@@ -78,6 +78,7 @@ COMMON(status)	makeClassMoveOutlineGesture(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/evt/popupgesture.c */
 COMMON(status)	makeClassPopupGesture(Class class);
 COMMON(Recogniser) popupGesture(void);
+COMMON(status)	postPopupGestureEvent(EventObj ev);
 
 /* /staff/jan/src/pl/packages/xpce/src/evt/recogniser.c */
 COMMON(status)	initialiseRecogniser(Recogniser r);

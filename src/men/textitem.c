@@ -51,8 +51,6 @@ static status	detachTimerTextItem(TextItem ti);
 static int	text_item_clear_width(TextItem ti);
 static int	clear_icon_shown(TextItem ti);
 
-#define STEPPER_BOX_W   14
-#define STEPPER_BOX_GAP 5
 
 status
 initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
@@ -143,7 +141,8 @@ RedrawAreaTextItem(TextItem ti, Area a)
   int clrw = text_item_clear_width(ti);
 
   ws_entry_field((Graphical)ti,
-		 tx, ty, tw+text_item_combo_width(ti)+clrw, th, flags);
+		 tx, ty, tw+text_item_combo_width(ti)+clrw, th,
+		 text_item_combo_width(ti), flags);
 
   if ( vt->string->data.hdr.f.size == 0 &&
        notNil(ti->placeholder) )
@@ -416,8 +415,8 @@ destroyCompleter(Browser c)
   send(c, NAME_client, NIL, EAV);
   send(c, NAME_show, OFF, EAV);
   send(c, NAME_transientFor, NIL, EAV);
-  if ( di && text_item_combo_width(di) )
-    changedDialogItem(di);		/* indicator will change */
+  if ( di )
+    changedDialogItem(di);		/* combo indicator or cycle face */
 }
 
 bool
@@ -919,6 +918,21 @@ combo_flags(TextItem ti)
 }
 
 
+/* Width of an icon area at the right of the field: the clear image or
+   the buttons of a combo box or stepper.  These take the same room, so
+   their icons are equally far from the edge.
+*/
+
+static int
+icon_area_width(TextItem ti, Image img)
+{ int iw = (img && instanceOfObject(img, ClassImage)
+	      ? valInt(img->size->w) : 22);
+  int ex = (int)valNum(getExFont(ti->value_text->font));
+
+  return iw + 1*ex;
+}
+
+
 /* The completer is shared with class menu (a ->kind: cycle menu opens
    it as its combo box), so its client is a dialog_item that need not be
    a text_item and need not have a <->style at all.
@@ -929,15 +943,9 @@ text_item_combo_width(TextItem ti)
 { if ( !instanceOfObject(ti, ClassTextItem) )
     return 0;
 
-  if ( ti->style == NAME_comboBox )
-  { int w = ws_combo_box_width((Graphical)ti);
-
-    return w >= 0 ? w : 14;
-  } else if ( ti->style == NAME_stepper )
-  { int w = ws_stepper_width((Graphical)ti);
-
-    return w >= 0 ? w : STEPPER_BOX_W+STEPPER_BOX_GAP;
-  }
+  if ( ti->style == NAME_comboBox || ti->style == NAME_stepper )
+    return icon_area_width(ti, getClassVariableValueObject(ti,
+							  NAME_clearImage));
 
   return 0;
 }
@@ -958,11 +966,7 @@ static int
 text_item_clear_width(TextItem ti)
 { if ( notNil(ti->clear_image) && ti->style == NAME_normal &&
        ti->editable == ON )
-  { int iw = valInt(ti->clear_image->size->w);
-    int ex = (int)valNum(getExFont(ti->value_text->font));
-
-    return iw + 1*ex;
-  }
+    return icon_area_width(ti, ti->clear_image);
 
   return 0;
 }
@@ -1954,7 +1958,7 @@ static getdecl get_textItem[] =
 /* Resources */
 
 static classvardecl rc_textItem[] =
-{ RC(NAME_border, "0..", "1mm",
+{ RC(NAME_border, "0..", "1.5mm",
      "Border around <-value_text"),
   RC(NAME_length, "int", "25",
      "Width of area for selection (chars)"),

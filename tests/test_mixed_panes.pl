@@ -899,6 +899,28 @@ mixed(F, File) :-
                                ]),
                     F, [open(false)]).
 
+%!  same_but_shares(+Term1, +Term2) is semidet.
+%
+%   The terms are the same but for their shares.  A share is pixels of
+%   the room, rounded to three decimals, and laying it out again rounds
+%   it to pixels: in a room of less than 1000 pixels, a share may come
+%   back 0.001 off.
+
+same_but_shares(T1, T2) :-
+    float(T1),
+    !,
+    float(T2),
+    abs(T1-T2) =< 0.0011.
+same_but_shares(T1, T2) :-
+    compound(T1),
+    !,
+    compound(T2),
+    T1 =.. [Name|Args1],
+    T2 =.. [Name|Args2],
+    maplist(same_but_shares, Args1, Args2).
+same_but_shares(T1, T2) :-
+    T1 == T2.
+
 test(an_editor_says_which_source_it_shows) :-
     mixed(F, File),
     editor(F, V),
@@ -928,7 +950,8 @@ test(a_terminal_is_written_by_what_it_is, Kind == terminal) :-
 %       its panes insist on: no arrangement of it is possible, and the
 %       term it gives back is not the one it was built from.
 
-test(and_gives_back_the_shares_it_was_asked_for, Shares == [0.6, 0.4]) :-
+test(and_gives_back_the_shares_it_was_asked_for,
+     true(same_but_shares(Shares, [0.6, 0.4]))) :-
     mixed(F, _File),
     get(F, pane_term, pane_frame(_, [tab(_, vertical(Tree))])),
     findall(Share, member(Share-_, Tree), Shares).
@@ -938,7 +961,7 @@ test(a_window_of_both_kinds_gives_the_same_term_back) :-
     get(F, pane_term, Term),
     open_pane_frame(Term, F2, [open(false)]),
     get(F2, pane_term, Again),
-    assertion(Term == Again).
+    assertion(same_but_shares(Term, Again)).
 
 test(an_editor_with_tabs_of_its_own_gives_the_same_term_back) :-
     mixed(F, _File),
@@ -948,7 +971,7 @@ test(an_editor_with_tabs_of_its_own_gives_the_same_term_back) :-
     get(F, pane_term, Term),
     open_pane_frame(Term, F2, [open(false)]),
     get(F2, pane_term, Again),
-    assertion(Term == Again).
+    assertion(same_but_shares(Term, Again)).
 
 test(the_caret_comes_back_where_it_was, Line == 2) :-
     mixed(F, _File),

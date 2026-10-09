@@ -1571,6 +1571,29 @@ eventTextImage(TextImage ti, EventObj ev)
 
 
 
+/* The outline of a text image is the frame of an editor or list_browser
+   that has no box (<-pen) of its own.  If ->focus_border of this device
+   is @on, it has the look of a field: rounded corners and the accent
+   colour while it has the keyboard focus.
+*/
+
+static void
+field_device(TextImage ti, bool *field, bool *focus)
+{ Graphical dev = (Graphical)ti->device;
+  BoolObj fb = OFF;
+
+  if ( notNil(dev) && dev->pen == ZERO )
+  { if ( instanceOfObject(dev, ClassEditor) )
+      fb = ((Editor)dev)->focus_border;
+    else if ( instanceOfObject(dev, ClassListBrowser) )
+      fb = ((ListBrowser)dev)->focus_border;
+  }
+
+  *field = (fb == ON);
+  *focus = *field && hasInputFocusGraphical(dev);
+}
+
+
 		/********************************
 		*            REDRAW		*
 		********************************/
@@ -1595,24 +1618,36 @@ RedrawAreaTextImage(TextImage ti, Area a)
   if ( h > valInt(a->h) ) h = valInt(a->h);
 
   obg = r_background(ti->background);
-  if ( sx < TXT_X_MARGIN || sx + w > ti->w - TXT_X_MARGIN ||
-       sy < TXT_Y_MARGIN || sy + h > ti->h - TXT_Y_MARGIN )
-  { Elevation z = ti->elevation;
-
-    if ( z && notNil(z) )
-    { r_3d_box(bx, by, bw, bh, 0, z, FALSE);
-    } else
-    { r_thickness(p);
-      r_dash(ti->texture);
-      r_box(bx, by, bw, bh, 0, NIL);
-    }
-  }
   r_offset(ox, oy);
   r_thickness(1);			/* default for underlining */
   r_dash(NAME_none);
   paint_area(ti, a, sx, sy, w, h);
   paint_placeholder(ti);
   r_offset(-ox, -oy);
+
+  if ( sx < TXT_X_MARGIN || sx + w > ti->w - TXT_X_MARGIN ||
+       sy < TXT_Y_MARGIN || sy + h > ti->h - TXT_Y_MARGIN )
+  { Elevation z = ti->elevation;
+
+    if ( z && notNil(z) )		/* a flat outline in the theme */
+    { bool field, focus;
+      Any old;
+
+      field_device(ti, &field, &focus);
+      old = r_colour(getClassVariableValueObject(ti,
+			focus ? NAME_accentColour : NAME_borderColour));
+      r_thickness(max(1, p) + (focus ? 1 : 0));
+      r_dash(NAME_none);
+      r_rounded_frame(bx, by, bw, bh, field ? FIELD_RADIUS : 0, obg);
+      r_colour(old);
+    } else if ( p > 0 )
+    { r_thickness(p);
+      r_dash(ti->texture);
+      r_box(bx, by, bw, bh, 0, NIL);
+    }
+    r_thickness(1);
+    r_dash(NAME_none);
+  }
   r_background(obg);
 
   return RedrawAreaGraphical(ti, a);
@@ -2608,8 +2643,12 @@ static classvardecl rc_textImage[] =
 { RC(NAME_background, "colour",
      "ui_window_background",
      "Background colour for the text"),
+  RC(NAME_accentColour, "colour", "ui_accent",
+     "Colour of the outline if the editor or list has the focus"),
+  RC(NAME_borderColour, "colour", "ui_separator",
+     "Colour of the outline if <-elevation is not @nil"),
   RC(NAME_elevation, "elevation*", "1",
-     "Elevation from the background"),
+     "Not @nil: draw a flat outline in border_colour"),
   RC(NAME_tabDistance, "int", "64",
      "Tabstop interval (pixels)"),
   RC(NAME_wrap, "{none,character,word}", "character",

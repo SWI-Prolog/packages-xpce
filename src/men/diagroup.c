@@ -88,6 +88,15 @@ compute_label_size_dialog_group(DialogGroup g, int *w, int *h)
 }
 
 
+/* Space between a label `above` the box and the box
+ */
+
+static int
+label_gap(DialogGroup g, int th)
+{ return th/3;
+}
+
+
 static void
 compute_label(DialogGroup g, int *x, int *y, int *w, int *h)
 { if ( notNil(g->label) )
@@ -98,7 +107,9 @@ compute_label(DialogGroup g, int *x, int *y, int *w, int *h)
     if ( w ) *w = tw;
     if ( h ) *h = th;
     if ( y )
-    { if ( g->label_format == NAME_top )
+    { if ( g->label_format == NAME_above )
+	*y = -(th + label_gap(g, th));
+      else if ( g->label_format == NAME_top )
 	*y = 0;
       else if ( g->label_format == NAME_bottom )
 	*y = -th;
@@ -114,7 +125,10 @@ compute_label(DialogGroup g, int *x, int *y, int *w, int *h)
 	*y = -th/2;
     }
     if ( x )
-    { *x = valInt(g->radius) + valInt(getAvgCharWidthFont(g->label_font));
+    { if ( g->label_format == NAME_above )
+	*x = valInt(g->radius)/2;
+      else
+	*x = valInt(g->radius) + valInt(getAvgCharWidthFont(g->label_font));
     }
   } else
   { if ( x ) *x = 0;
@@ -452,46 +466,31 @@ RedrawAreaDialogGroup(DialogGroup g, Area a)
   initialiseDeviceGraphical(g, &x, &y, &w, &h);
   compute_label(g, &lx, &ly, &lw, &lh);
 
-  if ( g->pen != ZERO )
-  { Elevation e = getClassVariableValueObject(g, NAME_elevation);
+  if ( g->pen != ZERO || notNil(g->elevation) )
+  { Any fill = NIL;
+    Any old;
 
-    if ( e && instanceOfObject(e, ClassElevation) )
-    { int bx = x;
-      int by = y-ly;
-      int bw = w;
-      int bh = h+ly;
-
-      eh = valInt(e->height);
-      r_3d_box(bx, by, bw, bh, valInt(g->radius), e, FALSE);
-      bx += eh;
-      by += eh;
-      bw -= 2*eh;
-      bh -= 2*eh;
-      r_3d_box(bx, by, bw, bh, valInt(g->radius), e, TRUE);
-    } else
-    { eh = valInt(g->pen);
-
-      r_thickness(eh);
-      r_dash(g->texture);
-      r_box(x, y-ly, w, h+ly, valInt(g->radius), NIL);
-    }
-  } else if ( notNil(g->elevation) )
-  { int bx = x;
-    int by = y-ly;
-    int bw = w;
-    int bh = h+ly;
-
-    r_3d_box(bx, by, bw, bh, valInt(g->radius), g->elevation, TRUE);
-    bg = g->elevation->background;
-    eh = valInt(g->elevation->height);
+    if ( notNil(g->elevation) && notDefault(g->elevation->background) )
+      fill = g->elevation->background;
+    bg = fill;
+    eh = valInt(g->pen);
+    old = r_colour(getClassVariableValueObject(g, NAME_borderColour));
+    r_thickness(eh);
+    r_dash(g->texture);
+    r_smooth_box(x, y-ly, w, h+ly, valInt(g->radius), fill);
+    r_thickness(1);
+    r_colour(old);
   } else
     eh = 0;
 
   if ( notNil(g->label) && g->label != NAME_ )
-  { int ex = valInt(getAvgCharWidthFont(g->label_font));
+  { if ( g->label_format != NAME_above )
+    { int ex = valInt(getAvgCharWidthFont(g->label_font));
 
-    r_clear(x+lx-ex/2, y, lw+ex, lh);
-    RedrawLabelDialogGroup(g, 0, x+lx, y, lw, lh, NAME_center, NAME_center, 0);
+      r_clear(x+lx-ex/2, y, lw+ex, lh);
+    }
+    RedrawLabelDialogGroup(g, 0, x+lx, y, lw, lh, NAME_center, NAME_center,
+			   g->active == ON ? 0 : LABEL_INACTIVE);
   }
 
   { Cell cell;
@@ -681,7 +680,7 @@ static vardecl var_diagroup[] =
      NAME_label, "Displayed label"),
   SV(NAME_labelFont, "font", IV_GET|IV_STORE, labelFontDialogGroup,
      NAME_appearance, "Font used to display textual label"),
-  SV(NAME_labelFormat, "{top,center,bottom,hot_spot}", IV_GET|IV_STORE,
+  SV(NAME_labelFormat, "{above,top,center,bottom,hot_spot}", IV_GET|IV_STORE,
      labelFormatDialogGroup,
      NAME_appearance, "Alignment of label with top"),
   SV(NAME_elevation, "elevation*", IV_GET|IV_STORE, elevationDialogGroup,
@@ -768,18 +767,18 @@ static getdecl get_diagroup[] =
 static classvardecl rc_diagroup[] =
 { RC(NAME_alignment, "{column,left,center,right}", "column",
      "Alignment in the row"),
-  RC(NAME_elevation, "elevation*", "0.25mm",
-     "Elevation above environment"),
-  RC(NAME_radius, "0..", "0",
+  RC(NAME_borderColour, "colour", "ui_separator",
+     "Colour of the box of a group of kind `box`"),
+  RC(NAME_radius, "0..", "6",
      "Radius for the corners"),
   RC(NAME_gap, "size", "size(3.8mm,2mm)",
      "Distance between items in X and Y"),
-  RC(NAME_border, "[size]", "@default",
-     "Distance around the items in X and Y"),
+  RC(NAME_border, "[size]", "size(3mm,3mm)",
+     "Distance around the items in a box (@default: <-gap)"),
   RC(NAME_labelFont, "font", "bold",
      "Font used to display the label"),
-  RC(NAME_labelFormat, "{top,center,bottom}", "center",
-     "Alignment of label with top-line"),
+  RC(NAME_labelFormat, "{above,top,center,bottom}", "above",
+     "Position of the label: above the box or on its top-line"),
   RC(NAME_labelSuffix, "name", "",
      "Ensured suffix of label")
 };

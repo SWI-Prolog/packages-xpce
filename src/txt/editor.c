@@ -197,6 +197,7 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
   assign(e, dabbrev_pos, NIL);
   assign(e, dabbrev_origin, NIL);
   assign(e, placeholder, NIL);
+  assign(e, focus_border, ON);
   assign(e, styles, newObject(ClassSheet, EAV));
 
   e->fragment_cache = newFragmentCache(e);
@@ -298,10 +299,16 @@ RedrawAreaEditor(Editor e, Area a)
     if ( valInt(a->x) < p || valInt(a->y) < p ||
 	 valInt(a->x) + valInt(a->w) > w - p ||
 	 valInt(a->y) + valInt(a->h) > h - p )
-    { r_thickness(p);
-      r_dash(e->texture);
+    { bool field = (e->focus_border == ON);
+      bool focus = field && hasInputFocusGraphical((Graphical)e);
+      Any old = r_colour(getClassVariableValueObject(e,
+				focus ? NAME_accentColour : NAME_borderColour));
 
-      r_box(x, y, w, h, 0, NIL);
+      r_thickness(p + (focus ? 1 : 0));
+      r_dash(NAME_none);
+      r_rounded_frame(x, y, w, h, field ? FIELD_RADIUS : 0, obg);
+      r_thickness(1);
+      r_colour(old);
     }
   }
 
@@ -324,6 +331,8 @@ static status
 loadFdEditor(Editor e, IOSTREAM *fd, ClassDef def)
 { TRY(loadSlotsObject(e, fd, def));
 
+  if ( !isBoolean(e->focus_border) )	/* saved before it existed */
+    assign(e, focus_border, ON);
   e->fragment_cache = newFragmentCache(e);
   e->internal_mark = 0;
 
@@ -1513,10 +1522,28 @@ typedEditor(Editor e, Any id)
 
 
 
+/* ->focus_border: @on (default) gives the editor the look of a text
+   entry field: rounded corners and an accent border while it has the
+   keyboard focus.  A view sets it to @off: its editor fills the window.
+*/
+
+static status
+focusBorderEditor(Editor e, BoolObj val)
+{ if ( e->focus_border != val )
+  { assign(e, focus_border, val);
+    changedEntireImageGraphical(e);
+  }
+
+  succeed;
+}
+
+
 static status
 event_editor(Editor e, EventObj ev)
 { if ( isAEvent(ev, NAME_focus) )
-  { if ( isAEvent(ev, NAME_activateKeyboardFocus) )
+  { if ( e->focus_border == ON )
+      changedEntireImageGraphical(e);	/* focus border */
+    if ( isAEvent(ev, NAME_activateKeyboardFocus) )
     { send(e->text_cursor, NAME_active, ON, EAV);
       ws_enable_text_input((Graphical)e, ON);
     } else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
@@ -5264,6 +5291,8 @@ static vardecl var_editor[] =
      NAME_internal, "Current dabbrev candidates"),
   SV(NAME_placeholder, "char_array*", IV_GET|IV_STORE, placeholderEditor,
      NAME_appearance, "Text shown while I hold none"),
+  SV(NAME_focusBorder, "bool", IV_GET|IV_STORE, focusBorderEditor,
+     NAME_appearance, "Look of a field: rounded, with a focus border"),
   IV(NAME_internalMark, "alien:int", IV_NONE,
      NAME_internal, "Additional mark for internal use"),
   IV(NAME_fragmentCache, "alien:FragmentCache", IV_NONE,
@@ -5722,6 +5751,10 @@ static classvardecl rc_editor[] =
      "Style for `other matches' in incremental search"),
   RC(NAME_keyBinding, "string", "",
      "`Key = selector' binding list"),
+  RC(NAME_accentColour, "colour", "ui_accent",
+     "Colour of the box if the editor has the focus"),
+  RC(NAME_borderColour, "colour", "ui_separator",
+     "Colour of the box around the editor"),
   RC(NAME_pen, "0..", UXWIN("0", "1"),
      "Thickness of box around editor"),
   RC(NAME_placeholderOpacity, "0.0..1.0", "0.5",

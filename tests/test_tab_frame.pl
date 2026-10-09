@@ -404,9 +404,8 @@ test(an_editable_label_opens_over_itself) :-
     get(Item, selection, Label),
     send(Label, equal, TF?label),
     get(TF, label_offset, X),
-    get(TF, label_height, H),
-    get(TF?label_size, width, W),
-    get(Item, area, area(X, 0, IW, IH)),
+    get(TF, label_area, area(_, Y, W, H)),
+    get(Item, area, area(X, Y, IW, IH)),
     IH >= H,
     IW >= W.                            % a label is narrow to type in
 
@@ -702,12 +701,13 @@ test(a_closable_tab_makes_room_for_its_button) :-
     W1 < W0+LH,                         % but is smaller than the label
     close_button(TF, B),
     get(B, area, area(BX, _, BW, _)),
-    get(TF, label_offset, LX),
-    BX >= LX+W0,                        % and lands in the room made
-    BX+BW =< LX+W1.
+    get(TF, label_area, area(PX, _, PW, PH)),
+    get(TF?label_font, width, TF?label, TW),
+    BX >= PX+PH/2+TW,                   % right of the text, which starts
+    BX+BW =< PX+PW.                     % a radius into the label's pill
 
-%   The cross sits on the baseline of the text it belongs to, and is drawn
-%   smaller than the label is tall.
+%   The cross is in the label it belongs to, and is drawn smaller than the
+%   label is tall.
 
 %   A tab that is given no label at all shrinks to its minimum rather than
 %   keeping the box of a label it no longer has, which used to leave a
@@ -727,7 +727,7 @@ test(an_empty_label_gives_the_room_back) :-
     H2 =:= H1,                          % but the bar keeps its height
     get(TF2, label_offset, W2).         % and the next tab moves up
 
-test(the_close_button_sits_on_the_text_baseline) :-
+test(the_close_button_sits_in_the_label) :-
     two_tabs(_TW, TF, _TF2),
     send(TF, closable, @on),
     get(TF, label_height, LH),

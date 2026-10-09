@@ -90,6 +90,7 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   assign(lb,   label_text,	      NIL);
   assign(lb,   styles,		      newObject(ClassSheet, EAV));
   assign(lb,   drop_unrenderable,     OFF);
+  assign(lb,   focus_border,          ON);
   assign(lb,   selection_style,       getClassVariableValueObject(lb,
 						      NAME_selectionStyle));
 
@@ -156,10 +157,16 @@ RedrawAreaListBrowser(ListBrowser lb, Area a)
     h -= th;
 
     if ( h > 0 )
-    { r_thickness(valInt(lb->pen));
-      r_dash(lb->texture);
+    { bool field = (lb->focus_border == ON);
+      bool focus = field && hasInputFocusGraphical((Graphical)lb);
+      Any old = r_colour(getClassVariableValueObject(lb,
+				focus ? NAME_accentColour : NAME_borderColour));
 
-      r_box(x, y, w, h, 0, NIL);
+      r_thickness(valInt(lb->pen) + (focus ? 1 : 0));
+      r_dash(NAME_none);
+      r_rounded_frame(x, y, w, h, field ? FIELD_RADIUS : 0, obg);
+      r_thickness(1);
+      r_colour(old);
     }
   }
 
@@ -181,6 +188,9 @@ storeListBrowser(ListBrowser lb, FileObj file)
 static status
 loadListBrowser(ListBrowser lb, IOSTREAM *fd, ClassDef def)
 { TRY(loadSlotsObject(lb, fd, def));
+
+  if ( !isBoolean(lb->focus_border) )	/* saved before it existed */
+    assign(lb, focus_border, ON);
 
   if ( isNil(lb->status) )
     assign(lb, status, NAME_inactive);
@@ -1017,10 +1027,28 @@ selectBrowserGesture()
 
 
 
+/* ->focus_border: @on (default) gives the list the look of a text entry
+   field: rounded corners and an accent border while it has the keyboard
+   focus.  A browser sets it to @off: its list fills the window.
+*/
+
+static status
+focusBorderListBrowser(ListBrowser lb, BoolObj val)
+{ if ( lb->focus_border != val )
+  { assign(lb, focus_border, val);
+    changedEntireImageGraphical(lb);
+  }
+
+  succeed;
+}
+
+
 static status
 eventListBrowser(ListBrowser lb, EventObj ev)
 { if ( isAEvent(ev, NAME_focus) )
-  { if ( isAEvent(ev, NAME_activateKeyboardFocus) )
+  { if ( lb->focus_border == ON )
+      changedEntireImageGraphical(lb);	/* focus border */
+    if ( isAEvent(ev, NAME_activateKeyboardFocus) )
       return send(lb, NAME_status, NAME_active, EAV);
     if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
     { cancelSearchListBrowser(lb);
@@ -1756,6 +1784,8 @@ static vardecl var_listBrowser[] =
      NAME_appearance, "Name --> style mapping"),
   IV(NAME_dropUnrenderable, "bool", IV_BOTH,
      NAME_appearance, "Drop items whose style font cannot show the label"),
+  SV(NAME_focusBorder, "bool", IV_GET|IV_STORE, focusBorderListBrowser,
+     NAME_appearance, "Look of a field: rounded, with a focus border"),
   IV(NAME_size, "characters=size", IV_GET,
      NAME_area, "Size in characters/lines"),
   IV(NAME_start, "int", IV_GET,
@@ -1919,6 +1949,10 @@ static classvardecl rc_listBrowser[] =
      "Style for incremental search"),
   RC(NAME_labelFont, "font", "bold",
      "Font used to display the label"),
+  RC(NAME_accentColour, "colour", "ui_accent",
+     "Colour of the box if the list_browser has the focus"),
+  RC(NAME_borderColour, "colour", "ui_separator",
+     "Colour of the box around list_browser"),
   RC(NAME_pen, "0..", "1",
      "Thickness of box around list_browser"),
   RC(NAME_searchIgnoreCase, "bool", "@on",

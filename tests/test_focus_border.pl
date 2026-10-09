@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org
-    Copyright (c)  2025, SWI-Prolog Solutions b.v.
+    Copyright (c)  2026, SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,15 +32,49 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef RAYMENU_H
-#define RAYMENU_H
 
-Colour ws_3d_grey(void);
-int ws_entry_field_margin(void);
-status ws_entry_field(Graphical gr, int x, int y, int w, int h, int bw,
-		      int flags);
-status ws_draw_checkbox(int x, int y, int w, int h, int b, int flags);
-status ws_checkbox_size(int flags, int *w, int *h);
-int ws_message_box(Any client, CharArray title, CharArray msg, int flags);
+:- module(test_focus_border, [test_focus_border/0]).
 
-#endif /* RAYMENU_H */
+/** <module> Test ->focus_border of editor and list_browser
+
+An editor or list_browser has the look of a text entry field (rounded,
+an accent border when it has the focus), unless it fills a window:
+view and browser switch ->focus_border off.
+
+Run with:
+
+    swipl -g test_focus_border -t halt packages/xpce/tests/test_focus_border.pl
+*/
+
+:- use_module(library(pce)).
+:- use_module(library(plunit)).
+
+test_focus_border :-
+    run_tests([ focus_border
+              ]).
+
+:- begin_tests(focus_border).
+
+test(editor, FB == @on) :-
+    new(E, editor),
+    get(E, focus_border, FB),
+    free(E).
+test(list_browser, FB == @on) :-
+    new(LB, list_browser),
+    get(LB, focus_border, FB),
+    free(LB).
+test(view, FB == @off) :-
+    new(V, view),
+    get(V?editor, focus_border, FB),
+    free(V).
+test(browser, FB == @off) :-
+    new(B, browser),
+    get(B?list_browser, focus_border, FB),
+    free(B).
+test(view_editor_replaced, FB == @off) :-
+    new(V, view),
+    send(V, editor, new(E, editor)),
+    get(E, focus_border, FB),
+    free(V).
+
+:- end_tests(focus_border).

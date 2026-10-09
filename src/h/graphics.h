@@ -680,6 +680,7 @@ NewClass(list_browser)
   FontObj	font;			/* Font for text */
   Sheet		styles;			/* Name --> style mapping */
   BoolObj	drop_unrenderable;	/* Drop items the style cannot show */
+  BoolObj	focus_border;		/* Field look: rounded, focus border */
   Size		size;			/* Size in characters */
   Int		start;			/* Index of first item shown */
   Int		search_origin;		/* Origin of incremental search */
@@ -1148,6 +1149,7 @@ GLOBAL  Chain grabbedWindows;		/* @grabbed_windows */
 
 #define LABEL_INACTIVE		0x1	/* str_label() flags */
 #define INACTIVE_ALPHA		0.4	/* opacity of an inactive item */
+#define FIELD_RADIUS		4	/* corners of entry fields, editors, ... */
 
 #define CHECKBOX_SELECTED	0x1	/* item is selected */
 #define CHECKBOX_ACTIVE		0x2	/* item is active */

@@ -1113,7 +1113,7 @@ static const struct builtin_theme_colour
   /* Derived from the basic colours */
   { "ui_margin_background",	    "ui_window_background",
     "Margin of an editor, e.g., with line numbers" },
-  { "ui_scrollbar_background",	    UXWIN("grey66", "ui_window_background"),
+  { "ui_scrollbar_background",	    "ui_dialog_background",
     "Trough of scrollbars" },
   /* Text */
   { "ui_text_selection_background", "sys_text_selection_background",

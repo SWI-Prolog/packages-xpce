@@ -4,8 +4,8 @@ A tab object is a refinement of a dialog_group object, which
 implies it is a device specialised for displaying dialog_item
 objects.
 
-A tab shows as an elevated rectangle with a little `tab`
-attached to it displaying its name.  Tabs are designed to
+A tab shows its name as a label above a flat rounded box with its
+contents.  Tabs are designed to
 cooperate in a tab_stack object, to achieve a `stack` of
 sheets holding controllers, which allows the user to
 switch by clicking the desired tab.
@@ -14,11 +14,12 @@ Tabs are normally used to establish settings for a system
 that has many settings.  Groups of related settings will be
 placed on a separate tab.
 
-The tab on top has the background of its contents.  The labels of the
+Each label is a pill: a box with a half circle at each end.  The label
+of the tab on top has an edge in the accent colour.  The labels of the
 hidden tabs have their background moved a little towards the text
 colour and dimmed text.  This works for light and dark themes alike.
-A line in the accent colour on top of the label of the tab on top
-makes it stand out clearly.
+The box around the contents is drawn in the class variable
+`border_colour`.
 
 See also class tab_stack.
 
@@ -26,11 +27,11 @@ See also class tab_stack.
 ## Class variables {#class-tab-classvars}
 
 - tab.indicator_colour: colour* = ui_accent
-    Colour of the line on top of the label of the tab on top.  @nil
-    omits the line.
+    Colour of the edge of the label of the tab on top.  @nil omits
+    the edge.
 
-- tab.indicator_width: 0.. = 3
-    Width of this line.  0 omits the line.
+- tab.indicator_width: 0.. = 2
+    Width of this edge.  0 omits the edge.
 
 
 ## Instance variables {#class-tab-instvars}
@@ -89,6 +90,10 @@ See also class tab_stack.
     rectangle used for displaying the contents.
 
 ## Get methods {#class-tab-get}
+
+- tab<-label_area: area
+    The box (pill) of the label, relative to the area of the tab.
+    Fails if the label is not shown.
 
 - tab<-position: -> point
     *Inherits description from*: tab->position

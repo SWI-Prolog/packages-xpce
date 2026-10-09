@@ -242,6 +242,15 @@ size_menu_item(Menu m, MenuItem mi, int *w, int *h)
 }
 
 
+/* The width of the chevron area at the right of a `cycle' menu
+ */
+
+static int
+cycle_marker_width(Menu m)
+{ return (int)(valNum(getExFont(m->value_font))*2.5 + 0.5);
+}
+
+
 static status
 computeItemsMenu(Menu m)
 { int w = 0, h = 0, iw, ih;
@@ -269,7 +278,9 @@ computeItemsMenu(Menu m)
   h += 2 * border;
 
   if ( is_cycle_menu(m) )
-  { rm = ws_combo_box_width((Graphical)m)+2;	/* 2 for the margin */
+  { lm = valInt(getExFont(m->value_font))/2;
+    rm = cycle_marker_width(m);
+    h += 4;
   } else if ( m->kind == NAME_choice )
   { int ex = valInt(getExFont(m->value_font));
 
@@ -544,6 +555,46 @@ mark_height(Menu m, Any mark)
 static int
 segment_radius(Menu m)
 { return min(6, valInt(m->item_size->h)/3);
+}
+
+
+/* The face of a `cycle' menu: a flat rounded box as a button, with a
+ * chevron at the right.  It looks pressed while its list is shown and
+ * shows the keyboard focus by a wider border in the accent colour.
+ */
+
+static void
+draw_cycle_face(Menu m, int x, int y, int w, int h)
+{ Any fill, border;
+  int pen = 1;
+  int rm = cycle_marker_width(m);
+  double ex = valNum(getExFont(m->value_font));
+  double cw = ex*0.9;
+  Any old;
+
+  if ( completerShownDialogItem(m) )
+    fill = getClassVariableValueObject(m, NAME_segmentPressed);
+  else
+    fill = getClassVariableValueObject(m, NAME_segmentBackground);
+  if ( hasInputFocusDialogItem(m) )
+  { border = getClassVariableValueObject(m, NAME_accentColour);
+    pen = 2;
+  } else
+    border = getClassVariableValueObject(m, NAME_segmentBorder);
+
+  if ( m->active == OFF )
+    r_push_group();
+  old = r_colour(border);
+  r_thickness(pen);
+  r_dash(NAME_none);
+  r_smooth_box(x, y, w, h, segment_radius(m), fill);
+  if ( m->active == OFF )
+    r_pop_group_with_alpha(INACTIVE_ALPHA);
+  r_colour(m->active == ON ? old : ws_3d_grey()); /* as the label */
+  r_chevron(x+w-rm + (rm-cw)/2.0 - ex*0.3, y + (h-cw/2.0)/2.0,
+	    cw, max(1.5, ex/5.0));
+  r_thickness(1);
+  r_colour(old);
 }
 
 
@@ -883,12 +934,9 @@ RedrawAreaMenu(Menu m, Area a)
 
   if ( is_cycle_menu(m) )
   { MenuItem mi = getItemSelectionMenu(m);
-    int flags = TEXTFIELD_COMBO;
 
     iw = max(iw, valInt(m->value_width));
-    if ( mi && mi->active == ON && m->active == ON )
-      flags |= TEXTFIELD_EDITABLE;
-    ws_entry_field((Graphical)m, cx, by, iw, ih, flags);
+    draw_cycle_face(m, cx, by, iw, ih);
 
     if ( mi != FAIL )
       RedrawMenuItem(m, mi, cx, cy, iw, ih);

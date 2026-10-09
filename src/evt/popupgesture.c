@@ -126,6 +126,30 @@ dispatchPopupGesture(PopupGesture g, EventObj ev)
 }
 
 
+/* Open the popup for `ev`.  A popup of a button is aligned below the
+ * button, as the popups of a menu_bar; otherwise it opens at the
+ * pointer.
+ */
+
+static void
+open_popup(PopupGesture g, EventObj ev)
+{ Any rec = ev->receiver;
+
+  if ( instanceOfObject(rec, ClassButton) &&
+       ((Button)rec)->popup == g->current )
+  { Point pos = tempObject(ClassPoint,
+			   ZERO, ((Graphical)rec)->area->h, EAV);
+    Int bw = ((Graphical)rec)->area->w;
+
+    if ( valInt(g->current->value_width) < valInt(bw) )
+      send(g->current, NAME_valueWidth, bw, EAV); /* at least as wide */
+    send(g->current, NAME_open, rec, pos, OFF, OFF, ON, EAV);
+    considerPreserveObject(pos);
+  } else
+    send(g->current, NAME_open, rec, getAreaPositionEvent(ev, DEFAULT), EAV);
+}
+
+
 static status
 eventPopupGesture(PopupGesture g, EventObj ev)
 { if ( g->status == NAME_active && isUpEvent(ev) )
@@ -135,8 +159,7 @@ eventPopupGesture(PopupGesture g, EventObj ev)
       sw = ev->window;
 
     if ( notNil(g->current) && g->current->displayed == OFF )
-    { send(g->current, NAME_open, ev->receiver,
-	   getAreaPositionEvent(ev, DEFAULT), EAV);
+    { open_popup(g, ev);
       attributeObject(g, NAME_Stayup, ON);
       grabPointerWindow(sw, ON);
       focusWindow(sw, ev->receiver, (Recogniser) g, g->cursor, NIL);
@@ -198,8 +221,7 @@ verifyPopupGesture(PopupGesture g, EventObj ev)
 static status
 initiatePopupGesture(PopupGesture g, EventObj ev)
 { if ( isNil(g->max_drag_distance) )
-  { send(g->current, NAME_open, ev->receiver,
-	 getAreaPositionEvent(ev, DEFAULT), EAV);
+  { open_popup(g, ev);
     postEvent(ev, (Graphical) g->current, DEFAULT);
   }
 
@@ -336,6 +358,25 @@ makeClassPopupGesture(Class class)
 { return declareClass(class, &popupGesture_decls);
 }
 
+
+
+/* Run the popup gesture for a down event of any button, e.g. a left
+ * click on the popup marker of a button.  See dispatchPopupGesture()
+ * for why only the down event needs to match.
+ */
+
+status
+postPopupGestureEvent(EventObj ev)
+{ PopupGesture g = (PopupGesture)popupGesture();
+  Name button = g->button;
+  status rc;
+
+  assign(g, button, getButtonEvent(ev));
+  rc = send(g, NAME_event, ev, EAV);
+  assign(g, button, button);
+
+  return rc;
+}
 
 
 Recogniser

@@ -46,6 +46,7 @@ initialiseBrowser(Browser b, Name name, Size size, DisplayObj display)
 
   TRY(lb = newObject(ClassListBrowser, DEFAULT, size->w, size->h, EAV) );
   send(lb, NAME_pen, ZERO, EAV);		/* leave to window */
+  send(lb, NAME_focusBorder, OFF, EAV);
   initialiseWindow((PceWindow)b, name,
 		   getSizeGraphical((Graphical) lb), display);
   t = get(b, NAME_tile, EAV);

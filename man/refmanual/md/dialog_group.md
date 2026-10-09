@@ -32,7 +32,8 @@ Here is a small example:
 
 - dialog_group<-border: [size]
     Space around the items.  The value @default uses the same value
-    for the border as for the <-gap between items.  See also
+    for the border as for the <-gap between items.  ->kind: box sets
+    it from the class variable `border` (3mm on each side).  See also
     ->kind.
 
 - dialog_group<-gap: size
@@ -48,10 +49,12 @@ Here is a small example:
 - dialog_group<-label_font: font
     Font used for displaying the <-label.
 
-- dialog_group<-label_format: {top,center,bottom,hot_spot}
-    Alignment of the label with the line drawn around the group.
-    Its value should normally be controlled by the class-variable to
-    ensure consistent appearance of compound dialog groups.
+- dialog_group<-label_format: {above,top,center,bottom,hot_spot}
+    Position of the label.  The default, `above`, puts the label
+    above the box around the group.  The other values align the
+    label with the top line of the box.  Its value should normally
+    be controlled by the class-variable to ensure consistent
+    appearance of compound dialog groups.
 
 - dialog_group<-radius: 0..
     Radius for the corners of the box surounding the group elements.
@@ -104,8 +107,9 @@ Here is a small example:
     - box
     	Sets <-border to @default, <-label to the <-label_name
     	calculated from the <-name and <-pen to 1.  This results
-    	in a (3d-) box with a label containing the items, which
-    	is normally used to visually group items for the user.
+    	in a rounded box in the class variable `border_colour`
+    	with a label above it, which is normally used to visually
+    	group items for the user.
 
     - group
     	Sets <-border to size(0,0), <-label to '' and <-pen to 0.

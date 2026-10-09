@@ -76,126 +76,139 @@ closely stacked buttons in a button-bar,   which  means normally not for
 buttons having images.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+/* The face of a button: a flat rounded box.  The default button is
+ * filled with the accent colour.  A pressed button is darker, an
+ * inactive one faded.  The keyboard focus is shown by a wider border
+ * in the accent colour or, on the default button, a white ring inside
+ * the border.  Both stay inside the area of the button.
+ */
+
+static bool
+is_pressed(Button b)
+{ return b->status == NAME_preview || b->status == NAME_execute;
+}
+
+
+static bool
+accent_face(Button b, int defb)
+{ return defb && b->active == ON && !is_pressed(b);
+}
+
+
 static void
 draw_generic_button_face(Button b,
 			 int x, int y, int w, int h,
 			 int up, int defb, int focus)
-{ Elevation z = getClassVariableValueObject(b, NAME_elevation);
-  int r = valInt(b->radius);
+{ int r = valInt(b->radius);
+  int pen = valInt(b->pen);
+  bool accent = accent_face(b, defb);
+  Any fill, border;
+  Any old;
 
-  if ( z && notNil(z) )			/* 3-d style */
-  { int up = (b->status == NAME_inactive || b->status == NAME_active);
+  if ( is_pressed(b) )
+    fill = getClassVariableValueObject(b, NAME_pressedColour);
+  else if ( accent )
+    fill = getClassVariableValueObject(b, NAME_accentColour);
+  else
+    fill = getClassVariableValueObject(b, NAME_faceColour);
+  if ( accent )
+    border = fill;
+  else if ( focus )
+  { border = getClassVariableValueObject(b, NAME_accentColour);
+    pen++;
+  } else
+    border = getClassVariableValueObject(b, NAME_borderColour);
 
-    { int bx = x, by = y, bw = w, bh = h;
+  if ( b->active == OFF )
+    r_push_group();
+  old = r_colour(border);
+  r_dash(NAME_none);
+  r_thickness(pen);
+  r_smooth_box(x, y, w, h, r, fill);
+  if ( b->active == OFF )
+    r_pop_group_with_alpha(INACTIVE_ALPHA);
 
-      if ( b->look == NAME_xpce )
-      {
-	if ( b->show_focus_border == ON )
-	{ PceWindow sw = getWindowGraphical((Graphical)b);
-	  Graphical kbfocus = (sw ? sw->keyboard_focus : NIL);
+  if ( focus && accent )		/* ring inside the accent face */
+  { int m = pen+1;
 
-	  if ( focus ||
-	       kbfocus == (Graphical) b ||	/* inactive focus */
-	       (defb && !instanceOfObject(kbfocus, ClassButton)) )
-	  { static Elevation e = NULL;
-
-	    if ( !e )
-	      e = newObject(ClassElevation, ONE, EAV);
-
-	    int gtk_margin = GTK_BUTTON_MARGIN;
-	    bx -= gtk_margin;
-	    by -= gtk_margin;
-	    bw += gtk_margin * 2;
-	    bh += gtk_margin * 2;
-	    r_3d_box(bx, by, bw, bh, r, e, FALSE);
-	  }
-	}
-
-	if ( focus )
-	{ int pen = valInt(b->pen);
-
-	  if ( pen > 0 )
-	  { r_thickness(pen);
-	    r_box(x-pen, y-pen, w+2*pen, h+2*pen, r, NIL);
-	  }
-	}
-      } else
-      { if ( defb )
-	{ int pen = valInt(b->pen);
-
-	  bx -= pen; by -= pen; bw += 2*pen; bh += 2*pen;
-	  r_thickness(pen);
-	  r_box(bx, by, bw, bh, r, NIL);
-	}
-      }
-    }
-
-    r_3d_box(x, y, w, h, r, z, up);
-  } else				/* 2-d style */
-  { int swapc  = 0;
-    int pen    = valInt(b->pen);
-    int radius = valInt(b->radius);
-    int shadow = valInt(b->shadow);
-
-    if ( defb )
-      pen++;
-
-    r_thickness(pen);
-    r_dash(b->texture);
-
-    if ( up )
-    { r_shadow_box(x, y, w, h, radius, shadow, NIL);
-    } else if ( b->status == NAME_preview )
-    { r_shadow_box(x, y, w, h, radius, shadow, BLACK_COLOUR);
-      swapc = TRUE;
-    } else if ( b->status == NAME_execute )
-    { r_shadow_box(x, y, w, h, radius, shadow, GREY25_COLOUR);
-    }
-
-    if ( swapc )
-      r_swap_background_and_foreground();
-
-    if ( swapc )
-      r_swap_background_and_foreground();
+    r_colour(getClassVariableValueObject(b, NAME_selectedForeground));
+    r_thickness(1);
+    r_smooth_box(x+m, y+m, w-2*m, h-2*m, max(0, r-m), NIL);
   }
+
+  r_thickness(1);
+  r_colour(old);
+}
+
+
+/* A button with a popup shows a marker at its right: <-popup_image or
+ * a down chevron.  If the button also has a message it is a split
+ * button: a line separates the label, which runs the message, from the
+ * marker, which opens the popup.  See on_popup_marker().
+ */
+
+static int
+popup_marker_width(Button b)
+{ double ex = valNum(getExFont(b->label_font));
+
+  if ( notNil(b->popup_image) )
+    return valInt(b->popup_image->size->w) + (int)ex;
+
+  return (int)(ex*2.5 + 0.5);
 }
 
 
 static int
 draw_button_popup_indicator(Button b, int x, int y, int w, int h, bool up)
-{ int rm;				/* required right margin */
+{ int rm = popup_marker_width(b);	/* required right margin */
   double ex = valNum(getExFont(b->label_font));
 
   if ( notNil(b->popup_image) )
   { int iw = valInt(b->popup_image->size->w);
     int ih = valInt(b->popup_image->size->h);
 
-    rm = iw+ex;
     r_image(b->popup_image, 0, 0, x+w-rm, y + (h-ih)/2, iw, ih);
   } else
-  { Elevation z = getClassVariableValueObject(b, NAME_elevation);
+  { double cw = ex*0.9;			/* the chevron */
+    double ch = cw*0.5;
+    double cx = x+w-rm + (rm-cw)/2.0 - (b->message != NIL ? 0 : ex*0.3);
+    double cy = y + (h-ch)/2.0;
+    Any old = NULL;
 
-    if ( b->look == NAME_xpce )
-    { double bw = ex*1.2;
-      double bh = bw*0.6;
+    if ( b->active == OFF )
+      old = r_colour(ws_3d_grey());	/* as the inactive label */
+    r_chevron(cx, cy, cw, max(1.5, ex/5.0));
+    if ( old )
+      r_colour(old);
 
-      rm = bw+8.0;
-      r_3d_box(x+w-bw-8.0, y+(h-bh)/2.0, bw, bh, 0, z, true);
-    } else
-    { double th = ex+4;
-      double tw = th;
-      double tx, ty;
+    if ( notNil(b->message) )		/* split button */
+    { Any c = r_colour(getClassVariableValueObject(b, NAME_separatorColour));
 
-      rm = tw+ex;
-      tx = x+w-rm;
-      ty = round(y + (h-th)/2.0);
-
-      r_3d_triangle(tx, ty, tx+tw, ty, tx+tw/2, ty+th, z, up, 0x5);
-      rm = tw;
+      r_thickness(1);
+      r_line(x+w-rm, y+h/4.0, x+w-rm, y+h-h/4.0);
+      r_colour(c);
     }
   }
 
   return rm;
+}
+
+
+/* True if `ev` is on the popup marker, so it opens the popup.  A button
+ * without a message is all marker.
+ */
+
+static bool
+on_popup_marker(Button b, EventObj ev)
+{ Int X, Y;
+
+  if ( isNil(b->popup) )
+    return false;
+  if ( isNil(b->message) )
+    return true;
+
+  return ( get_xy_event(ev, b, ON, &X, &Y) &&
+	   valInt(X) >= valInt(b->area->w) - popup_marker_width(b) );
 }
 
 
@@ -226,12 +239,18 @@ RedrawAreaButton(Button b, Area a)
 
   draw_generic_button_face(b, x, y, w, h, up, defb, kbf && focus);
 
+  Any old = NULL;
+  if ( accent_face(b, defb) )
+    old = r_colour(getClassVariableValueObject(b, NAME_selectedForeground));
+
   if ( notNil(b->popup) && !instanceOfObject(b->label, ClassImage) )
     rm = draw_button_popup_indicator(b, x, y, w, h, up);
 
   RedrawLabelDialogItem(b, accelerator_code(b->accelerator),
 			x, y, w-rm, h,
 			NAME_center, NAME_center, flags);
+  if ( old )
+    r_colour(old);
 
   return RedrawAreaGraphical(b, a);
 }
@@ -251,11 +270,13 @@ computeButton(Button b)
       h += 4;
     } else		/* sync with draw_button_popup_indicator() */
     { Size size = getClassVariableValueObject(b, NAME_size);
-      int ex = valInt(getExFont(b->label_font));
 
       h += 6; w += 10 + valInt(b->radius);
       if ( notNil(b->popup) )
-	w += 3*ex;
+      { w += popup_marker_width(b);
+	if ( notNil(b->message) )	/* room between label and separator */
+	  w += valInt(getExFont(b->label_font));
+      }
       w = max(valInt(size->w), w);
       h = max(valInt(size->h), h);
     }
@@ -350,6 +371,9 @@ eventButton(Button b, EventObj ev)
 
     if ( isAEvent(ev, NAME_msLeftDown) && !infocus )
       send(b, NAME_keyboardFocus, ON, EAV);
+
+    if ( isAEvent(ev, NAME_msLeftDown) && on_popup_marker(b, ev) )
+      return postPopupGestureEvent(ev);
 
     if ( isAEvent(ev, NAME_focus) )
     { changedDialogItem(b);
@@ -600,21 +624,28 @@ static classvardecl rc_button[] =
      "Thickness of box"),
   RC(NAME_selectedForeground, "colour",
      "ui_selection_foreground",
-     "Colour when in preview mode (Windows menu-bar)"),
+     "Label colour of the default button"),
   RC(NAME_selectedBackground, "colour",
      "ui_selection_background",
      "Background when in preview mode (Windows menu-bar)"),
+  RC(NAME_separatorColour, "colour", "ui_inactive",
+     "Line between the label and popup marker of a split button"),
   RC(NAME_popupImage, "image*", "@nil",
      "Image to indicate presence of popup menu"),
-  RC(NAME_radius, "0..", "0",
+  RC(NAME_radius, "0..", "4",
      "Rounding radius of box"),
+  RC(NAME_faceColour, "colour", "ui_button_background",
+     "Fill of the button"),
+  RC(NAME_pressedColour, "colour", "ui_button_pressed",
+     "Fill of the button while it is pressed"),
+  RC(NAME_borderColour, "colour", "ui_separator",
+     "Outline of the button"),
+  RC(NAME_accentColour, "colour", "ui_accent",
+     "Fill of the default button and colour of the focus ring"),
   RC(NAME_shadow, "int", "0",
      "Shadow shown around the box"),
   RC(NAME_size, "size", UXWIN("size(50,20)", "size(80,24)"),
      "Minimum size in pixels"),
-  RC(NAME_previewElevation, "elevation*",
-     "elevation(preview, 1, hilited)",
-     "Elevation of item in preview mode"),
   RC(NAME_elevation, RC_REFINE,
      UXWIN("button", "elevation(@nil, 2, @_dialog_bg)"),
      NULL)

@@ -75,6 +75,14 @@ the `dir.bm` icon, use the following code as a starting point:
 - list_browser<-dict: dict*
     Associated dict object (table of items).
 
+- list_browser<->focus_border: bool
+    If @on (default), the list_browser has the look of a text entry field:
+    an outline with rounded corners, drawn in the class variable
+    `accent_colour` while it has the keyboard focus.  Class browser sets
+    it to @off, as there the list_browser fills the window and the window is
+    its frame: the outline then has square corners and does not show
+    the focus.
+
 - list_browser<->drop_unrenderable: bool
     If @on (default @off), a dict_item whose style (see <-styles)
     has a font that does not provide all characters of the label is

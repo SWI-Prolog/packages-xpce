@@ -255,6 +255,21 @@ r_pill_outline(int x, int y, int w, int h)
 }
 
 
+/* A down chevron, the marker of a control that opens a list, in the
+ * current colour.  Its top-left is at x,y, it is w wide and w/2 high.
+ */
+
+void
+r_chevron(double x, double y, double w, double pen)
+{ fpoint pts[3] = { { x, y }, { x+w/2.0, y+w/2.0 }, { x+w, y } };
+  double old = r_thickness(pen);
+
+  r_dash(NAME_none);
+  r_polygon(pts, 3, FALSE);
+  r_thickness(old);
+}
+
+
 /* True if the item has the keyboard focus of a window that has the
  * input focus, i.e., keys typed now go to it.
  */

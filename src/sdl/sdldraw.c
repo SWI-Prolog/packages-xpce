@@ -953,7 +953,11 @@ r_box(int x, int y, int w, int h, int r, Any fill)
 void
 r_smooth_box(double x, double y, double w, double h, double r, Any fill)
 { Translate(x, y);
-  FloatArea(x, y, w, h);
+  double lw = (double)context.pen/2.0;	/* the line is centred on the */
+  double fx = x+lw;			/* path, so this keeps the outline */
+  double fy = y+lw;			/* inside the box and puts a 1px */
+  double fw = w-2*lw;			/* line on pixel centres */
+  double fh = h-2*lw;
 
   if ( fw <= 0 || fh <= 0 )
     return;
@@ -973,6 +977,56 @@ r_smooth_box(double x, double y, double w, double h, double r, Any fill)
   }
   if ( context.pen )
   { cairo_set_line_width(CR, context.pen);
+    pce_cairo_set_source_color(CR, context.colour);
+    cairo_stroke(CR);
+  }
+  cairo_new_path(CR);
+}
+
+/**
+ * Draw an anti-aliased outline with rounded corners around what has
+ * been drawn inside x,y,w,h.  The parts of the box outside the rounded
+ * corners are painted in `outside`, so a rectangular background drawn
+ * inside the box does not show there.  The outline is drawn in the
+ * current colour and thickness.
+ *
+ * @param x The x-coordinate of the top-left corner.
+ * @param y The y-coordinate of the top-left corner.
+ * @param w The width of the box.
+ * @param h The height of the box.
+ * @param r The radius for rounded corners.
+ * @param outside The colour outside the corners or @nil.
+ */
+void
+r_rounded_frame(double x, double y, double w, double h, double r,
+		Any outside)
+{ Translate(x, y);
+  double lw = (double)context.pen/2.0;
+
+  if ( w <= 0 || h <= 0 )
+    return;
+
+  if ( r > 0 && notNil(outside) )
+  { cairo_save(CR);
+    cairo_new_path(CR);
+    cairo_set_fill_rule(CR, CAIRO_FILL_RULE_EVEN_ODD);
+    cairo_rectangle(CR, x, y, w, h);
+    my_cairo_rounded_rectangle(CR, x, y, w, h, r, true);
+    r_fillpattern(outside, NAME_background);
+    pce_cairo_set_source_fill(CR, context.fill);
+    cairo_fill(CR);
+    cairo_restore(CR);
+  }
+
+  if ( context.pen )
+  { if ( r > 0 )
+      my_cairo_rounded_rectangle(CR, x+lw, y+lw, w-2*lw, h-2*lw,
+				 max(0, r-lw), false);
+    else
+    { cairo_new_path(CR);
+      cairo_rectangle(CR, x+lw, y+lw, w-2*lw, h-2*lw);
+    }
+    cairo_set_line_width(CR, context.pen);
     pce_cairo_set_source_color(CR, context.colour);
     cairo_stroke(CR);
   }
@@ -2908,11 +2962,9 @@ str_label(PceString s, int acc, FontObj font,
   str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
   str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
 
-  if ( flags & LABEL_INACTIVE )
+  if ( flags & LABEL_INACTIVE )		/* greyed out, flat */
   { Colour old = context.colour; /* ignore "fixed_colours" */
-    context.colour = WHITE_COLOUR;
 
-    str_draw_text_lines(acc, font, nlines, lines, 1, 1);
     context.colour = ws_3d_grey();
     str_draw_text_lines(acc, font, nlines, lines, 0, 0);
     context.colour = old;

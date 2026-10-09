@@ -385,6 +385,20 @@ getWindowGraphical(Graphical gr)
 }
 
 
+/* True if keys typed now go to `gr`: it has the keyboard focus of a
+   window that has the input focus.
+*/
+
+bool
+hasInputFocusGraphical(Graphical gr)
+{ PceWindow sw = getWindowGraphical(gr);
+
+  return ( sw &&
+	   sw->keyboard_focus == gr &&
+	   sw->input_focus == ON );
+}
+
+
 FrameObj
 getFrameGraphical(Graphical gr)
 { Graphical root = getRootGraphical(gr);

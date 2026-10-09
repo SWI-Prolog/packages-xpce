@@ -249,6 +249,14 @@ although the latter is the principal way of manipulating a text.
     	quoted_insert ->
     		_quoted_insert
 
+- editor<->focus_border: bool
+    If @on (default), the editor has the look of a text entry field:
+    an outline with rounded corners, drawn in the class variable
+    `accent_colour` while it has the keyboard focus.  Class view sets
+    it to @off, as there the editor fills the window and the window is
+    its frame: the outline then has square corners and does not show
+    the focus.
+
 - editor<-font: font
     Font used to display the contents of the associated text_buffer.  Class
     editor can handle both proportional and non-proportional fonts.

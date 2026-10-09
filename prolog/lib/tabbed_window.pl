@@ -392,15 +392,14 @@ class_variable(edit_width, int, 200,
 edit_label(T) :->
     "Put an editor over my label"::
     get(T, editable_label, @on),
-    get(T, label_height, H),
-    H > 0,                              % a lone tab may show no label
+    get(T, label_area, area(_, Y, _, H)), % a lone tab may show no label
     get(T, device, Stack),
     send(T, end_label_edit),
     get(T, label_offset, X),
     get(T, edit_label_width, X, W),
     send(Stack, hide_tab_buttons),      % one lies over the label I cover
-    send(Stack, display, new(TI, tab_label_item(T)), point(X, 0)),
-    send(TI, set, X, 0, W, H),
+    send(Stack, display, new(TI, tab_label_item(T)), point(X, Y)),
+    send(TI, set, X, Y, W, H),
     get(Stack, window, TW),
     take_frame_focus(TW, TI),
     send(TW, keyboard_focus, TI),

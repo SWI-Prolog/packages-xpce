@@ -35,8 +35,15 @@
 #include <h/kernel.h>
 #include <h/dialog.h>
 
-#define HIDDEN_TAB_SHRINK 3
-#define LOWER_LABEL 2
+/* Geometry of the label row: each label is a pill (see draw_label())
+   PILL_VPAD above and below its text, PILL_HGAP from its neighbours and
+   PILL_GAP above the box with the contents.  The text starts half the
+   height of the pill (its radius) from the ends.
+*/
+
+#define PILL_VPAD 3
+#define PILL_HGAP 2
+#define PILL_GAP  5
 
 		/********************************
 		*            CREATE		*
@@ -60,7 +67,7 @@ initialiseTab(Tab t, Name name)
 
 /* Room for the close button: a cross beside the text rather than a button
    around it, so it is drawn a little smaller than the label is tall and
-   sits on the baseline of the text it belongs to.
+   is centred in the pill of the label.
 */
 
 static int
@@ -68,6 +75,19 @@ close_button_size(int label_height)
 { int s = (label_height * 55) / 100;
 
   return s < 6 ? 6 : s;
+}
+
+
+static int
+pill_height(int lh)
+{ return lh - PILL_GAP;
+}
+
+/* Room between the start of the label and its text */
+
+static int
+pill_padding(int lh)
+{ return PILL_HGAP + pill_height(lh)/2;
 }
 
 
@@ -80,17 +100,17 @@ computeLabelTab(Tab t)
 
     if ( notNil(t->label) && t->label != NAME_ )
     { compute_label_size_dialog_group((DialogGroup) t, &w, &h);
-      if ( instanceOfObject(t->label, ClassCharArray) )
-	h += 2+HIDDEN_TAB_SHRINK;
-      w += 2*ex;
+      h += 2*PILL_VPAD + PILL_GAP;
+      h = max(h, valInt(minsize->h));
+      w += 2*pill_padding(h);
     } else				/* no label: the box shrinks to its */
     { w = 2*ex;				/* minimum rather than keeping the */
-      h = valInt(getHeightFont(t->label_font)) + 2 + HIDDEN_TAB_SHRINK;
+      h = valInt(getHeightFont(t->label_font)) + 2*PILL_VPAD + PILL_GAP;
     }					/* size of a label it no longer has */
     w = max(w, valInt(minsize->w));
     h = max(h, valInt(minsize->h));
     if ( t->closable == ON )		/* room for the button on the right; */
-      w += close_button_size(h) + ex/2;	/* <-label_format is left, so it */
+      w += close_button_size(pill_height(h)) + ex/2; /* <-label_format is left, so it */
 					/* lands there */
 
     if ( t->label_size != minsize )
@@ -132,23 +152,34 @@ label_width_tab(Tab t)
 }
 
 
+/* The pill of my label, relative to my area */
+
+static Area
+getLabelAreaTab(Tab t)
+{ int lh = labelHeightTab(t);
+
+  if ( lh > 0 )
+    answer(answerObject(ClassArea,
+			toInt(valInt(t->label_offset) + PILL_HGAP), ZERO,
+			toInt(valInt(t->label_size->w) - 2*PILL_HGAP),
+			toInt(pill_height(lh)), EAV));
+
+  fail;
+}
+
+
 static Area
 getLabelButtonAreaTab(Tab t)
 { int lh = labelHeightTab(t);
 
   if ( lh > 0 )
-  { int s    = close_button_size(lh);
-    int ex   = valInt(getAvgCharWidthFont(t->label_font));
-    int gap  = ex/2;
-    int box  = lh - HIDDEN_TAB_SHRINK;	/* the strip the label is drawn in */
-    int fh   = valInt(getHeightFont(t->label_font));
-    int top  = HIDDEN_TAB_SHRINK + LOWER_LABEL + (box-fh)/2;
-    int base = top + valInt(getAscentFont(t->label_font));
+  { int ph = pill_height(lh);		/* at the end of the text, */
+    int s  = close_button_size(ph);	/* centred in the pill */
 
     answer(answerObject(ClassArea,
 			toInt(valInt(t->label_offset) +
-			      valInt(t->label_size->w) - gap - s),
-			toInt(base - s),
+			      valInt(t->label_size->w) - pill_padding(lh) - s),
+			toInt((ph-s)/2),
 			toInt(s), toInt(s), EAV));
   }
 
@@ -239,15 +270,13 @@ geometryTab(Tab t, Int x, Int y, Int w, Int h)
 
 status
 changedLabelImageTab(Tab t)
-{ Elevation e = getClassVariableValueObject(t, NAME_elevation);
-  Int eh = e->height;
-  BoolObj old = t->displayed;
+{ BoolObj old = t->displayed;
 
   t->displayed = ON;
   changedImageGraphical(t,
 			t->label_offset, ZERO,
 			t->label_size->w,
-			add(t->label_size->h, eh));
+			add(t->label_size->h, ONE));
   t->displayed = old;
 
   succeed;
@@ -338,17 +367,16 @@ statusTab(Tab t, Name stat)
 		*             REDRAW		*
 		********************************/
 
-#define GOTO(p, a, b)	 p->x = (a), p->y = (b), p++
-#define RMOVE(p, dx, dy) p->x = p[-1].x + (dx), p->y = p[-1].y + (dy), p++
-
-
-/* Feedback for the tab on top.  Moving the background of the hidden
- * tabs a little towards the text colour and dimming their labels works
- * for light and dark themes alike: the tab on top has the background of
- * its contents.  An indicator line in the accent colour on top of the
- * label of the tab on top makes it stand out clearly, as many current
- * applications do.
+/* The look of a tab.  The label of a tab is a pill: a box with a half
+ * circle at each end.  The pill of the tab on top has an edge in the
+ * accent colour (<-indicator_colour, <-indicator_width).  The pills of
+ * the hidden tabs are filled with the background moved a little towards
+ * the text colour and have a dimmed label, which works for light and dark
+ * themes alike.  The contents of the tab on top are in a flat rounded box
+ * below the labels.
  */
+
+#define BOX_RADIUS 6			/* corners of the contents box */
 
 static Num
 hidden_fill_factor(void)
@@ -360,137 +388,95 @@ hidden_label_factor(void)
 { return toNum(0.35);
 }
 
-static void
-draw_indicator(Tab t, int x, int y, int w)
-{ Any c = getClassVariableValueObject(t, NAME_indicatorColour);
-  Int iw = getClassVariableValueObject(t, NAME_indicatorWidth);
 
-  if ( c && instanceOfObject(c, ClassColour) && iw && valInt(iw) > 0 )
-    r_fill(x, y, w, valInt(iw), c);
+static void
+draw_contents(Tab t, Area a, int x, int y, int w, int h)
+{ Cell cell;
+  Int ax = a->x, ay = a->y;
+  Point offset = t->offset;
+  int ox = valInt(offset->x);
+  int oy = valInt(offset->y);
+  Any old = r_colour(getClassVariableValueObject(t, NAME_borderColour));
+
+  r_thickness(1);
+  r_dash(NAME_none);
+  r_smooth_box(x, y, w, h, BOX_RADIUS, NIL);
+  r_colour(old);
+
+  d_clip(x+1, y+1, w-2, h-2);
+  assign(a, x, toInt(valInt(a->x) - ox));
+  assign(a, y, toInt(valInt(a->y) - oy));
+  r_offset(ox, oy);
+
+  for_cell(cell, t->graphicals)
+    RedrawArea(cell->value, a);
+
+  r_offset(-ox, -oy);
+  assign(a, x, ax);
+  assign(a, y, ay);
+  d_clip_done();
+}
+
+
+static void
+draw_label(Tab t, int x, int y, int lw, int lh, bool on_top, int lflags)
+{ int px = x + PILL_HGAP;		/* the pill */
+  int py = y;
+  int pw = lw - 2*PILL_HGAP;
+  int ph = pill_height(lh);
+  Any fg = r_colour(DEFAULT);
+  Any bg = r_background(DEFAULT);
+  Any lfg = NULL;
+
+  r_colour(fg);
+  r_background(bg);
+  r_dash(NAME_none);
+  if ( on_top )
+  { Any c = getClassVariableValueObject(t, NAME_indicatorColour);
+    Int iw = getClassVariableValueObject(t, NAME_indicatorWidth);
+
+    if ( c && instanceOfObject(c, ClassColour) && iw && valInt(iw) > 0 )
+    { r_colour(c);
+      r_thickness(valInt(iw));
+      r_smooth_box(px, py, pw, ph, ph/2.0, NIL);
+      r_thickness(1);
+      r_colour(fg);
+    }
+  } else if ( instanceOfObject(bg, ClassColour) &&
+	      instanceOfObject(fg, ClassColour) )
+  { r_thickness(0);
+    r_smooth_box(px, py, pw, ph, ph/2.0, getMixColour(bg, fg,
+						      hidden_fill_factor()));
+    r_thickness(1);
+    lfg = getMixColour(fg, bg, hidden_label_factor());
+  }
+
+  if ( lfg )
+    r_colour(lfg);
+  RedrawLabelDialogGroup((DialogGroup)t, 0,
+			 x+pill_padding(lh), py,
+			 lw-2*pill_padding(lh), ph,
+			 t->label_format, NAME_center,
+			 lflags);
+  if ( lfg )
+    r_colour(fg);
 }
 
 
 static status
 RedrawAreaTab(Tab t, Area a)
 { int x, y, w, h;
-  Elevation e = getClassVariableValueObject(t, NAME_elevation);
   int lh      = labelHeightTab(t);
-  int lw      = label_width_tab(t)-1;
+  int lw      = label_width_tab(t);
   int loff    = valInt(t->label_offset);
-  int eh      = valInt(e->height);
-  int ex      = valInt(getAvgCharWidthFont(t->label_font));
-  int r       = 1;			/* radius of label corners */
   int lflags  = (t->active == OFF ? LABEL_INACTIVE : 0);
 
   initialiseDeviceGraphical(t, &x, &y, &w, &h);
-  w -= 1;
-  h -= 1;
 
-  if ( lh == 0 )			/* no label: a plain box */
-  { if ( t->status == NAME_onTop )
-    { Cell cell;
-      Int ax = a->x, ay = a->y;
-      Point offset = t->offset;
-      int ox = valInt(offset->x);
-      int oy = valInt(offset->y);
-
-      r_3d_box(x, y, w, h, 0, e, true);
-
-      assign(a, x, toInt(valInt(a->x) - ox));
-      assign(a, y, toInt(valInt(a->y) - oy));
-      r_offset(ox, oy);
-
-      d_clip(x+eh, y+eh, w-2*eh, h-2*eh);
-      for_cell(cell, t->graphicals)
-	RedrawArea(cell->value, a);
-      d_clip_done();
-
-      r_offset(-ox, -oy);
-      assign(a, x, ax);
-      assign(a, y, ay);
-    }
-  } else if ( t->status == NAME_onTop )
-  { fpoint pts[10];
-    FPoint p = pts;
-
-    if ( loff == 0 )
-    { GOTO(p, x, y+r);			/* top-left of label */
-    } else
-    { GOTO(p, x, y+lh);			/* top-left of contents */
-      RMOVE(p, loff, 0);
-      RMOVE(p, 0, -lh+r);		/* top-left of label */
-    }
-    RMOVE(p, r, -r);
-    RMOVE(p, lw-2*r, 0);		/* top-right of label */
-    RMOVE(p, r, r);
-    RMOVE(p, 0, lh-r);
-    GOTO(p, x+w, y+lh);
-    RMOVE(p, 0, h-lh);
-    RMOVE(p, -w, 0);
-
-    r_3d_rectangular_polygon(p-pts, pts, e, DRAW_3D_FILLED|DRAW_3D_CLOSED);
-    draw_indicator(t, x+loff+1, y, lw-1);
-
-    RedrawLabelDialogGroup((DialogGroup)t, 0,
-			   x+loff+ex, y+HIDDEN_TAB_SHRINK+LOWER_LABEL, lw-2*ex, lh-HIDDEN_TAB_SHRINK,
-			   t->label_format, NAME_center,
-			   lflags);
-
-    { Cell cell;
-      Int ax = a->x, ay = a->y;
-      Point offset = t->offset;
-      int ox = valInt(offset->x);
-      int oy = valInt(offset->y);
-
-      assign(a, x, toInt(valInt(a->x) - ox));
-      assign(a, y, toInt(valInt(a->y) - oy));
-      r_offset(ox, oy);
-
-      d_clip(x+eh, y+eh, w-2*eh, h-2*eh); /* check if needed! */
-      for_cell(cell, t->graphicals)
-	RedrawArea(cell->value, a);
-      d_clip_done();
-
-      r_offset(-ox, -oy);
-      assign(a, x, ax);
-      assign(a, y, ay);
-    }
-  } else /* if ( t->status == NAME_hidden ) */
-  { fpoint pts[6];
-    FPoint p = pts;
-    Any obg = r_background(DEFAULT);
-    Any fg  = r_colour(DEFAULT);
-    Any lfg = NULL;
-
-    r_colour(fg);
-    y  += HIDDEN_TAB_SHRINK;
-    lh -= HIDDEN_TAB_SHRINK;
-
-    if ( instanceOfObject(obg, ClassColour) &&
-	 instanceOfObject(fg, ClassColour) )
-    { r_fill(x+loff+1, y, lw-1, lh,
-	     getMixColour(obg, fg, hidden_fill_factor()));
-      lfg = getMixColour(fg, obg, hidden_label_factor());
-    }
-
-    GOTO(p, x+loff, y+lh);		/* bottom-left */
-    RMOVE(p, 0, -lh+r+1);		/* top-left */
-    RMOVE(p, r, -r);
-    RMOVE(p, lw-2*r, 0);		/* top-right */
-    RMOVE(p, r, r);
-    RMOVE(p, 0, lh-r);			/* bottom-right */
-
-    r_3d_rectangular_polygon(p-pts, pts, e, DRAW_3D_FILLED);
-
-    if ( lfg )
-      r_colour(lfg);
-    RedrawLabelDialogGroup((DialogGroup)t, 0,
-			   x+loff+ex, y+LOWER_LABEL, lw-2*ex, lh,
-			   t->label_format, NAME_center,
-			   lflags);
-    if ( lfg )
-      r_colour(fg);
-  }
+  if ( lh > 0 )
+    draw_label(t, x+loff, y, lw, lh, t->status == NAME_onTop, lflags);
+  if ( t->status == NAME_onTop )
+    draw_contents(t, a, x, y+lh, w, h-lh);
 
   return RedrawAreaGraphical(t, a);
 }
@@ -670,6 +656,8 @@ static getdecl get_tab[] =
      NAME_layout, "Height my label takes (0 if it is not shown)"),
   GM(NAME_closeButtonArea, 0, "area", NULL, getCloseButtonAreaTab,
      NAME_layout, "Where my close button goes, relative to my area"),
+  GM(NAME_labelArea, 0, "area", NULL, getLabelAreaTab,
+     NAME_layout, "The box of my label, relative to my area"),
   GM(NAME_labelButtonArea, 0, "area", NULL, getLabelButtonAreaTab,
      NAME_layout, "Where a button on my label goes, relative to my area")
 };
@@ -677,9 +665,7 @@ static getdecl get_tab[] =
 /* Resources */
 
 static classvardecl rc_tab[] =
-{ RC(NAME_elevation, "elevation", "1",
-     "Elevation above environment"),
-  RC(NAME_inactiveColour, "colour*",
+{ RC(NAME_inactiveColour, "colour*",
      "@nil", NULL),
   RC(NAME_gap, "size", "size(15, 8)",
      "Distance between items in X and Y"),
@@ -694,9 +680,9 @@ static classvardecl rc_tab[] =
   RC(NAME_closable, "bool", "@off",
      "Label carries a button to close the tab"),
   RC(NAME_indicatorColour, "colour*", "ui_accent",
-     "Colour of the line on top of the label of the tab on top"),
-  RC(NAME_indicatorWidth, "0..", "3",
-     "Width of this line")
+     "Colour of the edge of the label of the tab on top"),
+  RC(NAME_indicatorWidth, "0..", "2",
+     "Width of this edge")
 };
 
 /* Class Declaration */

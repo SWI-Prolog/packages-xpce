@@ -40,8 +40,8 @@
 #define swapInt(x, y)	{ Int z; z=x; x=y; y=z; }
 #define BOUNDS(n, l, h) ((n) > (h) ? (h) : (n) < (l) ? (l) : (n))
 #define MIN_BUBBLE 6			/* smallest variable bubble */
-#define SB_THUMB_FRACTION 5		/* `win' thumb: 1/5 of the width */
-#define SB_THUMB_FRACTION_HOVER 3	/* ... and 1/3 when hovered */
+#define SB_THUMB_WIDTH 0.4		/* thumb: this part of the width */
+#define SB_THUMB_WIDTH_HOVER 0.6	/* ... while the pointer is in it */
 
 #define Repeating(sb) ((sb)->status == NAME_repeatDelay || \
 		       (sb)->status == NAME_repeat)
@@ -117,16 +117,17 @@ initialiseScrollBar(ScrollBar s, Any obj, Name orientation, Message msg)
 		*            COMPUTE		*
 		********************************/
 
+/* The line up/down arrows at the ends of the bar are only there if the
+   class variable `arrows` is @on.  They are square.
+*/
+
 static int
 arrow_height_scrollbar(ScrollBar sb)
-{ int ah;
+{ if ( getClassVariableValueObject(sb, NAME_arrows) != ON )
+    return 0;
 
-  if ( (ah = ws_arrow_height_scrollbar(sb)) < 0 )
-  { ah = valInt(sb->orientation == NAME_vertical ? sb->area->w
+  return valInt(sb->orientation == NAME_vertical ? sb->area->w
 						 : sb->area->h);
-  }
-
-  return ah;
 }
 
 
@@ -283,275 +284,171 @@ compute_bubble(ScrollBar s, struct bubble_info *bi,
 		 *		REDRAW		*
 		 *******************************/
 
+/* The look of a scroll bar: a flat trough in the class variable
+   `background` with a rounded thumb.  The thumb takes SB_THUMB_WIDTH of
+   the width of the bar and SB_THUMB_WIDTH_HOVER while the pointer is in
+   the bar.  Its colour is the class variable `thumb_colour` or, if this
+   is @default, a clearly visible variation of the trough colour.  The
+   optional arrows (class variable `arrows`) are chevrons.
+*/
+
 static void
-sb_init_draw_data(ScrollBar s, Area a, SbDrawData d, Any bg)
-{ int m;
-
-  initialiseDeviceGraphical(s, &d->x, &d->y, &d->w, &d->h);
+sb_init_draw_data(ScrollBar s, Area a, SbDrawData d)
+{ initialiseDeviceGraphical(s, &d->x, &d->y, &d->w, &d->h);
   NormaliseArea(d->x, d->y, d->w, d->h);
-
-  if ( instanceOfObject(bg, ClassElevation) )
-  { Elevation z = bg;
-
-    r_3d_box(d->x, d->y, d->w, d->h, 0, bg, false);
-
-    m = abs((int)valInt(z->height));
-    d->x += m;
-    d->y += m;
-    d->w -= 2*m;
-    d->h -= 2*m;
-  } else
-    m = 0;
 
   d->vertical = (s->orientation == NAME_vertical);
   d->arrow = arrow_height_scrollbar(s);
-  compute_bubble(s, &d->bubble,
-		 m ? d->arrow - 1 : d->arrow,
-		 MIN_BUBBLE, FALSE);
-  d->bubble.start -= m;
-  d->arrow -= 2*m;
+  compute_bubble(s, &d->bubble, d->arrow, MIN_BUBBLE, FALSE);
 }
 
-static Elevation
-getElevationScrollBar(ScrollBar s)
-{ Elevation z = getClassVariableValueObject(s, NAME_elevation);
 
-					/* TBD: make default one */
-  return z;
+static Any
+trough_colour(ScrollBar s)
+{ Any bg = getClassVariableValueObject(s, NAME_background);
+
+  if ( bg && instanceOfObject(bg, ClassElevation) )
+    bg = ((Elevation)bg)->colour;	/* compatibility */
+  if ( bg && instanceOfObject(bg, ClassColour) )
+    return bg;
+
+  return NULL;
+}
+
+
+/* A clearly visible variation of the trough colour: darker for light
+   themes, lighter for dark ones.
+*/
+
+static Any
+thumb_fill(ScrollBar s, Any trough)
+{ Any c = getClassVariableValueObject(s, NAME_thumbColour);
+
+  if ( c && instanceOfObject(c, ClassColour) )
+    return c;
+  if ( trough )
+  { Int i = getIntensityColour(trough);
+
+    if ( i && valInt(i) >= 128 )
+      return getReduceColour(trough, toNum(0.55));
+    else
+      return getHiliteColour(trough, toNum(0.45));
+  }
+
+  return GREY50_COLOUR;
 }
 
 
 static void
-draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up)
-{ Elevation z = getElevationScrollBar(s);
+draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, bool down)
+{ double cw = min(w, h)*0.45;		/* chevron width */
+  double ch = cw/2.0;
+  double cx = x + (w-cw)/2.0;
+  double cy = y + (h-ch)/2.0;
+  fpoint pts[3];
+  Any c = getClassVariableValueObject(s, NAME_arrowColour);
+  Any old = NULL;
+  double pen;
 
-  DEBUG(NAME_arrow, Cprintf("Arrow box(%d, %d, %d, %d)\n", x, y, w, h));
+  if ( down )
+    r_fill(x, y, w, h, getClassVariableValueObject(s, NAME_pressedColour));
 
-  Image img;
-  int iw, ih;
-
-  r_thickness(valInt(s->pen));
-
-  if ( up )
-    r_3d_box(x, y, w, h, 0, z, TRUE);
-  else
-    r_box(x, y, w, h, 0, isDefault(z->colour) ? NIL : (Any) z->colour);
-
-  realiseClass(ClassImage);
-
-       if ( which == NAME_up )       img = SCROLL_UP_IMAGE;
-  else if ( which == NAME_down )     img = SCROLL_DOWN_IMAGE;
-  else if ( which == NAME_left )     img = SCROLL_LEFT_IMAGE;
-  else /* ( which == NAME_right ) */ img = SCROLL_RIGHT_IMAGE;
-
-  if ( img )
-  { Any c = getClassVariableValueObject(s, NAME_arrowColour);
-    Any old = NULL;
-
-    if ( c && notDefault(c) )
-      old = r_colour(c);
-    iw = valInt(img->size->w);
-    ih = valInt(img->size->h);
-
-    r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih);
-    if ( old )
-      r_colour(old);
+  if ( which == NAME_up )
+  { pts[0] = (fpoint){cx, cy+ch}; pts[1] = (fpoint){cx+cw/2.0, cy};
+    pts[2] = (fpoint){cx+cw, cy+ch};
+  } else if ( which == NAME_down )
+  { pts[0] = (fpoint){cx, cy}; pts[1] = (fpoint){cx+cw/2.0, cy+ch};
+    pts[2] = (fpoint){cx+cw, cy};
   } else
-  { Cprintf("No scroll_bar arrow image\n");
+  { cx = x + (w-ch)/2.0;
+    cy = y + (h-cw)/2.0;
+    if ( which == NAME_left )
+    { pts[0] = (fpoint){cx+ch, cy}; pts[1] = (fpoint){cx, cy+cw/2.0};
+      pts[2] = (fpoint){cx+ch, cy+cw};
+    } else
+    { pts[0] = (fpoint){cx, cy}; pts[1] = (fpoint){cx+ch, cy+cw/2.0};
+      pts[2] = (fpoint){cx, cy+cw};
+    }
   }
+
+  if ( c && instanceOfObject(c, ClassColour) )
+    old = r_colour(c);
+  pen = r_thickness(1.5);
+  r_dash(NAME_none);
+  r_polygon(pts, 3, FALSE);
+  r_thickness(pen);
+  if ( old )
+    r_colour(old);
 }
 
 
 static void
 draw_arrows(ScrollBar s, SbDrawData d)
-{ int faup = TRUE;			/* first-arrow-up */
-  int saup = TRUE;			/* second-arrow-up */
+{ bool fdown = false;			/* first arrow pressed */
+  bool sdown = false;			/* second arrow pressed */
   int ah = d->arrow;
 
   if ( Repeating(s) && s->unit == NAME_line )
   { if ( s->direction == NAME_forwards )
-      saup = FALSE;
+      sdown = true;
     else
-      faup = FALSE;
+      fdown = true;
   }
 
   if ( d->vertical )
-  { draw_arrow(s, d->x, d->y, d->w, ah, NAME_up, faup);
-    draw_arrow(s, d->x, d->y + d->h - ah, d->w, ah, NAME_down, saup);
+  { draw_arrow(s, d->x, d->y, d->w, ah, NAME_up, fdown);
+    draw_arrow(s, d->x, d->y + d->h - ah, d->w, ah, NAME_down, sdown);
   } else
-  { draw_arrow(s, d->x, d->y, ah, d->h, NAME_left, faup);
-    draw_arrow(s, d->x + d->w-ah, d->y, ah, d->h, NAME_right, saup);
+  { draw_arrow(s, d->x, d->y, ah, d->h, NAME_left, fdown);
+    draw_arrow(s, d->x + d->w-ah, d->y, ah, d->h, NAME_right, sdown);
   }
-}
-
-
-/* Colour for the thumb of a `win' look scroll bar: a clearly visible
-   variation of the trough colour.  Darken for light themes, lighten
-   for dark ones.
-*/
-
-static Colour
-thumb_colour(Colour trough)
-{ Int i = getIntensityColour(trough);
-
-  if ( i && valInt(i) >= 128 )
-    return getReduceColour(trough, toNum(0.55));
-  else
-    return getHiliteColour(trough, toNum(0.45));
-}
-
-
-/* Draw the thumb of a `win' look scroll bar as a bar of about
-   1/SB_THUMB_FRACTION of the width of the scroll bar, centred in the
-   trough.  While the pointer is inside the scroll bar the thumb is
-   widened to 1/SB_THUMB_FRACTION_HOVER.  The area not covered by the
-   thumb is filled with the trough colour.
-*/
-
-static void
-draw_win_thumb(int x, int y, int w, int h, bool vertical,
-	       Colour trough, bool hover)
-{ int frac = hover ? SB_THUMB_FRACTION_HOVER : SB_THUMB_FRACTION;
-  int t;
-
-  r_fill(x, y, w, h, trough);
-
-  if ( vertical )
-  { t = (w + frac/2)/frac;
-    if ( t < 1 )
-      t = 1;
-    x += (w-t)/2;
-    w  = t;
-  } else
-  { t = (h + frac/2)/frac;
-    if ( t < 1 )
-      t = 1;
-    y += (h-t)/2;
-    h  = t;
-  }
-
-  r_fill(x, y, w, h, thumb_colour(trough));
 }
 
 
 static void
-draw_bubble(ScrollBar s, SbDrawData d)
-{ int p = valInt(s->pen);
-  Elevation z = getClassVariableValueObject(s, NAME_elevation);
-  int x = d->x, y = d->y, w = d->w, h = d->h;
-  BubbleInfo bi = &d->bubble;
-  bool pf=false, pb=false;		/* preview forward/backward */
-  Colour trough = NULL;			/* `win' look trough colour */
-  bool hover = (s->hover == ON);
-
-  if ( !instanceOfObject(z, ClassElevation) )
-    z = NULL;
-
-  if ( s->look == NAME_win && z && instanceOfObject(z->colour, ClassColour) )
-    trough = z->colour;
-
-  if ( s->look == NAME_win &&
-       Repeating(s) &&
-       s->unit == NAME_page )
-  { if ( s->direction == NAME_forwards )
-      pf = true;
-    else
-      pb = true;
-  }
+draw_thumb(ScrollBar s, SbDrawData d, Any trough)
+{ BubbleInfo bi = &d->bubble;
+  double part = (s->hover == ON ? SB_THUMB_WIDTH_HOVER : SB_THUMB_WIDTH);
+  Any fill = thumb_fill(s, trough);
+  double x, y, w, h, t;
 
   if ( d->vertical )
-  { int ym, hm;
+  { t = max(2.0, d->w * part);
+    x = d->x + (d->w - t)/2.0;
+    y = d->y + bi->start + 1;
+    w = t;
+    h = bi->length - 2;
+  } else
+  { t = max(2.0, d->h * part);
+    x = d->x + bi->start + 1;
+    y = d->y + (d->h - t)/2.0;
+    w = bi->length - 2;
+    h = t;
+  }
 
-    x += p;
-    w -= 2*p;
-
-    ym = y+bi->bar_start; hm = bi->start - bi->bar_start;
-    if ( pb )
-      r_fill(x, ym, w, hm, BLACK_COLOUR);
-    else if ( trough )
-      r_fill(x, ym, w, hm, trough);
-    else
-      r_clear(x, ym, w, hm);
-
-    ym = y+bi->start;
-    hm = bi->length;
-    if ( !ws_draw_sb_thumb(x, ym, w, hm) )
-    { if ( trough )
-	draw_win_thumb(x, ym, w, hm, true, trough, hover);
-      else if ( z )
-	r_3d_box(x, ym, w, hm, 0, z, true);
-      else
-	r_fill(x, ym, w, hm, GREY50_COLOUR);
-    }
-
-    ym += hm;
-    hm = (bi->bar_start+bi->bar_length) - (bi->start+bi->length);
-    if ( hm > 0 )
-    { if ( pf )
-	r_fill(x, ym, w, hm, BLACK_COLOUR);
-      else if ( trough )
-	r_fill(x, ym, w, hm, trough);
-      else
-	r_clear(x, ym, w, hm);
-    }
-  } else /* horizontal */
-  { int xm, wm;
-
-    y += p;
-    h -= 2*p;
-
-    xm = x+bi->bar_start; wm = bi->start - bi->bar_start;
-    if ( pb )
-      r_fill(xm, y, wm, h, BLACK_COLOUR);
-    else if ( trough )
-      r_fill(xm, y, wm, h, trough);
-    else
-      r_clear(xm, y, wm, h);
-
-    xm = x+bi->start;
-    wm = bi->length;
-    if ( !ws_draw_sb_thumb(xm, y, wm, h) )
-    { if ( trough )
-	draw_win_thumb(xm, y, wm, h, false, trough, hover);
-      else if ( z )
-	r_3d_box(xm, y, wm, h, 0, z, true);
-      else
-	r_fill(xm, y, wm, h, GREY50_COLOUR);
-    }
-
-    xm += wm;
-    wm = (bi->bar_start+bi->bar_length) - (bi->start+bi->length);
-    if ( wm > 0 )
-    { if ( pf )
-	r_fill(xm, y, wm, h, BLACK_COLOUR);
-      else if ( trough )
-	r_fill(xm, y, wm, h, trough);
-      else
-	r_clear(xm, y, wm, h);
-    }
+  if ( w > 0 && h > 0 )
+  { r_thickness(0);
+    r_smooth_box(x, y, w, h, t/2.0, fill);
+    r_thickness(1);
   }
 }
 
 
 static status
 RedrawAreaScrollBar(ScrollBar s, Area a)
-{ Any bg = getClassVariableValueObject(s, NAME_background);
+{ Any trough = trough_colour(s);
   Any obg = NIL;
-  Elevation z = NIL;
-
-  if ( bg )
-  { if ( instanceOfObject(bg, ClassColour) )
-      obg = r_background(bg);
-    else if ( instanceOfObject(bg, ClassElevation) )
-    { z = bg;
-      if ( instanceOfObject(z->colour, ClassColour) )
-	obg = r_background(z->colour);
-    }
-  }
-
   struct sb_draw_data d;
-  sb_init_draw_data(s, a, &d, z);
-  draw_bubble(s, &d);
+
+  if ( trough )
+    obg = r_background(trough);
+
+  sb_init_draw_data(s, a, &d);
+  if ( trough )
+    r_fill(d.x, d.y, d.w, d.h, trough);
+  else
+    r_clear(d.x, d.y, d.w, d.h);
+  draw_thumb(s, &d, trough);
   if ( d.arrow )
     draw_arrows(s, &d);
 
@@ -661,14 +558,11 @@ barEventScrollBar(ScrollBar s, EventObj ev)
 
   if ( isAEvent(ev, NAME_msLeft) )
   { int vertical = (s->orientation == NAME_vertical);
-    int ah = ws_arrow_height_scrollbar(s);
+    int ah = arrow_height_scrollbar(s);
     Int w = s->area->w;
     Int h = s->area->h;
     int offset = offset_event_scrollbar(s, ev);
     int len = (vertical ? valInt(h) : valInt(w));
-
-    if ( ah < 0 )
-      ah = (vertical ? valInt(w) : valInt(h));
 
     if ( isAEvent(ev, NAME_msLeftDown) )
     { DEBUG(NAME_scrollBar,
@@ -814,16 +708,14 @@ forwardScrollBar(ScrollBar s)
 }
 
 
-/* The `win' look draws a wider thumb while the pointer is inside the
-   scroll bar.
+/* The thumb is wider while the pointer is inside the scroll bar.
 */
 
 static status
 hoverScrollBar(ScrollBar s, BoolObj val)
 { if ( s->hover != val )
   { assign(s, hover, val);
-    if ( s->look == NAME_win )
-      CHANGING_GRAPHICAL(s, changedEntireImageGraphical(s));
+    CHANGING_GRAPHICAL(s, changedEntireImageGraphical(s));
   }
 
   succeed;
@@ -1067,30 +959,30 @@ static getdecl get_scrollBar[] =
 /* Resources */
 
 static classvardecl rc_scrollBar[] =
-{ RC(NAME_background, "[elevation|colour]",
-     UXWIN("elevation(@nil, 1, ui_scrollbar_background)",
-	   "ui_scrollbar_background"),
-     "Colour of background parts"),
+{ RC(NAME_arrows, "bool", "@off",
+     "Show line up/down arrows at the ends"),
+  RC(NAME_background, "[elevation|colour]", "ui_scrollbar_background",
+     "Colour of the trough"),
   RC(NAME_colour, "[colour]", "@_dialog_bg",
      "Colour of foreground parts"),
   RC(NAME_arrowColour, "[colour]", "ui_button_foreground",
      "Colour of the line up/down arrows"),
   RC(NAME_distance, "int", UXWIN("2", "0"),
      "Distance to graphical"),
-  RC(NAME_elevation, "elevation*",
-     UXWIN("elevation(@nil, 1, @_dialog_bg)",
-	   "elevation(@nil, 2, ui_button_background)"),
-     "3-D effect elevation"),
   RC(NAME_look, "{xpce,win}", UXWIN("xpce", "win"),
-     "Look-and-feel"),
+     "Ignored: scroll bars have one look"),
   RC(NAME_pen, "int", UXWIN("@_win_pen", "0"),
      "Thickness of surrounding box"),
+  RC(NAME_pressedColour, "colour", "ui_button_pressed",
+     "Background of a pressed arrow"),
   RC(NAME_placement, "chain", "[right,bottom]",
      "Relative placement"),
   RC(NAME_repeatDelay, "num", "0.35",
      "OpenLook: time to wait until start of repeat"),
   RC(NAME_repeatInterval, "num", "0.06",
      "OpenLook: interval between repeats"),
+  RC(NAME_thumbColour, "[colour]", "@default",
+     "Colour of the thumb (@default: from the background)"),
   RC(NAME_width, "[int]", UXWIN("4mm", "@default"),
      "Width of the scroll_bar"),
   RC(NAME_autoHide, "bool", "@on",

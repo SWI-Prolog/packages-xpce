@@ -56,6 +56,25 @@ established:
 
 ## Class variables {#class-scroll_bar-classvars}
 
+- scroll_bar.arrows: bool = @off
+    If @on, the scroll_bar has a line up/down (left/right) arrow at
+    each end.  Pressing an arrow scrolls one line, repeating while it
+    is held.  Without arrows, scrolling by line is left to the mouse
+    wheel and the keyboard.
+
+- scroll_bar.background: [elevation|colour] = ui_scrollbar_background
+    Colour of the trough.  For compatibility, the colour of an
+    elevation is used.
+
+- scroll_bar.thumb_colour: [colour] = @default
+    Colour of the thumb, the rounded bar that shows the part of the
+    object that is visible.  @default uses a clearly visible variation
+    of the background: darker for a light and lighter for a dark one.
+    The thumb is wider while the pointer is in the scroll_bar.
+
+- scroll_bar.pressed_colour: colour = ui_button_pressed
+    Background of a pressed arrow.
+
 - scroll_bar.repeat_interval: num = 0.06
     If the scroll_bar object has a UI for repeated scrolling, this
     class-variable determines the speed.  See also
@@ -98,12 +117,9 @@ established:
 - scroll_bar<-length: int
     *Inherits description from*: scroll_bar->bubble
 
-- scroll_bar<-look: {win,gtk}
-    Look-and-feel.  Currently only `x`, which implies compatible with the
-    scrollbars from the Xaw library.  Future version should offer Motif and
-    OpenLook compatible versions of the scrollbar.
-
-    *Inherits description from*: dialog_item-look
+- scroll_bar<-look: {xpce,win}
+    Ignored.  Scroll bars have one look, a flat trough with a rounded
+    thumb.  See the class variables.
 
 - scroll_bar<->message: [code]*
     Message executed when the user operates the scrollbar.  See the
@@ -182,7 +198,7 @@ established:
     this mechanism.
 
 - scroll_bar->event: event
-    Operate the scrollbar The exact definition depends on <-look.
+    Operate the scrollbar.
     After user-interaction that should affect the scrolled <-object,
     the scroll_bar object determines -direction, -unit and
     -amount.  Next:

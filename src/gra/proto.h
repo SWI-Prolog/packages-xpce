@@ -144,6 +144,7 @@ COMMON(status)	offsetDeviceGraphical(Any obj, int *x, int *y);
 COMMON(Area)	getAbsoluteAreaGraphical(Graphical gr, Device device);
 COMMON(Graphical) getRootGraphical(Graphical gr);
 COMMON(PceWindow) getWindowGraphical(Graphical gr);
+COMMON(bool)	hasInputFocusGraphical(Graphical gr);
 COMMON(FrameObj) getFrameGraphical(Graphical gr);
 COMMON(DisplayObj) getDisplayGraphical(Graphical gr);
 COMMON(Application) getApplicationGraphical(Graphical gr);

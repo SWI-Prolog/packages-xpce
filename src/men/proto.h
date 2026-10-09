@@ -17,6 +17,7 @@ COMMON(status)	labelDialogItem(DialogItem di, Any label);
 COMMON(status)	labelFontDialogItem(DialogItem di, FontObj font);
 COMMON(void)	r_pill(int x, int y, int w, int h, Any fill);
 COMMON(void)	r_pill_outline(int x, int y, int w, int h);
+COMMON(void)	r_chevron(double x, double y, double w, double pen);
 COMMON(int)	hasInputFocusDialogItem(Any obj);
 COMMON(status)	eventDialogItem(Any obj, EventObj ev);
 COMMON(status)	changedDialogItem(Any obj);

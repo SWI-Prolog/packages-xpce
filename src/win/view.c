@@ -76,6 +76,7 @@ editorView(View v, Editor editor)
     send(v->editor, NAME_destroy, EAV);
   }
   assign(v, editor, editor);
+  send(editor, NAME_focusBorder, OFF, EAV); /* the window is the frame */
   send(editor, NAME_set, ZERO, ZERO, EAV);
   send(v, NAME_display, editor, EAV);
   send(v, NAME_resizeMessage,

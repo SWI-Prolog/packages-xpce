@@ -34,97 +34,60 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/dialog.h>
 #include <stdbool.h>
 #include "sdlmenu.h"
 
-/**
- * Return the height of a scrollbar arrow.
- *
- * @param s Pointer to the ScrollBar.
- * @return The height in pixels.
+/* A colour of the theme, so it follows a change of theme
  */
-int
-ws_arrow_height_scrollbar(ScrollBar s)
-{ return -1;
+
+static Colour
+theme_colour(Colour *cache, const char *name)
+{ if ( !*cache )
+  { *cache = newObject(ClassColour, CtoKeyword(name), EAV);
+    lockObject(*cache, ON);
+  }
+
+  return *cache;
 }
 
-/**
- * Draw a scrollbar thumb (slider handle).
- *
- * @param x The x-coordinate.
- * @param y The y-coordinate.
- * @param w The width.
- * @param h The height.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_draw_sb_thumb(int x, int y, int w, int h)
-{ fail;
-}
+static Colour c_field, c_accent, c_separator, c_pressed;
+
 
 /**
- * Get the default 3D grey colour.
+ * Colour for greyed out (inactive) text and marks: the theme colour
+ * `ui_inactive`, so it follows a change of theme.
  *
- * @return The Colour object representing 3D grey.
+ * @return The Colour object.
  */
 Colour
 ws_3d_grey(void)
 { static Colour c;
 
-  if ( !c )
-  { c = newObject(ClassColour, CtoKeyword("grey60"), EAV);
-    lockObject(c, ON);
-  }
-
-  return c;
+  return theme_colour(&c, "ui_inactive");
 }
 
 		 /*******************************
 		 *	      TEXTITEM		*
 		 *******************************/
 
-static Elevation noedit_elevation;
-static Elevation edit_elevation;
-static Elevation button_elevation;
 
+/* Draw a chevron of width `w` centred in the box x,y,w,h, pointing
+ * down or up
+ */
 
 static void
-init_entry_resources(void)
-{ static bool done = false;
-  DisplayObj d = CurrentDisplay(NIL);
+entry_chevron(double x, double y, double w, double h, double cw, bool down)
+{ double ch = cw/2.0;
+  double cx = x + (w-cw)/2.0;
+  double cy = y + (h-ch)/2.0;
+  fpoint dpts[3] = { { cx, cy }, { cx+cw/2.0, cy+ch }, { cx+cw, cy } };
+  fpoint upts[3] = { { cx, cy+ch }, { cx+cw/2.0, cy }, { cx+cw, cy+ch } };
+  double pen = r_thickness(1.5);
 
-  if ( !done )
-  { done = true;
-
-    noedit_elevation = globalObject(NIL, ClassElevation, NIL,
-				    toInt(-1), EAV);
-    edit_elevation   = globalObject(NIL, ClassElevation, NIL,
-				    toInt(-1), d->background, EAV);
-    button_elevation = getClassVariableValueClass(ClassButton,
-						  NAME_elevation);
-  }
-}
-
-/**
- * Return the width of a combo box control.
- *
- * @param gr Pointer to the Graphical object.
- * @return Width in pixels.
- */
-int
-ws_combo_box_width(Graphical gr)
-{ return 14;
-}
-
-/**
- * Return the width of a stepper (spinbox arrows).
- *
- * @param gr Pointer to the Graphical object.
- * @return Width in pixels.
- */
-int
-ws_stepper_width(Graphical gr)
-{ return ws_combo_box_width(gr);
+  r_dash(NAME_none);
+  r_polygon(down ? dpts : upts, 3, FALSE);
+  r_thickness(pen);
 }
 
 /**
@@ -142,57 +105,61 @@ ws_entry_field_margin(void)
  * field  of specified  dimensions. If  the  field happens  to be  not
  * editable now, this is indicated by `editable'.
  *
+ * The field is a flat rounded box.  An editable field is filled with
+ * the theme colour `ui_window_background`; its border is `ui_separator`,
+ * or a wider `ui_accent` border if it has the keyboard focus.  The
+ * combo box and stepper buttons are chevrons in the `bw` pixels at the
+ * right of the field.
+ *
  * @param gr Pointer to the Graphical object.
  * @param x The x-coordinate.
  * @param y The y-coordinate.
  * @param w The width.
  * @param h The height.
+ * @param bw The width of the combo box or stepper buttons.
  * @param flags Rendering flags.
  * @return SUCCEED on success; otherwise, FAIL.
  */
 
 status
-ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
-{ init_entry_resources();
+ws_entry_field(Graphical gr, int x, int y, int w, int h, int bw, int flags)
+{ bool editable = (flags & TEXTFIELD_EDITABLE);
+  bool focus = editable && hasInputFocusDialogItem(gr);
+  Any fill = editable ? (Any)theme_colour(&c_field, "ui_window_background") : NIL;
+  Any old = r_colour(focus ? theme_colour(&c_accent, "ui_accent")
+			   : theme_colour(&c_separator, "ui_separator"));
 
-  if ( !(flags & TEXTFIELD_EDITABLE) )
-  { r_3d_box(x, y, w, h, 0, noedit_elevation, TRUE);
+  r_thickness(focus ? 2 : 1);
+  r_dash(NAME_none);
+  if ( gr->active == OFF )		/* drawn in <-inactive_colour: fade */
+  { r_push_group();
+    r_smooth_box(x, y, w, h, FIELD_RADIUS, fill);
+    r_pop_group_with_alpha(INACTIVE_ALPHA);
   } else
-  { r_3d_box(x, y, w, h, 0, edit_elevation, TRUE);
+    r_smooth_box(x, y, w, h, FIELD_RADIUS, fill);
+  r_thickness(1);
+  r_colour(editable ? old : (Any)ws_3d_grey());
 
-    if ( flags & TEXTFIELD_COMBO )
-    { int iw = valInt(SCROLL_DOWN_IMAGE->size->w);
-      int ih = valInt(SCROLL_DOWN_IMAGE->size->h);
-      int iy = y+2 + (h-4-valInt(SCROLL_DOWN_IMAGE->size->h))/2;
-      int cw = ws_combo_box_width(gr);
-      int up = !(flags & TEXTFIELD_COMBO_DOWN);
+  if ( flags & TEXTFIELD_COMBO )
+  { entry_chevron(x+w-bw, y, bw, h, 8.4,
+		  !(flags & TEXTFIELD_COMBO_DOWN));
+  }
+  if ( flags & TEXTFIELD_STEPPER )
+  { double cw = bw;
+    double bx, bh = h/2.0;
 
-      if ( cw < 0 ) cw = 14;
-      r_3d_box(x+w-cw-2, y+2, cw, h-4, 0, button_elevation, up);
-      r_image(SCROLL_DOWN_IMAGE, 0, 0, x+w-cw+(cw-iw)/2-2, iy, iw, ih);
+    bx = x+w-cw;
+
+    if ( flags & (TEXTFIELD_INCREMENT|TEXTFIELD_DECREMENT) )
+    { double by = (flags & TEXTFIELD_INCREMENT) ? y+2 : y+bh;
+
+      r_fill(bx, by, cw-2, bh-2, theme_colour(&c_pressed, "ui_button_pressed"));
     }
-    if ( flags & TEXTFIELD_STEPPER )
-    { double cw = ws_stepper_width(gr);
-      double bh = (h-4)/2.0;
-      bool b1up, b2up;
-
-      if ( cw < 0 ) cw = 14;
-      b1up = !(flags & TEXTFIELD_INCREMENT);
-      b2up = !(flags & TEXTFIELD_DECREMENT);
-
-      r_3d_box(x+w-cw-2, y+2,    cw, bh, 0, button_elevation, b1up);
-      r_3d_box(x+w-cw-2, y+2+bh, cw, bh, 0, button_elevation, b2up);
-
-      double iw = valNum(SCROLL_UP_IMAGE->size->w);
-      double ih = valNum(SCROLL_UP_IMAGE->size->h);
-      double ix = x + w - (cw+iw)/2.0;
-      double dy = (bh-ih)/2.0;
-
-      r_image(SCROLL_UP_IMAGE,   0, 0, ix, y+dy,      iw, ih);
-      r_image(SCROLL_DOWN_IMAGE, 0, 0, ix, y+h-dy-ih, iw, ih);
-    }
+    entry_chevron(bx, y+1,  cw, bh, 7, false);
+    entry_chevron(bx, y+bh-1, cw, bh, 7, true);
   }
 
+  r_colour(old);
   succeed;
 }
 
