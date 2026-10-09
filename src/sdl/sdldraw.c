@@ -2868,7 +2868,8 @@ str_draw_text_lines(int acc, FontObj font,
 	  int cw = str_width(&line->text, cn, cn+1, font);
 	  int cy = line->y+baseline+oy;
 
-	  r_underline(font, cx, cy, cw, DEFAULT, NAME_none);
+	  InvTranslate(cx, cy);		/* lines are translated; */
+	  r_underline(font, cx, cy, cw, DEFAULT, NAME_none); /* r_line() too */
 	  acc = 0;
 	  break;
 	}
