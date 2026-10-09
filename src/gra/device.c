@@ -1498,13 +1498,18 @@ determineXColumns(Matrix m, Size gap, Size bb, Size border)
 stretchRows()  stretches  the  rows   to    deal   with  objects  having
 <-ver_stretch defined. bbh is the total height   that should be taken by
 the objects. itemssh is the amount currently used.
+
+Only rows holding an item with <-ver_stretch grow.  If there is no such
+row, a filler below the last row takes the spare height, so the rows
+are not spread out when, e.g., a tab is taller than its contents.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static void
 stretchRows(Matrix m, int bbh)
 { int x, y;
-  Stretch s = alloca(sizeof(stretch) * m->rows);
+  Stretch s = alloca(sizeof(stretch) * (m->rows+1));
   Stretch sp;
+  int any_stretch = FALSE;
 
   for(sp = s, y=0; y<m->rows; y++)
   { int stretch = 0, noshrink=FALSE;
@@ -1528,14 +1533,20 @@ stretchRows(Matrix m, int bbh)
       sp->shrink = stretch;
     else
       sp->shrink = 0;
-
-    if ( stretch == 0 && y < m->rows - 1 )
-      sp->stretch = 1;
+    if ( stretch > 0 )
+      any_stretch = TRUE;
 
     sp++;
   }
+					/* filler below the last row */
+  Stretch filler = sp;
+  filler->ideal   = 0;
+  filler->minimum = 0;
+  filler->maximum = INT_MAX;
+  filler->stretch = (any_stretch ? 0 : 1);
+  filler->shrink  = 0;
 
-  distribute_stretches(s, sp-s, bbh);
+  distribute_stretches(s, sp-s+1, bbh);
 
   for(sp=s, y=0; y<m->rows; y++)
   { if ( m->units[0][y].height == 0 && m->units[0][y].depth == 0 )
