@@ -56,6 +56,13 @@ static MenuItem getMemberMenu(Menu m, Any obj);
 #define is_cycle_menu(m) ((m)->kind == NAME_cycle)
 
 static int	mark_width(Menu m, Any mark);
+static int	has_focus_ring(Menu m);
+static MenuItem	getFocusItemMenu(Menu m);
+static status	focusItemMenu(Menu m, MenuItem mi);
+static status	executeMenuItem(Menu m, MenuItem mi, EventObj ev);
+static void	draw_focus_ring(Menu m, MenuItem mi,
+				int x, int y, int w, int h);
+static int	segment_radius(Menu m);
 static int	mark_height(Menu m, Any mark);
 
 status
@@ -67,6 +74,7 @@ initialiseMenu(Menu m, Name name, Name kind, Code msg)
   assign(m, multiple_selection, OFF);
 
   assign(m, preview,		NIL);
+  assign(m, focus_item,		NIL);
 
   assign(m, columns,            ONE);
 
@@ -796,6 +804,10 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h)
 
   r_colour(saved);
 
+  if ( has_focus_ring(m) && hasInputFocusDialogItem(m) &&
+       getFocusItemMenu(m) == mi )
+    draw_focus_ring(m, mi, x, y, w, h);
+
   succeed;
 }
 
@@ -1044,6 +1056,148 @@ getItemFromEventMenu(Menu m, EventObj ev)
 }
 
 
+		 /*******************************
+		 *	      KEYBOARD		*
+		 *******************************/
+
+/* Marked and choice menus can be operated from the keyboard.  The arrow
+ * keys move between the items: in a single selection menu they move the
+ * selection, in a multiple selection menu the focus item, which Space
+ * toggles.  The focus item is shown with a ring.
+ */
+
+static int
+has_focus_ring(Menu m)
+{ return ( (m->kind == NAME_marked || m->kind == NAME_choice) &&
+	   !instanceOfObject(m, ClassPopup) );
+}
+
+
+static MenuItem
+getFocusItemMenu(Menu m)
+{ Cell cell;
+  MenuItem first = NULL;
+
+  if ( notNil(m->focus_item) && m->focus_item->menu == m &&
+       m->focus_item->active == ON )
+    answer(m->focus_item);
+
+  for_cell(cell, m->members)
+  { MenuItem mi = cell->value;
+
+    if ( mi->active == ON )
+    { if ( mi->selected == ON )
+	answer(mi);
+      if ( !first )
+	first = mi;
+    }
+  }
+
+  answer(first);
+}
+
+
+static status
+focusItemMenu(Menu m, MenuItem mi)
+{ if ( m->focus_item != mi )
+  { MenuItem old = m->focus_item;
+
+    assign(m, focus_item, mi);
+    if ( notNil(old) && old->menu == m )
+      ChangedItemMenu(m, old);
+    if ( notNil(mi) )
+      ChangedItemMenu(m, mi);
+  }
+
+  succeed;
+}
+
+
+/* The active item before or after `from` or NULL if there is none.
+ */
+
+static MenuItem
+neighbour_item(Menu m, MenuItem from, Name dir)
+{ Cell cell;
+  MenuItem prev = NULL;
+  int found = FALSE;
+
+  for_cell(cell, m->members)
+  { MenuItem mi = cell->value;
+
+    if ( found )
+    { if ( mi->active == ON )
+	return mi;
+      continue;
+    }
+    if ( mi == from )
+    { if ( dir == NAME_backwards )
+	return prev;
+      found = TRUE;
+      continue;
+    }
+    if ( mi->active == ON )
+      prev = mi;
+  }
+
+  return NULL;
+}
+
+
+static status
+keyboardEventMenu(Menu m, EventObj ev)
+{ MenuItem fi, to;
+  Name dir;
+
+  if ( m->active != ON || !has_focus_ring(m) ||
+       !hasInputFocusDialogItem(m) ||
+       !(fi = getFocusItemMenu(m)) )
+    fail;
+
+  if ( ev->id == NAME_cursorLeft || ev->id == NAME_cursorUp )
+    dir = NAME_backwards;
+  else if ( ev->id == NAME_cursorRight || ev->id == NAME_cursorDown )
+    dir = NAME_forwards;
+  else if ( ev->id == toInt(' ') ||
+	    (ev->id == toInt(13) && m->multiple_selection == ON) )
+    return executeMenuItem(m, fi, ev);
+  else
+    fail;
+
+  if ( !(to = neighbour_item(m, fi, dir)) )
+    fail;				/* at the end: advance to next item */
+
+  if ( m->multiple_selection == ON )
+    return focusItemMenu(m, to);
+
+  return executeMenuItem(m, to, ev);
+}
+
+
+/* Draw the focus ring around item `mi` that is drawn at x,y,w,h
+ */
+
+static void
+draw_focus_ring(Menu m, MenuItem mi, int x, int y, int w, int h)
+{ Any old = r_colour(getClassVariableValueObject(m, NAME_accentColour));
+  int r;
+
+  if ( m->kind == NAME_marked )
+  { int lw, lh;
+
+    size_menu_item(m, mi, &lw, &lh);
+    w = min(w, valInt(m->left_offset) + 2*valInt(m->border) + lw);
+    r = 4;
+  } else
+    r = segment_radius(m);
+
+  r_thickness(1);
+  r_dash(NAME_none);
+  r_smooth_box(x, y, w, h, r, NIL);
+  r_colour(old);
+}
+
+
 /* The gesture of a menu.  As the gesture of a button, but it ignores
  * the Alt key: Alt-click selects only the item clicked in a menu with
  * multiple selection.  See soloMenuItem().
@@ -1084,11 +1238,23 @@ eventMenu(Menu m, EventObj ev)
     succeed;
   }
 
+  if ( keyboardEventMenu(m, ev) )
+    succeed;
+
   if ( eventDialogItem(m, ev) )
     succeed;
 
   if ( m->active == ON )
-  { if ( is_cycle_menu(m) && ev->id == NAME_wheel )
+  { if ( isAEvent(ev, NAME_focus) )
+    { changedDialogItem(m);
+      succeed;
+    }
+
+    if ( isAEvent(ev, NAME_msLeftDown) && has_focus_ring(m) &&
+	 getKeyboardFocusGraphical((Graphical)m) != ON )
+      send(m, NAME_keyboardFocus, ON, EAV);
+
+    if ( is_cycle_menu(m) && ev->id == NAME_wheel )
     { Int rot = ev->rotation;
 
       if ( notNil(rot) )
@@ -1109,7 +1275,12 @@ eventMenu(Menu m, EventObj ev)
 
 static status
 WantsKeyboardFocusMenu(Menu m)
-{ return is_cycle_menu(m);
+{ if ( m->active != ON )
+    fail;
+  if ( is_cycle_menu(m) )
+    succeed;
+
+  return has_focus_ring(m) && getFocusItemMenu(m) != NULL;
 }
 
 status
@@ -1197,7 +1368,9 @@ openComboBoxMenu(Menu m)
 
 static status
 executeMenuItem(Menu m, MenuItem mi, EventObj ev)
-{ if ( m->multiple_selection == ON )
+{ focusItemMenu(m, mi);
+
+  if ( m->multiple_selection == ON )
   { toggleMenu(m, mi);
     send(m->device, NAME_modifiedItem, m, ON, EAV);
 
@@ -1648,6 +1821,8 @@ deleteMenu(Menu m, Any obj)
   TRY( mi = findMenuItemMenu(m, obj) );
 
   assign(mi, menu, NIL);
+  if ( m->focus_item == mi )
+    assign(m, focus_item, NIL);
   deleteChain(m->members, mi);
   return requestComputeGraphical(m, NAME_assignAccelerators);
 }
@@ -1665,6 +1840,7 @@ clearMenu(Menu m)
 	      }
 	      clearChain(m->members);
 	    });
+  assign(m, focus_item, NIL);
 
   return requestComputeGraphical(m, DEFAULT);
 }
@@ -2277,6 +2453,8 @@ static vardecl var_menu[] =
      NAME_appearance, "Presentation of the items"),
   SV(NAME_preview, "item=menu_item*", IV_GET|IV_STORE, previewMenu,
      NAME_event, "Item in `preview' state"),
+  IV(NAME_focusItem, "item=menu_item*", IV_NONE,
+     NAME_event, "Item operated by the keyboard"),
   IV(NAME_previewFeedback, "feedback={box,rounded_box,inverted_rounded_box,invert,colour}", IV_BOTH,
      NAME_appearance, "Feedback given to item in preview state"),
   SV(NAME_feedback, "feedback={box,image,show_selection_only}", IV_GET|IV_STORE, feedbackMenu,
@@ -2388,6 +2566,8 @@ static senddecl send_menu[] =
      NAME_items, "Sort members (see `chain ->sort')"),
   SM(NAME_labelWidth, 1, "width=[int]", labelWidthMenu,
      NAME_layout, "Set width in pixels used for label"),
+  SM(NAME_focusItem, 1, "item=member:menu_item*", focusItemMenu,
+     NAME_event, "Set the item operated by the keyboard"),
   SM(NAME_ChangedItem, 1, "changed=menu_item", ChangedItemMenu,
      NAME_repaint, "Handle change of item"),
   SM(NAME_clearSelection, 0, NULL, clearSelectionMenu,
@@ -2411,6 +2591,8 @@ static getdecl get_menu[] =
      DEFAULT, "Chain with menu_items contained"),
   GM(NAME_reference, 0, "point", NULL, getReferenceMenu,
      DEFAULT, "Baseline of label"),
+  GM(NAME_focusItem, 0, "item=menu_item", NULL, getFocusItemMenu,
+     NAME_event, "Item operated by the keyboard"),
   GM(NAME_kind, 0, "kind={cycle,marked,choice,toggle,popup}", NULL, getKindMenu,
      NAME_appearance, "Presentation; `toggle' if marked with multiple selection"),
   GM(NAME_activeItem, 1, "active=bool", "item=member:menu_item", getActiveItemMenu,

@@ -45,7 +45,7 @@ Run with:
 :- use_module(library(plunit)).
 
 test_menu :-
-    run_tests([menu_solo]).
+    run_tests([menu_kind, menu_solo, menu_keyboard]).
 
 %   toggle_menu(-Dialog, -Menu, -Log)
 %
@@ -108,6 +108,44 @@ item_position(D, M, Item, X, Y) :-
     get(MI, value, Item),
     !.
 
+:- begin_tests(menu_kind).
+
+test(toggle, [K-MS == toggle-(@on)]) :-
+    new(M, menu(m, toggle)),
+    get(M, kind, K),
+    get(M, multiple_selection, MS).
+test(marked_multiple_is_toggle, K == toggle) :-
+    new(M, menu(m, marked)),
+    send(M, multiple_selection, @on),
+    get(M, kind, K).
+test(kind_resets_multiple, [K-MS == marked-(@off)]) :-
+    new(M, menu(m, toggle)),
+    send(M, kind, marked),
+    get(M, kind, K),
+    get(M, multiple_selection, MS).
+test(choice_multiple, [K-MS == choice-(@on)]) :-
+    new(M, menu(m, choice)),
+    send(M, multiple_selection, @on),
+    get(M, kind, K),
+    get(M, multiple_selection, MS).
+test(default_kind, K == marked) :-
+    new(M, menu(m)),
+    get(M, kind, K).
+test(feedback_to_cycle, K == cycle) :-
+    new(M, menu(m, choice)),
+    send(M, feedback, show_selection_only),
+    get(M, kind, K).
+test(feedback_keeps_multiple, K == toggle) :-
+    new(M, menu(m, choice)),
+    send(M, multiple_selection, @on),
+    send(M, feedback, image),
+    get(M, kind, K).
+test(cycle_has_single_selection, fail) :-
+    new(M, menu(m, cycle)),
+    send(M, multiple_selection, @on).
+
+:- end_tests(menu_kind).
+
 :- begin_tests(menu_solo).
 
 test(alt_click_selects_only_the_item, [Sel-Calls == [b]-1]) :-
@@ -145,3 +183,73 @@ test(single_click_toggles, Sel == [a,c]) :-
     send(D, destroy).
 
 :- end_tests(menu_solo).
+
+%   focused_menu(+Kind, -Dialog, -Menu, -Log)
+%
+%   An open dialog with a menu of Kind holding a, b and c, of which b is
+%   selected, that has the keyboard focus.
+
+focused_menu(Kind, D, M, Log) :-
+    new(D, dialog),
+    new(Log, chain),
+    send(D, append, new(M, menu(m, Kind, message(Log, append, @arg1)))),
+    send_list(M, append, [a,b,c]),
+    send(M, selection, b),
+    send(D, open),
+    send(D, keyboard_focus, M),
+    send(D, input_focus, @on).
+
+key(D, Key) :-
+    post(D, Key, 0, 0, 0).
+
+:- begin_tests(menu_keyboard).
+
+test(wants_focus, true) :-
+    new(M, menu(m, marked)),
+    send(M, append, a),
+    send(M, '_wants_keyboard_focus').
+test(inactive_no_focus, fail) :-
+    new(M, menu(m, marked)),
+    send(M, append, a),
+    send(M, active, @off),
+    send(M, '_wants_keyboard_focus').
+test(right_moves_selection, [Sel-Log == c-[c]]) :-
+    focused_menu(marked, D, M, L),
+    key(D, cursor_right),
+    get(M, selection, Sel),
+    chain_list(L, Log),
+    send(D, destroy).
+test(up_moves_selection, Sel == a) :-
+    focused_menu(choice, D, M, _),
+    key(D, cursor_up),
+    get(M, selection, Sel),
+    send(D, destroy).
+test(right_at_end_keeps_selection, Sel == c) :-
+    focused_menu(marked, D, M, _),
+    key(D, cursor_right),
+    key(D, cursor_right),
+    get(M, selection, Sel),
+    send(D, destroy).
+test(skips_inactive, Sel == c) :-
+    focused_menu(marked, D, M, _),
+    send(M, selection, a),
+    send(M, off, b),
+    key(D, cursor_right),
+    get(M, selection, Sel),
+    send(D, destroy).
+test(toggle_right_moves_focus, [Sel-FI == [b]-c]) :-
+    focused_menu(toggle, D, M, _),
+    key(D, cursor_right),
+    selection(M, Sel),
+    get(M, focus_item, MI),
+    get(MI, value, FI),
+    send(D, destroy).
+test(toggle_space_toggles, [Sel-Log == [b,c]-[c]]) :-
+    focused_menu(toggle, D, M, L),
+    key(D, cursor_right),
+    key(D, 32),
+    selection(M, Sel),
+    chain_list(L, Log),
+    send(D, destroy).
+
+:- end_tests(menu_keyboard).

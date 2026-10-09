@@ -457,6 +457,7 @@ End;
   Any	     default_value;		/* Function or default value */ \
   Name	     kind;			/* Kind of menu */ \
   MenuItem   preview;			/* Item in preview state */ \
+  MenuItem   focus_item;		/* Item with the keyboard focus */ \
   Name	     preview_feedback;		/* Feedback given for this */ \
   Name	     feedback;			/* Visual feedback */ \
   BoolObj    multiple_selection;	/* radio-button? */ \
