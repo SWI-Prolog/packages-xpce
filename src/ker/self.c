@@ -1693,11 +1693,19 @@ pceInitialise(int handles, const char *home, const char *appdata,
   DEBUG_BOOT(Cprintf("Boot classes realised.\n"));
   initTypeAliases();
 
-  { for_hash_table(classTable, s,
+  /* Realise the classes that have instances.  Realising a class may
+   * define new classes, which can resize the table and make the scan
+   * skip some.  So we scan until a scan realises nothing.
+   */
+  for(bool changed = true; changed; )
+  { changed = false;
+    for_hash_table(classTable, s,
 		   { Class class = s->value;
 		     if ( class->no_created != class->no_freed &&
 			  class->realised == OFF )
-		       realiseClass(class);
+		     { realiseClass(class);
+		       changed = true;
+		     }
 		   });
   }
 
