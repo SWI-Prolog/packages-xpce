@@ -159,7 +159,7 @@ menu_bar(D, MB) :-
 
 buttons_tab(D, T) :-
     send(T, append, label(label, 'A label shows text or an image')),
-    send(T, append, label(image, image('pce.png'))),
+    send(T, append, label(image, image('pce.svg'))),
     BMsg = message(@prolog, show_value, D, button, @receiver?name),
     send(T, append, button(run, BMsg)),
     send(T, append, new(Default, button(ok, BMsg)), right),

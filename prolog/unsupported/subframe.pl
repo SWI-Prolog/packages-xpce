@@ -80,7 +80,7 @@ variable(icon_label_text,text,  get, "Text for iconic representation").
 resource(label_font,    font,   '@helvetica_bold_14').
 resource(pen,           int,    '3').
 resource(cursor,        cursor, 'hand2').
-resource(icon,          bitmap, 'pce.png').
+resource(icon,          bitmap, 'pce.svg').
 
 initialise(F, Label:char_array) :->
     "Create from Label"::
@@ -309,7 +309,7 @@ test :-
     send(@f, append, @p2),
     send(@f, open, @p, point(50,50)),
 
-    send(@p2, display, new(B, bitmap('pce.png'))),
+    send(@p2, display, new(B, bitmap('pce.svg'))),
     send(B, recogniser, new(move_gesture)),
 
     new(@f2, subframe('I am small')),

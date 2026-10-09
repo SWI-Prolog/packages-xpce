@@ -288,7 +288,7 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     hourgl6.png hourgl7.png hourgl8.png hourgl9.png hourgl.png king.png
     knight.png left_arrow.png line.png link.png linking.png magnify.png
     main_link.png nosticky.png note.png other_link.png pawn.png
-    pce16.png pce.png pinned.png pin.png printer.png queen.png question.png
+    pce16.png pinned.png pin.png printer.png queen.png question.png
     README right_arrow.png rook_64.png rook.png sad.png select.png
     selecting.png slant_left.png slant_right.png sticky.png support.png
     text.png textedit.png thermo.png transcript.png trash.png typing.png
@@ -297,7 +297,7 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     opendir.svg closedir.svg document.svg builtin_classflash.svg
     builtin_class.svg user_classflash.svg user_class.svg sign_alert.svg
     sign_ok.svg send.svg get.svg ivar.svg classvar.svg
-    juggler1.svg juggler2.svg juggler3.svg juggler4.svg
+    juggler1.svg juggler2.svg juggler3.svg juggler4.svg pce.svg
     juggler5.svg)
 
 
