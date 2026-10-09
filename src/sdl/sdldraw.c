@@ -939,6 +939,47 @@ r_box(int x, int y, int w, int h, int r, Any fill)
 }
 
 /**
+ * Draw an anti-aliased box with rounded corners.  Unlike r_box(), which
+ * draws crisp pixel-aligned edges, the coordinates and radius are real
+ * and the corners are smooth.  Used for controls with a modern look.
+ *
+ * @param x The x-coordinate of the top-left corner.
+ * @param y The y-coordinate of the top-left corner.
+ * @param w The width of the rectangle.
+ * @param h The height of the rectangle.
+ * @param r The radius for rounded corners.
+ * @param fill The fill colour or @nil.
+ */
+void
+r_smooth_box(double x, double y, double w, double h, double r, Any fill)
+{ Translate(x, y);
+  FloatArea(x, y, w, h);
+
+  if ( fw <= 0 || fh <= 0 )
+    return;
+
+  cairo_new_path(CR);
+  if ( r > 0 )
+    my_cairo_rounded_rectangle(CR, fx, fy, fw, fh, r, false);
+  else
+    cairo_rectangle(CR, fx, fy, fw, fh);
+  if ( notNil(fill) )
+  { r_fillpattern(fill, NAME_background);
+    pce_cairo_set_source_fill(CR, context.fill);
+    if ( context.pen )
+      cairo_fill_preserve(CR);
+    else
+      cairo_fill(CR);
+  }
+  if ( context.pen )
+  { cairo_set_line_width(CR, context.pen);
+    pce_cairo_set_source_color(CR, context.colour);
+    cairo_stroke(CR);
+  }
+  cairo_new_path(CR);
+}
+
+/**
  * Draw a rectangle with a shadow effect.
  *
  * @param x The x-coordinate of the top-left corner.

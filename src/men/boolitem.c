@@ -201,43 +201,6 @@ labelWidthBoolItem(BoolItem b, Int w)
 		*            REDRAW		*
 		********************************/
 
-/* Fill a pill: a rectangle with fully rounded ends.  The ends are
- * drawn as discs because r_arc() is anti-aliased and r_box() is not.
- */
-
-static void
-r_pill(int x, int y, int w, int h, Any fill)
-{ r_arc(x, y, h, h, 0, 360, NAME_none, fill);
-  r_arc(x+w-h, y, h, h, 0, 360, NAME_none, fill);
-  if ( w > h )
-    r_box(x+h/2, y, w-h, h, 0, fill);
-}
-
-
-/* Outline of a pill, used to show the keyboard focus
- */
-
-static void
-r_pill_outline(int x, int y, int w, int h)
-{ int r = h/2;
-
-  r_arc(x, y, h, h, 90, 180, NAME_none, NIL);
-  r_arc(x+w-h, y, h, h, 270, 180, NAME_none, NIL);
-  r_line(x+r, y, x+w-r, y);
-  r_line(x+r, y+h, x+w-r, y+h);
-}
-
-
-static int
-has_input_focus(BoolItem b)
-{ PceWindow sw = getWindowGraphical((Graphical)b);
-
-  return ( sw &&
-	   sw->keyboard_focus == (Graphical) b &&
-	   sw->input_focus == ON );
-}
-
-
 static status
 RedrawAreaBoolItem(BoolItem b, Area a)
 { int x, y, w, h;
@@ -276,7 +239,7 @@ RedrawAreaBoolItem(BoolItem b, Area a)
     if ( b->active == OFF )
       r_pop_group_with_alpha(INACTIVE_ALPHA);
 
-    if ( has_input_focus(b) )
+    if ( hasInputFocusDialogItem(b) )
     { int m = focus_margin(sh)-1;	/* a gap, so it shows on the track */
 
       old = r_colour(b->on_colour);

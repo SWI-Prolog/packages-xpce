@@ -225,6 +225,51 @@ labelFormatDialogItem(DialogItem di, Name format)
 
 
 		/********************************
+		*       DRAWING HELPERS		*
+		********************************/
+
+/* Fill a pill: a rectangle with fully rounded ends.  The ends are
+ * drawn as discs because r_arc() is anti-aliased and r_box() is not.
+ */
+
+void
+r_pill(int x, int y, int w, int h, Any fill)
+{ r_arc(x, y, h, h, 0, 360, NAME_none, fill);
+  r_arc(x+w-h, y, h, h, 0, 360, NAME_none, fill);
+  if ( w > h )
+    r_box(x+h/2, y, w-h, h, 0, fill);
+}
+
+
+/* Outline of a pill, used to show the keyboard focus
+ */
+
+void
+r_pill_outline(int x, int y, int w, int h)
+{ int r = h/2;
+
+  r_arc(x, y, h, h, 90, 180, NAME_none, NIL);
+  r_arc(x+w-h, y, h, h, 270, 180, NAME_none, NIL);
+  r_line(x+r, y, x+w-r, y);
+  r_line(x+r, y+h, x+w-r, y+h);
+}
+
+
+/* True if the item has the keyboard focus of a window that has the
+ * input focus, i.e., keys typed now go to it.
+ */
+
+int
+hasInputFocusDialogItem(Any obj)
+{ PceWindow sw = getWindowGraphical(obj);
+
+  return ( sw &&
+	   sw->keyboard_focus == (Graphical) obj &&
+	   sw->input_focus == ON );
+}
+
+
+		/********************************
 		*        EVENT_HANDLING		*
 		********************************/
 
