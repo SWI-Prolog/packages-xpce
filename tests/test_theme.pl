@@ -47,7 +47,8 @@ installed theme files.
 */
 
 test_theme :-
-    run_tests([ theme
+    run_tests([ theme,
+                theme_files
               ]).
 
 :- multifile
@@ -200,7 +201,7 @@ test(select_theme, [Sel1 == test_dark, Cur1 == test_dark,
 test(restored_system, Dark == false) :-
     %  The tests above restored the light system colours
     ( dark_system -> Dark = true ; Dark = false ).
-test(available_theme, true) :-
+test(available_theme, nondet) :-
     available_theme(light),
     available_theme(dark).
 
@@ -434,3 +435,49 @@ colour_rgb(C, rgb(R,G,B)) :-
     get(C, blue, B).
 
 :- end_tests(theme).
+
+%   user_theme_dir(-Dir)
+%
+%   Create a library directory Dir with theme/mytheme.pl, a theme that
+%   only sets console colours, a second theme/dark.pl and a file that
+%   is not a Prolog source, and add it to the library search path.
+
+user_theme_dir(Dir) :-
+    tmp_file(themes, Dir),
+    directory_file_path(Dir, theme, ThemeDir),
+    make_directory_path(ThemeDir),
+    forall(member(File-Content,
+                  [ 'mytheme.pl' -
+                    ":- module(prolog_theme_mytheme, []).\n\c
+                     :- multifile prolog:theme/1.\n\c
+                     prolog:theme(mytheme).\n",
+                    'dark.pl'    - ":- module(my_dark, []).\n",
+                    'notes.txt'  - "Not a theme\n"
+                  ]),
+           ( directory_file_path(ThemeDir, File, Path),
+             setup_call_cleanup(open(Path, write, Out),
+                                write(Out, Content),
+                                close(Out))
+           )),
+    asserta(user:file_search_path(library, Dir)).
+
+remove_user_theme_dir(Dir) :-
+    retractall(user:file_search_path(library, Dir)),
+    delete_directory_and_contents(Dir).
+
+:- begin_tests(theme_files,
+               [ setup(user_theme_dir(Dir)),
+                 cleanup(remove_user_theme_dir(Dir))
+               ]).
+
+test(user_theme, nondet) :-
+    available_theme(mytheme).
+test(once, [Themes == [light,dark,mytheme]]) :-
+    findall(T, ( available_theme(T),
+                 memberchk(T, [light,dark,mytheme,auto,notes])
+               ), Themes).
+test(theme_item, true) :-
+    new(TI, theme_item),
+    get(TI, member, mytheme, _).
+
+:- end_tests(theme_files).

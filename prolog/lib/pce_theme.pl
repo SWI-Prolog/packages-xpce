@@ -524,10 +524,18 @@ current_theme_selection(Selection) :-
 %!  available_theme(?Theme) is nondet.
 %
 %   True when Theme can be selected.  These are `light` and the themes
-%   in library(theme) that define colours for xpce.
+%   that resolve as library(theme/Theme), including those a user adds,
+%   e.g., in ``~/.config/swi-prolog/lib/theme``.  Each theme is
+%   enumerated once; the themes after `light` are sorted by name.
 
-available_theme(light).
 available_theme(Theme) :-
+    findall(T, theme_file(T), Themes0),
+    sort(Themes0, Themes),
+    (   Theme = light
+    ;   member(Theme, Themes)
+    ).
+
+theme_file(Theme) :-
     absolute_file_name(library(theme), Dir,
                        [ file_type(directory),
                          solutions(all),
@@ -535,18 +543,19 @@ available_theme(Theme) :-
                        ]),
     directory_files(Dir, Files),
     member(File, Files),
-    file_name_extension(Theme, pl, File),
-    Theme \== light,
-    directory_file_path(Dir, File, Path),
-    xpce_theme_file(Path).
+    file_name_extension(Theme, Ext, File),
+    Theme \== '',
+    user:prolog_file_type(Ext, prolog),
+    \+ not_a_theme(Theme).
 
-xpce_theme_file(Path) :-
-    setup_call_cleanup(
-        open(Path, read, In),
-        read_string(In, _, String),
-        close(In)),
-    sub_string(String, _, _, _, "pce_theme:colour"),
-    !.
+%   not_a_theme(?Name)
+%
+%   library(theme/Name) exists, but is not a theme to choose: `light`
+%   is always available (see above) and `auto` chooses between
+%   `light` and `dark` for the terminal.
+
+not_a_theme(light).
+not_a_theme(auto).
 
 canonical_theme(default, light) :- !.
 canonical_theme(Theme, Theme).
