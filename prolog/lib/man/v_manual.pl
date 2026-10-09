@@ -489,14 +489,9 @@ help(M) :->
                 *              DEMO             *
                 ********************************/
 
-:- multifile
-    pce_demo:pcedemo/0.
-
 start_demo(M) :->
-    send(M, report, progress, 'Starting demo tool ...'),
-    use_module(demo(pce_demo), []),
-    pce_demo:pcedemo,
-    send(M, report, done).
+    "Open the demo browser"::
+    send(M, start_tool, demos).
 
 
 class_variable_editor(_M) :->
