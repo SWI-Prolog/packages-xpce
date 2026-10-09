@@ -97,6 +97,13 @@ keystrokes and hovered hyperlinks.
 - terminal_image<->save_lines: int
     Number of past lines retained in the scroll-back buffer.
 
+- terminal_image<->scroll_past_end: bool
+    If @on, the window can be scrolled down until the last line is at
+    its top, leaving the rest of the window empty for the output that
+    follows.  Some people like that while tracing.  If @off (default),
+    scrolling stops with the last line at the bottom.  The default
+    comes from the class variable of the same name.
+
 - terminal_image<->syntax: syntax_table
     Syntax table used for word boundaries in selection.
 
@@ -492,6 +499,7 @@ about the terminal.  Class `prolog_terminal` uses it for `->block_popup`.
   underline.
 - fold_style: colour `ui_fold`; `@nil` takes the fold markers away.
 - save_lines: 1000 by default.
+- scroll_past_end: `@off`; see `<->scroll_past_end`.
 - auto_copy: copy selected text to clipboard automatically (default
   `@on` on macOS, `@off` elsewhere).
 - ansi_colours: 16-element vector with the theme colours

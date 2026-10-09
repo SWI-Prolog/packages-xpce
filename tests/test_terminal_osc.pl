@@ -765,6 +765,48 @@ test(scrolling_to_the_end_stops_at_the_end,
              assertion(Rows == AtEnd)
            )).
 
+%       With ->scroll_past_end the end is further: the last line on the
+%       top row and the rest of the window empty, which some people like
+%       while tracing.
+
+test(scroll_past_end_puts_the_last_line_on_top,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    send(TI, scroll_past_end, @on),
+    fill_window(TI, _),
+    screen(TI, AtEnd),
+    last(AtEnd, Last),
+    forall(member(Ask, [ scroll_vertical(forwards, page, 10000),
+                         scroll_vertical(forwards, line, 10000),
+                         scroll_vertical(goto, file, 1000)
+                       ]),
+           ( send(TI, scroll_vertical, backwards, page, 1000),
+             Ask =.. [Sel|Args],
+             Msg =.. [send, TI, Sel|Args],
+             call(Msg),
+             screen(TI, Rows),
+             assertion(Rows == [Last])
+           )).
+
+test(output_fills_the_window_past_the_end,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    send(TI, scroll_past_end, @on),
+    fill_window(TI, _),
+    send(TI, scroll_vertical, forwards, page, 10000),
+    screen(TI, [Last]),
+    send(TI, insert, 'more\r\nnext'),
+    atomic_list_concat([Last, ' more'], Top),
+    assertion(row_text(TI, 0, Top)),    % the window stays where it is
+    assertion(row_text(TI, 1, next)).   % and fills downwards
+
+test(switching_scroll_past_end_off_returns_to_the_end,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    fill_window(TI, _),
+    screen(TI, AtEnd),
+    send(TI, scroll_past_end, @on),
+    send(TI, scroll_vertical, goto, file, 1000),
+    send(TI, scroll_past_end, @off),
+    assertion(screen_is(TI, AtEnd)).
+
 test(scrolling_to_the_end_stops_at_the_end_with_a_fold,
      [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     fill_window(TI, Blocks),

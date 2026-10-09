@@ -318,6 +318,7 @@ NewClass(terminal_image)
   Code		link_message;		/* Handle a clicked link */
   ScrollBar	scroll_bar;		/* Associated scrollbar */
   Int		save_lines;		/* # saved lines */
+  BoolObj	scroll_past_end;	/* Last line may scroll to the top */
   SyntaxTable	syntax;			/* Word description */
   Name		focus_function;		/* Function in focus */
   StringObj	search_string;		/* Target of the search */

@@ -440,6 +440,7 @@ static void	rlc_restamp_folds(RlcData b);
 static void	rlc_keep_end_in_view(RlcData b, bool at_end);
 static int	rlc_last_window_start(RlcData b);
 static int	rlc_clamp_window_start(RlcData b, int here);
+static bool	rlc_scroll_past_end(RlcData b);
 static bool	rlc_fold_lines(RlcData b, TerminalBlock tb,
 			       int *headp, int *fromp, int *top);
 static TerminalBlock rlc_fold_head_block(RlcData b, int line);
@@ -670,7 +671,11 @@ scrollVerticalTerminalImage(TerminalImage ti,
 
   if ( unit == NAME_file )
   { int lines = rlc_view_count(b, b->first, b->last);
-    int start = lines*valInt(amount)/1000;
+    int start;
+
+    if ( rlc_scroll_past_end(b) )	/* as rlc_scroll_bubble() */
+      lines += b->window_size-1;
+    start = lines*valInt(amount)/1000;
     b->window_start = rlc_clamp_window_start(b,
 			  rlc_view_add(b, b->first, start));
     b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
@@ -3059,6 +3064,29 @@ saveLinesTerminalImage(TerminalImage ti, Int lines)
   succeed;
 }
 
+/* ->scroll_past_end: @on allows scrolling down until the last line is
+   at the top of the window, leaving the rest of it empty for what comes
+   next.  Switching it off scrolls back if the window is past the end.
+*/
+
+static status
+scrollPastEndTerminalImage(TerminalImage ti, BoolObj val)
+{ if ( ti->scroll_past_end != val )
+  { RlcData b = ti->data;
+
+    assign(ti, scroll_past_end, val);
+    if ( b && val == OFF )
+    { b->window_start = rlc_clamp_window_start(b, b->window_start);
+      b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+      rlc_request_redraw(b);
+    }
+    if ( b )
+      rlc_update_scrollbar(b);
+  }
+
+  succeed;
+}
+
 static status
 refreshTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
@@ -4122,6 +4150,8 @@ static vardecl var_terminal_image[] =
      NAME_event, "Associated scroll_bar"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
      NAME_memory, "How many lines are saved for scroll back"),
+  SV(NAME_scrollPastEnd, "bool", IV_GET|IV_STORE, scrollPastEndTerminalImage,
+     NAME_scroll, "Scrolling may take the last line up to the top"),
   IV(NAME_syntax, "syntax_table", IV_BOTH,
      NAME_language, "Description of the used syntax"),
   IV(NAME_focusFunction, "name*", IV_GET,
@@ -4353,6 +4383,8 @@ static classvardecl rc_terminal_image[] =
      "Automatically copy selected text to the clipboard"),
   RC(NAME_saveLines, "int", "1000",
      "How many lines are saved for scroll back"),
+  RC(NAME_scrollPastEnd, "bool", "@off",
+     "Scrolling may take the last line up to the top of the window"),
   RC(NAME_syntax, "[syntax_table]", "default",
      "Syntax definition"),
   RC(NAME_font, "mono_font", "tt",
@@ -5934,6 +5966,10 @@ rlc_scroll_bubble(RlcData b, int *length, int *start, int *view)
   int nsb_view  = rlc_view_count(b, b->window_start, b->last);
   if ( nsb_view > b->window_size )
     nsb_view = b->window_size;
+  if ( rlc_scroll_past_end(b) )		/* room for the last line at */
+  { nsb_lines += b->window_size-1;	/* the top */
+    nsb_view = b->window_size;
+  }
 
   *length = nsb_lines;
   *start  = nsb_start;
@@ -8162,13 +8198,45 @@ rlc_last_window_start(RlcData b)
 }
 
 
+/** True if the user may scroll past rlc_last_window_start(), up to the
+ * window starting at the last line.  See ->scroll_past_end.
+ */
+
+static bool
+rlc_scroll_past_end(RlcData b)
+{ TerminalImage ti = b->object;
+
+  return ( !rlc_alt_screen(b) &&
+	   get(ti, NAME_scrollPastEnd, EAV) == ON );
+}
+
+
+/** The furthest the user may scroll: rlc_last_window_start() or, with
+ * ->scroll_past_end, the last line at the top of the window.
+ */
+
+static int
+rlc_max_window_start(RlcData b)
+{ if ( rlc_scroll_past_end(b) )
+  { int start = b->last;
+
+    while ( rlc_folded(b, start) && start != b->first )
+      start = PrevLine(b, start);
+
+    return start;
+  }
+
+  return rlc_last_window_start(b);
+}
+
+
 /** Do not scroll further than that.  Fewer lines than the window holds
  * are all of them, so `here' is only ever pulled back.
  */
 
 static int
 rlc_clamp_window_start(RlcData b, int here)
-{ int last = rlc_last_window_start(b);
+{ int last = rlc_max_window_start(b);
 
   if ( rlc_view_count(b, b->first, here) >
        rlc_view_count(b, b->first, last) )

@@ -2724,6 +2724,7 @@ scope('M.terminal_image.S.nfd_style', advanced).
 scope('M.terminal_image.S.paste', basic).
 scope('M.terminal_image.S.print', advanced).
 scope('M.terminal_image.S.save_lines', obscure).
+scope('M.terminal_image.S.scroll_past_end', basic).
 scope('M.terminal_image.S.scroll_vertical', basic).
 scope('M.terminal_image.S.select_all', basic).
 scope('M.terminal_image.S.selection_style', advanced).
@@ -3519,6 +3520,7 @@ scope('R.terminal_image.link_cursor', advanced).
 scope('R.terminal_image.link_style', advanced).
 scope('R.terminal_image.nfd_style', advanced).
 scope('R.terminal_image.save_lines', advanced).
+scope('R.terminal_image.scroll_past_end', basic).
 scope('R.terminal_image.selection_style', advanced).
 scope('R.terminal_image.syntax', advanced).
 scope('R.text.border', advanced).
@@ -5651,6 +5653,7 @@ scope('V.terminal_image.opacity', advanced).
 scope('V.terminal_image.pen', advanced).
 scope('V.terminal_image.request_compute', advanced).
 scope('V.terminal_image.save_lines', internal).
+scope('V.terminal_image.scroll_past_end', basic).
 scope('V.terminal_image.scroll_bar', advanced).
 scope('V.terminal_image.selected', advanced).
 scope('V.terminal_image.selection_style', advanced).

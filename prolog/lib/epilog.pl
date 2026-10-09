@@ -2019,7 +2019,8 @@ terminal_prolog_flag(Term, Flag, Value, Default) :-
 
 pce_preferences:preferences(epilog_window,
     [ terminal_image - [ font, background, colour,
-                         link_style, save_lines, ansi_colours,
+                         link_style, save_lines, scroll_past_end,
+                         ansi_colours,
                          exact_case, auto_copy, fold_previous
                        ],
       epilog_report  - [ placement, hide_after, background, colour ]
