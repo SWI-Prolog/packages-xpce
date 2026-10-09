@@ -626,6 +626,26 @@ appendDialogGroup(DialogGroup g, Graphical item, Name where)
 }
 
 
+/* An accelerator key: offer it to my items.  A tab only does so while
+ * it is on top.  See `dialog ->assign_accelerators'.
+ */
+
+static status
+keyDialogGroup(DialogGroup g, Name key)
+{ Cell cell;
+
+  if ( instanceOfObject(g, ClassTab) && ((Tab)g)->status != NAME_onTop )
+    fail;
+
+  for_cell(cell, g->graphicals)
+  { if ( send(cell->value, NAME_key, key, EAV) )
+      succeed;
+  }
+
+  fail;
+}
+
+
 static status
 openDialogGroup(DialogGroup g)
 { if ( isNil(g->device) )
@@ -721,6 +741,8 @@ static senddecl send_diagroup[] =
      NAME_apply, "->restore all items to their <-default"),
   SM(NAME_showLabel, 1, "bool", showLabelDialogGroup,
      NAME_appearance, "Whether label is visible"),
+  SM(NAME_key, 1, "key=name", keyDialogGroup,
+     NAME_accelerator, "Offer accelerator key to my items"),
   SM(NAME_open, 0, NULL, openDialogGroup,
      NAME_organisation, "Create dialog with this item and ->open")
 };

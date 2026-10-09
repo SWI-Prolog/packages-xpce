@@ -425,8 +425,6 @@ modifiedDialogItem(Any di, BoolObj modified)
 #define ACC_LOWER 2
 #define ACC_DIGIT 3
 
-#define ACC_CHARSETSIZE 256
-
 typedef struct
 { int	      acc;
   int	      index;
@@ -529,14 +527,24 @@ wantsAccelerator(Any obj)
 }
 
 
+/* Assign accelerators to the objects, avoiding the characters marked in
+ * `taken`, an array of ACC_CHARSETSIZE flags, if not NULL.  The
+ * characters assigned are added to `taken`.  This allows for sets of
+ * objects that share the accelerators of another set, such as the
+ * items on the tabs of a dialog, which share the items around the
+ * tabs.
+ */
+
 status
-assignAccelerators(Chain objects, Name prefix, Name label_method)
+assignAcceleratorsTaken(Chain objects, Name prefix, Name label_method,
+			unsigned char *taken)
 { int  size = valInt(objects->size);
   Abin bins = alloca(sizeof(abin) * size);
   int  n;
   Cell cell;
   Abin a = bins;
   unsigned char used[ACC_CHARSETSIZE];
+  unsigned char none[ACC_CHARSETSIZE];
   int do_free = FALSE;
 
   if ( size && !bins )
@@ -544,8 +552,12 @@ assignAccelerators(Chain objects, Name prefix, Name label_method)
     do_free = TRUE;
   }
 
+  if ( !taken )
+  { memset(none, 0, sizeof(none));
+    taken = none;
+  }
   for(n=0; n<ACC_CHARSETSIZE; n++)
-    used[n] = 0;
+    used[n] = taken[n];
 
   for_cell(cell, objects)
   { Any lbl;
@@ -562,7 +574,7 @@ assignAccelerators(Chain objects, Name prefix, Name label_method)
     { a->label = s;
       a->index = -1;
       a->mode  = ACC_WSEP;
-      if ( acc_index(a, NULL) )
+      if ( acc_index(a, taken) )
       { used[tolower(a->acc)]++;
 	a->object = cell->value;
 	DEBUG(NAME_accelerator,
@@ -603,6 +615,7 @@ assignAccelerators(Chain objects, Name prefix, Name label_method)
     if ( acc > 0 )
     { char buf[100];
 
+      taken[acc] = 1;
       snprintf(buf, sizeof(buf), "%s%c", strName(prefix), acc);
       send(bins[n].object, NAME_accelerator, CtoKeyword(buf), EAV);
     } else
@@ -613,6 +626,12 @@ assignAccelerators(Chain objects, Name prefix, Name label_method)
     pceFree(bins);
 
   succeed;
+}
+
+
+status
+assignAccelerators(Chain objects, Name prefix, Name label_method)
+{ return assignAcceleratorsTaken(objects, prefix, label_method, NULL);
 }
 
 

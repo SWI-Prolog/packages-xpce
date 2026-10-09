@@ -23,6 +23,8 @@ COMMON(status)	changedDialogItem(Any obj);
 COMMON(Point)	getReferenceDialogItem(Any obj);
 COMMON(status)	modifiedDialogItem(Any di, BoolObj modified);
 COMMON(status)	assignAccelerators(Chain objects, Name prefix, Name label_method);
+COMMON(status)	assignAcceleratorsTaken(Chain objects, Name prefix,
+				Name label_method, unsigned char *taken);
 COMMON(status)	makeClassDialogItem(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/label.c */

@@ -322,9 +322,67 @@ getReportToDialog(Dialog d)
 		 *	   ACCELERATORS		*
 		 *******************************/
 
+/* Collect the graphicals of `root` that may get an accelerator in
+ * `items`, looking inside dialog groups.  A label_box is an item: its
+ * parts have no accelerators.  If `tabs` is a chain, the tabs of tab
+ * stacks are added to it, as their items share the accelerators of the
+ * items around them.  Otherwise the tabs are looked into as well.
+ */
+
+static void
+accelerator_items(Device root, Chain items, Chain tabs)
+{ Chain agenda = answerObject(ClassChain, root, EAV);
+  Device dev;
+
+  while( (dev = getDeleteHeadChain(agenda)) )
+  { Cell cell;
+
+    for_cell(cell, dev->graphicals)
+    { Graphical gr = cell->value;
+
+      if ( instanceOfObject(gr, ClassTabStack) )
+      { Cell c2;
+
+	for_cell(c2, ((Device)gr)->graphicals)
+	{ if ( instanceOfObject(c2->value, ClassTab) )
+	    appendChain(notNil(tabs) ? tabs : agenda, c2->value);
+	}
+      } else if ( instanceOfObject(gr, ClassDialogGroup) &&
+		  !instanceOfObject(gr, ClassLabelBox) )
+      { appendChain(agenda, gr);
+      } else
+	appendChain(items, gr);
+    }
+  }
+
+  doneObject(agenda);
+}
+
+
 static status
 assignAcceletatorsDialog(Dialog d)
-{ return assignAccelerators(d->graphicals, CtoName("\\e"), NAME_label);
+{ Name prefix = CtoName("\\e");
+  Chain items = answerObject(ClassChain, EAV);
+  Chain tabs = answerObject(ClassChain, EAV);
+  unsigned char around[ACC_CHARSETSIZE] = {0};
+  Tab tab;
+
+  accelerator_items((Device)d, items, tabs);
+  assignAcceleratorsTaken(items, prefix, NAME_label, around);
+
+  while( (tab = getDeleteHeadChain(tabs)) )
+  { unsigned char taken[ACC_CHARSETSIZE];
+
+    memcpy(taken, around, sizeof(taken));
+    clearChain(items);
+    accelerator_items((Device)tab, items, NIL);
+    assignAcceleratorsTaken(items, prefix, NAME_label, taken);
+  }
+
+  doneObject(items);
+  doneObject(tabs);
+
+  succeed;
 }
 
 

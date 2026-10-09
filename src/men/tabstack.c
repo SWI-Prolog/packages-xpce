@@ -361,6 +361,23 @@ labelsLaidOutTabStack(TabStack ts)
 }
 
 
+/* An accelerator key: offer it to the tabs; only the one on top takes
+ * it.
+ */
+
+static status
+keyTabStack(TabStack ts, Name key)
+{ Cell cell;
+
+  for_cell(cell, ts->graphicals)
+  { if ( send(cell->value, NAME_key, key, EAV) )
+      succeed;
+  }
+
+  fail;
+}
+
+
 static status
 layoutDialogTabStack(TabStack ts, Size s)
 { int w, h;
@@ -484,6 +501,8 @@ static senddecl send_tab_stack[] =
      DEFAULT, "Create from list of tab objects"),
   SM(NAME_event, 1, "event", eventTabStack,
      NAME_event, "Process an event"),
+  SM(NAME_key, 1, "key=name", keyTabStack,
+     NAME_accelerator, "Offer accelerator key to the tab on top"),
   SM(NAME_append, 1, "tab", appendTabStack,
      NAME_organisation, "Append a tab object"),
   SM(NAME_erase, 1, "graphical", eraseTabStack,
