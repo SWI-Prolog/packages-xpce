@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <h/text.h>
 #include <h/unix.h>
 #include <stdbool.h>
 
@@ -2088,10 +2089,32 @@ visible_window(PceWindow sw, IArea a)
 }
 
 
+/* The scroll_bar of what fills a view (its editor) or a browser (its
+ * list_browser), or NULL.
+ */
+
+static ScrollBar
+inner_scroll_bar(PceWindow sw)
+{ ScrollBar sb = NIL;
+
+  if ( instanceOfObject(sw, ClassView) && notNil(((View)sw)->editor) )
+    sb = ((View)sw)->editor->scroll_bar;
+  else if ( instanceOfObject(sw, ClassBrowser) &&
+	    notNil(((Browser)sw)->list_browser) )
+    sb = ((Browser)sw)->list_browser->scroll_bar;
+
+  if ( notNil(sb) && sb->displayed == ON )
+    return sb;
+
+  return NULL;
+}
+
+
 /* <-content_area: the part of <-visible that is not taken by chrome of
  * the window itself.  A window whose scrollbars live in its decorator
  * has none inside it and this is <-visible; one that displays its own
- * scroll_bar -- an editor, a terminal -- has that much less room.  It is
+ * scroll_bar -- a terminal -- or whose editor or list_browser fills it
+ * and draws one -- a view or browser -- has that much less room.  It is
  * where something placed in the corner belongs, so that it does not sit
  * on top of the bar.
  */
@@ -2100,8 +2123,16 @@ static Area
 getContentAreaWindow(PceWindow sw)
 { iarea a;
   Cell cell;
+  ScrollBar isb;
 
   visible_window(sw, &a);
+
+  if ( (isb = inner_scroll_bar(sw)) )
+  { if ( isb->orientation == NAME_vertical )
+      a.w -= valInt(isb->area->w);
+    else
+      a.h -= valInt(isb->area->h);
+  }
 
   for_cell(cell, sw->graphicals)
   { Graphical gr = cell->value;

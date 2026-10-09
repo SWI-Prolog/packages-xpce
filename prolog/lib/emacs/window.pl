@@ -198,21 +198,6 @@ initialise(V, B:buffer=[emacs_buffer], W:width=[int], H:height=[int]) :->
     get(E, mode, Mode),             % the mode object
     ignore(send(Mode, new_buffer)),
     send(V, display_fixed, new(split_handle)).   % puts itself in the corner
-%       My editor fills me and draws its own scroll bar, so what is left
-%       for the grip in my corner is that much narrower.  See `window
-%       <-content_area', which the grip places itself against.
-
-content_area(V, Area:area) :<-
-    "What is visible, less the scroll bar my editor draws"::
-    get_super(V, content_area, Area),
-    (   get(V, editor, E),
-        get(E, scroll_bar, SB),
-        SB \== @nil
-    ->  get(SB, width, SBW),
-        get(Area, width, W),
-        send(Area, width, W-SBW)
-    ;   true
-    ).
 
 %       A tab may hold more than one view (see class tab_frame), while
 %       it can only show one label.  The label follows the view that has

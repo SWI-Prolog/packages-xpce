@@ -226,6 +226,33 @@ test(and_less_the_bar_when_it_does, true(Narrower == true)) :-
     ;   Narrower = false
     ).
 
+%       A view or browser draws no bar itself: the editor or list_browser
+%       that fills it does.  A grip in its corner went on top of that bar.
+
+test(a_view_is_less_the_bar_of_its_editor, true(Narrower == true)) :-
+    new(V, view(@default, size(40, 5))),
+    forall(between(1, 50, I), send(V, format, 'line ~w~n', [I])),
+    send(V, open),
+    get(V?editor?scroll_bar, width, BarW),
+    narrower(V, BarW, Narrower),
+    send(V, destroy).
+
+test(a_browser_is_less_the_bar_of_its_list, true(Narrower == true)) :-
+    new(B, browser(@default, size(20, 5))),
+    forall(between(1, 50, I), send(B, append, I)),
+    send(B, open),
+    get(B?list_browser?scroll_bar, width, BarW),
+    narrower(B, BarW, Narrower),
+    send(B, destroy).
+
+narrower(W, BarW, Narrower) :-
+    get(W, visible, area(_, _, VW, _)),
+    get(W, content_area, area(_, _, CW, _)),
+    (   CW < VW, VW-CW =< BarW+1
+    ->  Narrower = true
+    ;   Narrower = false
+    ).
+
 %       A fixed graphical is a graphical of the window, so <-contains
 %       answers it and ->destroy takes it with the window: a grip left
 %       behind by the pane it belonged to shows up in checkpce/0 as a
