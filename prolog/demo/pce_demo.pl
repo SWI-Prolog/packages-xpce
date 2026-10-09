@@ -189,6 +189,11 @@ demo('Transform',
      demo(transform),
      transform_demo).
 
+demo('Dialog gallery',
+     'The dialog items: buttons, text, menus, sliders, pickers, groups',
+     demo(dialog_gallery),
+     dialog_gallery).
+
 demo('Arc gallery',
      'A gallery of class arc usage',
      demo(arc),
