@@ -549,7 +549,7 @@ intersection_iarea(IArea a, IArea b)
 static void
 pce_cairo_set_source_color(cairo_t *cr, Colour pce)
 { SDL_Color c = pceColour2SDL_Color(pce);
-  cairo_set_source_rgba(cr, c.r/256.0, c.g/256.0, c.b/256.0, c.a/256.0);
+  cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
 }
 
 /* Build a cairo pattern from an XPCE `gradient' object and set it as
