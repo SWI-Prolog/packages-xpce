@@ -49,11 +49,11 @@ static status	compute_popup_indicator(Menu m, MenuItem mi,
 static status	modifiedMenu(Menu m, BoolObj val);
 static MenuItem getMemberMenu(Menu m, Any obj);
 
-#define CYCLE_DROP_WIDTH 14
-#define CYCLE_DROP_HEIGHT 14
-#define CYCLE_TRIANGLE_WIDTH 9
-#define CYCLE_TRIANGLE_HEIGHT 8
-#define CYCLE_DROP_DISTANCE 5
+/* A cycle menu shows only the selection, in a combo box.  ->kind is
+ * the authority; <-feedback is kept consistent for compatibility.
+ */
+
+#define is_cycle_menu(m) ((m)->kind == NAME_cycle)
 
 #define MARK_IMAGE_SIZE	  16
 #define MARK_DIAMOND_SIZE 14
@@ -70,7 +70,6 @@ initialiseMenu(Menu m, Name name, Name kind, Code msg)
 
   assign(m, preview,		NIL);
 
-  assign(m, kind,		kind);
   assign(m, columns,            ONE);
 
   assign(m, left_offset,	ZERO);
@@ -80,6 +79,8 @@ initialiseMenu(Menu m, Name name, Name kind, Code msg)
   assign(m, item_size,		newObject(ClassSize, EAV));
   obtainClassVariablesObject(m);
 
+  if ( isDefault(kind) )
+    kind = getClassVariableValueObject(m, NAME_kind);
   kindMenu(m, kind);
 
   return requestComputeGraphical(m, NAME_assignAccelerators);
@@ -152,7 +153,7 @@ area_menu_item(Menu m, MenuItem mi, int *x, int *y, int *w, int *h)
   *x = valInt(m->item_offset->x) + valInt(m->margin);
   *y = valInt(m->item_offset->y);
 
-  if ( m->feedback != NAME_showSelectionOnly )
+  if ( !is_cycle_menu(m) )
   { int index = valInt(getIndexChain(m->members, mi)) - 1; /* 0-based */
     int rows, cols;
     int gx = x_gap(m);
@@ -210,18 +211,6 @@ computeLabelMenu(Menu m)
        valInt(m->label_width) > iox )
     iox = valInt(m->label_width);
 
-  if ( m->feedback == NAME_showSelectionOnly )
-  { Any ci = getClassVariableValueObject(m, NAME_cycleIndicator);
-
-    if ( (Name)ci == NAME_comboBox )
-    { iox += 0;
-    } else if ( instanceOfObject(ci, ClassElevation) )
-    { iox += CYCLE_DROP_WIDTH + CYCLE_DROP_DISTANCE;
-    } else /* if ( instanceOfObject(ci, ClassImage) ) */
-    { iox += MARK_IMAGE_SIZE + CYCLE_DROP_DISTANCE;
-    }
-  }
-
   assign(m->item_offset, x, toInt(iox));
   assign(m->item_offset, y, toInt(ioy));
 
@@ -273,11 +262,8 @@ computeItemsMenu(Menu m)
   w += 2 * border;
   h += 2 * border;
 
-  if ( m->feedback == NAME_showSelectionOnly )
-  { Image ci = getClassVariableValueObject(m, NAME_cycleIndicator);
-
-    if ( (Name)ci == NAME_comboBox )
-      rm = ws_combo_box_width((Graphical)m)+2;	/* 2 for the margin */
+  if ( is_cycle_menu(m) )
+  { rm = ws_combo_box_width((Graphical)m)+2;	/* 2 for the margin */
   } else
   { if ( notNil(m->on_image) || notNil(m->off_image) )
     { int cw, ch;
@@ -363,7 +349,7 @@ computeMenu(Menu m)
     ix = valInt(m->item_offset->x);
     iy = valInt(m->item_offset->y);
 
-    if ( m->feedback == NAME_showSelectionOnly )
+    if ( is_cycle_menu(m) )
     { iw = valInt(m->item_size->w);
       ih = valInt(m->item_size->h);
       iw = max(iw, valInt(m->value_width));
@@ -456,20 +442,6 @@ ChangedItemMenu(Menu m, MenuItem mi)
 		*            REDRAW		*
 		********************************/
 
-static void
-draw_cycle_blob(int x, int y, Elevation z, int up)
-{ int w = CYCLE_DROP_WIDTH;
-  int h = CYCLE_DROP_HEIGHT;
-  int tw = CYCLE_TRIANGLE_WIDTH;
-  int th = CYCLE_TRIANGLE_HEIGHT;
-  int tx = x + (w - tw)/2;
-  int ty = y + (h - th)/2;
-
-  r_3d_box(x, y, w, h, 0, z, up);
-  r_3d_triangle(tx + tw/2, ty+th, tx, ty, tx+tw, ty, z, up, 0x3);
-}
-
-
 static int
 item_mark_y(Menu m, int y, int h, int mh)
 { return (m->vertical_format == NAME_top    ? y :
@@ -536,7 +508,7 @@ draw_popup_indicator(Menu m, MenuItem mi,
 
 static inline status
 elevated_items(Menu m, Elevation z)
-{ if ( m->feedback == NAME_showSelectionOnly )
+{ if ( is_cycle_menu(m) )
     fail;
 
   if ( instanceOfObject(z, ClassElevation) )
@@ -738,7 +710,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
   iy = y;
   ih = h;
 
-  if ( isDefault(colour) && m->feedback == NAME_showSelectionOnly )
+  if ( isDefault(colour) && is_cycle_menu(m) )
   { Any c2 = getClassVariableValueObject(m, NAME_textColour);
     if ( instanceOfObject(c2, ClassColour) )
       colour = c2;
@@ -831,35 +803,17 @@ RedrawAreaMenu(Menu m, Area a)
   iw = valInt(m->item_size->w);
   ih = valInt(m->item_size->h);
 
-  if ( m->feedback == NAME_showSelectionOnly )
+  if ( is_cycle_menu(m) )
   { MenuItem mi = getItemSelectionMenu(m);
-    Any ci = getClassVariableValueObject(m, NAME_cycleIndicator);
-    int fm = 0;
+    int flags = TEXTFIELD_COMBO;
 
     iw = max(iw, valInt(m->value_width));
-
-    if ( (Name)ci == NAME_comboBox )
-    { int flags = TEXTFIELD_COMBO;
-
-      if ( mi && mi->active == ON && m->active == ON )
-	flags |= TEXTFIELD_EDITABLE;
-
-      ws_entry_field((Graphical)m, cx, by, iw, ih, flags);
-      /*fm = ws_entry_field_margin();*/
-    } else if ( instanceOfObject(ci, ClassElevation) )
-    { int bw = CYCLE_DROP_WIDTH;
-
-      draw_cycle_blob(cx-(bw+CYCLE_DROP_DISTANCE), cy, ci, TRUE);
-    } else /*if ( instanceOfObject(ci, ClassImage) )*/
-    { Image i = ci;
-      int bw = valInt(i->size->w);
-      int bh = valInt(i->size->h);
-
-      r_image(i, 0, 0, cx-(bw+CYCLE_DROP_DISTANCE), cy, bw, bh);
-    }
+    if ( mi && mi->active == ON && m->active == ON )
+      flags |= TEXTFIELD_EDITABLE;
+    ws_entry_field((Graphical)m, cx, by, iw, ih, flags);
 
     if ( mi != FAIL )
-      RedrawMenuItem(m, mi, cx+fm, cy+fm, iw-2*fm, ih-2*fm, iz);
+      RedrawMenuItem(m, mi, cx, cy, iw, ih, iz);
   } else
   { int rows, cols;
     int n = 1;
@@ -1051,7 +1005,7 @@ eventMenu(Menu m, EventObj ev)
     succeed;
 
   if ( m->active == ON )
-  { if ( m->feedback == NAME_showSelectionOnly && ev->id == NAME_wheel )
+  { if ( is_cycle_menu(m) && ev->id == NAME_wheel )
     { Int rot = ev->rotation;
 
       if ( notNil(rot) )
@@ -1072,7 +1026,7 @@ eventMenu(Menu m, EventObj ev)
 
 static status
 WantsKeyboardFocusMenu(Menu m)
-{ return m->feedback == NAME_showSelectionOnly;
+{ return is_cycle_menu(m);
 }
 
 status
@@ -1248,18 +1202,8 @@ static status
 executeMenu(Menu m, EventObj ev)
 { MenuItem mi;
 
-  if ( m->feedback == NAME_showSelectionOnly )
-  { Any img = getClassVariableValueObject(m, NAME_cycleIndicator); /* TBD */
-
-    if ( img == NAME_comboBox )
-      return openComboBoxMenu(m);
-    else
-    { nextMenu(m, NAME_up);
-      if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
-	forwardMenu(m, m->message, ev);
-      succeed;
-    }
-  }
+  if ( is_cycle_menu(m) )
+    return openComboBoxMenu(m);
 
   if ( isDefault(ev) )
     ev = getValueVar(EVENT);			/* @event */
@@ -1788,54 +1732,29 @@ allOffMenu(Menu m)
 		*            KIND		*
 		********************************/
 
+/* ->kind defines how the menu presents its items:
+
+     cycle   Only the selection, in a combo box
+     marked  Items with a radio button (single) or check box (multiple)
+     choice  A segmented control
+     popup   The items of a popup menu
+
+   Whether the user may select one or more items is the orthogonal
+   ->multiple_selection.  ->kind resets it to @off, and `toggle' is the
+   old name for a `marked' menu with multiple selection.
+*/
+
 static status
 kindMenu(Menu m, Name kind)
-{ if ( m->look == NAME_xpce )
-  { if ( kind == NAME_choice || kind == NAME_toggle )
-    { assign(m, on_image, NIL);
-      assign(m, off_image, NIL);
-      assign(m, feedback, NAME_box);
-      assign(m, pen, ONE);
-      assign(m, border, TWO);
-      multipleSelectionMenu(m, kind == NAME_toggle ? ON : OFF);
-      assign(m, kind, kind);
-      return requestComputeGraphical(m, DEFAULT);
-    } else if ( kind == NAME_marked )
-    { assign(m, on_image, MARK_IMAGE);
-      assign(m, off_image, NOMARK_IMAGE);
-      assign(m, feedback, NAME_image);
-      assign(m, pen, ZERO);
-      assign(m, border, TWO);
-      multipleSelectionMenu(m, OFF);
-      assign(m, kind, kind);
+{ BoolObj multiple = OFF;
 
-      return requestComputeGraphical(m, DEFAULT);
-    } else if ( kind == NAME_cycle )
-    { assign(m, pen, ZERO);
-    }
-  } else if ( m->look == NAME_win )
-  { if ( kind == NAME_marked || kind == NAME_toggle )
-    { assign(m, on_image, MARK_IMAGE);
-      assign(m, off_image, NOMARK_IMAGE);
-      assign(m, feedback, NAME_image);
-      assign(m, pen, ZERO);
-      assign(m, border, toInt(3));
-      multipleSelectionMenu(m, kind == NAME_toggle ? ON : OFF);
-
-      assign(m, kind, kind);
-      return requestComputeGraphical(m, DEFAULT);
-    } else if ( kind == NAME_choice )
-    { assign(m, on_image, NIL);
-      assign(m, off_image, NIL);
-      assign(m, feedback, NAME_box);
-      assign(m, pen, ONE);
-      assign(m, border, TWO);
-      multipleSelectionMenu(m, OFF);
-
-      assign(m, kind, kind);
-      return requestComputeGraphical(m, DEFAULT);
-    }
+  if ( kind == NAME_toggle )
+  { kind = NAME_marked;
+    multiple = ON;
   }
+
+  assign(m, kind, kind);
+  assign(m, pen, ZERO);
 
   if ( kind == NAME_cycle )
   { assign(m, on_image, NIL);
@@ -1843,59 +1762,45 @@ kindMenu(Menu m, Name kind)
     assign(m, feedback, NAME_showSelectionOnly);
     assign(m, layout,   NAME_horizontal);
     assign(m, accelerator_font, NIL);
-    assign(m, auto_value_align, OFF),
-    multipleSelectionMenu(m, OFF);
-    if ( getClassVariableValueObject(m, NAME_cycleIndicator) != NAME_comboBox )
-    { assign(m, popup, newObject(ClassPopup, EAV));
-      assign(m->popup, members, m->members);
-      kindMenu((Menu) m->popup,  NAME_cyclePopup);
-    } else
-    { assign(m, border, toInt(4));
-    }
+    assign(m, auto_value_align, OFF);
+    assign(m, border, toInt(4));
   } else
   { assign(m, auto_value_align, ON);
 
     if ( kind == NAME_marked )
-    { assign(m, on_image, MARK_IMAGE);
-      assign(m, off_image, NOMARK_IMAGE);
+    { assign(m, on_image,
+	     getClassVariableValueObject(m, NAME_onImage));
+      assign(m, off_image,
+	     getClassVariableValueObject(m, NAME_offImage));
       assign(m, feedback, NAME_image);
-      multipleSelectionMenu(m, OFF);
     } else if ( kind == NAME_choice )
     { assign(m, on_image, NIL);
       assign(m, off_image, NIL);
       assign(m, feedback, NAME_box);
-      multipleSelectionMenu(m, OFF);
-    } else if ( kind == NAME_toggle )
-    { assign(m, on_image, MARK_IMAGE);
-      assign(m, off_image, NOMARK_IMAGE);
-      assign(m, feedback, NAME_image);
-      multipleSelectionMenu(m, ON);
-    } else if ( kind == NAME_popup )
+    } else /* popup */
     { if ( instanceOfObject(m, ClassPopup) )
       { defaultPopupImages((PopupObj)m);
       } else
       { assign(m, on_image, NIL);
 	assign(m, off_image, NIL);
       }
-      multipleSelectionMenu(m, OFF);
-    } else if ( kind == NAME_cyclePopup )
-    { if ( m->look == NAME_win )
-	assign(m, on_image, NAME_marked);
-      else
-	assign(m, on_image, MARK_IMAGE);
-      assign(m, off_image, NIL);
-      multipleSelectionMenu(m, OFF);
-    } else
-      fail;
+      assign(m, feedback, NAME_image);
+    }
   }
 
-  assign(m, kind, kind);
+  multipleSelectionMenu(m, multiple);
 
-  succeed;
+  return requestComputeGraphical(m, DEFAULT);
 }
 
 
+static Name
+getKindMenu(Menu m)
+{ if ( m->kind == NAME_marked && m->multiple_selection == ON )
+    answer(NAME_toggle);
 
+  answer(m->kind);
+}
 
 
 		/********************************
@@ -1935,7 +1840,10 @@ ensureSingleSelectionMenu(Menu m)
 
 static status
 multipleSelectionMenu(Menu m, BoolObj val)
-{ assignGraphical(m, NAME_multipleSelection, val);
+{ if ( val == ON && is_cycle_menu(m) )
+    fail;				/* a combo box selects one value */
+
+  assignGraphical(m, NAME_multipleSelection, val);
 
   get(m, NAME_selection, EAV);		/* update <-selection */
 
@@ -1951,11 +1859,7 @@ layoutMenu(Menu m, Name or)
 
 static status
 columnsMenu(Menu m, Int n)
-{ assignGraphical(m, NAME_columns, n);
-  if ( m->feedback == NAME_showSelectionOnly && notNil(m->popup) )
-    send(m->popup, NAME_columns, n, EAV);
-
-  succeed;
+{ return assignGraphical(m, NAME_columns, n);
 }
 
 
@@ -2020,9 +1924,25 @@ verticalFormatMenu(Menu m, Name name)
 }
 
 
+/* ->feedback is the old way to choose the presentation.  It maps to
+   ->kind, keeping ->multiple_selection.
+*/
+
 static status
 feedbackMenu(Menu m, Name feedback)
-{ return assignGraphical(m, NAME_feedback, feedback);
+{ Name kind = (feedback == NAME_showSelectionOnly ? NAME_cycle :
+	       feedback == NAME_box               ? NAME_choice :
+						    NAME_marked);
+  BoolObj multiple = m->multiple_selection;
+
+  if ( instanceOfObject(m, ClassPopup) )
+    return assignGraphical(m, NAME_feedback, feedback);
+
+  TRY(kindMenu(m, kind));
+  if ( kind != NAME_cycle )
+    multipleSelectionMenu(m, multiple);
+
+  succeed;
 }
 
 
@@ -2270,14 +2190,14 @@ static vardecl var_menu[] =
      NAME_organisation, "Menu items (alternatives)"),
   IV(NAME_default, "value=any|chain|function*", IV_NONE,
      NAME_apply, "Default value"),
-  SV(NAME_kind, "kind={cycle,marked,choice,toggle,popup,cycle_popup}", IV_GET|IV_STORE, kindMenu,
-     NAME_appearance, "Kind of menu"),
+  SV(NAME_kind, "kind={cycle,marked,choice,toggle,popup}", IV_STORE, kindMenu,
+     NAME_appearance, "Presentation of the items"),
   SV(NAME_preview, "item=menu_item*", IV_GET|IV_STORE, previewMenu,
      NAME_event, "Item in `preview' state"),
   IV(NAME_previewFeedback, "feedback={box,rounded_box,inverted_rounded_box,invert,colour}", IV_BOTH,
      NAME_appearance, "Feedback given to item in preview state"),
   SV(NAME_feedback, "feedback={box,image,show_selection_only}", IV_GET|IV_STORE, feedbackMenu,
-     NAME_appearance, "Type of feedback for selection"),
+     NAME_appearance, "Old name for ->kind: image, box or show_selection_only"),
   SV(NAME_multipleSelection, "multiple=bool", IV_GET|IV_STORE, multipleSelectionMenu,
      NAME_selection, "If @on, more than one item may be selected"),
   SV(NAME_showLabel, "show=bool", IV_GET|IV_STORE, showLabelMenu,
@@ -2408,6 +2328,8 @@ static getdecl get_menu[] =
      DEFAULT, "Chain with menu_items contained"),
   GM(NAME_reference, 0, "point", NULL, getReferenceMenu,
      DEFAULT, "Baseline of label"),
+  GM(NAME_kind, 0, "kind={cycle,marked,choice,toggle,popup}", NULL, getKindMenu,
+     NAME_appearance, "Presentation; `toggle' if marked with multiple selection"),
   GM(NAME_activeItem, 1, "active=bool", "item=member:menu_item", getActiveItemMenu,
      NAME_active, "Active value if indicated item"),
   GM(NAME_default, 0, "value=any|chain", NULL, getDefaultMenu,
@@ -2439,9 +2361,6 @@ static classvardecl rc_menu[] =
      "Colour to draw the accelerators"),
   RC(NAME_border, "int", "2",
      "Border around each item"),
-  RC(NAME_cycleIndicator, "{combo_box}|image|elevation",
-     "combo_box",
-     "Indication of a ->kind: cycle menu"),
   RC(NAME_feedback, "name", "image",
      "Type of feedback for selection"),
   RC(NAME_format, "{left,center,right}", "left",

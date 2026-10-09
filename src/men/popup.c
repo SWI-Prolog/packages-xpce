@@ -286,46 +286,32 @@ keyPopup(PopupObj p, Name key)
 static status
 executePopup(PopupObj p, Any context)
 { DisplayObj d = CurrentDisplay(context);
+  Code def_msg = DEFAULT;
 
-  if ( p->kind == NAME_cyclePopup )
-  { Menu m = context;
+  for( ; instanceOfObject(p, ClassPopup); p = p->selected_item )
+  { if ( notDefault(p->message) )
+      def_msg = p->message;
 
-    if ( instanceOfObject(m, ClassMenu) )
-    { if ( notNil(p->selected_item) )
-      { selectionMenu(m, p->selected_item);
-	EventObj ev = getValueVar(EVENT);
-	BUSY(forwardMenu(m, m->message, ev));
-      }
-    } else
-      return errorPce(context, NAME_unexpectedType, ClassMenu);
-  } else
-  { Code def_msg = DEFAULT;
+    if ( instanceOfObject(p->selected_item, ClassMenuItem) )
+    { MenuItem mi = p->selected_item;
 
-    for( ; instanceOfObject(p, ClassPopup); p = p->selected_item )
-    { if ( notDefault(p->message) )
-	def_msg = p->message;
+      BUSY(if ( p->multiple_selection == ON )
+	   { toggleMenu((Menu) p, mi);
+	     if ( isDefault(mi->message) )
+	     { if ( notDefault(def_msg) && notNil(def_msg) )
+		 forwardReceiverCode(def_msg, p,
+				     mi->value, mi->selected, context, EAV);
+	     } else if ( notNil(mi->message) )
+	       forwardReceiverCode(mi->message, p, mi->selected, context, EAV);
+	   } else
+	   { if ( isDefault(mi->message) )
+	     { if ( notDefault(def_msg) && notNil(def_msg) )
+		 forwardReceiverCode(def_msg, p, mi->value, context, EAV);
+	     } else if ( notNil(mi->message) )
+	       forwardReceiverCode(mi->message, p, context, EAV);
+	   })
 
-      if ( instanceOfObject(p->selected_item, ClassMenuItem) )
-      { MenuItem mi = p->selected_item;
-
-	BUSY(if ( p->multiple_selection == ON )
-	     { toggleMenu((Menu) p, mi);
-	       if ( isDefault(mi->message) )
-	       { if ( notDefault(def_msg) && notNil(def_msg) )
-		   forwardReceiverCode(def_msg, p,
-				       mi->value, mi->selected, context, EAV);
-	       } else if ( notNil(mi->message) )
-		 forwardReceiverCode(mi->message, p, mi->selected, context, EAV);
-	     } else
-	     { if ( isDefault(mi->message) )
-	       { if ( notDefault(def_msg) && notNil(def_msg) )
-		   forwardReceiverCode(def_msg, p, mi->value, context, EAV);
-	       } else if ( notNil(mi->message) )
-		 forwardReceiverCode(mi->message, p, context, EAV);
-	     })
-
-	succeed;
-      }
+      succeed;
     }
   }
 
