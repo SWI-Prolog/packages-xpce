@@ -138,15 +138,11 @@ exist.  See also the Prolog predicate pce_autoload/2.
 ## @colour_display {#object-colour_display}
 
 Predefined executable code object that succeeds if the attached
-default display @display is a colour display.  Defined as:
-
-	new(@colour_display, @display?depth > 1).
-
-Commonly used for conditional Default specifications:
+default display @display is a colour display.  As all displays are
+colour displays, it always succeeds.  It is kept for compatibility
+with Defaults files that use it in conditional specifications such as
 
 	text_cursor.colour: when(@colour_display, red, black)
-
-See also `@display <-visual_type`, `@display <-depth`.
 
 ## @colour_names {#object-colour_names}
 

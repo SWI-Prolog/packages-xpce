@@ -11,9 +11,8 @@ object:
 	_window_pen @= number(1)
 
 After this the global object @_window_pen refers to a number
-object with value 1.  See also the XPCE Defaults file, normally
-located in $PCEHOME/Defaults, where $PCEHOME refers to
-the XPCE homd directory (see `@pce <-home`).
+object with value 1.  See also the class variable `pce.initialise`,
+whose built-in value defines several such objects.
 
 The construct
 

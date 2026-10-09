@@ -7,11 +7,11 @@
 1.1.  Where do I specify look-and-feel?
 =======================================
 
-Look-and-feel and other defaults are stored as class-variable bindings
-in two text files:
+The built-in defaults of class variables are part of the classes.
+They may be overruled by class-variable bindings in two text files:
 
-  * `<pcehome>/Defaults` ships with XPCE and holds the system-wide
-    defaults.
+  * `<pcehome>/Defaults` is an optional site-wide file.  It is not
+    shipped with XPCE; a system administrator may create it.
   * `$PCEAPPDATA/Defaults` is the per-user file, read after the one
     above and therefore winning over it.  On Linux it is
     `~/.config/swi-prolog/xpce/Defaults`; on macOS it lives below
@@ -19,7 +19,7 @@ in two text files:
     Windows it is below `%APPDATA%\swi-prolog\xpce\Defaults`.
 
 A program can decline to read the per-user file with the `xpce_defaults`
-Prolog flag: `swipl -Dxpce_defaults=none` reads only the system one, and
+Prolog flag: `swipl -Dxpce_defaults=none` reads only the site-wide one, and
 `swipl -Dxpce_defaults=File` reads File in place of the user's.  That is
 for a test suite or an application that must not depend on the
 preferences of whoever is running it; the system file is read either
@@ -103,11 +103,10 @@ an object of the requested type by evaluating it.  Thus
 
 defines default windows to be one third of the display, while
 
-	window.background:	when(@colour_display, grey95, white)
+	frame.geometry:	when(@display?width > 2000, '1200x800', '800x600')
 
-makes the window background slightly grey on colour displays and white
-otherwise.  The object `@colour_display` is a predefined conditional
-object.
+opens frames larger on wide displays.  Class `when` evaluates its first
+argument and returns the second if it succeeds and the third otherwise.
 
 
 1.6.  Constants
@@ -119,13 +118,17 @@ you can reuse further down the file, bind the class variable
 	pce.initialise
 
 It holds an executable (code) object that is run once during start-up,
-before any other class-variable conversion takes place.  The shipped
-`Defaults` uses it, for example, to publish a few colour references:
+before any other class-variable conversion takes place.  Its built-in
+value publishes, for example, a few colour references:
 
     pce.initialise: \
-	and(_dialog_bg @= when(@colour_display, grey80, white), \
-	    _graph_bg  @= when(@colour_display, grey95, white), \
-	    _win_pen   @= when(@colour_display, 0, 1))
+	and(_dialog_bg @= colour(ui_dialog_background), \
+	    _graph_bg  @= colour(ui_window_background), \
+	    _win_pen   @= number(0), \
+	    ...)
+
+Note that setting `pce.initialise` replaces this value, so a Defaults
+file that sets it must define all these references.
 
 The `@=` infix operator binds the left-hand reference name to the
 right-hand object.  After this runs, `@_dialog_bg`, `@_graph_bg` and

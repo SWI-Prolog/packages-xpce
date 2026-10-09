@@ -52,10 +52,7 @@
 variable(outlined,      bool := @off,   get,    "Is in outline mode?").
 variable(outline_regex_list, [chain],   send,   "Associated regexes").
 
-class_variable(header_style, style,
-               when(@colour_display,
-                    style(colour := blue),
-                    style(bold := @on)),
+class_variable(header_style, style, style(colour := blue),
                "Style for outline-headers").
 
 initialise(M) :->

@@ -156,8 +156,8 @@ among which Java.
 
 The visual feedback (look) and to some extend the reactions to user
 actions (feel) of the \product{} controllers is determined by
-\product{}'s {\em defaults} file, located in
-\metafile{<pcehome>/Defaults}. See \secref{classvar}.
+class variables, whose values may be changed in the user's
+{\em Defaults} file. See \secref{classvar}.
 
 \begin{xpceonly}
 \section{A brief history of (X)PCE}

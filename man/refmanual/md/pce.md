@@ -74,10 +74,12 @@ etc.
     @see pce->debug
 
 - pce-defaults: source_sink|char_array
-    File/rc from which to load defaults.  See ->load_defaults, class
-    class_variable and class_variable/4.
+    File/rc from which to load site-wide defaults.  See ->load_defaults,
+    class class_variable and class_variable/4.
 
-    The default value is the file("$PCEHOME/Defaults")
+    The default value is the file("$PCEHOME/Defaults").  This file is
+    not shipped with XPCE: the built-in defaults are part of the
+    classes.  If it does not exist it is silently ignored.
 
 - pce-user_defaults: source_sink|char_array*
     File/rc holding the defaults of whoever is running the program,
@@ -87,9 +89,7 @@ etc.
     `@nil` reads none, which is how a program says it is not to depend
     on the preferences of its user -- a test suite wants that, and so
     does an application that must look the same for everyone.
-    `<-defaults` is read either way: it carries the font bindings, so a
-    program without it would not merely lose preferences, it would look
-    wrong.
+    `<-defaults` is read either way.
 
     Both are read by the first lookup of a class variable, so this has
     to be set before then.  From SWI-Prolog it is set by the

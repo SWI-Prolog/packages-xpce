@@ -287,15 +287,12 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     hourgl10.png hourgl1.png hourgl2.png hourgl3.png hourgl4.png hourgl5.png
     hourgl6.png hourgl7.png hourgl8.png hourgl9.png hourgl.png king.png
     knight.png left_arrow.png line.png link.png linking.png magnify.png
-    main_link.png mark.png ms_down_arrow.png ms_left_arrow.png
-    ms_right_arrow.png ms_up_arrow.png nomark.png nosticky.png note.png
-    off_marked.png off_toggle.png ol_cycle.png ol_pulldown.png
-    ol_pullright.png on_marked.png on_toggle.png other_link.png pawn.png
+    main_link.png nosticky.png note.png other_link.png pawn.png
     pce16.png pce.png pinned.png pin.png printer.png queen.png question.png
     README right_arrow.png rook_64.png rook.png sad.png select.png
     selecting.png slant_left.png slant_right.png sticky.png support.png
-    text.png textedit.png thermo.png toggle_off.png toggle_on.png
-    transcript.png trash.png typing.png web.png
+    text.png textedit.png thermo.png transcript.png trash.png typing.png
+    web.png
 
     opendir.svg closedir.svg document.svg builtin_classflash.svg
     builtin_class.svg user_classflash.svg user_class.svg sign_alert.svg

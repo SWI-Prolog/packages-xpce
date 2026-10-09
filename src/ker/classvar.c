@@ -997,9 +997,10 @@ load_defaults_from(SourceSink from)
 
 
 /* Read the class variable defaults.  `from' @default is what the first
- * lookup of a class variable asks for, and reads both files: the one
- * that ships with the system and, after it so that it wins, the one
- * belonging to whoever is running this.  <-user_defaults @nil declines
+ * lookup of a class variable asks for, and reads both files: the
+ * optional site-wide one (not shipped; the built-in defaults are part
+ * of the classes) and, after it so that it wins, the one belonging to
+ * whoever is running this.  <-user_defaults @nil declines
  * the second, which is how a program says it is not to depend on the
  * preferences of its user; see pce_init/3 and the `xpce_defaults'
  * Prolog flag.

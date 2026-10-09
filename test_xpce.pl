@@ -232,9 +232,9 @@ srcsink(read-1) :-
 foreign(привіт).
 
 file(env-1) :-
-    new(F, file('$PCEHOME/Defaults')),
+    new(F, file('$PCEHOME/Defaults.user')),
     send(F, exists),
-    absolute_file_name(pce('Defaults'), PlName),
+    absolute_file_name(pce('Defaults.user'), PlName),
     get(F, name, PceName),
     same_file(PceName, PlName),
     send(F, same, PlName).

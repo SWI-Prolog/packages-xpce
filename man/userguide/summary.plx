@@ -53,16 +53,13 @@ send(Dialog, append,
 #class @= "name @= object" assoc
 Class \class{@=} assigns a symbolic reference name to the argument
 object. It is used to define global objects in the class-variable
-display.initialise. See the system defaults file
-\metafile{<pcehome>/Defaults}. The following example from \file{Defaults}
-creates the objects @_dialog_bg and @_win_pen depending on whether or
-not the display is monochrome or colour.
+pce.initialise. The following example from its built-in value creates
+the objects @_dialog_bg and @_win_pen.
 \begin{code}
-display.initialise: \
-	and(_dialog_bg @= when(@colour_display, \
-			       grey80, white), \
-	    _win_pen   @= when(@colour_display, \
-			       0, 1))
+pce.initialise: \
+	and(_dialog_bg @= colour(ui_dialog_background), \
+	    _win_pen   @= number(0), \
+	    ...)
 \end{code}
 
 #class and "and(statement ...)"
@@ -1771,10 +1768,10 @@ either of the two functions. It is commonly used to define conditional
 class-variable values.
 
 \begin{code}
-editor.selection_style: \
-	when(@colour_display, \
-	     style(background := yellow), \
-	     style(highlight := @on))
+frame.geometry: \
+	when(@display?width > 2000, \
+	     '1200x800', \
+	     '800x600')
 \end{code}
 
 #class while "while(condition, body)"

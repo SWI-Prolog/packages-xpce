@@ -52,9 +52,7 @@
 :- pce_begin_class(man_inheritance_tree, tree).
 
 class_variable(delegation_attributes, vector,
-               when(@colour_display,
-                    vector(colour := green),
-                    vector(texture := dotted))).
+               vector(colour := green)).
 
 variable(showed,                name, get, "Name of ->show'ed class").
 variable(delegation_link,       link, get, "Link for delegation relation").

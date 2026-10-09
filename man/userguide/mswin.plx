@@ -12,8 +12,8 @@ graphical functionality is build on top of this `Virtual Window System'.
 This approach guarantees full portability of applications between the
 platforms.
 
-The look-and-feel of \product{} may be tailored using the defaults file
-located in \metafile{<pcehome>/Defaults}.
+The look-and-feel of \product{} may be tailored using the user's
+{\em Defaults} file. See \secref{classvar}.
 
 
 \section{Currently unsupported features in the Win32 version}
@@ -52,7 +52,7 @@ provide access to related Window resources.
 \strong{It is NOT advised to use these objects in your application code
 directly as this will stop the application to run on the Unix/X11
 version of \product{}. We advice using these objects in the \product{}
-defaults file (\metafile{<pcehome>/Defaults}) only, or use conditional code
+{\em Defaults} file only, or use conditional code
 using `pce <-window_system'.}
 
 
@@ -61,8 +61,8 @@ using `pce <-window_system'.}
 Colours may be created from their X11 names. To provide access to the
 window-system colours as they can be obtained using the Win32 API
 function GetSysColor(), \product{} binds these colours to named colour
-objects. These colour objects are normally used in the \product{}
-resource file (\metafile{<pcehome>/Defaults}) to colour \product{}'s
+objects. These colour objects are normally used in a
+{\em Defaults} file to colour \product{}'s
 controller objects according to the user's preferences.
 
 If the name of the Windows API colours are COLOR_SOMETHING, the \product{}

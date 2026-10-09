@@ -766,8 +766,6 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
 #include "bitmaps/exclamation.xpm"
 #include "bitmaps/cnode.xpm"
 #include "bitmaps/enode.xpm"
-#include "bitmaps/mark.xpm"
-#include "bitmaps/nomark.xpm"
 #include "bitmaps/mark_handle.xpm"
 
 static void
@@ -783,8 +781,6 @@ standardImages(void)
   stdXPMImage(NAME_exclamationImage,   P, &EXCLAMATION_IMAGE,  exclamation_xpm);
   stdXPMImage(NAME_treeExpandedImage,  B, NULL,		       enode_xpm);
   stdXPMImage(NAME_treeCollapsedImage, B, NULL,		       cnode_xpm);
-  stdXPMImage(NAME_markImage,          P, &MARK_IMAGE,	       mark_xpm);
-  stdXPMImage(NAME_nomarkImage,        P, &NOMARK_IMAGE,       nomark_xpm);
   stdXPMImage(NAME_markHandleImage,    B, &MARK_HANDLE_IMAGE,  mark_handle_xpm);
   stdXPMImage(NAME_nullImage,          B, &NULL_IMAGE,         NULL);
 #undef P

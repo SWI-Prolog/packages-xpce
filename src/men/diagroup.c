@@ -746,8 +746,7 @@ static getdecl get_diagroup[] =
 static classvardecl rc_diagroup[] =
 { RC(NAME_alignment, "{column,left,center,right}", "column",
      "Alignment in the row"),
-  RC(NAME_elevation, "elevation*",
-   "when(@colour_display, 0.25mm, @nil)",
+  RC(NAME_elevation, "elevation*", "0.25mm",
      "Elevation above environment"),
   RC(NAME_radius, "0..", "0",
      "Radius for the corners"),

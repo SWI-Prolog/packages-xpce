@@ -1104,10 +1104,6 @@ GLOBAL Colour GREY50_COLOUR;
 GLOBAL Colour BLACK_COLOUR;
 GLOBAL Colour BLUE_COLOUR;
 
-GLOBAL Image MARK_IMAGE;		/* images for toggle and marked */
-GLOBAL Image NOMARK_IMAGE;
-GLOBAL Image MS_MARK_IMAGE;		/* MS images for toggle and marked */
-GLOBAL Image MS_NOMARK_IMAGE;
 GLOBAL Image MARK_HANDLE_IMAGE;		/* connect_gesture */
 GLOBAL Image NULL_IMAGE;		/* empty image */
 GLOBAL Image SCROLL_UP_IMAGE;

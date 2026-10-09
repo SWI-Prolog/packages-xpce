@@ -90,8 +90,6 @@ struct global
   { NAME_grey75Image,		NAME_image },
   { NAME_blackImage,		NAME_image },
   { NAME_cycleImage,		NAME_image },
-  { NAME_markImage,		NAME_image },
-  { NAME_nomarkImage,		NAME_image },
   { NAME_pullRightImage,	NAME_image },
   { NAME_markHandleImage,	NAME_image },
   { NAME_pceImage,		NAME_image },
