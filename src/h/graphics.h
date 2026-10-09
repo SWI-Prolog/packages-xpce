@@ -184,6 +184,7 @@ NewClass(tab)
   Int		label_offset;		/* X-Offset of the label-box */
   BoolObj	editable_label;		/* Label can be edited in place */
   BoolObj	closable;		/* Label carries a close button */
+  Image		icon;			/* Image left of the label text */
   Name		status;			/* {on_top, hidden} */
   Name		previous_top;		/* Name of element on top before me */
 End;

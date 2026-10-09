@@ -5493,6 +5493,7 @@ scope('V.tab.format', advanced).
 scope('V.tab.gap', advanced).
 scope('V.tab.graphicals', advanced).
 scope('V.tab.handles', advanced).
+scope('V.tab.icon', basic).
 scope('V.tab.inverted', advanced).
 scope('V.tab.label', advanced).
 scope('V.tab.label_font', advanced).

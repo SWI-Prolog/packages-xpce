@@ -52,6 +52,7 @@
 static status
 initialiseTab(Tab t, Name name)
 { assign(t, label_offset, ZERO);
+  assign(t, icon,	  NIL);
   assign(t, status,	  NAME_onTop);
   assign(t, size,	  DEFAULT);
 
@@ -91,6 +92,55 @@ pill_padding(int lh)
 }
 
 
+/* The <-icon is drawn as high as the text, keeping its aspect ratio, and
+   centred in the half circle at the left end of the pill, as the close
+   button is in the one at the right end.
+*/
+
+static void
+icon_size(Tab t, int *iw, int *ih)
+{ Image img = t->icon;
+  int fh = valInt(getHeightFont(t->label_font));
+  int w = valInt(img->size->w);
+  int h = valInt(img->size->h);
+
+  *ih = fh;
+  *iw = (h > 0 ? (w*fh + h/2)/h : fh);
+}
+
+
+/* Room between the ends of the label and its text: the icon and close
+   button, or else the radius of the pill.
+*/
+
+static int
+text_left(Tab t, int lh)
+{ if ( notNil(t->icon) )
+  { int iw, ih;
+    int ex = valInt(getAvgCharWidthFont(t->label_font));
+
+    icon_size(t, &iw, &ih);
+    return PILL_HGAP + (pill_height(lh)-ih)/2 + iw + ex/2;
+  }
+
+  return pill_padding(lh);
+}
+
+
+static int
+text_right(Tab t, int lh)
+{ if ( t->closable == ON )
+  { int ph = pill_height(lh);
+    int s = close_button_size(ph);
+    int ex = valInt(getAvgCharWidthFont(t->label_font));
+
+    return PILL_HGAP + (ph+s)/2 + ex/2;
+  }
+
+  return pill_padding(lh);
+}
+
+
 static status
 computeLabelTab(Tab t)
 { if ( notNil(t->label_size) )
@@ -102,16 +152,14 @@ computeLabelTab(Tab t)
     { compute_label_size_dialog_group((DialogGroup) t, &w, &h);
       h += 2*PILL_VPAD + PILL_GAP;
       h = max(h, valInt(minsize->h));
-      w += 2*pill_padding(h);
+      w += text_left(t, h) + text_right(t, h);
     } else				/* no label: the box shrinks to its */
-    { w = 2*ex;				/* minimum rather than keeping the */
-      h = valInt(getHeightFont(t->label_font)) + 2*PILL_VPAD + PILL_GAP;
-    }					/* size of a label it no longer has */
+    { h = valInt(getHeightFont(t->label_font)) + 2*PILL_VPAD + PILL_GAP;
+      h = max(h, valInt(minsize->h));	/* minimum rather than keeping the */
+      w = 2*ex +			/* size of a label it no longer has */
+	  text_left(t, h) + text_right(t, h) - 2*pill_padding(h);
+    }
     w = max(w, valInt(minsize->w));
-    h = max(h, valInt(minsize->h));
-    if ( t->closable == ON )		/* room for the button on the right; */
-      w += close_button_size(pill_height(h)) + ex/2; /* <-label_format is left, so it */
-					/* lands there */
 
     if ( t->label_size != minsize )
       setSize(t->label_size, toInt(w), toInt(h));
@@ -173,12 +221,12 @@ getLabelButtonAreaTab(Tab t)
 { int lh = labelHeightTab(t);
 
   if ( lh > 0 )
-  { int ph = pill_height(lh);		/* at the end of the text, */
-    int s  = close_button_size(ph);	/* centred in the pill */
+  { int ph = pill_height(lh);		/* centred in the right end */
+    int s  = close_button_size(ph);	/* of the pill */
 
     answer(answerObject(ClassArea,
 			toInt(valInt(t->label_offset) +
-			      valInt(t->label_size->w) - pill_padding(lh) - s),
+			      valInt(t->label_size->w) - PILL_HGAP - (ph+s)/2),
 			toInt((ph-s)/2),
 			toInt(s), toInt(s), EAV));
   }
@@ -305,6 +353,21 @@ ChangedLabelTab(Tab t)
        ) &&
        instanceOfObject(t->device, ClassTabStack) )
   { send(t->device, NAME_layoutLabels, EAV);
+  }
+
+  succeed;
+}
+
+
+/* ->icon: an image left of the text of the label, drawn as high as the
+   text.  See icon_size().
+*/
+
+static status
+iconTab(Tab t, Image img)
+{ if ( t->icon != img )
+  { assign(t, icon, img);
+    qadSendv(t, NAME_ChangedLabel, 0, NULL);
   }
 
   succeed;
@@ -451,11 +514,22 @@ draw_label(Tab t, int x, int y, int lw, int lh, bool on_top, int lflags)
     lfg = getMixColour(fg, bg, hidden_label_factor());
   }
 
+  if ( notNil(t->icon) )
+  { int iw, ih;
+
+    icon_size(t, &iw, &ih);
+    if ( lfg )				/* dimmed as the label */
+      r_push_group();
+    r_image(t->icon, 0, 0, px + (ph-ih)/2, py + (ph-ih)/2, iw, ih);
+    if ( lfg )
+      r_pop_group_with_alpha(1.0 - valNum(hidden_label_factor()));
+  }
+
   if ( lfg )
     r_colour(lfg);
   RedrawLabelDialogGroup((DialogGroup)t, 0,
-			 x+pill_padding(lh), py,
-			 lw-2*pill_padding(lh), ph,
+			 x+text_left(t, lh), py,
+			 lw-text_left(t, lh)-text_right(t, lh), ph,
 			 t->label_format, NAME_center,
 			 lflags);
   if ( lfg )
@@ -605,6 +679,8 @@ static vardecl var_tab[] =
      NAME_appearance, "Label can be edited in place"),
   SV(NAME_closable, "bool", IV_GET|IV_STORE, closableTab,
      NAME_appearance, "Label carries a button to close me"),
+  SV(NAME_icon, "image*", IV_GET|IV_STORE, iconTab,
+     NAME_appearance, "Image left of the text of my label"),
   SV(NAME_status, "{on_top,hidden}", IV_GET|IV_STORE, statusTab,
      NAME_appearance, "Currently displayed status"),
   IV(NAME_previousTop, "name*", IV_NONE,

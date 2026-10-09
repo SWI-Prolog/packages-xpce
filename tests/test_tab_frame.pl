@@ -706,6 +706,31 @@ test(a_closable_tab_makes_room_for_its_button) :-
     BX >= PX+PH/2+TW,                   % right of the text, which starts
     BX+BW =< PX+PW.                     % a radius into the label's pill
 
+%   The cross is centred in the half circle at the right end of the
+%   pill, so a closable label needs little more room than another one.
+
+test(the_close_button_is_in_the_end_of_the_label, true(abs(Off) =< 1)) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, closable, @on),
+    get(TF, close_button_area, area(BX, _, S, S)),
+    get(TF, label_area, area(PX, _, PW, PH)),
+    Off is (BX+S/2) - (PX+PW-PH/2).
+
+%   An icon goes left of the text, as high as the text.
+
+test(an_icon_makes_room_left_of_the_text, true(W1 > W0)) :-
+    two_tabs(_TW, TF, _TF2),
+    get(TF?label_size, width, W0),
+    send(TF, icon, image('16x16/doc.png')),
+    get(TF?label_size, width, W1).
+
+test(an_icon_can_be_taken_away, true(W2 == W0)) :-
+    two_tabs(_TW, TF, _TF2),
+    get(TF?label_size, width, W0),
+    send(TF, icon, image('16x16/doc.png')),
+    send(TF, icon, @nil),
+    get(TF?label_size, width, W2).
+
 %   The cross is in the label it belongs to, and is drawn smaller than the
 %   label is tall.
 

@@ -36,6 +36,13 @@ See also class tab_stack.
 
 ## Instance variables {#class-tab-instvars}
 
+- tab<->icon: image*
+    Image shown left of the text of the label, scaled to the height
+    of the text.  It sits in the half circle at the left end of the
+    label, as a close button (see <-closable) sits in the one at the
+    right end.  It is dimmed with the label of a hidden tab.  Default
+    @nil.
+
 - tab<-label_format: {left,center,right}
     Deternines how the label is aligned the box.
 

@@ -544,13 +544,12 @@ place_new_tab_button(TS, Tabs:prolog) :->
     "Put the new-tab button after the last label"::
     (   new_tab_message(TS, Message),
         last(Tabs, Last),
-        get(Last, label_button_area, area(BX, BY, S, S)),
+        get(Last, label_area, area(PX, PY, PW, S)), % as high as a label
         get(Last, area, area(TX, TY, _, _)),
-        get(Last, label_offset, LX),
-        get(Last?label_size, width, LW)
-    ->  Gap is LX+LW-BX-S,              % the same room it leaves on a label
-        X is TX+LX+LW+Gap,
-        Y is TY+BY,
+        get(Last, label_offset, LX)
+    ->  Gap is 2*(PX-LX),               % as far as the next label would be
+        X is TX+PX+PW+Gap,
+        Y is TY+PY,
         get(TS, tab_button, TS, new_tab_button, size(S, S),
             new_tab, Message, 'Open a new tab', B),
         send(B, set, X, Y)
