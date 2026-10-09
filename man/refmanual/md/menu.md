@@ -79,6 +79,8 @@ first item is at `Menu <-item_offset`.
 If `Menu <->layout` equals horizontal, the items are placed
 left-to-right.  If `Menu <->layout` equals vertical, the items are placed
 top-to-bottom.  The items are spread over `Menu <-columns` columns.
+In both layouts the label is left of the first item, so a dialog
+aligns it with the labels of the items above and below.
 The following illustrates the placement of a menu with
 horizontal layout, 2 columns and 5 items:
 

@@ -196,24 +196,17 @@ computeLabelMenu(Menu m)
       assign(m, label_area, newObject(ClassArea, EAV));
 
     dia_label_size(m, &w, &h, NULL);
-    if ( m->layout == NAME_horizontal )
-      w += valInt(getAvgCharWidthFont(m->label_font));
+    w += valInt(getAvgCharWidthFont(m->label_font));
     setArea(m->label_area, DEFAULT, DEFAULT, toInt(w), toInt(h));
 
-    if ( m->layout == NAME_vertical )
-    { iox = 0;
-      ioy = h;
-    } else
-    { iox = w;
-      ioy = 0;
-    }
+    iox = w;				/* label left of the (first) item */
+    ioy = 0;
   } else
   { assign(m, label_area, NIL);
     iox = ioy = 0;
   }
 
   if ( notDefault(m->label_width) &&
-       m->layout == NAME_horizontal &&
        valInt(m->label_width) > iox )
     iox = valInt(m->label_width);
 
@@ -344,10 +337,8 @@ computeMenu(Menu m)
     if ( m->show_label == ON )
     { Area a = m->label_area;
 
-      if ( m->layout == NAME_horizontal )
-      { if ( valInt(m->item_size->h) > valInt(a->h) )
-	  assign(a, h, m->item_size->h);
-      }
+      if ( valInt(m->item_size->h) > valInt(a->h) )
+	assign(a, h, m->item_size->h);	/* centre on the first item */
 
       x = valInt(a->x); y = valInt(a->y);
       w = valInt(a->w); h = valInt(a->h);
@@ -915,8 +906,7 @@ RedrawAreaMenu(Menu m, Area a)
   { int flags = (m->active == ON ? 0 : LABEL_INACTIVE);
     int lw = (isDefault(m->label_width) ? valInt(m->label_area->w)
 					: valInt(m->label_width));
-    if ( m->layout == NAME_horizontal )
-      lw -= valInt(getAvgCharWidthFont(m->label_font));
+    lw -= valInt(getAvgCharWidthFont(m->label_font));
 
     RedrawLabelDialogItem(m,
 			  accelerator_code(m->accelerator),
@@ -2072,7 +2062,8 @@ kindMenu(Menu m, Name kind)
     assign(m, auto_value_align, OFF);
     assign(m, border, toInt(4));
   } else
-  { assign(m, auto_value_align, ON);
+  { /* the segments of a choice have the width of their own labels */
+    assign(m, auto_value_align, kind == NAME_choice ? OFF : ON);
 
     if ( kind == NAME_marked )
     { assign(m, on_image,
@@ -2162,6 +2153,8 @@ static status
 layoutMenu(Menu m, Name or)
 { return assignGraphical(m, NAME_layout, or);
 }
+
+
 
 
 static status

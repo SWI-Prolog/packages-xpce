@@ -45,7 +45,7 @@ Run with:
 :- use_module(library(plunit)).
 
 test_menu :-
-    run_tests([menu_kind, menu_solo, menu_keyboard]).
+    run_tests([menu_kind, menu_solo, menu_keyboard, menu_layout]).
 
 %   toggle_menu(-Dialog, -Menu, -Log)
 %
@@ -253,3 +253,41 @@ test(toggle_space_toggles, [Sel-Log == [b,c]-[c]]) :-
     send(D, destroy).
 
 :- end_tests(menu_keyboard).
+
+%   layout_dialog(-Dialog, -Marked, -Other, +Kind, +Layout)
+%
+%   A dialog with a marked menu with long labels above a menu Other
+%   of Kind and Layout.
+
+layout_dialog(D, M1, M2, Kind, Layout) :-
+    new(D, dialog),
+    send(D, append, new(M1, menu(a_long_label, marked))),
+    send_list(M1, append, [a_very_long_value, another_long_value]),
+    send(D, append, new(M2, menu(c, Kind))),
+    send(M2, layout, Layout),
+    send_list(M2, append, [x, y]),
+    send(D, layout).
+
+:- begin_tests(menu_layout).
+
+test(choice_keeps_own_value_width, VW == 0) :-
+    layout_dialog(D, _, M2, choice, horizontal),
+    get(M2, slot, value_width, VW),
+    send(D, destroy).
+test(marked_aligns_value_width, VW == W1) :-
+    layout_dialog(D, M1, M2, marked, horizontal),
+    get(M1, value_width, W1),
+    get(M2, slot, value_width, VW),
+    send(D, destroy).
+test(vertical_label_aligned, X1 == X2) :-
+    layout_dialog(D, M1, M2, marked, vertical),
+    get(M1, item_offset, point(X1, _)),
+    get(M2, item_offset, point(X2, _)),
+    send(D, destroy).
+test(horizontal_label_aligned, X1 == X2) :-
+    layout_dialog(D, M1, M2, marked, horizontal),
+    get(M1, item_offset, point(X1, _)),
+    get(M2, item_offset, point(X2, _)),
+    send(D, destroy).
+
+:- end_tests(menu_layout).
