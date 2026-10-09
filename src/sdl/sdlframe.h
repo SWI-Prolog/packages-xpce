@@ -53,6 +53,7 @@ typedef struct
 FrameObj wsid_to_frame(SDL_WindowID id);
 WsFrame sdl_frame(FrameObj fr, bool create);
 bool ws_draw_frame(FrameObj fr);
+bool ws_rounded_popups(Any fr);
 Uint32 SDLCALL flash_end_callback(void *userdata, SDL_TimerID id, Uint32 interval);
 bool sdl_frame_event(SDL_Event *ev);
 void sdl_start_live_resize_watch(void);

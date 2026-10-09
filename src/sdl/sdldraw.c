@@ -141,7 +141,11 @@ void
 d_init_surface(cairo_surface_t *surf, Any background)
 { int width   = cairo_image_surface_get_width(surf);
   int height  = cairo_image_surface_get_height(surf);
-  cairo_t *cr = cairo_create(surf);
+  cairo_t *cr;
+
+  if ( isNil(background) )		/* leave it transparent */
+    return;
+  cr = cairo_create(surf);
   cairo_new_path(cr);
   if ( instanceOfObject(background, ClassColour) )
   { pce_cairo_set_source_color(cr, background);
@@ -987,15 +991,17 @@ r_smooth_box(double x, double y, double w, double h, double r, Any fill)
  * Draw an anti-aliased outline with rounded corners around what has
  * been drawn inside x,y,w,h.  The parts of the box outside the rounded
  * corners are painted in `outside`, so a rectangular background drawn
- * inside the box does not show there.  The outline is drawn in the
- * current colour and thickness.
+ * inside the box does not show there.  If `outside` is @default they are
+ * made transparent, which shows what is behind a window that supports
+ * transparency, such as a popup.  The outline is drawn in the current
+ * colour and thickness.
  *
  * @param x The x-coordinate of the top-left corner.
  * @param y The y-coordinate of the top-left corner.
  * @param w The width of the box.
  * @param h The height of the box.
  * @param r The radius for rounded corners.
- * @param outside The colour outside the corners or @nil.
+ * @param outside The colour outside the corners, @default (clear) or @nil.
  */
 void
 r_rounded_frame(double x, double y, double w, double h, double r,
@@ -1012,8 +1018,12 @@ r_rounded_frame(double x, double y, double w, double h, double r,
     cairo_set_fill_rule(CR, CAIRO_FILL_RULE_EVEN_ODD);
     cairo_rectangle(CR, x, y, w, h);
     my_cairo_rounded_rectangle(CR, x, y, w, h, r, true);
-    r_fillpattern(outside, NAME_background);
-    pce_cairo_set_source_fill(CR, context.fill);
+    if ( isDefault(outside) )
+    { cairo_set_operator(CR, CAIRO_OPERATOR_CLEAR);
+    } else
+    { r_fillpattern(outside, NAME_background);
+      pce_cairo_set_source_fill(CR, context.fill);
+    }
     cairo_fill(CR);
     cairo_restore(CR);
   }
@@ -1032,6 +1042,33 @@ r_rounded_frame(double x, double y, double w, double h, double r,
   }
   cairo_new_path(CR);
 }
+
+/**
+ * Make the rectangle ox,oy,ow,oh transparent, except for the box x,y,w,h
+ * with corners rounded by `r' inside it.  Used for the margin of a
+ * popup window that holds its drop shadow.
+ */
+void
+r_clear_outside(double ox, double oy, double ow, double oh,
+		double x, double y, double w, double h, double r)
+{ Translate(ox, oy);
+  Translate(x, y);
+
+  cairo_save(CR);
+  cairo_new_path(CR);
+  cairo_set_fill_rule(CR, CAIRO_FILL_RULE_EVEN_ODD);
+  cairo_rectangle(CR, ox, oy, ow, oh);
+  if ( r > 0 )
+    my_cairo_rounded_rectangle(CR, x, y, w, h, r, true);
+  else
+  { cairo_new_sub_path(CR);
+    cairo_rectangle(CR, x, y, w, h);
+  }
+  cairo_set_operator(CR, CAIRO_OPERATOR_CLEAR);
+  cairo_fill(CR);
+  cairo_restore(CR);
+}
+
 
 /* One pass of a box blur of radius `r' over `n' values of `line', which
  * are `step' bytes apart, using `tmp' (n bytes) as scratch.

@@ -278,6 +278,80 @@ constrain_popup(SDL_Window *parent, int *x, int *y, int w, int h)
 }
 #endif
 
+/* Popups have rounded corners (see draw_popup_frame() in men/menu.c),
+ * for which their window must be transparent outside the corners.  That
+ * needs a compositor.  MacOS, Windows and Wayland always have one.  On
+ * X11 we ask whether a compositing manager owns _NET_WM_CM_S0.  We have
+ * no link to libX11, but SDL has loaded it.  Without a compositor the
+ * transparent pixels show black, so popups get square corners.
+ */
+
+static int popups_transparent = -1;	/* unknown */
+
+#if !defined(__APPLE__) && !defined(__WINDOWS__)
+#include <dlfcn.h>
+
+static bool
+x11_composited(SDL_Window *win)
+{ void *dpy = SDL_GetPointerProperty(SDL_GetWindowProperties(win),
+				     SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+  void *lib;
+  bool rc = false;
+
+  if ( !dpy || !(lib = dlopen("libX11.so.6", RTLD_LAZY|RTLD_NOLOAD)) )
+    return false;
+
+  unsigned long (*intern)(void *, const char *, int) =
+    (unsigned long (*)(void *, const char *, int))dlsym(lib, "XInternAtom");
+  unsigned long (*owner)(void *, unsigned long) =
+    (unsigned long (*)(void *, unsigned long))dlsym(lib, "XGetSelectionOwner");
+
+  if ( intern && owner )
+    rc = owner(dpy, intern(dpy, "_NET_WM_CM_S0", 0)) != 0;
+  dlclose(lib);
+
+  return rc;
+}
+#endif
+
+static bool
+transparent_popups(SDL_Window *parent)
+{ if ( popups_transparent < 0 )
+  {
+#if defined(__APPLE__) || defined(__WINDOWS__)
+    popups_transparent = 1;
+#else
+    const char *drv = SDL_GetCurrentVideoDriver();
+
+    if ( drv && strcmp(drv, "x11") == 0 )
+      popups_transparent = x11_composited(parent);
+    else
+      popups_transparent = (drv && strcmp(drv, "wayland") == 0);
+#endif
+  }
+
+  return popups_transparent == 1;
+}
+
+/* True if popup windows are transparent and may have rounded corners
+ * and a drop shadow.  If this is not yet known, it is found out using
+ * the SDL window of `fr' (any frame on the display) if it has one.
+ */
+
+bool
+ws_rounded_popups(Any fr)
+{ if ( popups_transparent < 0 &&
+       fr && instanceOfObject(fr, ClassFrame) &&
+       ws_created_frame(fr) )
+  { WsFrame wfr = ((FrameObj)fr)->ws_ref;
+
+    transparent_popups(wfr->ws_window);
+  }
+
+  return popups_transparent == 1;
+}
+
+
 /**
  * Create the specified frame.
  *
@@ -307,6 +381,10 @@ ws_create_frame(FrameObj fr)
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MENU_BOOLEAN, true);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FOCUSABLE_BOOLEAN, false);
+    /* A popup may have rounded corners: what is outside them is made
+       transparent.  See draw_popup_frame() in men/menu.c. */
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN,
+			   transparent_popups(parent));
 #if defined(__APPLE__) && defined(SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN)
     /* SDL on MacOS does not handle popup placement correctly on secondary displays */
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN, false);
@@ -888,8 +966,12 @@ ws_draw_frame(FrameObj fr)
 
   DEBUG(NAME_sdl,
 	Cprintf("BEGIN ws_draw_frame(%s)\n", pp(fr)));
-  SDL_Color c = pceColour2SDL_Color(gapColourFrame(fr));
-  SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
+  if ( SDL_GetWindowFlags(wfr->ws_window) & SDL_WINDOW_TRANSPARENT )
+  { SDL_SetRenderDrawColor(wfr->ws_renderer, 0, 0, 0, 0);
+  } else
+  { SDL_Color c = pceColour2SDL_Color(gapColourFrame(fr));
+    SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
+  }
   SDL_RenderClear(wfr->ws_renderer);
   Cell cell;
   for_cell(cell, fr->members)

@@ -132,6 +132,38 @@ getDefaultMenuItemPopup(PopupObj p)
 }
 
 		/********************************
+		*           SHADOW		*
+		********************************/
+
+/* The drop shadow of a popup (class variable `shadow') or NULL.  It is
+ * drawn in the window of the popup, around the popup itself, so it is
+ * only there if the window can be transparent (see ws_rounded_popups()).
+ * `fr' is used to find that out if it is not yet known.
+ */
+
+Shadow
+popupShadow(PopupObj p, Any fr)
+{ Any val = getClassVariableValueObject(p, NAME_shadow);
+  Shadow s;
+
+  if ( val && (s = toShadow(val)) && ws_rounded_popups(fr) )
+    return s;
+
+  return NULL;
+}
+
+
+/* Room around the popup in its window for the drop shadow */
+
+int
+popupShadowMargin(PopupObj p, Any fr)
+{ Shadow s = popupShadow(p, fr);
+
+  return s ? extentShadow(s) : 0;
+}
+
+
+		/********************************
 		*           OPEN/CLOSE		*
 		********************************/
 
@@ -162,8 +194,14 @@ openPopup(PopupObj p, Graphical gr, Point pos,
   if ( isDefault(warp_pointer) )	warp_pointer = ON;
   if ( isDefault(ensure_on_display) )	ensure_on_display = ON;
 
+  fr = getFrameGraphical(gr);
+  int m = popupShadowMargin(p, fr);	/* room for the shadow */
+
   sw = createPopupWindow(d);
-  send(sw, NAME_display, p, EAV);
+  if ( m )				/* keep the room right and below */
+    send(sw, NAME_border, tempObject(ClassSize, toInt(m), toInt(m), EAV), EAV);
+  send(sw, NAME_display, p, tempObject(ClassPoint, toInt(m), toInt(m), EAV),
+       EAV);
 
   offset = getFramePositionGraphical(gr);
   if ( !offset )
@@ -199,24 +237,23 @@ openPopup(PopupObj p, Graphical gr, Point pos,
   { dx = -4;
     previewMenu((Menu) p, NIL);
   }
-  pw = valInt(p->area->w);
-  ph = valInt(p->area->h);
+  pw = valInt(p->area->w) + 2*m;
+  ph = valInt(p->area->h) + 2*m;
 
-  if ( pos_is_pointer == ON )
+  if ( pos_is_pointer == ON )		/* dx,dy include the margin */
   { cx = valInt(pos->x);
     cy = valInt(pos->y);
     px = cx - dx;
     py = cy - dy;
   } else
-  { px = valInt(pos->x);
-    py = valInt(pos->y);
+  { px = valInt(pos->x) - m;		/* the popup itself at pos */
+    py = valInt(pos->y) - m;
     cx = px + dx;
     cy = py + dy;
     moved = TRUE;
   }
 
   swfr = getFrameGraphical((Graphical) sw);
-  fr   = getFrameGraphical(gr);
   if ( fr )
   { send(swfr, NAME_application, fr->application, EAV);
     attributeObject(swfr, NAME_parent, fr);
@@ -716,7 +753,15 @@ static classvardecl rc_popup[] =
      "Label is visible"),
   RC(NAME_valueWidth, "int", "80",
      "Minimum width in pixels"),
-  RC(NAME_elevation, RC_REFINE, UXWIN("2", "1"), NULL),
+  RC(NAME_radius, "0..", UXWINMAC("6", "8", "10"),
+     "Radius of the corners"),
+  RC(NAME_borderColour, "colour", "ui_separator",
+     "Colour of the outline"),
+  RC(NAME_shadow, "shadow*",
+     UXWINMAC("shadow(0, 4, 12, colour(@default, 0, 0, 0, 70))",
+	      "shadow(0, 4, 12, colour(@default, 0, 0, 0, 70))",
+	      "@nil"),
+     "Drop shadow (needs a compositor; MacOS adds its own)"),
   RC(NAME_labelSuffix, RC_REFINE, "", NULL),
   RC(NAME_format, RC_REFINE, "left", NULL),
   RC(NAME_margin, RC_REFINE, "1",    NULL),

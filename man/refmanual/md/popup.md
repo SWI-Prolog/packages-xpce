@@ -15,11 +15,9 @@ connect the popup with some event.  See also `graphical ->popup` and
 PCE encourages you to associate popup-menus with the right mouse-button
 only.
 
-By default, a popup menu inverts the current item.  This gives odd
-results on colour displays.  You can change this into a box by adding
-the following line to your Defaults file.
+A popup has a flat outline in the theme with rounded corners.  The
+item under the pointer is highlighted in the selection colours.
 
-	popup.preview_feedback: box
 
 The method ->execute is activated to execute the behaviour
 associated with the selected item.  The documentation of this
@@ -60,6 +58,24 @@ not supported.
 @see menu_item-popup
 @see list_browser-popup
 @see dialog_item-popup
+
+
+## Class variables {#class-popup-classvars}
+
+- popup.radius: 0.. = 6 (Unix), 8 (Windows), 10 (MacOS)
+    Radius of the corners of the popup.  The window of the popup is
+    made transparent outside them.  On X11 this needs a compositing
+    window manager; without one the corners are square.  0 makes them
+    square everywhere.
+
+- popup.border_colour: colour = ui_separator
+    Colour of the outline of the popup.
+
+- popup.shadow: shadow* = shadow(0, 4, 12, colour(@default, 0, 0, 0, 70))
+    Drop shadow around the popup (see class shadow).  It is drawn in
+    the window of the popup, which is made larger for it, and thus
+    needs the same transparent window as rounded corners.  The default
+    is @nil on MacOS, which gives popups a shadow of its own.
 
 
 ## Instance variables {#class-popup-instvars}

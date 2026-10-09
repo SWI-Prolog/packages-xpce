@@ -891,6 +891,38 @@ draw_choice_separator(Menu m, MenuItem prev, int px, int py,
 }
 
 
+/* The frame of a popup: a flat outline in the class variable
+   border_colour with corners rounded by the class variable radius.  The
+   corners outside it are made transparent, so the popup window is
+   rounded too.  This is done after every redraw, as highlighting an item
+   paints into the corners.  Without a compositor the window cannot be
+   transparent and the corners are square (see ws_rounded_popups()).
+*/
+
+static void
+draw_popup_frame(Menu m, int x, int y, int w, int h)
+{ FrameObj fr = getFrameGraphical((Graphical)m);
+  Int ri = getClassVariableValueObject(m, NAME_radius);
+  Any c = getClassVariableValueObject(m, NAME_borderColour);
+  int r = (ri && isInteger(ri) && ws_rounded_popups(fr) ? valInt(ri) : 0);
+  Shadow s = popupShadow((PopupObj)m, fr);
+  Any old;
+
+  if ( s )				/* the margin around me holds */
+  { int sm = extentShadow(s);		/* the shadow */
+
+    r_clear_outside(x-sm, y-sm, w+2*sm, h+2*sm, x, y, w, h, r);
+    r_drop_shadow(s, NAME_box, x, y, w, h, r);
+  }
+
+  old = r_colour(c && instanceOfObject(c, ClassColour) ? c : DEFAULT);
+  r_thickness(1);
+  r_dash(NAME_none);
+  r_rounded_frame(x, y, w, h, r, s ? NIL : DEFAULT);
+  r_colour(old);
+}
+
+
 static status
 RedrawAreaMenu(Menu m, Area a)
 { int x, y, w, h;
@@ -944,7 +976,7 @@ RedrawAreaMenu(Menu m, Area a)
     ay += y - valInt(m->area->y);
     rows_and_cols(m, &rows, &cols);
 
-    if ( z && notNil(z) )
+    if ( z && notNil(z) && !instanceOfObject(m, ClassPopup) )
       r_3d_box(cx, cy, w-(cx-x), h-(cy-y), 0, z, TRUE);
     cx += valInt(m->margin);
     bx = cx;
@@ -994,6 +1026,9 @@ RedrawAreaMenu(Menu m, Area a)
       }
       n++;
     }
+
+    if ( instanceOfObject(m, ClassPopup) )
+      draw_popup_frame(m, x, y, w, h);
   }
 
   return RedrawAreaGraphical(m, a);

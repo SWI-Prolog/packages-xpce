@@ -3443,9 +3443,9 @@ scope('R.pce.initialise', advanced).
 scope('R.picture.size', basic_programming).
 scope('R.popup.accelerator_font', basic).
 scope('R.popup.border', basic).
+scope('R.popup.border_colour', advanced).
 scope('R.popup.cursor', basic).
 scope('R.popup.default_item', basic).
-scope('R.popup.elevation', advanced).
 scope('R.popup.feedback', internal).
 scope('R.popup.format', advanced).
 scope('R.popup.kind', internal).
@@ -3458,6 +3458,8 @@ scope('R.popup.off_image', advanced).
 scope('R.popup.on_image', advanced).
 scope('R.popup.pen', basic).
 scope('R.popup.preview_feedback', basic).
+scope('R.popup.radius', basic).
+scope('R.popup.shadow', basic).
 scope('R.popup.show_label', basic).
 scope('R.popup.value_width', advanced).
 scope('R.popup_gesture.button', advanced).

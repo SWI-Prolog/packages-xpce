@@ -86,6 +86,22 @@ ws_uncreate_window(PceWindow sw)
   ws_event_destroyed_target(sw);
 }
 
+/* What a new backing is filled with.  A popup starts transparent: it
+ * may have rounded corners, and its window is shown before the popup
+ * has drawn itself.  See draw_popup_frame() in men/menu.c.
+ */
+
+static Any
+initial_background(PceWindow sw)
+{ FrameObj fr = sw->frame;
+
+  if ( notNil(fr) && fr->kind == NAME_popup && ws_rounded_popups(fr) )
+    return NIL;
+
+  return sw->background;
+}
+
+
 /**
  * Create a native window for the specified PceWindow, optionally as a
  * child of  another.  In  SDL, native windows  are not  window system
@@ -113,7 +129,7 @@ ws_create_window(PceWindow sw, PceWindow parent)
   wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 					    wsw->w,  wsw->h);
   assert(wsw->backing);
-  d_init_surface(wsw->backing, sw->background);
+  d_init_surface(wsw->backing, initial_background(sw));
   ws_dirty_all_window(sw);
 
   DEBUG(NAME_sdl, Cprintf("ws_create_window(%s)\n", pp(sw)));
@@ -148,7 +164,7 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
 						max(wsw->w, 1),
 						max(wsw->h, 1));
       assert(wsw->backing);
-      d_init_surface(wsw->backing, sw->background);
+      d_init_surface(wsw->backing, initial_background(sw));
       wsw->ndirty = 0;			/* rectangles refer to the old size */
       ws_dirty_all_window(sw);
       if ( wsw->texture )

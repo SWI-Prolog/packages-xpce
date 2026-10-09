@@ -59,6 +59,8 @@ COMMON(status)	makeClassMenuItem(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/men/popup.c */
 COMMON(status)	defaultPopupImages(PopupObj p);
 COMMON(status)	makeClassPopup(Class class);
+COMMON(Shadow)	popupShadow(PopupObj p, Any fr);
+COMMON(int)	popupShadowMargin(PopupObj p, Any fr);
 
 /* src/men/boolitem.c */
 COMMON(status)	makeClassBoolItem(Class class);

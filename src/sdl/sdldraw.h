@@ -105,6 +105,8 @@ void r_rounded_frame(double x, double y, double w, double h, double r,
 		     Any outside);
 void r_smooth_box(double x, double y, double w, double h,
 		  double r, Any fill);
+void r_clear_outside(double ox, double oy, double ow, double oh,
+		     double x, double y, double w, double h, double r);
 void r_drop_shadow(Shadow s, Name shape,
 		   double x, double y, double w, double h, double r);
 Any r_elevation_shadow(Elevation e);
