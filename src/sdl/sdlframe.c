@@ -202,6 +202,36 @@ sdl_parent_window(FrameObj fr, FrameObj *frp)
   return NULL;
 }
 
+/* Record the position of the frame's window, given in global
+ * coordinates, relative to its display.
+ */
+
+static void
+set_frame_position(FrameObj fr, int x, int y)
+{ Area da = fr->display->area;
+
+  assign(fr->area, x, toInt(x - valInt(da->x)));
+  assign(fr->area, y, toInt(y - valInt(da->y)));
+}
+
+
+/* Make <-area of the frame reflect where its window is.  The area is
+ * updated on SDL_EVENT_WINDOW_MOVED, but a window placed when it is
+ * created, e.g., centred on the display, need not generate that event.
+ * The position of a popup window is relative to its parent and is
+ * maintained by xpce itself.
+ */
+
+static void
+sync_frame_position(FrameObj fr, SDL_Window *win)
+{ int x, y;
+
+  if ( !(SDL_GetWindowFlags(win) & (SDL_WINDOW_POPUP_MENU|SDL_WINDOW_TOOLTIP)) &&
+       SDL_GetWindowPosition(win, &x, &y) )
+    set_frame_position(fr, x, y);
+}
+
+
 #ifdef __APPLE__
 /* SDL's popup constraining is disabled on MacOS (see ws_create_frame()),
    so we must keep popups inside the display ourselves.  Popup positions
@@ -1072,6 +1102,7 @@ sdl_frame_event(SDL_Event *ev)
 	  { DEBUG(NAME_display, Cprintf("Opened %s on %s\n", pp(fr), pp(dsp)));
 	    assign(fr, display, dsp);
 	  }
+	  sync_frame_position(fr, wfr->ws_window);
 	}
 	return frame_displayed(fr, ON);
       case SDL_EVENT_WINDOW_HIDDEN:
@@ -1081,18 +1112,8 @@ sdl_frame_event(SDL_Event *ev)
 	RedrawDisplayManager(TheDisplayManager());
 	return ws_draw_frame(fr);
       case SDL_EVENT_WINDOW_MOVED:
-      { int new_x = ev->window.data1;
-	int new_y = ev->window.data2;
-	Area da = fr->display->area;
-
-	new_x -= valInt(da->x);
-	new_y -= valInt(da->y);
-
-	assign(fr->area, x, toInt(new_x));
-	assign(fr->area, y, toInt(new_y));
-
+	set_frame_position(fr, ev->window.data1, ev->window.data2);
 	return true;
-      }
       case SDL_EVENT_WINDOW_RESIZED:
       { int new_w, new_h;
 
