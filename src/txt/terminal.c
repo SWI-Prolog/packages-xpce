@@ -2926,7 +2926,7 @@ getInputTerminalImage(TerminalImage ti)
   else
     tail = rlc_cluster_distance(b, b->caret_y, b->caret_x, el, ec);
 
-  if ( !(text=rlc_read_from_window(b, sl, sc, el, ec, "", 0)) )
+  if ( !(text=rlc_read_from_window(b, sl, sc, el, ec, "\n", 0)) )
     fail;
   str = TCHAR2String(text);
   rlc_free(text);
@@ -4738,9 +4738,13 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
  * put the caret anywhere: we can only ask, and the request every line
  * editor understands is cursor-left and cursor-right.  Count the
  * grapheme clusters between the caret and the target and send that
- * many.  Only inside the logical line the caret is on -- the line
- * being edited -- so a click anywhere else still just starts a
- * selection.
+ * many.  Only inside the input being edited, so a click anywhere else
+ * still just starts a selection.  Without OSC 133 marks that is the
+ * logical line the caret is on.  With them it is everything from where
+ * `B' put the start of the input to the end of the buffer, which holds
+ * all lines of an input with embedded newlines, such as a multi-line
+ * query pasted or recalled from the history.  A line editor such as
+ * libedit moves over such a newline with a single cursor key.
  *
  * The caret follows the pointer for the whole gesture, as it does in an
  * editor: to the click on the way down, along with a drag, and so to
@@ -4775,8 +4779,9 @@ rlc_logical_start(RlcData b, int line)
 }
 
 /* Grapheme clusters from (l1,c1) forward to (l2,c2).  The caller
- * guarantees both are on the same logical line and (l1,c1) comes
- * first.
+ * guarantees both are in the input being edited and (l1,c1) comes
+ * first.  A soft wrap costs nothing, a hard line break is the newline
+ * in the input and costs a step.
  */
 
 static int
@@ -4789,9 +4794,11 @@ rlc_cluster_distance(RlcData b, int l1, int c1, int l2, int c2)
     if ( (l1 == l2 && c1 >= c2) || n >= MAX_CLICK_MOVE )
       return n;
 
-    if ( c1 >= tl->size )		/* on to the next wrapped row */
+    if ( c1 >= tl->size )		/* on to the next row */
     { if ( l1 == b->last )
 	return n;
+      if ( !tl->softreturn )		/* over the newline */
+	n++;
       l1 = NextLine(b, l1);
       c1 = 0;
       continue;
@@ -4835,6 +4842,28 @@ rlc_input_start(RlcData b, int line, int *sl, int *sc)
   }
 
   return false;
+}
+
+
+/* Is `line' part of the input being edited?  The caret's logical line
+ * always is.  If the client marked where the input starts, so is every
+ * line from there to the end of the buffer: an input with newlines in
+ * it spans several logical lines, and while it is being edited nothing
+ * is written below it.  See also rlc_input_range().
+ */
+
+static bool
+rlc_line_in_input(RlcData b, int line)
+{ if ( !rlc_between(b, b->first, b->last, line) )
+    return false;
+
+  if ( rlc_logical_start(b, line) == rlc_logical_start(b, b->caret_y) )
+    return true;
+
+  return ( b->prompt_marks && b->input_active &&
+	   rlc_between(b, b->first, b->last, b->input_line) &&
+	   rlc_between(b, b->input_line, b->last, line) &&
+	   rlc_between(b, b->input_line, b->last, b->caret_y) );
 }
 
 
@@ -4902,8 +4931,7 @@ rlc_caret_to_position(RlcData b, int line, int chr)
   if ( !rlc_editing_line(b) )		/* nobody is editing a line */
     return false;
 
-  if ( !rlc_between(b, b->first, b->last, line) ||
-       rlc_logical_start(b, line) != rlc_logical_start(b, b->caret_y) )
+  if ( !rlc_line_in_input(b, line) )
     return false;
 
   if ( rlc_input_start(b, line, &sl, &sc) &&
@@ -4966,10 +4994,52 @@ rlc_logical_end(RlcData b, int line, int *el, int *ec)
 }
 
 
+/* rlc_input_range()
+ *	Where the input being edited runs: from where the client marked
+ *	it (OSC 133 `B') to the end of its text.  Without newlines in it
+ *	that is the end of the logical line of the caret.  An input with
+ *	newlines -- a multi-line query pasted or recalled from the history
+ *	-- spans several logical lines, and as nothing is written below an
+ *	input while it is edited, it ends with the text in the buffer.
+ *	Empty rows below that text are not part of it: the line editor
+ *	may leave them behind when the input shrinks.
+ *
+ *	Fails unless the caret is in the input, as it is whenever the
+ *	client is editing it.
+ */
+
+static bool
+rlc_input_range(RlcData b, int *sl, int *sc, int *el, int *ec)
+{ int line;
+
+  if ( !b->prompt_marks || !b->input_active ||
+       !rlc_between(b, b->first, b->last, b->input_line) ||
+       !rlc_between(b, b->input_line, b->last, b->caret_y) )
+    return false;
+
+  *sl = b->input_line;
+  *sc = b->input_char;
+
+  for(line = b->last;
+      line != b->caret_y && line != b->input_line &&
+	b->lines[line].size == 0;
+      line = PrevLine(b, line))
+    ;
+  rlc_logical_end(b, line, el, ec);
+  if ( rlc_sel_lt(b, *el, *ec, *sl, *sc) )
+  { *el = *sl;				/* nothing typed behind the mark */
+    *ec = *sc;
+  }
+
+  return true;
+}
+
+
 /* rlc_selection_in_input()
- *	Is the selection entirely inside the line being edited?  If so,
- *	answer its range, ordered.  Only then may we delete it: anything
- *	else on the screen is output, which we cannot take back.
+ *	Is the selection entirely inside the input being edited (see
+ *	rlc_input_range())?  If so, answer its range, ordered.  Only then
+ *	may we delete it: anything else on the screen is output, which we
+ *	cannot take back.
  */
 
 /* rlc_selection_range()
@@ -4993,30 +5063,16 @@ rlc_selection_range(RlcData b, int *sl, int *sc, int *el, int *ec)
 
 static bool
 rlc_selection_in_input(RlcData b, int *sl, int *sc, int *el, int *ec)
-{ int isl, isc, lel, lec;
+{ int isl, isc, iel, iec;
 
-  if ( !rlc_editing_line(b) || !rlc_has_selection(b) )
+  if ( !rlc_editing_line(b) || !rlc_has_selection(b) ||
+       !rlc_input_range(b, &isl, &isc, &iel, &iec) )
     return false;
 
   rlc_selection_range(b, sl, sc, el, ec);
 
-					/* one logical line, the one we
-					   are editing */
-  if ( rlc_logical_start(b, *sl) != rlc_logical_start(b, b->caret_y) ||
-       rlc_logical_start(b, *el) != rlc_logical_start(b, b->caret_y) )
-    return false;
-
-					/* at or after the prompt */
-  if ( !rlc_input_start(b, *sl, &isl, &isc) ||
-       rlc_sel_lt(b, *sl, *sc, isl, isc) )
-    return false;
-
-					/* not past the end of the text */
-  rlc_logical_end(b, b->caret_y, &lel, &lec);
-  if ( rlc_sel_lt(b, lel, lec, *el, *ec) )
-    return false;
-
-  return true;
+  return ( !rlc_sel_lt(b, *sl, *sc, isl, isc) && /* at or after the prompt */
+	   !rlc_sel_lt(b, iel, iec, *el, *ec) );  /* not past the text */
 }
 
 
@@ -5033,14 +5089,11 @@ static bool
 rlc_selection_on_input(RlcData b)
 { int sl, sc, el, ec, isl, isc, lel, lec;
 
-  if ( !rlc_editing_line(b) || !rlc_has_selection(b) )
-    return false;
-
-  if ( !rlc_input_start(b, b->caret_y, &isl, &isc) )
+  if ( !rlc_editing_line(b) || !rlc_has_selection(b) ||
+       !rlc_input_range(b, &isl, &isc, &lel, &lec) )
     return false;
 
   rlc_selection_range(b, &sl, &sc, &el, &ec);
-  rlc_logical_end(b, b->caret_y, &lel, &lec);
 
   return rlc_sel_lt(b, sl, sc, lel, lec) &&	/* starts before its end */
 	 rlc_sel_lt(b, isl, isc, el, ec);	/* ends after its start */
@@ -5049,8 +5102,9 @@ rlc_selection_on_input(RlcData b)
 
 /* rlc_first_input()
  *	Is the client reading the first line of a command, and if so, where
- *	does that line run?  From where the client marked its input (OSC
- *	133 `B') to the end of the text on the logical line of the caret.
+ *	does that line run?  As rlc_input_range(): from where the client
+ *	marked its input (OSC 133 `B') to the end of its text, which may
+ *	hold newlines.
  *
  *	Only a prompt the client does not mark `k=s' counts.  A `k=s'
  *	prompt asks for more of an input the client has not finished
@@ -5064,17 +5118,7 @@ rlc_selection_on_input(RlcData b)
 
 static bool
 rlc_first_input(RlcData b, int *sl, int *sc, int *el, int *ec)
-{ if ( !b->prompt_marks || !b->input_active || b->input_continued ||
-       !rlc_input_start(b, b->caret_y, sl, sc) )
-    return false;
-
-  rlc_logical_end(b, b->caret_y, el, ec);
-  if ( rlc_sel_lt(b, *el, *ec, *sl, *sc) )
-  { *el = *sl;				/* nothing typed behind the mark */
-    *ec = *sc;
-  }
-
-  return true;
+{ return !b->input_continued && rlc_input_range(b, sl, sc, el, ec);
 }
 
 
