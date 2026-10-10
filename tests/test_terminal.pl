@@ -4962,6 +4962,30 @@ test(isearch_abort_gives_back_view_and_selection, [setup(test_begin(T))]) :-
     assertion(After == Before),
     assertion(\+ term_has_selection(T)).
 
+test(isearch_click_ends_the_search_where_it_is,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  A click ends the search as Escape does, so the user can select
+    %  and copy from the page the search found.  Ending it as ^G does
+    %  would take the view back to where the search started.  The lines
+    %  are a command's output with a prompt below, as in real use: a
+    %  click on a line of the input would move the line editor's caret
+    %  and its echo brings the view back for its own reasons.
+    out(T, '\e]133;C\a'),
+    scrollback(T, 60),
+    out(T, '\e]133;D\a\e]133;A\a?- \e]133;B\a'),
+    isearch(T),
+    isearch_type(T, line12),
+    term_bubble(T, _, Searching, _),
+    screen_row(T, line12, Row),
+    click(T, 2, Row),
+    T = terminal(_, xpce(_, TI)),
+    assertion(get(TI, focus_function, @nil)),
+    term_bubble(T, _, After, _),
+    assertion(After == Searching),
+    assertion(on_screen(T, line12)).
+
 test(isearch_keys_do_not_reach_the_client, [setup(test_begin(T))]) :-
     %  Nothing is written while a search runs, so the buffer standing
     %  still is what says the keys stayed at the window.

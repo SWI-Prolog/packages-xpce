@@ -1208,7 +1208,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     if ( isPopupEvent(ev) )		/* MacOS Control-click asks for the */
       fail;				/* menu, not for a selection */
 
-    endIsearchTerminalImage(ti, OFF);	/* the mouse takes the selection */
+    endIsearchTerminalImage(ti, ON);	/* the mouse takes the selection */
+					/* from the page the search found */
     get_xy_event(ev, ti, ON, &x, &y);
     if ( rlc_fold_at_gutter(ti, valInt(x), valInt(y)) )
       succeed;				/* ->msLeftUp does the folding */
