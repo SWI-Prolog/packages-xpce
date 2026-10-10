@@ -205,7 +205,7 @@ recomputeText(TextObj t, Name what)
     GetSel(t->selection, &from, &to);
     if ( from > size || to > size )
     { if ( from > size ) from = size;
-      if ( from > size ) to = size;
+      if ( to > size ) to = size;
 
       assign(t, selection, MakeSel(toInt(from), toInt(to)));
     }
@@ -1261,19 +1261,53 @@ caretText(TextObj t, Int where)
 }
 
 
+/* Move the caret for a caret movement command.  If Shift is held, as
+ * in Shift-Left, the selection is extended from its end that is not at
+ * the caret, or started at the caret.  Otherwise it is cleared.
+ */
+
+static bool
+extend_selection_event(void)
+{ EventObj ev = getValueVar(EVENT);
+
+  return ( instanceOfObject(ev, ClassEvent) &&
+	   (valInt(ev->buttons) & BUTTON_shift) );
+}
+
+
+static status
+moveCaretText(TextObj t, Int where)
+{ if ( extend_selection_event() )
+  { Int anchor = t->caret;
+
+    if ( notNil(t->selection) )
+    { int from, to;
+
+      GetSel(t->selection, &from, &to);
+      if ( valInt(t->caret) == from )
+	anchor = toInt(to);
+      else if ( valInt(t->caret) == to )
+	anchor = toInt(from);
+    }
+
+    caretText(t, where);
+    return selectionText(t, anchor, t->caret);
+  }
+
+  deselectText(t);
+  return caretText(t, where);
+}
+
+
 static status
 forwardCharText(TextObj t, Int arg)
-{ deselectText(t);
-
-  return caretText(t, add(t->caret, toInt(UArg(t))));
+{ return moveCaretText(t, add(t->caret, toInt(UArg(t))));
 }
 
 
 static status
 backwardCharText(TextObj t, Int arg)
-{ deselectText(t);
-
-  return caretText(t, sub(t->caret, toInt(UArg(t))));
+{ return moveCaretText(t, sub(t->caret, toInt(UArg(t))));
 }
 
 
@@ -1282,22 +1316,19 @@ nextLineText(TextObj t, Int arg, Int column)
 { int cx, cy;
   int fw, fh;
 
-  deselectText(t);
   fw = valInt(getAvgCharWidthFont(text_font(t)));
   fh = valInt(getHeightFont(text_font(t)));
   get_char_pos_text(t, DEFAULT, &cx, &cy);
   cy += UArg(t) * fh + fh/2;
   cx  = (isDefault(column) ? cx + fw/2 : valInt(column));
 
-  return caretText(t, get_pointed_text(t, cx, cy, TRUE));
+  return moveCaretText(t, get_pointed_text(t, cx, cy, TRUE));
 }
 
 
 static status
 previousLineText(TextObj t, Int arg, Int column)
-{ deselectText(t);
-
-  return nextLineText(t, toInt(-UArg(t)), column);
+{ return nextLineText(t, toInt(-UArg(t)), column);
 }
 
 
@@ -1319,13 +1350,12 @@ endOfLineText(TextObj t, Int arg)
   int caret = valInt(t->caret);
   int n;
 
-  deselectText(t);
   caret = end_of_line(s, caret);
   for(n = UArg(t)-1; caret < t->string->data.s_size && n > 0; n--)
   { caret++;
     caret = end_of_line(s, caret);
   }
-  return caretText(t, toInt(caret));
+  return moveCaretText(t, toInt(caret));
 }
 
 
@@ -1335,13 +1365,12 @@ beginningOfLineText(TextObj t, Int arg)
   int caret = valInt(t->caret);
   int n;
 
-  deselectText(t);
   caret = start_of_line(s, caret);
   for(n = UArg(t)-1; caret > 0 && n > 0; n--)
   { caret--;
     caret = start_of_line(s, caret);
   }
-  return caretText(t, toInt(caret));
+  return moveCaretText(t, toInt(caret));
 }
 
 
@@ -1349,9 +1378,8 @@ static status
 forwardWordText(TextObj t, Int arg)
 { int caret = valInt(t->caret);
 
-  deselectText(t);
   caret = forward_word(&t->string->data, caret, UArg(t));
-  return caretText(t, toInt(caret));
+  return moveCaretText(t, toInt(caret));
 }
 
 
@@ -1359,9 +1387,17 @@ static status
 backwardWordText(TextObj t, Int arg)
 { int caret = valInt(t->caret);
 
-  deselectText(t);
   caret = backward_word(&t->string->data, caret, UArg(t));
-  return caretText(t, toInt(caret));
+  return moveCaretText(t, toInt(caret));
+}
+
+
+static status
+selectAllText(TextObj t)
+{ Int size = getSizeCharArray(t->string);
+
+  caretText(t, size);
+  return selectionText(t, ZERO, size);
 }
 
 
@@ -1949,6 +1985,8 @@ static senddecl send_text[] =
      NAME_transpose, "Transpose two char_array around caret"),
   SM(NAME_selection, 2, T_selection, selectionText,
      NAME_selection, "Make [from, to) the selection"),
+  SM(NAME_selectAll, 0, NULL, selectAllText,
+     NAME_selection, "Select all text, leaving the caret at the end"),
   SM(NAME_copy, 0, NULL, copyText,
      NAME_selection, "Copy selection (\\C-c)"),
   SM(NAME_cut, 0, NULL, cutText,

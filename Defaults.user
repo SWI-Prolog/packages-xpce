@@ -124,6 +124,15 @@
 !key_binding.style:	emacs
 !key_binding.style:	apple
 
+! Style for text entry in dialogs: text_item and class text.  It
+! overlays the Emacs bindings with the native keys of the platform:
+! `apple' on MacOS and `cua' elsewhere, where Control-A selects all.
+! Use `emacs' for Emacs keys only.  PceEmacs follows key_binding.style.
+
+!key_binding.dialog_style:	cua
+!key_binding.dialog_style:	emacs
+!key_binding.dialog_style:	apple
+
 ! Creating a selection using  the  mouse   puts  the  selection into the
 ! copy/paste ! buffer by default.  This behaviour can be disabled with the
 ! preference below.

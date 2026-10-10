@@ -723,6 +723,14 @@ static kbDef emacs_view_basics[] =
 static kbDef text[] =
 { { SUPER,		NAME_emacsBasics },
 
+  /* Shift with a caret key extends the selection */
+  { "\\S-<cursor_left>",	NAME_backwardChar },
+  { "\\S-<cursor_right>",	NAME_forwardChar },
+  { "\\S-<cursor_home>",	NAME_beginningOfLine },
+  { "\\S-<end>",		NAME_endOfLine },
+  { "\\S-<cursor_up>",	NAME_previousLine },
+  { "\\S-<cursor_down>",	NAME_nextLine },
+
   { "\\C-u",		NAME_clear },
   { "\\C-c",		NAME_copy },
   { "\\C-v",		NAME_paste },
@@ -737,6 +745,12 @@ static kbDef text[] =
 
 static kbDef text_item[] =
 { { SUPER,		NAME_emacsBasics },
+
+  /* Shift with a caret key extends the selection */
+  { "\\S-<cursor_left>",	NAME_backwardChar },
+  { "\\S-<cursor_right>",	NAME_forwardChar },
+  { "\\S-<cursor_home>",	NAME_beginningOfLine },
+  { "\\S-<end>",		NAME_endOfLine },
 
   { "\\C-c",		NAME_copy },
   { "\\C-v",		NAME_paste },
@@ -758,6 +772,10 @@ static kbDef text_item[] =
 
 static kbDef text_item_view[] =
 { { SUPER,		NAME_emacsViewBasics },
+  { "\\S-<cursor_left>",	NAME_backwardChar },
+  { "\\S-<cursor_right>",	NAME_forwardChar },
+  { "\\S-<cursor_home>",	NAME_beginningOfLine },
+  { "\\S-<end>",		NAME_endOfLine },
   { "\\C-c",		NAME_copy },
   { "TAB",		NAME_next },
   { "\\S-TAB",		NAME_previous },

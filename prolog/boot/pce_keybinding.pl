@@ -59,9 +59,91 @@ message_level(silent).
 %   Apple, the command key is  mapped  to   the  SDL3  GUI key, which is
 %   mapped to Emacs ``\s-`` (super).
 %
+%   The tables for text entry in dialogs (see dialog_table/1) follow the
+%   class variable `key_binding.dialog_style`; all others, notably those
+%   of PceEmacs, follow `key_binding.style`.  Both overlay the Emacs
+%   bindings: a key a style does not bind keeps its Emacs function.
+%
 %   @arg ModeName         Name of the key-binding-style
 %   @arg TableName        Syntax table to modify
 %   @arg Modifications    List of Key-Method
+
+%   Text entry in dialogs.  On Windows and Linux (`cua`), native wins
+%   over Emacs for Control-A, which selects all.
+
+binding(cua, text_item,
+        [ '\\C-a'                 = select_all,
+          '\\C-x'                 = cut,
+          '\\C-<cursor_left>'     = backward_word,
+          '\\C-<cursor_right>'    = forward_word,
+          '\\C-\\S-<cursor_left>'  = backward_word,
+          '\\C-\\S-<cursor_right>' = forward_word,
+          '\\C-BS'                = backward_kill_word,
+          '\\C-DEL'               = kill_word
+        ]).
+binding(cua, text_item_view,
+        [ '\\C-a'                 = select_all,
+          '\\C-<cursor_left>'     = backward_word,
+          '\\C-<cursor_right>'    = forward_word,
+          '\\C-\\S-<cursor_left>'  = backward_word,
+          '\\C-\\S-<cursor_right>' = forward_word
+        ]).
+binding(cua, text,
+        [ '\\C-a'                 = select_all,
+          '\\C-x'                 = cut,
+          '\\C-<cursor_left>'     = backward_word,
+          '\\C-<cursor_right>'    = forward_word,
+          '\\C-\\S-<cursor_left>'  = backward_word,
+          '\\C-\\S-<cursor_right>' = forward_word,
+          '\\C-BS'                = backward_kill_word,
+          '\\C-DEL'               = kill_word
+        ]).
+
+%   On MacOS the Emacs control keys are native too, so the two styles
+%   only meet on Option, which moves by word as \e<cursor_left>.
+
+binding(apple, text_item,
+        [ '\\s-c'                 = copy,
+          '\\s-x'                 = cut,
+          '\\s-v'                 = paste,
+          '\\s-a'                 = select_all,
+          '\\s-<cursor_left>'     = beginning_of_line,
+          '\\s-<cursor_right>'    = end_of_line,
+          '\\S-\\s-<cursor_left>'  = beginning_of_line,
+          '\\S-\\s-<cursor_right>' = end_of_line,
+          '\\e<cursor_left>'      = backward_word,
+          '\\e<cursor_right>'     = forward_word,
+          '\\e\\S-<cursor_left>'   = backward_word,
+          '\\e\\S-<cursor_right>'  = forward_word
+        ]).
+binding(apple, text_item_view,
+        [ '\\s-c'                 = copy,
+          '\\s-a'                 = select_all,
+          '\\s-<cursor_left>'     = beginning_of_line,
+          '\\s-<cursor_right>'    = end_of_line,
+          '\\S-\\s-<cursor_left>'  = beginning_of_line,
+          '\\S-\\s-<cursor_right>' = end_of_line,
+          '\\e<cursor_left>'      = backward_word,
+          '\\e<cursor_right>'     = forward_word,
+          '\\e\\S-<cursor_left>'   = backward_word,
+          '\\e\\S-<cursor_right>'  = forward_word
+        ]).
+binding(apple, text,
+        [ '\\s-c'                 = copy,
+          '\\s-x'                 = cut,
+          '\\s-v'                 = paste,
+          '\\s-a'                 = select_all,
+          '\\s-<cursor_left>'     = beginning_of_line,
+          '\\s-<cursor_right>'    = end_of_line,
+          '\\S-\\s-<cursor_left>'  = beginning_of_line,
+          '\\S-\\s-<cursor_right>' = end_of_line,
+          '\\e<cursor_left>'      = backward_word,
+          '\\e<cursor_right>'     = forward_word,
+          '\\e\\S-<cursor_left>'   = backward_word,
+          '\\e\\S-<cursor_right>'  = forward_word
+        ]).
+
+%   Everything else, notably PceEmacs.
 
 binding(cua, editor,
         [ '\\C-v' = paste,
@@ -130,27 +212,64 @@ binding(apple, epilog,
                  *       CHANGE BINDINGS        *
                  *******************************/
 
-%!  set_keybinding_style(+Id)
+%!  dialog_table(?TableName) is nondet.
 %
-%   Runtime modification of the current key-binding style.
+%   Key-binding tables for text entry in dialogs.  These follow
+%   `key_binding.dialog_style` rather than `key_binding.style`.
 
-set_keybinding_style(Mode) :-
-    current_style(Mode),
-    !.
-set_keybinding_style(emacs) :-
-    !,
-    send(@key_bindings, for_all,
-         message(@arg2, unmodify)),
-    set_style(emacs).
+dialog_table(text_item).
+dialog_table(text_item_view).
+dialog_table(text).
+
+%!  table_domain(+TableName, -Domain) is det.
+%
+%   Domain is `dialog` for a dialog_table/1 and `editor` otherwise.  The
+%   domain decides which class variable holds the style of a table.
+
+table_domain(Table, Domain) :-
+    (   dialog_table(Table)
+    ->  Domain = dialog
+    ;   Domain = editor
+    ).
+
+domain_variable(editor, style).
+domain_variable(dialog, dialog_style).
+
+%!  set_keybinding_style(+Id)
+%!  set_keybinding_style(+Domain, +Id)
+%
+%   Runtime modification of the current key-binding style.  The first
+%   form sets the style of the `editor` domain.
+
 set_keybinding_style(Style) :-
-    set_keybinding_style(emacs),
-    (   binding(Style, Table, Modifications),
-        get(@key_bindings, member, Table, KB),
-        modify(Modifications, KB),
-        fail
+    set_keybinding_style(editor, Style).
+
+set_keybinding_style(Domain, Style) :-
+    current_style(Domain, Style),
+    !.
+set_keybinding_style(Domain, Style) :-
+    new(Tables, chain),
+    send(@key_bindings, for_all, message(Tables, append, @arg2)),
+    chain_list(Tables, KBs),
+    free(Tables),
+    forall(member(KB, KBs), restyle(Domain, Style, KB)),
+    set_style(Domain, Style).
+
+%   restyle(+Domain, +Style, +KeyBinding)
+%
+%   Undo the modifications of the style of KeyBinding if it is in
+%   Domain, and apply those of Style.
+
+restyle(Domain, Style, KB) :-
+    get(KB, name, Table),
+    (   table_domain(Table, Domain)
+    ->  send(KB, unmodify),
+        (   binding(Style, Table, Modifications)
+        ->  modify(Modifications, KB)
+        ;   true
+        )
     ;   true
-    ),
-    set_style(Style).
+    ).
 
 
 modify([], _).
@@ -192,22 +311,35 @@ class_variable(style, name,
                  apple(apple)
                ],
                "Basic binding style (emacs,cua,apple)").
+class_variable(dialog_style, name,
+               [ unix(cua),
+                 windows(cua),
+                 apple(apple)
+               ],
+               "Binding style for text entry in dialogs (emacs,cua,apple)").
 
 %!  current_style(-Style) is det.
-%!  set_style(+Style) is det.
+%!  current_style(+Domain, -Style) is det.
+%!  set_style(+Domain, +Style) is det.
 %
-%   Manipulate the style.  The style is stored in the class-variable
-%   key_binding.style, so it can be set in the users preferences
-%   file.
+%   Manipulate the style of a domain (see table_domain/2).  The style
+%   is stored in the class-variable key_binding.style or
+%   key_binding.dialog_style, so it can be set in the users
+%   preferences file.
 
 current_style(Style) :-
+    current_style(editor, Style).
+
+current_style(Domain, Style) :-
+    domain_variable(Domain, Name),
     get(@pce, convert, key_binding, class, Class),
-    get(Class, class_variable, style, Var),
+    get(Class, class_variable, Name, Var),
     get(Var, value, Style).
 
-set_style(Style) :-
+set_style(Domain, Style) :-
+    domain_variable(Domain, Name),
     get(@pce, convert, key_binding, class, Class),
-    get(Class, class_variable, style, Var),
+    get(Class, class_variable, Name, Var),
     send(Var, value, Style).
 
 
@@ -218,10 +350,11 @@ apply_preferences(KB) :->
 
 apply_cua(KB) :->
     "Apply our local overrides"::
-    current_style(Mode),
-    (   Mode == emacs
-    ->  true
-    ;   get(KB, name, Name),
+    get(KB, name, Name),
+    (   atom(Name),
+        table_domain(Name, Domain),
+        current_style(Domain, Mode),
+        Mode \== emacs,
         binding(Mode, Name, Modifications)
     ->  modify(Modifications, KB)
     ;   true
@@ -443,6 +576,14 @@ key_binding_style(_Pce, Style:name) :->
 key_binding_style(_Pce, Style:name) :<-
     "Get the key-binding style"::
     current_style(Style).
+
+dialog_key_binding_style(_Pce, Style:name) :->
+    "Set the key-binding style for text entry in dialogs"::
+    set_keybinding_style(dialog, Style).
+
+dialog_key_binding_style(_Pce, Style:name) :<-
+    "Get the key-binding style for text entry in dialogs"::
+    current_style(dialog, Style).
 
 key_binding_styles(_Pce, Styles:chain) :<-
     "List of supported styles"::

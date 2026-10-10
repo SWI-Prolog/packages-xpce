@@ -22,6 +22,7 @@ test_libs(menu                 OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(accelerators         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(password_item        OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(keyboard_focus       OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(native_keys          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(button               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(dialog_group         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(focus_border         OPTIONS ${XPCE_TEST_OPTIONS})
@@ -86,6 +87,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:accelerators
                      xpce:password_item
                      xpce:keyboard_focus
+                     xpce:native_keys
                      xpce:button
                      xpce:dialog_group
                      xpce:focus_border

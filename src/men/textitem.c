@@ -220,8 +220,7 @@ activateTextItem(TextItem ti, BoolObj val)
 
 static status
 selectAllTextItem(TextItem ti)
-{ send(ti->value_text, NAME_selection,
-       ZERO, getSizeCharArray(ti->value_text->string), EAV);
+{ send(ti->value_text, NAME_selectAll, EAV);
 
   return requestComputeGraphical(ti, DEFAULT);
 }
