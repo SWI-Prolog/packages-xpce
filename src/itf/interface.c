@@ -520,7 +520,7 @@ pceToCReference(Any obj, PceCValue *rval)
 int
 pceToC(Any obj, PceCValue *rval)
 { if ( isInteger(obj) )
-  { double v = valNum(obj);
+  { double v = valNumShortest(obj);	/* 0.6, not 0.5999999999999999 */
     rval->integer = (intptr_t)v;
     if ( (double)rval->integer == v )
     { return PCE_INTEGER;

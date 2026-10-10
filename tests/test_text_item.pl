@@ -55,9 +55,11 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- use_module(library(pce_float_item)).
 
 test_text_item :-
-    run_tests([ text_item_clear_button
+    run_tests([ text_item_clear_button,
+                float_item
               ]).
 
 %       A subclass of our own: class text_item is what draws the field,
@@ -123,3 +125,11 @@ test(a_subclass_answers_the_same_way) :-
     assertion(Editable > ReadOnly).
 
 :- end_tests(text_item_clear_button).
+
+:- begin_tests(float_item).
+
+test(exact_selection, V == 0.6) :-
+    new(F, float_item(f, 0.6)),
+    get(F, selection, V).
+
+:- end_tests(float_item).

@@ -41,8 +41,9 @@ Exercise the dispatch in packages/xpce/swipl/interface.c that hands
 Prolog numbers to xpce.  xpce nums pack a double, so:
 
   * Small integers fitting int64 pass through unchanged.
-  * Floats round-trip through cToPceReal (a 1-bit LSB loss can happen
-    because toNum() uses bit0 of the mantissa as its tag).
+  * Floats round-trip through cToPceReal.  toNum() uses bit0 of the
+    mantissa as its tag; leaving xpce, the value that is written with
+    the fewest digits is taken, so 0.6 comes back as 0.6.
   * Rationals and bignums that overflow int64 are float-promoted by
     PL_get_term_value() and then packed into a num.
   * Bignums that overflow double raise evaluation_error(float_overflow)
@@ -56,6 +57,8 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- use_module(library(apply)).
+:- use_module(library(yall)).
 
 test_number_conversion :-
     run_tests([ roundtrip_int,
@@ -63,7 +66,9 @@ test_number_conversion :-
                 roundtrip_rational,
                 roundtrip_bignum,
                 real_slot,
-                overflow
+                overflow,
+                text_to_number,
+                shortest
               ]).
 
 %!  num_close(+A, +B) is semidet.
@@ -222,3 +227,28 @@ test(negative_bignum_overflow,
     new(_, chain(Huge)).
 
 :- end_tests(overflow).
+
+
+:- begin_tests(text_to_number).
+
+%   Adding up the fractional digits one by one gave 0.12300000000000001
+%   and 3.1415900000000003.
+
+test(real_from_text, Vs == [0.123, 3.14159, -2.5, 1500.0, 12.0]) :-
+    maplist([T,V]>>get(@pce, convert, T, real, V),
+            ['0.123', '3.14159', '-2.5', '1.5e3', '12'], Vs).
+
+:- end_tests(text_to_number).
+
+
+:- begin_tests(shortest).
+
+test(exact_roundtrip, L == [0.6, 0.1, 0.7, 3.3, 2.675, 123456.789]) :-
+    maplist(chain_roundtrip, [0.6, 0.1, 0.7, 3.3, 2.675, 123456.789], L).
+test(printed, Texts == ['0.6', '3.14159', '-2.5', '3', '1e-20']) :-
+    maplist([X,T]>>( new(S, string('%s', X)),
+                     get(S, value, T)
+                   ),
+            [0.6, 3.14159, -2.5, 3, 1.0e-20], Texts).
+
+:- end_tests(shortest).

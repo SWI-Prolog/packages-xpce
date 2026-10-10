@@ -38,6 +38,7 @@
 #include <h/graphics.h>
 #include <h/unix.h>
 #include <math.h>
+#include <locale.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -117,147 +118,180 @@ environment.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #define cisdigit(c)	((c) >= '0' && (c) <= '9')
-#define digitval(c)	((c)-'0')
+
+/* The length of the number at the start of `in`: [sign] digits
+ * [.digits] [e[sign]digits], where the integer part may be omitted.
+ * 0 if there is no number.
+ */
+
+static size_t
+number_length(const char *in)
+{ const char *s = in;
+
+  if ( (*s == '-' || *s == '+') && cisdigit(s[1]) )
+    s++;
+  if ( cisdigit(*s) )
+  { while(cisdigit(*s))
+      s++;
+  } else if ( !(*s == '.' && cisdigit(s[1])) )
+    return 0;
+
+  if ( *s == '.' && cisdigit(s[1]) )
+  { s++;
+    while(cisdigit(*s))
+      s++;
+  }
+
+  if ( *s == 'e' || *s == 'E' )
+  { const char *e = s+1;
+
+    if ( *e == '-' || *e == '+' )
+      e++;
+    if ( cisdigit(*e) )
+    { while(cisdigit(*e))
+	e++;
+      s = e;
+    }
+  }
+
+  return s-in;
+}
+
+
+/* Convert the number at the start of `in`.  Adding up the digits
+ * ourselves is not exact, so we let strtod() do it, after replacing the
+ * `.` by the decimal point of the locale.
+ */
 
 double
 cstrtod(const char *in, char **end)
-{ double rval;
-  int sign = 1;
-
-  if ( (*in == '-' || *in == '+') && cisdigit(in[1]) )
-  { if ( *in == '-' )
-      sign = -1;
-    in++;
-  }
-
-  if ( cisdigit(*in) )
-  { rval = digitval(*in);
-    in++;
-
-    while(cisdigit(*in))
-    { rval = rval*10.0 + digitval(*in);
-      in++;
-    }
-  } else if ( *in == '.' )
-  { rval = 0.0;
-  } else
-  { *end = (char *)in;
-    return 0.0;
-  }
-
-  if ( *in == '.' && cisdigit(in[1]) )
-  { double n = 10.0;
-    in++;
-
-    while(cisdigit(*in))
-    { rval += digitval(*in)/n;
-      n *= 10.0;
-      in++;
-    }
-  }
-
-  if ( *in == 'e' || *in == 'E' )
-  { int esign;
-    long exp;
-    const char *eend = in;
-
-    in++;
-    if ( *in == '-' )
-    { esign = -1;
-      in++;
-    } else if ( *in == '+' )
-    { esign = 1;
-      in++;
-    } else
-      esign = 1;
-
-    if ( cisdigit(*in) )
-    { exp = digitval(*in);
-      in++;
-    } else
-    { *end = (char *)eend;
-      return rval*sign;
-    }
-    while(cisdigit(*in))
-    { exp = exp*10+digitval(*in);
-      in++;
-    }
-    rval *= pow(10.0, (double)(esign*exp));
-  }
+{ size_t len = number_length(in);
+  const char *dp = localeconv()->decimal_point;
+  size_t dplen = strlen(dp);
+  char tmp[128];
+  char *buf = tmp, *o;
+  double rval;
 
   *end = (char *)in;
-  return rval*sign;
+  if ( len == 0 )
+    return 0.0;
+  if ( len*dplen+1 > sizeof(tmp) )
+    buf = pceMalloc(len*dplen+1);
+
+  o = buf;
+  for(size_t i=0; i<len; i++)
+  { if ( in[i] == '.' )
+    { memcpy(o, dp, dplen);
+      o += dplen;
+    } else
+      *o++ = in[i];
+  }
+  *o = EOS;
+
+  rval = strtod(buf, NULL);
+  if ( buf != tmp )
+    pceFree(buf);
+  *end = (char *)in+len;
+
+  return rval;
 }
 
 
 double
 cwcstod(const wchar_t *in, wchar_t **end)
-{ double rval;
-  int sign = 1;
+{ char tmp[128];
+  char *buf = tmp, *e;
+  size_t len = 0;
+  double rval;
 
-  if ( (*in == '-' || *in == '+') && cisdigit(in[1]) )
-  { if ( *in == '-' )
-      sign = -1;
-    in++;
+  while( in[len] && in[len] < 128 && strchr("0123456789+-.eE", (int)in[len]) )
+    len++;
+  if ( len+1 > sizeof(tmp) )
+    buf = pceMalloc(len+1);
+  for(size_t i=0; i<len; i++)
+    buf[i] = (char)in[i];
+  buf[len] = EOS;
+
+  rval = cstrtod(buf, &e);
+  *end = (wchar_t *)in + (e-buf);
+  if ( buf != tmp )
+    pceFree(buf);
+
+  return rval;
+}
+
+
+		 /*******************************
+		 *	  TAGGED NUMBERS	*
+		 *******************************/
+
+/* An xpce number is a double whose least significant bit holds the tag.
+ * Of the two doubles it may have been, return the one that is written
+ * with the fewest digits: 0.6 rather than 0.5999999999999999.  This is
+ * meant for where a number leaves xpce, to Prolog or as text.
+ */
+
+double
+valNumShortest(Num n)
+{ cvt_double c = {.I = (Int)n};
+  double d0, d1;
+  char buf[32];
+
+  c.u &= ~INT_MASK;
+  d0 = c.d;
+  if ( d0 == floor(d0) || !isfinite(d0) )
+    return d0;				/* integral: no digits after . */
+  c.u |= INT_MASK;
+  d1 = c.d;
+
+  for(int digits = 15; digits <= 16; digits++)
+  { for(int k = 0; k < 2; k++)
+    { double v;
+
+      snprintf(buf, sizeof(buf), "%.*g", digits, k == 0 ? d0 : d1);
+      v = strtod(buf, NULL);
+      if ( v == d0 || v == d1 )
+	return v;
+    }
   }
 
-  if ( cisdigit(*in) )
-  { rval = digitval(*in);
-    in++;
+  return d0;
+}
 
-    while(cisdigit(*in))
-    { rval = rval*10.0 + digitval(*in);
-      in++;
-    }
-  } else if ( *in == '.' )
-  { rval = 0.0;
+
+/* Write an xpce number with as few digits as needed to read it back,
+ * as Prolog writes floats.  The text does not depend on the locale.
+ */
+
+char *
+formatNum(Num n, char *buf, size_t size)
+{ double v = valNumShortest(n);
+
+  if ( v == floor(v) && fabs(v) < 1e15 )
+  { snprintf(buf, size, "%.0f", v);
   } else
-  { *end = (wchar_t *)in;
-    return 0.0;
-  }
+  { for(int digits = 15; digits <= 17; digits++)
+    { char *e;
 
-  if ( *in == '.' && cisdigit(in[1]) )
-  { double n = 10.0;
-    in++;
+      snprintf(buf, size, "%.*g", digits, v);
+      if ( strtod(buf, &e) == v )
+	break;
+    }
 
-    while(cisdigit(*in))
-    { rval += digitval(*in)/n;
-      n *= 10.0;
-      in++;
+    const char *dp = localeconv()->decimal_point;
+    if ( !(dp[0] == '.' && !dp[1]) )	/* locale point -> '.' */
+    { char *p = strstr(buf, dp);
+
+      if ( p )
+      { size_t dplen = strlen(dp);
+
+	*p = '.';
+	memmove(p+1, p+dplen, strlen(p+dplen)+1);
+      }
     }
   }
 
-  if ( *in == 'e' || *in == 'E' )
-  { int esign;
-    long exp;
-    const wchar_t *eend = in;
-
-    in++;
-    if ( *in == '-' )
-    { esign = -1;
-      in++;
-    } else if ( *in == '+' )
-    { esign = 1;
-      in++;
-    } else
-      esign = 1;
-
-    if ( cisdigit(*in) )
-    { exp = digitval(*in);
-      in++;
-    } else
-    { *end = (wchar_t *)eend;
-      return rval*sign;
-    }
-    while(cisdigit(*in))
-    { exp = exp*10+digitval(*in);
-      in++;
-    }
-    rval *= pow(10.0, (double)(esign*exp));
-  }
-
-  *end = (wchar_t *)in;
-  return rval*sign;
+  return buf;
 }
 
 

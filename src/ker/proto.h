@@ -139,6 +139,8 @@ COMMON(int)	distance(int x1, int y1, int x2, int y2);
 COMMON(int)	rfloat(double f);
 COMMON(double)	cstrtod(const char *in, char **end);
 COMMON(double)	cwcstod(const wchar_t *in, wchar_t **end);
+COMMON(double)	valNumShortest(Num n);
+COMMON(char *)	formatNum(Num n, char *buf, size_t size);
 COMMON(char *)	strcpyskip(char *t, char *f);
 COMMON(status)	substr(register char *str, register char *sb);
 COMMON(status)	prefixstr(char *s1, char *s2);

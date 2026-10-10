@@ -147,8 +147,16 @@ value(RI, Value:num) :<-
 %   text_float(+Text, -Float) is semidet.
 %
 %   Float is the number Text holds as a float.  The item edits a real
-%   number, also if it is integral.
+%   number, also if it is integral.  Prolog's number syntax is tried
+%   first, as xpce numbers are tagged doubles that drop the last bit:
+%   `0.6` would become 0.5999999999999999.
 
+text_float(Text, Float) :-
+    get(Text, value, Atom),
+    normalize_space(atom(Stripped), Atom),
+    catch(atom_number(Stripped, Num), _, fail),
+    !,
+    Float is float(Num).
 text_float(Text, Float) :-
     get(@pce, convert, Text, num, Num),
     Float is float(Num).

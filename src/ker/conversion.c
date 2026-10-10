@@ -38,7 +38,7 @@ static char *ppsavestring(const char *s);
 
 status
 toString(Any obj, PceString s)
-{ char tmp[25];
+{ char tmp[32];
   char *str;
   status rval = FAIL;
 
@@ -48,8 +48,8 @@ toString(Any obj, PceString s)
     str_cphdr(s, &ca->data);
     s->s_text = ca->data.s_text;
     succeed;
-  } else if ( isInteger(obj) )
-  { snprintf(tmp, sizeof(tmp), "%" PRIdPTR, valInt(obj));
+  } else if ( isInteger(obj) )		/* also 0.6 rather than 0 */
+  { formatNum(obj, tmp, sizeof(tmp));
     str = ppsavestring(tmp);
     rval = SUCCEED;
   } else if ( instanceOfObject(obj, ClassReal) )
@@ -269,14 +269,7 @@ do_pp(Any obj)
     return ppsavestring("FAIL");
 
   if ( isInteger(obj) )
-  { double v = valNum(obj);
-    intptr_t i = v;
-    if ( (double)i == v )
-      snprintf(tmp, sizeof(tmp), "%" PRIdPTR, i);
-    else
-      snprintf(tmp, sizeof(tmp), "%.3f", v);
-    return ppsavestring(tmp);
-  }
+    return ppsavestring(formatNum(obj, tmp, sizeof(tmp)));
 
   if ( isProperObject(obj) )
   { if ( isName(obj))
