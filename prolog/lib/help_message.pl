@@ -50,14 +50,21 @@ class_variable(colour, colour, ui_tooltip_foreground,
                "Balloon text and border colour").
 
 variable(handler,       handler,        get, "Handler for intercept").
+variable(key_handler,   handler,        get, "Hide on a key").
 variable(message,       string*,        get, "Currently displayed message").
+
+%   As tooltips elsewhere, a key hides the balloon.  The key is not
+%   consumed: ->key_hide fails.
 
 initialise(W) :->
     send(W, slot, handler,
          handler(mouse, message(W, try_hide, @event))),
+    send(W, slot, key_handler,
+         handler(keyboard, message(W, key_hide))),
     send_super(W, initialise),
     get(W, frame, Frame),
-    send(Frame, kind, popup),
+    send(Frame, protect),               % reused: not destroyed with the
+    send(Frame, kind, popup),           % frame it is transient for
     send(Frame, sensitive, @off),
     send(Frame?tile, border, 1),       % border in the text colour
     get(W, colour, Colour),
@@ -66,6 +73,23 @@ initialise(W) :->
     send(W, append, new(L, label(feedback, '', normal))),
     send(L, length, 0),
     send(Frame, create).
+
+%   Do not leave the handler behind if the window is freed anyway.
+
+unlink(W) :->
+    (   get(W, display, D),
+        D \== @nil
+    ->  delete_handlers(W, D)
+    ;   true
+    ),
+    send_super(W, unlink).
+
+delete_handlers(W, D) :-
+    get(W, handler, H),
+    get(W, key_handler, KH),
+    send(D?inspect_handlers, delete, H),
+    send(D?inspect_handlers, delete, KH).
+
 
 owner(W, Owner:[any]*) :->
     "Maintain hyperlink to the owner"::
@@ -79,9 +103,12 @@ owner(W, Owner:any) :<-
     get(W, hypered, owner, Owner).
 
 
+%   The owner may be gone, e.g., closed from the keyboard while the
+%   balloon was shown.  Then the balloon is hidden.
+
 try_hide(W, Ev:event) :->
-    get(W, owner, Owner),
-    (   send(Ev, inside, Owner),
+    (   get(W, owner, Owner),
+        send(Ev, inside, Owner),
         (   send(Ev, is_a, loc_move)
         ;   send(Ev, is_a, loc_still)
         )
@@ -112,8 +139,14 @@ hide(W) :->
     "Remove from the display"::
     send(W, transient_for, @nil),
     send(W, show, @off),
-    get(W, handler, H),
-    send(W?display?inspect_handlers, delete, H).
+    get(W, display, D),
+    delete_handlers(W, D).
+
+key_hide(W) :->
+    "Hide on a key; fail, so the key is processed"::
+    send(W, owner, @nil),
+    send(W, hide),
+    fail.
 
 
 feedback(W, S:string*, Ev:event, For:[any]*) :->
@@ -132,7 +165,9 @@ feedback(W, S:string*, Ev:event, For:[any]*) :->
         send(W, layout),
         send(W?frame, fit),
         send(W, adjust_position, Ev),
-        send(W?display, inspect_handler, W?handler)
+        get(W, display, D),
+        send(D, inspect_handler, W?handler),
+        send(D, inspect_handler, W?key_handler)
     ).
 
 

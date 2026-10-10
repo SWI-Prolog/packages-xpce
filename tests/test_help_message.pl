@@ -46,7 +46,8 @@ Run with:
 :- use_module(library(help_message)).
 
 test_help_message :-
-    run_tests([ help_message,
+    run_tests([ help_message_owner,      % first: see combo_box_tip_over_dialog
+                help_message,
                 combo_box_keys
               ]).
 
@@ -170,6 +171,71 @@ test(combo_box_tip_over_dialog, [ condition(combo_boxes),
 
 :- end_tests(help_message).
 
+:- begin_tests(help_message_owner).
+
+%   A balloon is transient for the frame it shows over.  Closing that
+%   frame while the balloon shows (e.g., from the keyboard) used to
+%   destroy the reused balloon window, leaving its handler to report
+%   every later mouse event to the freed window.  Now the balloon is
+%   hidden and kept, the next mouse event removes the handler and a new
+%   balloon works.
+
+test(owner_frame_closed, [ condition(combo_boxes),
+                           Alive-Shown1-Handlers-Shown2 ==
+                           true-false-0-true ]) :-
+    new(D1, dialog),
+    send(D1, append, new(B1, button(one))),
+    send(D1, open),
+    new(Ev, event(loc_still, D1, 10, 10)),
+    send(@help_message_window, feedback, string('A tip'), Ev, B1),
+    send(D1?frame, destroy),
+    truth(object(@help_message_window), Alive),
+    shown(Shown1),
+    new(D2, dialog),
+    send(D2, append, new(B2, button(two))),
+    send(D2, open),
+    new(Move, event(loc_move, D2, 10, 10)),
+    ignore(send(D2, post_event, Move)), % try_hide sees the owner is gone
+    count_tip_handlers(Handlers),
+    new(Ev2, event(loc_still, D2, 10, 10)),
+    send(@help_message_window, feedback, string('Another tip'), Ev2, B2),
+    shown(Shown2),
+    send(@help_message_window, hide),
+    send(D2?frame, destroy).
+
+%   As other tooltips, a key hides the balloon, but is not consumed.
+
+test(key_hides, [ condition(combo_boxes),
+                  Shown-Handlers-Typed == false-0-x ]) :-
+    new(D, dialog),
+    send(D, append, new(TI, text_item(name, ''))),
+    send(D, open),
+    send(D, keyboard_focus, TI),
+    new(Ev, event(loc_still, D, 10, 10)),
+    send(@help_message_window, feedback, string('A tip'), Ev, TI),
+    new(Key, event(0'x, D, 10, 10)),
+    ignore(send(D, post_event, Key)),
+    shown(Shown),
+    count_tip_handlers(Handlers),
+    get(TI, selection, Typed),
+    send(D?frame, destroy).
+
+:- end_tests(help_message_owner).
+
+%   count_tip_handlers(-N)
+%
+%   N is the number of balloon handlers in the display's
+%   <-inspect_handlers.
+
+count_tip_handlers(N) :-
+    get(@display, inspect_handlers, Chain),
+    chain_list(Chain, Hs),
+    aggregate_all(count,
+                  ( member(H, Hs),
+                    get(H, message, M),
+                    get(M, receiver, @help_message_window)
+                  ), N).
+
 
 %   The keyboard works on an open combo box: up and down move through the
 %   values, RET selects, ESC closes and typing starts a new search.
@@ -276,3 +342,9 @@ test(menu_click_outside, Shown == false) :-
     send(D, destroy).
 
 :- end_tests(combo_box_keys).
+
+shown(Shown) :-
+    truth(get(@help_message_window?frame, status, window), Shown).
+
+truth(Goal, true) :- call(Goal), !.
+truth(_, false).

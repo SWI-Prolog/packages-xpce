@@ -103,6 +103,10 @@ destroyTransientFrame(FrameObj fr)
 { if ( isProtectedObj(fr) )	/* a special (reusable) frame */
   { if ( destroyCompleterFrame(fr) )
       return;
+				/* e.g., the help balloon: keep it */
+    send(fr, NAME_transientFor, NIL, EAV);
+    send(fr, NAME_show, OFF, EAV);
+    return;
   }
   send(fr, NAME_destroy, EAV);
 }
