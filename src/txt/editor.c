@@ -1719,7 +1719,7 @@ insert_character(Editor e, Int chr, uchar_t *c)
 
 static status
 insert_editor(Editor e, Int times, Int chr, int fill)
-{ uchar_t c;
+{ uchar_t c = 0;
   LocalString(s, TRUE, 1);		/* wide-character string! */
 
   MustBeEditable(e);
@@ -3476,7 +3476,7 @@ static status
 insertSelfFillEditor(Editor e, Int times, Int chr)
 { TextBuffer tb = e->text_buffer;
   LocalString(s, TRUE, 1);
-  uchar_t c;
+  uchar_t c = 0;
   Int le;
 
   MustBeEditable(e);

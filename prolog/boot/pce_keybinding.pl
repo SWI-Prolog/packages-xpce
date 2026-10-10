@@ -235,8 +235,8 @@ table_domain(Table, Domain) :-
 domain_variable(editor, style).
 domain_variable(dialog, dialog_style).
 
-%!  set_keybinding_style(+Id)
-%!  set_keybinding_style(+Domain, +Id)
+%!  set_keybinding_style(+Id) is det.
+%!  set_keybinding_style(+Domain, +Id) is det.
 %
 %   Runtime modification of the current key-binding style.  The first
 %   form sets the style of the `editor` domain.
