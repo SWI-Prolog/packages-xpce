@@ -62,6 +62,8 @@ initialiseSlider(Slider s, Name name, Any low, Any high, Any def, Message msg)
   assign(s, message,	   msg);
   assign(s, width,	   toInt(200));
   assign(s, drag,	   OFF);
+  assign(s, step,	   DEFAULT);
+  assign(s, page_step,	   DEFAULT);
   assign(s, format,	   DEFAULT);
 
   assign(s, default_value, def);
@@ -165,6 +167,14 @@ RedrawAreaSlider(Slider s, Area a)
     r_dash(NAME_none);
     r_thickness(1);
     r_arc(x+sx+vv, y+sy, bw, bw, 0, 360, NAME_chord, WHITE_COLOUR);
+    if ( hasInputFocusDialogItem(s) )	/* focus: a ring inside the knob */
+    { Any old = r_colour(BLUE_COLOUR);
+
+      r_thickness(2);
+      r_arc(x+sx+vv+2, y+sy+2, bw-4, bw-4, 0, 360, NAME_none, NIL);
+      r_thickness(1);
+      r_colour(old);
+    }
     if ( s->active == OFF )
       r_pop_group_with_alpha(INACTIVE_ALPHA);
   }
@@ -369,15 +379,98 @@ displayedValueSlider(Slider s, Any val)
 
 
 static status
+WantsKeyboardFocusSlider(Slider s)
+{ return s->active == ON;
+}
+
+
+/* Set the value from the keyboard and apply it as a mouse release
+ * does.
+ */
+
+static status
+keyValueSlider(Slider s, double v)
+{ double l = convert_value(s->low);
+  double h = convert_value(s->high);
+  Any val;
+
+  if ( v < l ) v = l;
+  if ( v > h ) v = h;
+  v = round(v*1e9)/1e9;			/* no 0.23000000000000004 */
+  val = int_slider(s) ? (Any)toInt(llround(v)) : (Any)CtoReal(v);
+  if ( convert_value(s->displayed_value) == convert_value(val) )
+    succeed;
+
+  send(s, NAME_displayedValue, val, EAV);
+  if ( !send(s->device, NAME_modifiedItem, s, ON, EAV) )
+    applySlider(s, ON);
+
+  succeed;
+}
+
+
+/* The keys of a slider on Windows, Gnome, KDE and MacOS: the cursor
+ * keys move by <-step, Page-Up and Page-Down by <-page_step and Home
+ * and End go to the ends.  By default, an integer slider steps by one,
+ * a real slider by a hundredth of the range, and a page is a tenth of
+ * the range.
+ */
+
+static status
+keySlider(Slider s, EventObj ev)
+{ Name id = ev->id;
+  double l = convert_value(s->low);
+  double h = convert_value(s->high);
+  double v = convert_value(s->displayed_value);
+  double step = ( notDefault(s->step) ? convert_value(s->step) :
+		  int_slider(s) ? 1.0 : (h-l)/100.0 );
+  double page = ( notDefault(s->page_step) ? convert_value(s->page_step) :
+		  int_slider(s) ? fmax(1.0, round((h-l)/10.0)) : (h-l)/10.0 );
+
+  if ( !isName(id) ||
+       (valInt(ev->buttons) & (BUTTON_control|BUTTON_meta|BUTTON_gui)) )
+    fail;
+
+  if ( id == NAME_cursorRight || id == NAME_cursorUp )
+    return keyValueSlider(s, v+step);
+  if ( id == NAME_cursorLeft || id == NAME_cursorDown )
+    return keyValueSlider(s, v-step);
+  if ( id == NAME_pageUp )
+    return keyValueSlider(s, v+page);
+  if ( id == NAME_pageDown )
+    return keyValueSlider(s, v-page);
+  if ( id == NAME_cursorHome )
+    return keyValueSlider(s, l);
+  if ( id == NAME_end )
+    return keyValueSlider(s, h);
+
+  fail;
+}
+
+
+static status
 eventSlider(Slider s, EventObj ev)
-{ if ( eventDialogItem(s, ev) )
+{ if ( s->active == ON && isAEvent(ev, NAME_keyboard) &&
+       getKeyboardFocusGraphical((Graphical)s) == ON &&
+       keySlider(s, ev) )
+    succeed;
+
+  if ( eventDialogItem(s, ev) )
     succeed;
 
   if ( s->active == OFF )
     fail;
 
+  if ( isAEvent(ev, NAME_focus) )
+  { changedDialogItem(s);
+    succeed;
+  }
+
   if ( isAEvent(ev, NAME_msLeftDown) )
+  { if ( getKeyboardFocusGraphical((Graphical)s) != ON )
+      send(s, NAME_keyboardFocus, ON, EAV);
     return send(s, NAME_focus, EAV);
+  }
 
   if ( isAEvent(ev, NAME_msLeft) &&
        hasModifierEvent(ev, findGlobal(NAME_ModifierAllUp)) )
@@ -604,7 +697,11 @@ static vardecl var_slider[] =
   SV(NAME_width, "int", IV_NONE|IV_STORE, widthSlider,
      NAME_area, "Length of the bar"),
   IV(NAME_drag, "bool", IV_BOTH,
-     NAME_event, "Send messages while dragging")
+     NAME_event, "Send messages while dragging"),
+  IV(NAME_step, "[int|real]", IV_BOTH,
+     NAME_event, "Change of the cursor keys"),
+  IV(NAME_pageStep, "[int|real]", IV_BOTH,
+     NAME_event, "Change of Page-Up and Page-Down")
 };
 
 /* Send Methods */
@@ -612,6 +709,8 @@ static vardecl var_slider[] =
 static senddecl send_slider[] =
 { SM(NAME_compute, 0, NULL, computeSlider,
      DEFAULT, "Compute desired size"),
+  SM(NAME_WantsKeyboardFocus, 0, NULL, WantsKeyboardFocusSlider,
+     NAME_event, "Test if ready to accept input"),
   SM(NAME_event, 1, "event", eventSlider,
      DEFAULT, "Process an event"),
   SM(NAME_geometry, 4, T_geometry, geometrySlider,

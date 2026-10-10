@@ -253,6 +253,15 @@ test(toggle_space_toggles, [Sel-Log == [b,c]-[c]]) :-
     selection(M, Sel),
     chain_list(L, Log),
     send(D, destroy).
+test(cycle_down_up, [Sels-Log == [c,b]-[c,b]]) :-
+    focused_menu(cycle, D, M, L),
+    key(D, cursor_down),
+    get(M, selection, S1),
+    key(D, cursor_up),
+    get(M, selection, S2),
+    Sels = [S1,S2],
+    chain_list(L, Log),
+    send(D, destroy).
 
 :- end_tests(menu_keyboard).
 

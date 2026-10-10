@@ -40,6 +40,7 @@ static FontObj	getFontMenuItemMenu(Menu m, MenuItem mi);
 static MenuItem	getItemSelectionMenu(Menu m);
 static MenuItem	getNextMenu(Menu m, Name direction);
 static status	nextMenu(Menu m, Name direction);
+static status	openComboBoxMenu(Menu m);
 static status	kindMenu(Menu m, Name kind);
 static status	ensureSingleSelectionMenu(Menu m);
 static status	multipleSelectionMenu(Menu m, BoolObj val);
@@ -1220,10 +1221,41 @@ neighbour_item(Menu m, MenuItem from, Name dir)
 }
 
 
+/* A cycle menu is a combo box: as on Windows, Gnome and MacOS, Up and
+ * Down select the previous or next value and Space, Alt-Down and F4
+ * open the list.  Return is left to the default button.
+ */
+
+static status
+keyboardEventCycleMenu(Menu m, EventObj ev)
+{ int mods = valInt(ev->buttons) & (BUTTON_control|BUTTON_meta|BUTTON_gui);
+  Any id = ev->id;
+
+  if ( m->active != ON || !hasInputFocusDialogItem(m) )
+    fail;
+
+  if ( (id == NAME_cursorDown && mods == BUTTON_meta) ||
+       (!mods && (id == toInt(' ') || id == NAME_f4)) )
+    return openComboBoxMenu(m);
+
+  if ( !mods && (id == NAME_cursorDown || id == NAME_cursorUp) )
+  { if ( nextMenu(m, id == NAME_cursorDown ? NAME_up : NAME_down) &&
+	 !send(m->device, NAME_modifiedItem, m, ON, EAV) )
+      forwardMenu(m, m->message, ev);
+    succeed;
+  }
+
+  fail;
+}
+
+
 static status
 keyboardEventMenu(Menu m, EventObj ev)
 { MenuItem fi, to;
   Name dir;
+
+  if ( is_cycle_menu(m) )
+    return keyboardEventCycleMenu(m, ev);
 
   if ( m->active != ON || !has_focus_ring(m) ||
        !hasInputFocusDialogItem(m) ||

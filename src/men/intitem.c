@@ -204,14 +204,14 @@ addIntItem(IntItem ii, Int change)
 
 
 static status
-incrementIntItem(IntItem ii)
-{ return addIntItem(ii, ONE);
+incrementIntItem(IntItem ii, Int times)
+{ return addIntItem(ii, isDefault(times) ? ONE : times);
 }
 
 
 static status
-decrementIntItem(IntItem ii)
-{ return addIntItem(ii, toInt(-1));
+decrementIntItem(IntItem ii, Int times)
+{ return addIntItem(ii, toInt(isDefault(times) ? -1 : -valInt(times)));
 }
 
 
@@ -262,10 +262,10 @@ static senddecl send_int_item[] =
      NAME_type, "Allowed range"),
   SM(NAME_typed, 1, "event|event_id", typedIntItem,
      NAME_event, "Process keyboard event"),
-  SM(NAME_increment, 0, NULL, incrementIntItem,
-     NAME_selection, "Increment the selection"),
-  SM(NAME_decrement, 0, NULL, decrementIntItem,
-     NAME_selection, "Decrement the selection"),
+  SM(NAME_increment, 1, "times=[int]", incrementIntItem,
+     NAME_selection, "Increment the selection (by times)"),
+  SM(NAME_decrement, 1, "times=[int]", decrementIntItem,
+     NAME_selection, "Decrement the selection (by times)"),
   SM(NAME_type, 1, "type", typeIntItem,
      NAME_type, "Adjust ->low and ->high")
 };

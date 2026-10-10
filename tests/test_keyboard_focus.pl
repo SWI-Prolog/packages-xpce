@@ -162,4 +162,51 @@ test(editor_outside_dialog, fail) :-   % e.g., PceEmacs
                  ),
                  send(V, destroy)).
 
+%   tabs(-Dialog, -TabStack)
+%
+%   Four tabs, of which `two` is inactive.
+
+tabs(D, TS) :-
+    new(D, dialog),
+    send(D, append,
+         new(TS, tab_stack(new(T1, tab(one)), new(T2, tab(two)),
+                           new(T3, tab(three)), new(T4, tab(four))))),
+    send(T1, append, button(a)),
+    send(T2, append, button(b)),
+    send(T2, active, @off),
+    send(T3, append, button(c)),
+    send(T4, append, button(d)),
+    send(D, open),
+    send(D, keyboard_focus, T1?a_member).
+
+on_top(TS, Name) :-
+    get(TS?on_top, name, Name).
+
+%   cycle(+Dialog, +TabStack, +Id, +Buttons, +Count, -TabsAndFoci)
+
+cycle(_, _, _, _, 0, []) :- !.
+cycle(D, TS, Id, Buttons, N, [Tab/Focus|T]) :-
+    post(D, Id, Buttons),
+    on_top(TS, Tab),
+    focus(D, Focus),
+    N1 is N-1,
+    cycle(D, TS, Id, Buttons, N1, T).
+
+test(control_tab, L == [three/c, four/d, one/a]) :-
+    tabs(D, TS),
+    cycle(D, TS, 'TAB', 0x1, 3, L),
+    send(D, destroy).
+test(control_shift_tab, L == [four/d, three/c, one/a]) :-
+    tabs(D, TS),
+    cycle(D, TS, 'TAB', 0x3, 3, L),
+    send(D, destroy).
+test(control_page_down, L == [three/c, four/d, one/a]) :-
+    tabs(D, TS),
+    cycle(D, TS, page_down, 0x1, 3, L),
+    send(D, destroy).
+test(control_page_up, L == [four/d, three/c, one/a]) :-
+    tabs(D, TS),
+    cycle(D, TS, page_up, 0x1, 3, L),
+    send(D, destroy).
+
 :- end_tests(keyboard_focus).

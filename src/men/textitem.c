@@ -1301,9 +1301,46 @@ keyTextItem(TextItem ti, Name key)
 }
 
 
+/* As a spin box on Windows, Gnome and MacOS, Up and Down step the value
+ * of an item that can be stepped (int_item, float_item), and Page-Up and
+ * Page-Down take ten steps.  An item that cannot fails ->increment and
+ * ->decrement, so it handles these keys as usual.
+ */
+
+static status
+stepTextItem(TextItem ti, EventId id)
+{ Any key = id;
+  Name dir;
+  Int times = ONE;
+
+  if ( instanceOfObject(id, ClassEvent) )
+  { EventObj ev = (EventObj)id;
+
+    if ( valInt(ev->buttons) &
+	 (BUTTON_control|BUTTON_meta|BUTTON_gui|BUTTON_shift) )
+      fail;
+    key = ev->id;
+  }
+
+  if ( key == NAME_cursorUp || key == NAME_pageUp )
+    dir = NAME_increment;
+  else if ( key == NAME_cursorDown || key == NAME_pageDown )
+    dir = NAME_decrement;
+  else
+    fail;
+  if ( key == NAME_pageUp || key == NAME_pageDown )
+    times = toInt(10);
+
+  return ti->editable == ON && send(ti, dir, times, EAV);
+}
+
+
 status
 typedTextItem(TextItem ti, EventId id)
-{ return typedKeyBinding(ti->editable == ON ? KeyBindingTextItem()
+{ if ( stepTextItem(ti, id) )
+    succeed;
+
+  return typedKeyBinding(ti->editable == ON ? KeyBindingTextItem()
 					    : KeyBindingTextItemView(),
 			 id, (Graphical) ti);
 }
@@ -1907,10 +1944,10 @@ static senddecl send_textItem[] =
      NAME_accelerator, "Request keyboard if accelerator is typed"),
   SM(NAME_repeat, 0, NULL, repeatTextItem,
      DEFAULT, "Repeat in/decrement"),
-  SM(NAME_increment, 0, NULL, failObject,
-     NAME_selection, "(virtual) Increment the selection"),
-  SM(NAME_decrement, 0, NULL, failObject,
-     NAME_selection, "(virtual) Decrement the selection"),
+  SM(NAME_increment, 1, "times=[int]", failObject,
+     NAME_selection, "(virtual) Increment the selection by steps"),
+  SM(NAME_decrement, 1, "times=[int]", failObject,
+     NAME_selection, "(virtual) Decrement the selection by steps"),
   SM(NAME_labelWidth, 1, "[int]", labelWidthTextItem,
      NAME_layout, "Width of label in pixels"),
   SM(NAME_clear, 0, NULL, clearTextItem,

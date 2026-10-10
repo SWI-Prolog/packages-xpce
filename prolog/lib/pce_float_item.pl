@@ -203,35 +203,51 @@ step(RI, Step:num*, Apply:[bool]) :->
     ).
 
 
-increment(RI) :->
-    "Handle stepper"::
-    get(RI, step, Step),
-    Step \== @nil,
+increment(RI, Times:[int]) :->
+    "Step up by <-step, Times times (default 1)"::
+    step_value(RI, 1, Times).
+
+decrement(RI, Times:[int]) :->
+    "Step down by <-step, Times times (default 1)"::
+    step_value(RI, -1, Times).
+
+%   step_value(+Item, +Sign, +Times)
+%
+%   Add Sign*Times steps to the value, within the range.  Without a
+%   <-step, the cursor keys step by a hundredth of the range, as for a
+%   real slider; without a range there is nothing to step.
+
+step_value(RI, Sign, Times) :-
+    item_step(RI, Step),
+    default(Times, 1, N),
     get(RI, value, Now),
-    (   get(RI, high, High), High \== @nil
-    ->  NewVal is min(High, Now+Step)
-    ;   NewVal is Now+Step
+    New0 is Now + Sign*N*Step,
+    get(RI, low, Low),
+    get(RI, high, High),
+    (   Low \== @nil, New0 < Low
+    ->  NewVal = Low
+    ;   High \== @nil, New0 > High
+    ->  NewVal = High
+    ;   NewVal is round(New0*1.0e9)/1.0e9     % no 0.30000000000000004
     ),
-    send(RI, value, NewVal),
-    (   get(RI, apply_step, @on)
-    ->  send(RI, apply)
-    ;   true
+    (   NewVal =:= Now
+    ->  true                            % at the limit
+    ;   send(RI, value, NewVal),
+        (   get(RI, apply_step, @on)
+        ->  ignore(send(RI, apply, @on)) % fails without a message
+        ;   true
+        )
     ).
 
-decrement(RI) :->
-    "Handle stepper"::
+item_step(RI, Step) :-
     get(RI, step, Step),
     Step \== @nil,
-    get(RI, value, Now),
-    (   get(RI, low, Low), Low \== @nil
-    ->  NewVal is max(Low, Now-Step)
-    ;   NewVal is Now-Step
-    ),
-    send(RI, value, NewVal),
-    (   get(RI, apply_step, @on)
-    ->  send(RI, apply)
-    ;   true
-    ).
+    !.
+item_step(RI, Step) :-
+    get(RI, low, Low), Low \== @nil,
+    get(RI, high, High), High \== @nil,
+    High > Low,
+    Step is (High-Low)/100.
 
 
 :- pce_end_class(float_item).

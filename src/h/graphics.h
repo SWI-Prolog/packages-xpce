@@ -440,6 +440,8 @@ NewClass(slider)
   Any	     high;			/* Low and high values */
   Int	     width;			/* Width in pixels */
   BoolObj    drag;			/* Dragging gives messages */
+  Any	     step;			/* Step of the cursor keys */
+  Any	     page_step;			/* Step of Page-Up/Down */
 End;
 
 NewClass(bool_item)

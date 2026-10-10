@@ -43,9 +43,10 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- use_module(library(apply)).
 
 test_slider :-
-    run_tests([slider]).
+    run_tests([slider, slider_keyboard]).
 
 :- begin_tests(slider).
 
@@ -64,3 +65,59 @@ test(real_default, V =:= 1.25) :-
     get(S, selection, V).
 
 :- end_tests(slider).
+
+%   slider_dialog(-Dialog, -Slider, -Log, +Low, +High, +Value)
+%
+%   An open dialog with a focussed slider whose message logs its value.
+
+slider_dialog(D, S, Log, Low, High, Value) :-
+    new(Log, chain),
+    new(D, dialog),
+    send(D, append,
+         new(S, slider(value, Low, High, Value, message(Log, append, @arg1)))),
+    send(D, append, button(after)),
+    send(D, open),
+    send(D, keyboard_focus, S).
+
+keys(D, S, Keys, Values) :-
+    foldl(key(D, S), Keys, Values, []).
+
+key(D, S, Id, [V|T], T) :-
+    new(Ev, event(Id, D, 0, 0, 0, 1000)),
+    send(D, post_event, Ev),
+    get(S, selection, V).
+
+:- begin_tests(slider_keyboard).
+
+test(int_keys, Values-Calls == [26,25,26,25,35,25,100,0]-Values) :-
+    slider_dialog(D, S, Log, 0, 100, 25),
+    keys(D, S, [cursor_right, cursor_left, cursor_up, cursor_down,
+                page_up, page_down, end, cursor_home], Values),
+    chain_list(Log, Calls),
+    send(D, destroy).
+test(clamped, Values-Calls == [100]-[]) :-
+    slider_dialog(D, S, Log, 0, 100, 100),
+    keys(D, S, [cursor_right], Values),
+    chain_list(Log, Calls),
+    send(D, destroy).
+test(real_keys, Values == [0.53, 0.23, 1.5]) :-
+    slider_dialog(D, S, _, -1.5, 1.5, 0.5),
+    keys(D, S, [cursor_right, page_down, end], Values),
+    send(D, destroy).
+test(explicit_steps, Values == [27,25,45,25]) :-
+    slider_dialog(D, S, _, 0, 100, 25),
+    send(S, step, 2),
+    send(S, page_step, 20),
+    keys(D, S, [cursor_right, cursor_left, page_up, page_down], Values),
+    send(D, destroy).
+test(tab_leaves, Focus == after) :-
+    slider_dialog(D, _, _, 0, 100, 25),
+    new(Ev, event('TAB', D, 0, 0, 0, 1000)),
+    send(D, post_event, Ev),
+    get(D?keyboard_focus, name, Focus),
+    send(D, destroy).
+test(takes_focus, true) :-
+    new(S, slider(value, 0, 100, 25)),
+    send(S, '_wants_keyboard_focus').
+
+:- end_tests(slider_keyboard).

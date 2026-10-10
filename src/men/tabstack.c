@@ -361,18 +361,76 @@ labelsLaidOutTabStack(TabStack ts)
 }
 
 
+/* Put the next (`forward`) or previous active tab on top, wrapping
+ * around.  ->on_top moves the keyboard focus into it.
+ */
+
+static status
+cycleTabStack(TabStack ts, bool forward)
+{ Tab top = getOnTopTabStack(ts);
+  Tab first = NULL, last = NULL, prev = NULL, next = NULL;
+  bool seen = false;
+  Cell cell;
+
+  if ( !top )
+    fail;
+
+  for_cell(cell, ts->graphicals)
+  { Tab t = cell->value;
+
+    if ( !is_tab(t) )
+      continue;
+    if ( t == top )
+    { seen = true;
+      continue;
+    }
+    if ( t->active == OFF )
+      continue;
+
+    if ( !first )
+      first = t;
+    last = t;
+    if ( !seen )
+      prev = t;
+    else if ( !next )
+      next = t;
+  }
+
+  Tab to = forward ? (next ? next : first) : (prev ? prev : last);
+  if ( !to )
+    fail;
+
+  return send(ts, NAME_onTop, to, EAV);
+}
+
+
 /* An accelerator key: offer it to the tabs; only the one on top takes
- * it.
+ * it.  Otherwise, Control-Tab and Control-Page-Down show the next tab
+ * and Control-Shift-Tab and Control-Page-Up the previous, as on
+ * Windows, Gnome and KDE, and in browsers on MacOS.
  */
 
 static status
 keyTabStack(TabStack ts, Name key)
-{ Cell cell;
+{ static Name next_keys[2], prev_keys[2];
+  Cell cell;
 
   for_cell(cell, ts->graphicals)
   { if ( send(cell->value, NAME_key, key, EAV) )
       succeed;
   }
+
+  if ( !next_keys[0] )
+  { next_keys[0] = CtoName("\\C-TAB");
+    next_keys[1] = CtoName("\\C-<page_down>");
+    prev_keys[0] = CtoName("\\C-\\S-TAB");
+    prev_keys[1] = CtoName("\\C-<page_up>");
+  }
+
+  if ( key == next_keys[0] || key == next_keys[1] )
+    return cycleTabStack(ts, true);
+  if ( key == prev_keys[0] || key == prev_keys[1] )
+    return cycleTabStack(ts, false);
 
   fail;
 }

@@ -56,9 +56,11 @@ Run with:
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
 :- use_module(library(pce_float_item)).
+:- use_module(library(apply)).
 
 test_text_item :-
     run_tests([ text_item_clear_button,
+                text_item_step,
                 float_item
               ]).
 
@@ -125,6 +127,57 @@ test(a_subclass_answers_the_same_way) :-
     assertion(Editable > ReadOnly).
 
 :- end_tests(text_item_clear_button).
+
+%!  steps(+Item, +Keys, -Values) is det.
+%
+%   Open a dialog holding Item (an object or a term to create one), type
+%   Keys and collect the selection after each.
+
+steps(Spec, Keys, Values) :-
+    (   object(Spec)
+    ->  Item = Spec
+    ;   new(Item, Spec)
+    ),
+    new(D, dialog),
+    send(D, append, Item),
+    send(D, open),
+    send(D, keyboard_focus, Item),
+    foldl(step_key(D, Item), Keys, Values, []),
+    send(D, destroy).
+
+step_key(D, Item, Id, [V|T], T) :-
+    new(Ev, event(Id, D, 0, 0, 0, 1000)),
+    send(D, post_event, Ev),
+    get(Item, selection, V).
+
+:- begin_tests(text_item_step).
+
+test(int_item, Values-Calls == [6,7,6,16,6,0]-[6,7,6,16,6,0]) :-
+    new(Log, chain),
+    steps(int_item(n, 5, message(Log, append, @arg1), 0, 100),
+          [cursor_up, cursor_up, cursor_down, page_up, page_down, page_down],
+          Values),
+    chain_list(Log, Calls).
+test(float_item_step, Values == [0.6, 0.5, 0.4, 1.4]) :-
+    new(F, float_item(f, 0.5)),
+    send(F, step, 0.1),
+    steps(F, [cursor_up, cursor_down, cursor_down, page_up], Values).
+test(float_item_back_to_start, Count == 2) :-
+    new(Log, chain),
+    new(F, float_item(f, 0.5, message(Log, append, @arg1))),
+    send(F, step, 0.1),
+    steps(F, [cursor_up, cursor_down], _),
+    get(Log, size, Count).
+test(float_item_range, Values == [0.52, 0.72]) :-
+    steps(float_item(r, 0.5, @default, 0.0, 2.0), [cursor_up, page_up], Values).
+test(float_item_limit, Values == [2.0, 2.0]) :-
+    steps(float_item(r, 1.9, @default, 0.0, 2.0), [page_up, page_up], Values).
+test(float_item_no_step, Values == [0.5]) :-
+    steps(float_item(x, 0.5), [cursor_up], Values).
+test(text_item_unchanged, Values == [abc]) :-
+    steps(text_item(t, abc), [cursor_up], Values).
+
+:- end_tests(text_item_step).
 
 :- begin_tests(float_item).
 
