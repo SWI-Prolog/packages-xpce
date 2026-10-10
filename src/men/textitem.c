@@ -1317,6 +1317,12 @@ nextTextItem(TextItem ti)
 
 
 static status
+previousTextItem(TextItem ti)
+{ return send(ti->device, NAME_advance, ti, DEFAULT, NAME_backwards, EAV);
+}
+
+
+static status
 enterTextItem(TextItem ti, EventId id)
 { Device dev = ti->device;
 
@@ -1873,6 +1879,8 @@ static senddecl send_textItem[] =
      NAME_area, "Equivalent to ->length"),
   SM(NAME_next, 0, NULL, nextTextItem,
      NAME_caret, "Advance to next item in same <-device"),
+  SM(NAME_previous, 0, NULL, previousTextItem,
+     NAME_caret, "Move back to previous item in same <-device"),
   SM(NAME_style, 1, "[{normal,combo_box,stepper}]", styleTextItem,
      DEFAULT, "Set style or termine default style"),
   SM(NAME_complete, 1, "[event_id]", completeTextItem,

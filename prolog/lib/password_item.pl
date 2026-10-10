@@ -77,10 +77,12 @@ unlink(I) :->
 
 event(I, Ev:event) :->
     get(I, shadow, Shadow),
-    (   send(Ev, is_a, keyboard),
-        \+ item_key(Ev)
-    ->  send(Shadow, event, Ev),
-        send(I, update)
+    (   send(Ev, is_a, keyboard)
+    ->  (   item_key(Ev)
+        ->  send_super(I, event, Ev)
+        ;   send(Shadow, event, Ev),
+            send(I, update)
+        )
     ;   send(Ev, is_a, mouse)
     ->  (   send_super(I, event, Ev)
         ->  Done = true

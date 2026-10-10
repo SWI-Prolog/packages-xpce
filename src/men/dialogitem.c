@@ -288,14 +288,25 @@ hasInputFocusDialogItem(Any obj)
 		*        EVENT_HANDLING		*
 		********************************/
 
+/* SDL names the Tab key `TAB'; Shift-Tab moves backwards.  Cursor
+ * left and right move as well, which is what makes a row of buttons
+ * navigable.
+ */
+
 static status
 advanceEventDialogItem(Any obj, EventObj ev)
-{ if ( (ev->id == toInt(9) ||
+{ if ( (ev->id == NAME_TAB || ev->id == toInt('\t') ||
 	ev->id == NAME_cursorRight ||
 	ev->id == NAME_cursorLeft) &&
        getKeyboardFocusGraphical(obj) == ON )
-  { Name dir = (ev->id == NAME_cursorLeft ? NAME_backwards : NAME_forwards);
+  { int shift = (valInt(ev->buttons) & BUTTON_shift);
+    Name dir = ( ev->id == NAME_cursorLeft ||
+		 (ev->id != NAME_cursorRight && shift)
+		   ? NAME_backwards : NAME_forwards );
     Device dev = ((Graphical)obj)->device;
+
+    if ( valInt(ev->buttons) & (BUTTON_control|BUTTON_meta|BUTTON_gui) )
+      fail;
 
     send(dev, NAME_advance, obj, DEFAULT, dir, EAV);
 

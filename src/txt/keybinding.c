@@ -749,6 +749,7 @@ static kbDef text_item[] =
   { "RET",		NAME_enter },
   { "LFD",		NAME_enter },
   { "TAB",		NAME_next },
+  { "\\S-TAB",		NAME_previous },
   { "SPC",		NAME_complete },
 
   { NULL,		NULL }
@@ -759,6 +760,7 @@ static kbDef text_item_view[] =
 { { SUPER,		NAME_emacsViewBasics },
   { "\\C-c",		NAME_copy },
   { "TAB",		NAME_next },
+  { "\\S-TAB",		NAME_previous },
 
   { NULL,		NULL }
 };
@@ -775,6 +777,7 @@ static kbDef list_browser[] =
   { "BS",		NAME_backwardDeleteChar },
   { "DEL",		NAME_backwardDeleteChar },
   { "TAB",		NAME_extendPrefixOrNext },
+  { "\\S-TAB",		NAME_previous },
   { "\\C-w",		NAME_extendToCurrent },
   { "\\C-s",		NAME_repeatSearch },
   { "\\C-n",		NAME_nextLine },
@@ -849,6 +852,9 @@ static kbDef editor[] =
   { "\\C-\\S-<page_up>",      NAME_cursorPageUp },
   { "\\C-\\S-<page_down>",    NAME_cursorPageDown },
 
+  { "\\C-TAB",		      NAME_focusNext },
+  { "\\S-TAB",		      NAME_focusPrevious },
+  { "\\C-\\S-TAB",	      NAME_focusPrevious },
   { "\\C-SPC",		      NAME_setMark },
   { "LFD",		      NAME_newlineAndIndent },
   { "\\C-j",		      NAME_newlineAndIndent },

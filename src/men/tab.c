@@ -633,15 +633,6 @@ flashTab(Tab t, Area a, Int time)
 
 
 static status
-advanceTab(Tab t, Graphical gr, BoolObj propagate, Name direction)
-{ if ( isDefault(propagate) )
-    propagate = OFF;
-
-  return advanceDevice((Device)t, gr, propagate, direction);
-}
-
-
-static status
 activeTab(Tab t, BoolObj active)
 { if ( t->active != active )
   { assign(t, active, active);
@@ -662,12 +653,6 @@ static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_flash[] =
 	{ "area=[area]", "time=[num]" };
-static char *T_advance[] =
-	{ "from=[graphical]*",
-	  "propagate=[bool]",
-	  "direction=[{forwards,backwards}]"
-	};
-
 /* Instance Variables */
 
 static vardecl var_tab[] =
@@ -711,8 +696,6 @@ static senddecl send_tab[] =
      NAME_area, "Top-side of tab"),
   SM(NAME_compute, 0, NULL, computeTab,
      NAME_update, "Recompute area"),
-  SM(NAME_advance, 3, T_advance, advanceTab,
-     NAME_focus, "Advance keyboard focus to next item"),
   SM(NAME_active, 1, "bool", activeTab,
      NAME_event, "Enable/disable the tab"),
   SM(NAME_ChangedLabel, 0, NULL, ChangedLabelTab,

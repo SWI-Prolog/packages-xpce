@@ -1695,6 +1695,28 @@ verify_editable_editor(Editor e)
 }
 
 
+/* The character ->insert_self and friends insert: chr or, by default,
+ * the one typed.  SDL names the Tab key rather than sending ^I.
+ */
+
+static status
+insert_character(Editor e, Int chr, uchar_t *c)
+{ if ( isDefault(chr) )
+  { EventObj ev = getValueVar(EVENT);
+
+    if ( instanceOfObject(ev, ClassEvent) && isInteger(ev->id) )
+      *c = valInt(ev->id);
+    else if ( instanceOfObject(ev, ClassEvent) && ev->id == NAME_TAB )
+      *c = '\t';
+    else
+      return errorPce(e, NAME_noCharacter);
+  } else
+    *c = valInt(chr);
+
+  succeed;
+}
+
+
 static status
 insert_editor(Editor e, Int times, Int chr, int fill)
 { uchar_t c;
@@ -1711,15 +1733,8 @@ insert_editor(Editor e, Int times, Int chr, int fill)
   if ( isDefault(times) )
     times = ONE;
 
-  if ( isDefault(chr) )
-  { EventObj ev = getValueVar(EVENT);
-
-    if ( instanceOfObject(ev, ClassEvent) && isInteger(ev->id) )
-      c = valInt(ev->id);
-    else
-      return errorPce(e, NAME_noCharacter);
-  } else
-    c = valInt(chr);
+  if ( !insert_character(e, chr, &c) )
+    fail;
 
   str_store(s, 0, c);
   s->s_size = 1;
@@ -3469,15 +3484,8 @@ insertSelfFillEditor(Editor e, Int times, Int chr)
   if ( isDefault(times) )
     times = ONE;
 
-  if ( isDefault(chr) )
-  { EventObj ev = getValueVar(EVENT);
-
-    if ( instanceOfObject(ev, ClassEvent) && isInteger(ev->id) )
-      c = valInt(ev->id);
-    else
-      return errorPce(e, NAME_noCharacter);
-  } else
-    c = valInt(chr);
+  if ( !insert_character(e, chr, &c) )
+    fail;
 
   str_store(s, 0, c);
   s->s_size = 1;
@@ -3652,6 +3660,37 @@ endIsearchEditor(Editor e, BoolObj save_mark)
   }
 
   succeed;
+}
+
+
+/* Tab is a character in an editor, so an editor that is an item in a
+ * dialog is left with Control-Tab, as in GTK and Cocoa.  Elsewhere,
+ * as in PceEmacs, the editor is not one of several items and these
+ * commands fail.
+ */
+
+static status
+focusEditor(Editor e, Name direction)
+{ PceWindow sw;
+
+  if ( isNil(e->device) ||
+       !(sw = getWindowGraphical((Graphical)e)) ||
+       !instanceOfObject(sw, ClassDialog) )
+    fail;
+
+  return send(e->device, NAME_advance, e, DEFAULT, direction, EAV);
+}
+
+
+static status
+focusNextEditor(Editor e)
+{ return focusEditor(e, NAME_forwards);
+}
+
+
+static status
+focusPreviousEditor(Editor e)
+{ return focusEditor(e, NAME_backwards);
 }
 
 
@@ -5590,6 +5629,10 @@ static senddecl send_editor[] =
      NAME_search, "Find string in X-cut buffer"),
   SM(NAME_isearchBackward, 0, NULL, isearchBackwardEditor,
      NAME_search, "Start incremental search backward"),
+  SM(NAME_focusNext, 0, NULL, focusNextEditor,
+     NAME_focus, "Pass the keyboard focus to the next item"),
+  SM(NAME_focusPrevious, 0, NULL, focusPreviousEditor,
+     NAME_focus, "Pass the keyboard focus to the previous item"),
   SM(NAME_isearchForward, 0, NULL, isearchForwardEditor,
      NAME_search, "Start incremental search forward"),
   SM(NAME_internalMark, 1, "[int]", internalMarkEditor,

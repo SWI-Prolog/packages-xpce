@@ -293,6 +293,12 @@ nextListBrowser(ListBrowser lb)
 
 
 static status
+previousListBrowser(ListBrowser lb)
+{ return send(lb->device, NAME_advance, lb, DEFAULT, NAME_backwards, EAV);
+}
+
+
+static status
 extendPrefixOrNextListBrowser(ListBrowser lb)
 { if ( notNil(lb->search_string) )
   { StringObj ext = lb->search_string;
@@ -1844,6 +1850,8 @@ static senddecl send_listBrowser[] =
      NAME_caret, "->extend_prefix or ->next"),
   SM(NAME_next, 0, NULL, nextListBrowser,
      NAME_caret, "Move caret to next item (`device ->advance')"),
+  SM(NAME_previous, 0, NULL, previousListBrowser,
+     NAME_caret, "Move caret to previous item (`device ->advance')"),
   SM(NAME_reference, 1, "point", referenceListBrowser,
      NAME_dialogItem, "Set reference as dialog_item"),
   SM(NAME_clear, 0, NULL, clearListBrowser,

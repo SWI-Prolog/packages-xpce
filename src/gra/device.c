@@ -440,7 +440,10 @@ WantsKeyboardFocusDevice(Device dev)
 { Cell cell;
 
   for_cell(cell, dev->graphicals)
-  { if ( qadSendv(cell->value, NAME_WantsKeyboardFocus, 0, NULL) )
+  { Graphical gr = cell->value;
+
+    if ( gr->displayed == ON &&
+	 qadSendv(gr, NAME_WantsKeyboardFocus, 0, NULL) )
       succeed;
   }
 
@@ -448,9 +451,73 @@ WantsKeyboardFocusDevice(Device dev)
 }
 
 
+/* A container is a device that has no say of its own about the
+ * keyboard focus: it wants it if one of its graphicals does, and
+ * passing the focus to it means passing it to one of those.  Windows
+ * are excluded, as their graphicals are focussed in their own right.
+ */
+
+static bool
+isFocusContainer(Graphical gr)
+{ Any rec;
+  Method m;
+
+  return ( instanceOfObject(gr, ClassDevice) &&
+	   !instanceOfObject(gr, ClassWindow) &&
+	   (m = (Method)resolveSendMethodObject(gr, NULL,
+						NAME_WantsKeyboardFocus,
+						&rec)) &&
+	   m->context == ClassDevice );
+}
+
+
+static Graphical edgeFocusDevice(Device dev, Name direction);
+
+/* The graphical that gets the keyboard focus if it is passed to gr
+ * when travelling in direction: gr itself, the first or last item
+ * inside it if it is a container, or NULL if it does not want it.
+ */
+
+static Graphical
+focusTarget(Graphical gr, Name direction)
+{ if ( gr->displayed != ON ||
+       !qadSendv(gr, NAME_WantsKeyboardFocus, 0, NULL) )
+    return NULL;
+
+  if ( isFocusContainer(gr) )
+    return edgeFocusDevice((Device)gr, direction);
+
+  return gr;
+}
+
+
+/* The first (forwards) or last (backwards) graphical inside dev that
+ * takes the keyboard focus.
+ */
+
+static Graphical
+edgeFocusDevice(Device dev, Name direction)
+{ Graphical found = NULL;
+  Cell cell;
+
+  for_cell(cell, dev->graphicals)
+  { Graphical t = focusTarget(cell->value, direction);
+
+    if ( t )
+    { if ( direction != NAME_backwards )
+	return t;
+      found = t;
+    }
+  }
+
+  return found;
+}
+
+
 static Int
 getWantsKeyboardFocusGraphical(Graphical gr)
-{ if ( qadSendv(gr, NAME_WantsKeyboardFocus, 0, NULL) )
+{ if ( gr->displayed == ON &&
+       qadSendv(gr, NAME_WantsKeyboardFocus, 0, NULL) )
   { if ( instanceOfObject(gr, ClassTextItem) )
       return toInt(10);
     if ( instanceOfObject(gr, ClassButton) &&
@@ -464,12 +531,23 @@ getWantsKeyboardFocusGraphical(Graphical gr)
 }
 
 
+/* ->advance: pass the keyboard focus on from gr, which is in dev, to
+ * the next or previous graphical that wants it.  Containers (see
+ * isFocusContainer()) are entered and left as if their items were
+ * ours, so the focus travels through dialog_group, label_box and tab
+ * items in the order they appear.  If dev has nothing left in this
+ * direction, the question goes up to our device (`propagate`), or the
+ * focus wraps around to the other end of dev.
+ *
+ * Without gr, the focus goes to the best item of dev, preferring a
+ * text_item and then the default button.  With an explicit direction
+ * it goes to the first or last item instead.
+ */
+
 status
 advanceDevice(Device dev, Graphical gr, BoolObj propagate, Name direction)
 { Cell cell;
-  int skip = TRUE;			/* before gr */
-  Graphical first = NIL;
-  Graphical last = NIL;
+  Graphical target = NULL;
   PceWindow sw;
 
   TRY( sw = getWindowGraphical((Graphical) dev) );
@@ -477,70 +555,71 @@ advanceDevice(Device dev, Graphical gr, BoolObj propagate, Name direction)
   if ( isDefault(gr) )
     gr = NIL;
 
-					/* Find initial focus */
   if ( isNil(gr) )
-  { Graphical focus = NIL;
-    int best = -1;
-
-    for_cell(cell, dev->graphicals)
-    { Int v;
-
-      if ( (v = getWantsKeyboardFocusGraphical(cell->value)) &&
-	   valInt(v) > best )
-      { best = valInt(v);
-	focus = cell->value;
-      }
-    }
-
-    if ( best != -1 )
-      return keyboardFocusWindow(sw, focus);
-  } else
   { if ( isDefault(direction) )
-      direction = NAME_forwards;
+    { Graphical focus = NIL;
+      int best = -1;
 
-    for_cell(cell, dev->graphicals)
-    { if ( skip )
-      { if ( isNil(first) &&
-	     qadSendv(cell->value, NAME_WantsKeyboardFocus, 0, NULL) )
-	  first = cell->value;
+      for_cell(cell, dev->graphicals)
+      { Int v;
 
-	if ( direction == NAME_backwards )
-	{ if ( cell->value == gr )
-	  { if ( notNil(last) )
-	      return keyboardFocusWindow(sw, last);
-	  } else
-	  { if ( qadSendv(cell->value, NAME_WantsKeyboardFocus, 0, NULL) )
-	      last = cell->value;
-	  }
+	if ( (v = getWantsKeyboardFocusGraphical(cell->value)) &&
+	     valInt(v) > best )
+	{ best = valInt(v);
+	  focus = cell->value;
 	}
-
-	if ( cell->value == gr )
-	  skip = FALSE;
-
-	continue;
       }
 
-      if ( send(cell->value, NAME_WantsKeyboardFocus, EAV) )
-      { if ( direction == NAME_forwards )
-	  return keyboardFocusWindow(sw, cell->value);
-	else
-	  last = cell->value;
-      }
+      if ( best == -1 )
+	succeed;
+      if ( isFocusContainer(focus) )
+	return send(focus, NAME_advance, NIL, OFF, EAV);
+
+      return keyboardFocusWindow(sw, focus);
     }
 
-    if ( last && direction == NAME_backwards )
-      return keyboardFocusWindow(sw, last);
+    if ( (target = edgeFocusDevice(dev, direction)) )
+      return keyboardFocusWindow(sw, target);
+    succeed;
   }
+
+  if ( isDefault(direction) )
+    direction = NAME_forwards;
+
+  if ( direction == NAME_backwards )
+  { for_cell(cell, dev->graphicals)
+    { Graphical t;
+
+      if ( cell->value == gr )
+	break;
+      if ( (t = focusTarget(cell->value, direction)) )
+	target = t;
+    }
+  } else
+  { bool after = false;
+
+    for_cell(cell, dev->graphicals)
+    { if ( after )
+      { if ( (target = focusTarget(cell->value, direction)) )
+	  break;
+      } else if ( cell->value == gr )
+      { after = true;
+      }
+    }
+  }
+
+  if ( target )
+    return keyboardFocusWindow(sw, target);
 
   if ( isDefault(propagate) )
     propagate = ((Device) sw != dev ? ON : OFF);
 
   if ( propagate == ON && notNil(dev->device) )
-    send(dev->device, NAME_advance, dev, EAV);
-  else
-    keyboardFocusWindow(sw, first);	/* may be NIL */
+    return send(dev->device, NAME_advance, dev, DEFAULT, direction, EAV);
 
-  succeed;
+					/* wrap around; may be NULL */
+  target = edgeFocusDevice(dev, direction);
+  return keyboardFocusWindow(sw, target ? target : NIL);
 }
 
 
