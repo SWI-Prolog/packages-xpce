@@ -61,6 +61,19 @@ tab per category:
 The menu bar holds popup menus.  Each item reports the value its
 message receives in the status line at the bottom.
 
+The gallery can be operated from the keyboard:
+
+  * Tab and Shift-Tab move the focus, Control-Tab and Control-Page-Down
+    (Up) switch tabs.
+  * Alt-<letter> activates the item whose label shows that letter
+    underlined while Alt is held.  F10 opens the first menu.
+  * Return runs the default button (`ok`), Escape the `cancel` button.
+  * Space or Return press a button; Space or Down open a button's
+    popup.  Popups use the cursor keys, Return and Escape.
+  * Menus and sliders use the cursor keys; Page-Up/Down and Home/End
+    move a slider further.  Up and Down step a number item, Page-Up
+    and Page-Down take ten steps.
+
 Run with:
 
     ?- dialog_gallery.
@@ -164,6 +177,7 @@ buttons_tab(D, T) :-
     send(T, append, button(run, BMsg)),
     send(T, append, new(Default, button(ok, BMsg)), right),
     send(Default, default_button, @on),
+    send(T, append, button(cancel, BMsg), right), % Escape runs it
     send(T, append, new(Off, button(inactive, BMsg)), right),
     send(Off, active, @off),
     send(T, append, new(Split, button(more, BMsg)), right),
@@ -188,7 +202,8 @@ text_tab(D, T) :-
     msg(D, int_item, IMsg),
     send(T, append, int_item(int_item, 42, IMsg, 0, 100)),
     msg(D, float_item, FMsg),
-    send(T, append, float_item(float_item, 3.14, FMsg)),
+    send(T, append, new(Float, float_item(float_item, 3.14, FMsg))),
+    send(Float, step, 0.1),
     msg(D, password_item, PMsg),
     send(T, append, password_item(password, PMsg)),
     msg(D, file_item, FiMsg),
@@ -231,7 +246,8 @@ ranges_tab(D, T) :-
     send(T, append, slider(slider, 0, 100, 25, SMsg)),
     msg(D, real_slider, RMsg),
     send(T, append, slider(real_slider, -1.5, 1.5, 0.5, RMsg)),
-    send(T, append, new(LB, list_browser(@default, 30, 6))),
+    send(T, append, new(Box, label_box(list))),
+    send(Box, append, new(LB, list_browser(@default, 30, 6))),
     msg(D, list_browser, LMsg),
     send(LB, select_message, LMsg),
     forall(member(X, [alpha, beta, gamma, delta, epsilon, zeta, eta, theta]),
