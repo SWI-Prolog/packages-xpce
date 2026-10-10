@@ -1655,7 +1655,10 @@ prolog_debug_spec(Head, M, Spec) =>
     callable(Head),
     head_name_arity(Head, Name, Arity),
     (   get(M, prolog_module, Module)
-    ->  Spec = (Module:Name/Arity)
+    ->  (   predicate_property(Module:Head, imported_from(M))
+        ->  Spec = (M:Name/Arity)
+        ;   Spec = (Module:Name/Arity)
+        )
     ;   Spec = Name/Arity
     ).
 
@@ -2753,7 +2756,12 @@ head(F, Qualify:[bool], Head:prolog) :<-
 
 loaded_specifier(F, Head:prolog) :<-
     "Get predicate specifier for loaded predicate"::
-    get(F, head, Head),
+    get(F, head, Head0),
+    (   predicate_property(Head0, imported_from(M))
+    ->  strip_module(Head0, _, Head1),
+        Head = M:Head1
+    ;   Head = Head0
+    ),
     current_predicate(_, Head).
 
 has_source(F) :->
@@ -2797,11 +2805,13 @@ edit(F, Where:[{as_arranged,here,tab,split,window}]) :->
 listing(F) :->
     "Generate a listing"::
     get(F, loaded_specifier, Spec),
+    pi_head(PI, Spec),
+    format(string(Pred), '~q', [PI]),
     (   get(F, debug_thread, Thread)
     ->  Options = [thread(Thread)],
-        Title = string('*Listing for %N in thread %N*', F, Thread)
+        Title = string('*Listing for %N in thread %N*', Pred, Thread)
     ;   Options = [],
-        Title = string('*Listing for %N*', F)
+        Title = string('*Listing for %N*', Pred)
     ),
     new(Tmp, emacs_buffer(@nil, Title)),
     send(Tmp, mode, prolog),

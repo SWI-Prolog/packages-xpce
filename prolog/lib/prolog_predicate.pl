@@ -289,9 +289,17 @@ info(P) :->
 
 spy(P) :->
     "Set a spy point on predicate"::
-     get(P, head, Head),
+     get(P, head, Head0),
+     resolve_predicate(Head0, Head),
      pi_head(PI, Head),
      gspy(PI).
+
+resolve_predicate(Head0, Head) :-
+    predicate_property(Head0, imported_from(M)),
+    !,
+    strip_module(Head0, _, Head1),
+    Head = M:Head1.
+resolve_predicate(Head, Head).
 
 :- pce_end_class(prolog_predicate).
 
