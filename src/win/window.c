@@ -780,10 +780,37 @@ postEventWindow(PceWindow sw, EventObj ev)
       goto out;
     }
 
+    /* A stay-up popup of a menu_bar or popup_gesture holds the focus
+     * and grabs the pointer.  It is operated with the cursor keys,
+     * Return and Escape, so the keyboard goes there, not to the
+     * dialog item holding the keyboard focus, also if the grab is held
+     * by another window of the frame, e.g. after F10 in an editor.
+     */
+    { PceWindow gw = ws_grabbing_window();
+
+      if ( gw == sw && notNil(sw->focus) && sw->focus != (Graphical)sw )
+      { rval = postEvent(ev, sw->focus,
+			 isNil(sw->focus_recogniser) ? DEFAULT
+						     : sw->focus_recogniser);
+	goto out;
+      }
+      if ( gw && gw != sw && !isFreedObj(gw) &&
+	   instanceOfObject(gw, ClassWindow) && notNil(gw->focus) &&
+	   fr && notNil(fr) && getFrameWindow(gw, OFF) == fr )
+      { rval = postNamedEvent(ev, (Graphical)gw, DEFAULT, NAME_postEvent);
+	goto out;
+      }
+    }
+
     if ( notNil(fr) &&
 	 (iw = getKeyboardFocusFrame(fr)) &&
 	 iw != sw )
     { rval = eventFrame(fr, ev);
+      goto out;
+    }
+
+    if ( fr && notNil(fr) && menuBarKeyFrame(fr, ev) )
+    { rval = SUCCEED;
       goto out;
     }
 
@@ -881,6 +908,23 @@ destroyed:
   delCodeReference(old_event);
 
   return rval;
+}
+
+
+/* A window displayed inside another graphical, such as a dialog on
+ * the tab of a tabbed_window, offers an accelerator key to its
+ * graphicals, so it reaches the items of the tab from outside.
+ */
+
+static status
+keyWindow(PceWindow sw, Name key)
+{ Graphical gr;
+
+  for_chain(sw->graphicals, gr,
+	    if ( send(gr, NAME_key, key, EAV) )
+	      succeed);
+
+  fail;
 }
 
 
@@ -2795,6 +2839,8 @@ static vardecl var_window[] =
 static senddecl send_window[] =
 { SM(NAME_destroy, 0, NULL, destroyWindow,
      DEFAULT, "->destroy associated frame"),
+  SM(NAME_key, 1, "key=name", keyWindow,
+     NAME_accelerator, "Offer accelerator key to my graphicals"),
   SM(NAME_device, 1, "device*", deviceWindow,
      DEFAULT, "Display window on device, take care of <-decoration"),
   SM(NAME_displayed, 1, "bool", displayedWindow,

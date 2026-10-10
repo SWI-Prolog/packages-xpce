@@ -274,7 +274,8 @@ openPopup(PopupObj p, Graphical gr, Point pos,
 
 static status
 closePopup(PopupObj p)
-{ if ( notNil(p->pullright) )
+{ deleteAttributeObject(p, NAME_keyboard); /* see accelerator_key() */
+  if ( notNil(p->pullright) )
   { send(p->pullright, NAME_close, EAV);
     assign(p, pullright, NIL);
   }
@@ -296,6 +297,27 @@ closePopup(PopupObj p)
 		*         EVENT HANDLING	*
 		********************************/
 
+/* True if `key` selects item mi: its mnemonic, Alt-<letter>, or, in an
+ * open popup (`plain`), just the letter, as on Windows and Gnome.
+ */
+
+static bool
+mnemonic_key(MenuItem mi, Name key, bool plain)
+{ const char *m, *k;
+
+  if ( mi->active != ON || !isName(mi->mnemonic) )
+    return false;
+  if ( mi->mnemonic == key )
+    return true;
+
+  return ( plain && isName(key) &&
+	   (m = strName(mi->mnemonic)) && (k = strName(key)) &&
+	   m[0] == '\\' && m[1] == 'e' && m[2] && !m[3] &&
+	   k[0] && !k[1] &&
+	   tolower((unsigned char)k[0]) == (unsigned char)m[2] );
+}
+
+
 static status
 keyPopup(PopupObj p, Name key)
 { Cell cell;
@@ -303,7 +325,7 @@ keyPopup(PopupObj p, Name key)
   for_cell(cell, p->members)
   { MenuItem mi = cell->value;
 
-    if ( (mi->accelerator == key && mi->active == ON) ||
+    if ( mnemonic_key(mi, key, false) ||
 	 (notNil(mi->popup) && keyPopup(mi->popup, key)) )
     { assign(p, selected_item, mi);
       succeed;
@@ -434,6 +456,7 @@ static status
 kbdSelectPopup(PopupObj p, MenuItem mi)
 { if ( notNil(mi->popup) )
   { previewMenu((Menu) p, mi);
+    attributeObject(mi->popup, NAME_keyboard, ON);
     send(p, NAME_showPullrightMenu, mi, EAV);
     previewMenu((Menu)mi->popup, getHeadChain(mi->popup->members));
   } else
@@ -445,13 +468,33 @@ kbdSelectPopup(PopupObj p, MenuItem mi)
 }
 
 
+/* True if the highlighted item of p opens a submenu.
+ */
+
+bool
+previewHasSubmenuPopup(PopupObj p)
+{ return ( notNil(p->preview) && p->preview->active == ON &&
+	   notNil(p->preview->popup) );
+}
+
+
 static status
 typedPopup(PopupObj p, Any ev)
 { Any id = (instanceOfObject(ev, ClassEvent) ? ((EventObj)ev)->id : ev);
   int prev;
 
-  if ( id == toInt(13) )			/* RETURN ... */
-  { return kbdSelectPopup(p, p->preview);
+  if ( id == toInt(13) || id == NAME_RET ) /* RETURN ... */
+  { if ( isNil(p->preview) )
+      fail;
+    return kbdSelectPopup(p, p->preview);
+  } else if ( id == NAME_cursorRight || id == NAME_cursorLeft )
+  { if ( id == NAME_cursorRight && previewHasSubmenuPopup(p) )
+      return kbdSelectPopup(p, p->preview); /* open the submenu */
+    fail;				/* see eventPopup() and menu_bar */
+  } else if ( id == toInt(27) || id == NAME_ESC )
+  { assign(p, selected_item, NIL);	/* ESC: close without selection */
+    send(p, NAME_close, EAV);
+    succeed;
   } else if ( (prev = (id == NAME_cursorUp)) || /* cursor up/down */
 	      id == NAME_cursorDown )
   { MenuItem mi;
@@ -469,13 +512,13 @@ typedPopup(PopupObj p, Any ev)
 
     succeed;
   } else
-  { Name key = characterName(ev);		/* accelerator of item */
+  { Name key = characterName(ev);		/* mnemonic of item */
     Cell cell;
 
     for_cell(cell, p->members)
     { MenuItem mi = cell->value;
 
-      if ( mi->accelerator == key )
+      if ( mnemonic_key(mi, key, true) )
 	return kbdSelectPopup(p, mi);
     }
 
@@ -496,7 +539,17 @@ eventPopup(PopupObj p, EventObj ev)
 		pp(ev->id), pp(ev->x), pp(ev->y)));
 
   if ( notNil(p->pullright) )
-  { status rval = postEvent(ev, (Graphical) p->pullright, DEFAULT);
+  { status rval;
+
+    if ( isNil(p->pullright->pullright) && /* Left, Escape: close the */
+	 (ev->id == NAME_cursorLeft ||	   /* innermost submenu */
+	  ev->id == NAME_ESC || ev->id == toInt(27)) )
+    { send(p->pullright, NAME_close, EAV);
+      assign(p, pullright, NIL);
+      succeed;
+    }
+
+    rval = postEvent(ev, (Graphical) p->pullright, DEFAULT);
 
     if ( isDragEvent(ev) )
     { if ( isNil(p->pullright->preview) )
@@ -583,7 +636,11 @@ eventPopup(PopupObj p, EventObj ev)
       succeed;
     }
   } else if ( isAEvent(ev, NAME_keyboard) )
-  { return typedPopup(p, ev);
+  { if ( !getAttributeObject(p, NAME_keyboard) )
+    { attributeObject(p, NAME_keyboard, ON); /* show the mnemonics, */
+      changedDialogItem(p);		     /* see accelerator_key() */
+    }
+    return typedPopup(p, ev);
   }
 
   succeed;				/* accept all events */

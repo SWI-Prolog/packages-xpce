@@ -366,12 +366,12 @@ append_family(PI, Generic:name, Families:name, Installed:chain) :->
 %   font of the attribute `preview_font` and drops it if the font
 %   cannot show the name, such as for symbol fonts.  Fonts are only
 %   loaded when shown.  Using `menu_item<-font` would load all of
-%   them to compute the size of the menu.  Accelerators make no sense
-%   for this many items.
+%   them to compute the size of the menu.  Mnemonics make no sense for
+%   this many items.
 
 append_family_item(M, Family, Points, Before) :-
     new(MI, menu_item(Family, @default, Family)),
-    send(MI, accelerator, @nil),
+    send(MI, mnemonic, @nil),
     send(MI, attribute, preview_font, font(Family, normal, Points)),
     (   Before == @on
     ->  send(M, prepend, MI)

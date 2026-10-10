@@ -35,6 +35,7 @@
 #define SWIPL_WINDOWS_NATIVE_ACCESS 1 /* get Swinhandle() */
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/dialog.h>			/* acceleratorCuesFrame() */
 #include <math.h>
 #include "../../swipl/pcecall.h"
 #include "sdlevent.h"
@@ -293,6 +294,21 @@ keycode_to_name(SDL_Event *event)
  */
 
 static SDL_Keymod lastmod = SDL_KMOD_NONE;
+
+/* The Alt key that shows the accelerators of dialog items while it is
+ * held.  Elsewhere, the right Alt key is AltGr, which types characters.
+ * See acceleratorCuesFrame().
+ */
+
+static bool
+is_cue_alt_key(SDL_Keycode key)
+{
+#ifdef __APPLE__
+  return key == SDLK_LALT || key == SDLK_RALT;
+#else
+  return key == SDLK_LALT;
+#endif
+}
 static Any grabbing_window = NIL;
 static Any mouse_tracking_window = NIL; /* Window or Frame */
 static Any pointer_window = NIL;	/* Window holding the pointer */
@@ -773,6 +789,8 @@ CtoEvent(SDL_Event *event)
       fail;
     case SDL_EVENT_KEY_UP:
       lastmod = event->key.mod;
+      if ( is_cue_alt_key(event->key.key) )
+	acceleratorCuesFrame(wsid_to_frame(event->key.windowID), false);
       fail;		      /* only update modifiers */
       /* https://wiki.libsdl.org/SDL3/SDL_TextInputEvent */
     case SDL_EVENT_TEXT_INPUT:
@@ -873,6 +891,10 @@ CtoEvent(SDL_Event *event)
 #endif
 
       lastmod = event->key.mod;
+      if ( is_cue_alt_key(event->key.key) )
+      { acceleratorCuesFrame(wsid_to_frame(event->key.windowID), true);
+	fail;
+      }
       menubar_key_time = 0;
       if ( ws_menubar_key_equivalent(event) )
       { DEBUG(NAME_keyboard,

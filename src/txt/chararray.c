@@ -250,6 +250,51 @@ Upcase first letter, downcase the rest  and replace word separators (-_)
 by spaces.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+/* The letter that is preferred as the accelerator (mnemonic) of a
+ * dialog item called this, for common names.  Fails for other names.
+ * `ok` and `cancel` have none: Return and Escape run them.  An
+ * application may redefine this, as <-label_name.
+ */
+
+static const struct
+{ const char *name;
+  const char *letter;
+} mnemonics[] =
+{ { "apply",  "a" },
+  { "close",  "c" },
+  { "delete", "d" },
+  { "edit",   "e" },
+  { "file",   "f" },
+  { "find",   "f" },
+  { "help",   "h" },
+  { "new",    "n" },
+  { "open",   "o" },
+  { "print",  "p" },
+  { "quit",   "q" },
+  { "revert", "r" },
+  { "save",   "s" },
+  { "view",   "v" },
+  { NULL,     NULL }
+};
+
+static CharArray
+getMnemonicCharArray(CharArray n)
+{ PceString s = &n->data;
+
+  if ( !s->s_iswide )
+  { for(int i=0; mnemonics[i].name; i++)
+    { const char *m = mnemonics[i].name;
+
+      if ( strlen(m) == (size_t)s->s_size &&
+	   strncmp(m, (const char*)s->s_textA, s->s_size) == 0 )
+	answer((CharArray)CtoName(mnemonics[i].letter));
+    }
+  }
+
+  fail;
+}
+
+
 CharArray
 getLabelNameCharArray(CharArray n)
 { PceString s = &n->data;
@@ -907,6 +952,8 @@ static getdecl get_charArray[] =
      NAME_case, "Map all uppercase letters to lowercase"),
   GM(NAME_labelName, 0, "char_array", NULL, getLabelNameCharArray,
      NAME_case, "Default name used for labels"),
+  GM(NAME_mnemonic, 0, "char_array", NULL, getMnemonicCharArray,
+     NAME_accelerator, "Preferred accelerator letter for an item called me"),
   GM(NAME_upcase, 0, "char_array", NULL, getUpcaseCharArray,
      NAME_case, "Map all lowercase letters to uppercase"),
   GM(NAME_strip, 1, "char_array", "[{canonicalise,leading,trailing,both}]", getStripCharArray,

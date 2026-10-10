@@ -40,7 +40,7 @@ static status	labelMenuItem(MenuItem mi, Any label);
 
 static status
 initialiseMenuItem(MenuItem m, Any value, Message msg, Any label,
-		   BoolObj eg, Code cond, Name acc)
+		   BoolObj eg, Code cond, Name acc, Name mnemonic)
 { if ( isDefault(eg) )
     eg = OFF;
   if ( isDefault(label) && !(label = get(m, NAME_defaultLabel, value, EAV)) )
@@ -58,8 +58,39 @@ initialiseMenuItem(MenuItem m, Any value, Message msg, Any label,
   assign(m, condition, cond);
   assign(m, end_group, eg);
   assign(m, accelerator, acc);
+  assign(m, mnemonic, isDefault(mnemonic) ? mnemonic
+					  : normaliseAccelerator(mnemonic));
+  assign(m, mnemonic_fixed, isDefault(mnemonic) ? OFF : ON);
 
   return labelMenuItem(m, label);
+}
+
+
+/* ->mnemonic: the letter that is underlined in the label and selects
+ * the item from the keyboard, Alt-<letter> or just the letter in an
+ * open popup.  As dialog_item ->accelerator: a letter (`s` or `\es`) or
+ * @nil fixes it, @default has it assigned by `menu ->assign_accelerators`.
+ * ->accelerator is the shortcut shown at the right, such as Ctrl-S.
+ */
+
+static status
+mnemonicMenuItem(MenuItem mi, Name mnemonic)
+{ assign(mi, mnemonic_fixed, isDefault(mnemonic) ? OFF : ON);
+  assign(mi, mnemonic, normaliseAccelerator(mnemonic));
+  if ( notNil(mi->menu) )
+    requestComputeGraphical(mi->menu, NAME_assignAccelerators);
+
+  succeed;
+}
+
+
+/* The letter preferred as mnemonic for an item with value `name`.  See
+ * char_array<-mnemonic.
+ */
+
+static CharArray
+getMnemonicNameMenuItem(MenuItem mi, Name name)
+{ answer(get(name, NAME_mnemonic, EAV));
 }
 
 
@@ -321,7 +352,7 @@ getContainedInMenuItem(MenuItem mi)
 static char *T_value[] =
         { "value=any", "label=[name|image]" };
 static char *T_initialise[] =
-        { "value=any", "message=[code]*", "label=[name|image]", "end_group=[bool]", "condition=[code]*", "accelerator=[name]*" };
+        { "value=any", "message=[code]*", "label=[name|image]", "end_group=[bool]", "condition=[code]*", "accelerator=[name]*", "mnemonic=[name]*" };
 
 /* Instance Variables */
 
@@ -351,13 +382,17 @@ static vardecl var_menuItem[] =
   SV(NAME_popup, "popup*", IV_GET|IV_STORE, popupMenuItem,
      NAME_menu, "Associated popup (pull-right)"),
   IV(NAME_accelerator, "[name]*", IV_BOTH,
-     NAME_accelerator, "Activate when ->key: name is received")
+     NAME_accelerator, "Shortcut shown at the right, e.g. Ctrl-S"),
+  SV(NAME_mnemonic, "[name]*", IV_GET|IV_STORE, mnemonicMenuItem,
+     NAME_accelerator, "Underlined letter; a letter or @nil fixes it"),
+  IV(NAME_mnemonicFixed, "bool", IV_GET,
+     NAME_accelerator, "@on if ->mnemonic fixed it")
 };
 
 /* Send Methods */
 
 static senddecl send_menuItem[] =
-{ SM(NAME_initialise, 6, T_initialise, initialiseMenuItem,
+{ SM(NAME_initialise, 7, T_initialise, initialiseMenuItem,
      DEFAULT, "Create from value, message, label, end and cond"),
   SM(NAME_unlink, 0, NULL, unlinkMenuItem,
      DEFAULT, "Unlink from menu"),
@@ -381,7 +416,9 @@ static getdecl get_menuItem[] =
   GM(NAME_message, 0, "message=[code]*", NULL, getMessageMenuItem,
      NAME_action, "Message that will be executed"),
   GM(NAME_defaultLabel, 1, "label=name|image", "value=any", getDefaultLabelMenuItem,
-     NAME_label, "Compute default label from value")
+     NAME_label, "Compute default label from value"),
+  GM(NAME_mnemonicName, 1, "char_array", "name", getMnemonicNameMenuItem,
+     NAME_accelerator, "Preferred mnemonic for an item with value name")
 };
 
 /* Resources */
@@ -395,11 +432,11 @@ static classvardecl rc_menuItem[] =
 
 /* Class Declaration */
 
-static Name menuItem_termnames[] = { NAME_value, NAME_message, NAME_label, NAME_endGroup, NAME_condition, NAME_accelerator };
+static Name menuItem_termnames[] = { NAME_value, NAME_message, NAME_label, NAME_endGroup, NAME_condition, NAME_accelerator, NAME_mnemonic };
 
 ClassDecl(menuItem_decls,
           var_menuItem, send_menuItem, get_menuItem, rc_menuItem,
-          6, menuItem_termnames);
+          7, menuItem_termnames);
 
 
 status

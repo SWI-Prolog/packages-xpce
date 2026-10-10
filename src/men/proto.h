@@ -2,6 +2,8 @@
 
 /* /staff/jan/src/pl/packages/xpce/src/men/button.c */
 COMMON(int)	accelerator_code(Name a);
+COMMON(status)	acceleratorCuesFrame(FrameObj fr, bool held);
+COMMON(int)	accelerator_key(Name a);
 COMMON(status)	RedrawAreaButton(Button b, Area a);
 COMMON(Point)	getReferenceButton(Button b);
 COMMON(status)	makeButtonGesture(void);
@@ -24,6 +26,16 @@ COMMON(status)	changedDialogItem(Any obj);
 COMMON(Point)	getReferenceDialogItem(Any obj);
 COMMON(status)	modifiedDialogItem(Any di, BoolObj modified);
 COMMON(status)	assignAccelerators(Chain objects, Name prefix, Name label_method);
+COMMON(Any)	normaliseAccelerator(Any acc);
+COMMON(void)	reassignAcceleratorsOf(Graphical gr);
+COMMON(bool)	fixedAccelerator(Any obj);
+COMMON(Any)	currentAccelerator(Any obj);
+COMMON(void)	autoAccelerator(Any obj, Any acc);
+COMMON(void)	markAccelerator(Any acc, unsigned char *taken);
+COMMON(bool)	strongAccelerator(Any obj);
+COMMON(status)	assignAcceleratorsSoft(Chain objects, Name prefix,
+				       Name label_method, unsigned char *taken,
+				       const unsigned char *soft);
 COMMON(status)	assignAcceleratorsTaken(Chain objects, Name prefix,
 				Name label_method, unsigned char *taken);
 COMMON(status)	makeClassDialogItem(Class class);
@@ -58,6 +70,7 @@ COMMON(status)	makeClassMenuItem(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/popup.c */
 COMMON(status)	defaultPopupImages(PopupObj p);
+COMMON(bool)	previewHasSubmenuPopup(PopupObj p);
 COMMON(status)	makeClassPopup(Class class);
 COMMON(Shadow)	popupShadow(PopupObj p, Any fr);
 COMMON(int)	popupShadowMargin(PopupObj p, Any fr);

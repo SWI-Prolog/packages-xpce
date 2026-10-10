@@ -45,15 +45,98 @@ initialiseButton(Button b, Name name, Message msg, Name acc)
   assign(b, show_focus_border, ON);
 
   assign(b, message, msg);
-  if ( notDefault(acc) )
-    assign(b, accelerator, acc);
+  if ( notDefault(acc) )		/* fixed: see ->accelerator */
+  { assign(b, accelerator, normaliseAccelerator(acc));
+    assign(b, accelerator_fixed, ON);
+  }
 
   return requestComputeGraphical(b, DEFAULT);
 }
 
 
+/* The character of accelerator `a` that is underlined in a label, or
+ * 0.  As on Windows, Gnome and KDE, the underlines are only shown while
+ * Alt (Option on MacOS) is held, unless the class variable
+ * dialog_item.accelerator_cues says `always` (or `never`).  The window
+ * system reports Alt through acceleratorCuesFrame().  A popup opened
+ * from the keyboard shows them anyway: see accelerator_key().
+ */
+
+static bool alt_held = false;
+
+static Name
+accelerator_cues(void)
+{ Name mode = getClassVariableValueClass(ClassDialogItem,
+					  NAME_acceleratorCues);
+
+  return mode ? mode : NAME_alt;
+}
+
+
 int
 accelerator_code(Name a)
+{ Name mode = accelerator_cues();
+
+  if ( mode == NAME_never || (mode == NAME_alt && !alt_held) )
+    return 0;
+
+  return accelerator_key(a);
+}
+
+
+/* Alt went down or up in frame `fr`.  Redraw it if the underlines
+ * change.  That includes the windows displayed inside its windows,
+ * such as the dialogs on the tabs of a tabbed_window, which are not
+ * members of the frame, and the open popups, which are frames of their
+ * own.
+ */
+
+status
+acceleratorCuesFrame(FrameObj fr, bool held)
+{ if ( alt_held != held )
+  { alt_held = held;
+
+    if ( fr && notNil(fr) && !isFreeingObj(fr) &&
+	 accelerator_cues() == NAME_alt )
+    { Chain agenda = answerObject(ClassChain, EAV);
+      Device dev;
+      Cell cell;
+
+      for_cell(cell, fr->members)
+	appendChain(agenda, cell->value);
+      if ( notNil(fr->display) )
+      { Cell fc;
+
+	for_cell(fc, fr->display->frames)
+	{ FrameObj pf = fc->value;
+
+	  if ( pf != fr && pf->kind == NAME_popup )
+	  { for_cell(cell, pf->members)
+	      appendChain(agenda, cell->value);
+	  }
+	}
+      }
+
+      while( (dev = getDeleteHeadChain(agenda)) )
+      { if ( instanceOfObject(dev, ClassWindow) )
+	  send(dev, NAME_redraw, EAV);
+
+	for_cell(cell, dev->graphicals)
+	{ if ( instanceOfObject(cell->value, ClassDevice) )
+	    appendChain(agenda, cell->value);
+	}
+      }
+
+      doneObject(agenda);
+    }
+  }
+
+  succeed;
+}
+
+
+int
+accelerator_key(Name a)
 { if ( isName(a) )
   { char *s = strName(a);
 
@@ -364,9 +447,20 @@ eventButton(Button b, EventObj ev)
 
     makeButtonGesture();
 
-    if ( ev->id == toInt(13) && infocus ) /* RETURN */
-    { send(b, NAME_execute, EAV);
-      succeed;
+    if ( infocus && isAEvent(ev, NAME_keyboard) &&
+	 !(valInt(ev->buttons) & (BUTTON_control|BUTTON_meta|BUTTON_gui)) )
+    { if ( notNil(b->popup) &&		/* Down, or the button only */
+	   ( ev->id == NAME_cursorDown || /* has a popup */
+	     ( isNil(b->message) &&
+	       (ev->id == NAME_RET || ev->id == toInt(13) ||
+		ev->id == toInt(' ')) ) ) )
+	return keyboardPopupGesture((Graphical)b);
+
+      if ( ev->id == NAME_RET || ev->id == toInt(13) ||
+	   ev->id == toInt(' ') )	/* Return, Space: press */
+      { send(b, NAME_execute, EAV);
+	succeed;
+      }
     }
 
     if ( isAEvent(ev, NAME_msLeftDown) && !infocus )
@@ -387,13 +481,27 @@ eventButton(Button b, EventObj ev)
 }
 
 
+/* Return runs the default button.  Escape, and Command-period on
+ * MacOS, run a button named `cancel`, as in the dialogs of Windows,
+ * Gnome and MacOS.
+ */
+
 static status
 keyButton(Button b, Name key)
 { if ( b->active == ON )
-  { static Name ret;
+  { static Name ret, esc, cmd_period;
 
     if ( !ret )
-      ret = CtoName("RET");
+    { ret = CtoName("RET");
+      esc = CtoName("\\e");
+      cmd_period = CtoName("\\s-.");
+    }
+
+    if ( (key == esc || key == cmd_period) && b->name == NAME_cancel )
+      return send(b, NAME_execute, EAV);
+
+    if ( b->accelerator == key && notNil(b->popup) && isNil(b->message) )
+      return keyboardPopupGesture((Graphical)b);
 
     if ( b->accelerator == key ||
 	 (b->default_button == ON && key == ret) )

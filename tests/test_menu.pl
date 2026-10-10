@@ -45,7 +45,9 @@ Run with:
 :- use_module(library(plunit)).
 
 test_menu :-
-    run_tests([menu_kind, menu_solo, menu_keyboard, menu_layout]).
+    run_tests([menu_kind, menu_solo, menu_keyboard, menu_accelerator,
+               menu_mnemonic,
+               menu_layout]).
 
 %   toggle_menu(-Dialog, -Menu, -Log)
 %
@@ -253,6 +255,88 @@ test(toggle_space_toggles, [Sel-Log == [b,c]-[c]]) :-
     send(D, destroy).
 
 :- end_tests(menu_keyboard).
+
+:- begin_tests(menu_accelerator).
+
+%   A menu in a dialog gets one accelerator, which moves the keyboard
+%   focus to it.  Its items get none, so they cannot clash with the
+%   other items of the dialog.
+
+accelerator_dialog(D, M, B) :-
+    new(D, dialog),
+    send(D, append, new(B, button(left))),
+    send(D, append, new(M, menu(align, marked))),
+    send_list(M, append, [left, center, right]),
+    send(D, open).
+
+test(items_have_none, Accs == []) :-
+    accelerator_dialog(D, M, _),
+    get(M?members, find_all, message(@prolog, atom, @arg1?accelerator),
+        Chain),
+    chain_list(Chain, Accs),
+    send(D, destroy).
+test(menu_key_focusses, Focus == align) :-
+    accelerator_dialog(D, M, B),
+    send(D, keyboard_focus, B),
+    get(M, accelerator, '\\ea'),
+    post(D, 0'a, 0, 0, 0x4),            % Alt-A
+    get(D?keyboard_focus, name, Focus),
+    send(D, destroy).
+
+:- end_tests(menu_accelerator).
+
+:- begin_tests(menu_mnemonic).
+
+%   The items of a popup have a <-mnemonic, the underlined letter.  Their
+%   <-accelerator is the shortcut shown at the right.
+
+%   mnemonics(+Items, -Pairs)
+%
+%   Pairs is a list Value-Mnemonic of a computed popup holding Items.
+
+mnemonics(Items, Pairs) :-
+    new(P, popup(test)),
+    send_list(P, append, Items),
+    send(P, compute),
+    get_chain(P, members, MIs),
+    findall(V-M, ( member(MI, MIs),
+                   get(MI, value, V),
+                   get(MI, mnemonic, M)
+                 ), Pairs).
+
+get_chain(Obj, Sel, List) :-
+    get(Obj, Sel, Chain),
+    chain_list(Chain, List).
+
+test(popup_items_have_one, M == '\\ec') :-
+    mnemonics([copy, paste], [copy-M|_]).
+test(shortcut_kept, Acc-M == 'Ctrl-S'-'\\es') :-
+    new(MI, menu_item(save, accelerator := 'Ctrl-S')),
+    mnemonics([MI], [save-M]),
+    get(MI, accelerator, Acc).
+test(preferred, Pairs == [sort-'\\eo', save-'\\es']) :-
+    mnemonics([sort, save], Pairs).
+test(fixed, Pairs-Fixed == [rename-'\\ee', run-'\\er']-(@on)) :-
+    new(Run, menu_item(run, mnemonic := 'R')),
+    mnemonics([rename, Run], Pairs),
+    get(Run, mnemonic_fixed, Fixed).
+test(none, Pairs == [run-(@nil)]) :-
+    mnemonics([menu_item(run, mnemonic := @nil)], Pairs).
+test(key_selects, Sel == save) :-
+    new(P, popup(file)),
+    send_list(P, append, [open, save]),
+    send(P, compute),
+    send(P, key, '\\es'),
+    get(P?selected_item, value, Sel).
+test(dialog_menu_items_have_none, M == @nil) :-
+    new(D, dialog),
+    send(D, append, new(Menu, menu(align, marked))),
+    send_list(Menu, append, [left, right]),
+    send(D, open),
+    get(Menu?members?head, mnemonic, M),
+    send(D, destroy).
+
+:- end_tests(menu_mnemonic).
 
 %   layout_dialog(-Dialog, -Marked, -Other, +Kind, +Layout)
 %

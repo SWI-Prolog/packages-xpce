@@ -3048,9 +3048,37 @@ str_selected_string(PceString s, FontObj font,
   }
 }
 
+/* The index of the character in `s` to underline for accelerator
+ * `acc`, or -1.  As the accelerators are assigned (see acc_index() in
+ * dialogitem.c), prefer the start of a word, then an uppercase letter
+ * and then any occurrence: "Switch to buffer" underlines the `t` of
+ * "to".
+ */
+
+static int
+accelerator_index(PceString s, int acc)
+{ int upper = -1, any = -1;
+
+  for(int cn=0; cn<s->s_size; cn++)
+  { int c = str_fetch(s, cn);
+
+    if ( (int)tolower(c) != acc )
+      continue;
+    if ( cn == 0 || iswspace(str_fetch(s, cn-1)) )
+      return cn;
+    if ( upper < 0 && iswupper(c) )
+      upper = cn;
+    if ( any < 0 )
+      any = cn;
+  }
+
+  return upper >= 0 ? upper : any;
+}
+
+
 /**
- * Draws a string, just like str_string(), but underscores the first
- * character matching the accelerator (case-insensitive).
+ * Draws a string, just like str_string(), but underscores the character
+ * of the accelerator (case-insensitive).  See accelerator_index().
  */
 
 static void
@@ -3065,24 +3093,16 @@ str_draw_text_lines(int acc, FontObj font,
   { str_text(font, &line->text, line->x+ox, line->y+baseline+oy);
 
     if ( acc )
-    { int cx = line->x+ox;
-      int cn;
+    { int cn = accelerator_index(&line->text, acc);
 
-      cx += 0; // lbearing(str_fetch(&line->text, 0));
+      if ( cn >= 0 )
+      { int cx = line->x+ox + str_advance(&line->text, 0, cn, font);
+	int cw = str_width(&line->text, cn, cn+1, font);
+	int cy = line->y+baseline+oy;
 
-      for(cn=0; cn<line->text.s_size; cn++)
-      { int c  = str_fetch(&line->text, cn);
-
-	if ( (int)tolower(c) == acc )
-	{ cx += str_advance(&line->text, 0, cn, font);
-	  int cw = str_width(&line->text, cn, cn+1, font);
-	  int cy = line->y+baseline+oy;
-
-	  InvTranslate(cx, cy);		/* lines are translated; */
-	  r_underline(font, cx, cy, cw, DEFAULT, NAME_none); /* r_line() too */
-	  acc = 0;
-	  break;
-	}
+	InvTranslate(cx, cy);		/* lines are translated; */
+	r_underline(font, cx, cy, cw, DEFAULT, NAME_none); /* r_line() too */
+	acc = 0;
       }
     }
   }

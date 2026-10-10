@@ -130,7 +130,8 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   Name	     alignment;			/* Align in the column? */ \
   BoolObj    auto_label_align;		/* Automatically align label? */ \
   BoolObj    auto_value_align;		/* Automatically align value? */ \
-  Name	     accelerator;		/* Associated accelerator */
+  Name	     accelerator;		/* Associated accelerator */ \
+  BoolObj    accelerator_fixed;		/* Not assigned automatically */
 
 
 #define ABSTRACT_JOINT \
@@ -197,6 +198,8 @@ NewClass(label_box)
   Code		message;		/* associated message */
   Any		default_value;		/* default */
   BoolObj	modified;		/* item has been modified */
+  Name		accelerator;		/* Alt-key to focus my first item */
+  BoolObj	accelerator_fixed;	/* Not assigned automatically */
 End;
 
 NewClass(tab_stack)
@@ -571,7 +574,9 @@ NewClass(menu_item)
   Code	     condition;			/* Determines <->active */
   BoolObj    end_group;			/* Ends logical group of items */
   PopupObj   popup;			/* Popup (sub-popups and menu-bars) */
-  Name	     accelerator;		/* activate on this key */
+  Name	     accelerator;		/* Shortcut shown, e.g. Ctrl-S */
+  Name	     mnemonic;			/* Underlined letter (Alt-<letter>) */
+  BoolObj    mnemonic_fixed;		/* Not assigned automatically */
 End;
 
 		/********************************

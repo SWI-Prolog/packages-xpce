@@ -53,7 +53,7 @@ initialiseMenuBar(MenuBar mb, Name name)
 
 
 static status
-RedrawAreaButtonMenuBar(Button b, Area a)
+RedrawAreaButtonMenuBar(Button b, Area a, bool kbd)
 { int x, y, w, h;
   Any ofg = NIL;
   int flags = 0;
@@ -82,7 +82,8 @@ RedrawAreaButtonMenuBar(Button b, Area a)
   if ( b->active == OFF )
     flags |= LABEL_INACTIVE;
 
-  RedrawLabelDialogItem(b, accelerator_code(b->accelerator),
+  RedrawLabelDialogItem(b, kbd ? accelerator_key(b->accelerator)
+			      : accelerator_code(b->accelerator),
 			x, y, w, h,
 			NAME_center, NAME_center, flags);
 
@@ -101,6 +102,9 @@ RedrawAreaMenuBar(MenuBar mb, Area a)
   if ( ws_has_native_menubar(mb) )
     succeed;
 
+  bool kbd = ( notNil(mb->current) &&	/* operated from the keyboard */
+	       getAttributeObject(mb->current, NAME_keyboard) );
+
   for_cell(cell, mb->buttons)
   { Button b = cell->value;
 
@@ -113,7 +117,7 @@ RedrawAreaMenuBar(MenuBar mb, Area a)
       assign(b, active, ba ? ON : OFF);
       assign(b, status, b->popup == mb->current ? NAME_preview
 						: NAME_inactive);
-      RedrawAreaButtonMenuBar(b, a);
+      RedrawAreaButtonMenuBar(b, a, kbd);
       assign(b, device, NIL);
     }
     assign(b->area, x, sub(b->area->x, x));
@@ -301,6 +305,7 @@ cancelMenuBar(MenuBar mb, EventObj ev)
   { grabPointerWindow(sw, OFF);
     focusWindow(sw, NIL, NIL, NIL, NIL);
   }
+  deleteAttributeObject(mb, NAME_Stayup); /* see eventMenuBar() */
 
   succeed;
 }
@@ -342,20 +347,27 @@ popup, so the  user  can  freely   switch  between  keyboard  and  mouse
 operation.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+/* F10 opens the first menu, as on Windows and Gnome.
+ */
+
 static status
 keyMenuBar(MenuBar mb, Name key)
-{ Cell cell;
+{ static Name f10;
+  Cell cell;
 
-  if ( mb->active == OFF )
+  if ( mb->active == OFF || ws_has_native_menubar(mb) )
     fail;
+  if ( !f10 )
+    f10 = CtoName("<f10>");
 					/* show popup if matching key */
   for_cell(cell, mb->buttons)
   { Button b = cell->value;
 
-    if ( b->active == ON && b->accelerator == key )
+    if ( b->active == ON && (b->accelerator == key || key == f10) )
     { PceWindow sw = getWindowGraphical((Graphical)mb);
 
       attributeObject(mb, NAME_Stayup, ON);
+      attributeObject(b->popup, NAME_keyboard, ON);
       showPopupMenuBar(mb, b->popup);
       previewMenu((Menu)b->popup, getHeadChain(b->popup->members));
 
@@ -443,10 +455,23 @@ eventMenuBar(MenuBar mb, EventObj ev)
       }
     } else if ( isAEvent(ev, NAME_keyboard) )
     { PopupObj current = mb->current;
+      PopupObj inner = current;
       int pref;
 
-      if ( (pref = isAEvent(ev, NAME_cursorLeft)) ||
-	   isAEvent(ev, NAME_cursorRight) )
+      while( notNil(inner->pullright) )	/* the innermost open submenu */
+	inner = inner->pullright;
+
+      /* In or into a submenu: Right opens it, Left and Escape close it.
+       * See eventPopup() and typedPopup().
+       */
+      if ( ( isAEvent(ev, NAME_cursorRight) &&
+	     previewHasSubmenuPopup(inner) ) ||
+	   ( ( isAEvent(ev, NAME_cursorLeft) ||
+	       ev->id == toInt(27) || ev->id == NAME_ESC ) &&
+	     notNil(current->pullright) ) )
+      { postEvent(ev, (Graphical)current, DEFAULT);
+      } else if ( (pref = isAEvent(ev, NAME_cursorLeft)) ||
+		  isAEvent(ev, NAME_cursorRight) )
       { PopupObj next;
 
 	if ( pref )
@@ -457,11 +482,12 @@ eventMenuBar(MenuBar mb, EventObj ev)
 	    next = getHeadChain(mb->members);
 	}
 
+	attributeObject(next, NAME_keyboard, ON);
 	showPopupMenuBar(mb, next);
 
 	if ( !emptyChain(next->members) )
 	  previewMenu((Menu)next, getHeadChain(next->members));
-      } else if ( ev->id == toInt(27) )	/* ESC ... */
+      } else if ( ev->id == toInt(27) || ev->id == NAME_ESC )
       {	cancelMenuBar(mb, ev);
       } else
       { /*PceWindow sw = ev->window;*/
@@ -472,13 +498,13 @@ eventMenuBar(MenuBar mb, EventObj ev)
 	if ( mb->current->displayed == OFF )
 	{ grabPointerWindow(sw, OFF);
 	  focusWindow(sw, NIL, NIL, NIL, NIL);
+	  deleteAttributeObject(mb, NAME_Stayup); /* a click starts anew */
+	  assign(mb, current, NIL);
 
-	  if ( notNil(mb->current->selected_item) )
-	  { assign(mb, current, NIL);
+	  if ( notNil(current->selected_item) )
 	    send(current, NAME_execute, mb, EAV);
-	    if ( !onFlag(mb, F_FREED|F_FREEING) )
-	      changedMenuBarButton(mb, current);
-	  }
+	  if ( !onFlag(mb, F_FREED|F_FREEING) )
+	    changedMenuBarButton(mb, current);
 	}
       }
     } else

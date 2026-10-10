@@ -64,6 +64,7 @@ COMMON(status)	redrawFrame(FrameObj fr, Area a);
 COMMON(FrameObj) blockedByModalFrame(FrameObj fr);
 COMMON(FrameObj) getNextFocusFrame(FrameObj fr);
 COMMON(status)	eventFrame(FrameObj fr, EventObj ev);
+COMMON(status)	menuBarKeyFrame(FrameObj fr, EventObj ev);
 COMMON(status)	makeClassFrame(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/picture.c */

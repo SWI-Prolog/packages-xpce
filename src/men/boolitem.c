@@ -328,6 +328,21 @@ toggleBoolItem(BoolItem b)
 }
 
 
+/* As a check box on Windows and Gnome, the accelerator focusses and
+ * toggles the item.
+ */
+
+static status
+keyBoolItem(BoolItem b, Name key)
+{ if ( b->active == ON && isName(b->accelerator) && b->accelerator == key )
+  { send(b, NAME_keyboardFocus, ON, EAV);
+    return toggleBoolItem(b);
+  }
+
+  fail;
+}
+
+
 static status
 eventBoolItem(BoolItem b, EventObj ev)
 { if ( eventDialogItem(b, ev) )
@@ -527,6 +542,8 @@ static senddecl send_bool_item[] =
      DEFAULT, "Create from label, default and message"),
   SM(NAME_unlink, 0, NULL, unlinkBoolItem,
      DEFAULT, "Stop and destroy the animation timer"),
+  SM(NAME_key, 1, "key=name", keyBoolItem,
+     NAME_accelerator, "Toggle if key is my accelerator"),
   SM(NAME_WantsKeyboardFocus, 0, NULL, WantsKeyboardFocusBoolItem,
      NAME_event, "Test if ready to accept input (active)"),
   SM(NAME_animate, 0, NULL, animateBoolItem,

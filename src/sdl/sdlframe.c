@@ -1244,7 +1244,8 @@ sdl_frame_event(SDL_Event *ev)
 	return rc;
       }
       case SDL_EVENT_WINDOW_FOCUS_LOST:
-      { focusLostCompleterFrame(fr);	/* before: it releases the grab */
+      { acceleratorCuesFrame(fr, false); /* Alt-Tab: no Alt release */
+	focusLostCompleterFrame(fr);	/* before: it releases the grab */
 	PceWindow sw = ws_grabbing_window();
 	DEBUG(NAME_keyboard, Cprintf("Input focus lost for %s (grabbing=%s)\n",
 				     pp(fr), pp(sw)));

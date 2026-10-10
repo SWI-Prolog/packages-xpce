@@ -1565,6 +1565,88 @@ postEventFrame(FrameObj fr, EventObj ev)
 }
 
 
+/* The first menu_bar drawn by xpce in a window of fr, also looking in
+ * the windows displayed inside its windows.
+ */
+
+static MenuBar
+frame_menu_bar(FrameObj fr)
+{ Chain agenda = answerObject(ClassChain, EAV);
+  MenuBar found = NULL;
+  Device dev;
+  Cell cell;
+
+  for_cell(cell, fr->members)
+    appendChain(agenda, cell->value);
+  while( !found && (dev = getDeleteHeadChain(agenda)) )
+  { for_cell(cell, dev->graphicals)
+    { Graphical gr = cell->value;
+
+      if ( instanceOfObject(gr, ClassMenuBar) )
+      { MenuBar mb = (MenuBar)gr;
+
+	if ( gr->displayed == ON && mb->active == ON &&
+	     !ws_has_native_menubar(mb) )
+	{ found = mb;
+	  break;
+	}
+      } else if ( instanceOfObject(gr, ClassDevice) )
+	appendChain(agenda, gr);
+    }
+  }
+  doneObject(agenda);
+
+  return found;
+}
+
+
+/* The key that opens the menu bar, F10 by default, is handled before
+ * the window with the keyboard focus sees it, as Gnome does.  The class
+ * variable frame.menu_bar_key changes it; @nil disables it, e.g. for a
+ * terminal whose programs use F10.  Called by eventFrame() and
+ * eventWindow().
+ */
+
+status
+menuBarKeyFrame(FrameObj fr, EventObj ev)
+{ Any key;
+  MenuBar mb;
+
+  if ( (key = getClassVariableValueObject(fr, NAME_menuBarKey)) &&
+       ev->id == key &&
+       !(valInt(ev->buttons) &
+	 (BUTTON_control|BUTTON_meta|BUTTON_gui|BUTTON_shift)) &&
+       (mb = frame_menu_bar(fr)) )
+    return send(mb, NAME_key, CtoName("<f10>"), EAV);
+
+  fail;
+}
+
+
+/* Keyboard events that the frame handles before the window with the
+ * keyboard focus: those for a window of the frame that holds a pointer
+ * grab, i.e., that operates a popup, and the menu bar key.
+ */
+
+static int
+frame_keyboard_event(FrameObj fr, EventObj ev, status *rc)
+{ PceWindow gw = ws_grabbing_window();
+
+  if ( gw && !isFreedObj(gw) && instanceOfObject(gw, ClassWindow) &&
+       notNil(gw->focus) && getFrameWindow(gw, OFF) == fr )
+  { *rc = postNamedEvent(ev, (Graphical)gw, DEFAULT, NAME_postEvent);
+    return TRUE;
+  }
+
+  if ( menuBarKeyFrame(fr, ev) )
+  { *rc = SUCCEED;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+
 status
 eventFrame(FrameObj fr, EventObj ev)
 { FrameObj bfr;
@@ -1580,6 +1662,12 @@ eventFrame(FrameObj fr, EventObj ev)
       send(bfr, NAME_expose, EAV);
       send(bfr, NAME_event, ev, EAV);
       fail;
+    }
+
+    { status rc;
+
+      if ( frame_keyboard_event(fr, ev, &rc) )
+	return rc;
     }
 
     if ( (sw = getKeyboardFocusFrame(fr)) )
@@ -2243,7 +2331,9 @@ static getdecl get_frame[] =
 /* Resources */
 
 static classvardecl rc_frame[] =
-{ RC(NAME_busyCursor, "cursor*", UXWIN("watch", "win_wait"),
+{ RC(NAME_menuBarKey, "name*", "f10",
+     "Key that opens the first menu of the menu_bar (@nil: none)"),
+  RC(NAME_busyCursor, "cursor*", UXWIN("watch", "win_wait"),
      "Default cursor displayed by ->busy_cursor"),
   RC(NAME_confirmDone, "bool", "@off",
      "Show confirmer on `Delete'"),

@@ -55,8 +55,48 @@ initialiseLabelBox(LabelBox lb, Name name, Code msg)
   assign(lb, auto_label_align,	ON);
   assign(lb, message,		msg);
   assign(lb, modified,		OFF);
+  assign(lb, accelerator,	DEFAULT);
+  assign(lb, accelerator_fixed,	OFF);
 
   succeed;
+}
+
+
+/* A label_box is a compound dialog item.  Its accelerator moves the
+ * keyboard focus to its first part that takes it.  See `dialog
+ * ->assign_accelerators'.
+ */
+
+static status
+acceleratorLabelBox(LabelBox lb, Name acc)
+{ assign(lb, accelerator_fixed, isDefault(acc) ? OFF : ON);
+  acc = normaliseAccelerator(acc);
+  if ( lb->accelerator != acc )
+  { assign(lb, accelerator, acc);
+    changedDialogItem(lb);
+  }
+  reassignAcceleratorsOf((Graphical)lb);
+
+  succeed;
+}
+
+
+static status
+keyLabelBox(LabelBox lb, Name key)
+{ Cell cell;
+
+  if ( lb->active == OFF )
+    fail;
+
+  if ( isName(lb->accelerator) && lb->accelerator == key )
+    return send(lb, NAME_advance, NIL, OFF, NAME_forwards, EAV);
+
+  for_cell(cell, lb->graphicals)
+  { if ( send(cell->value, NAME_key, key, EAV) )
+      succeed;
+  }
+
+  fail;
 }
 
 		 /*******************************
@@ -252,7 +292,7 @@ RedrawAreaLabelBox(LabelBox lb, Area a)
     if ( instanceOfObject(lb->label_font, ClassFont) )
       sx = valInt(getAvgCharWidthFont(lb->label_font));
 
-    RedrawLabelDialogGroup((DialogGroup)lb, 0,
+    RedrawLabelDialogGroup((DialogGroup)lb, accelerator_code(lb->accelerator),
 			   -lw, ly, lw-sx, lh,
 			   lb->label_format, NAME_top, 0);
 
@@ -374,7 +414,11 @@ static vardecl var_label_box[] =
   IV(NAME_default, "any|function", IV_NONE,
      NAME_apply, "The default value"),
   IV(NAME_modified, "bool", IV_GET,
-     NAME_apply, "Item has been modified")
+     NAME_apply, "Item has been modified"),
+  SV(NAME_accelerator, "[name]*", IV_GET|IV_STORE, acceleratorLabelBox,
+     NAME_accelerator, "Key that moves the focus to the first part"),
+  IV(NAME_acceleratorFixed, "bool", IV_GET,
+     NAME_accelerator, "@on if ->accelerator fixed it")
 };
 
 /* Send Methods */
@@ -384,6 +428,8 @@ static senddecl send_label_box[] =
      DEFAULT, "Create a label_box"),
   SM(NAME_geometry, 4, T_geometry, geometryLabelBox,
      DEFAULT, "Move/resize label box"),
+  SM(NAME_key, 1, "name", keyLabelBox,
+     NAME_accelerator, "Handle my accelerator or offer to my parts"),
   SM(NAME_compute, 0, NULL, computeLabelBox,
      NAME_update, "Recompute area"),
   SM(NAME_labelWidth, 1, "[int]", labelWidthLabelBox,

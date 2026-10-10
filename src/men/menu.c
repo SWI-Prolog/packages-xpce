@@ -819,7 +819,10 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h)
     int fw = valInt(getAvgCharWidthFont(f));
 
     str_label(&((Name) mi->label)->data,
-	      accelerator_code(mi->accelerator),
+	      ( instanceOfObject(m, ClassPopup) &&
+		getAttributeObject(m, NAME_keyboard) )
+		? accelerator_key(mi->mnemonic)
+		: accelerator_code(mi->mnemonic),
 	      f,
 	      ix+fw/2, iy, iw-fw, ih,
 	      m->format, m->vertical_format,
@@ -2450,31 +2453,29 @@ getMenuBarMenu(Menu m)
 }
 
 
-/* Alt-<char> to open a popup and the same again to run an item is an
-   XPCE thing: it works because XPCE draws the bar and underlines the
-   character.  A native bar draws neither, and the accelerator would show
-   up as the meaningless "\ex" beside every item.
-*/
-
-static int
-auto_accelerator(Name acc)
-{ return isName(acc) && strncmp(strName(acc), "\\e", 2) == 0;
-}
-
+/* The items of a popup have their own mnemonics.  A menu in a dialog
+ * has an accelerator for the menu as a whole, assigned with those of
+ * the other items of the dialog, that moves the keyboard focus to it.
+ * Its items getting their own as well led to clashes with the other
+ * items.  A native menu bar draws no underlines and has no Alt-<char>
+ * mnemonics, so neither do its popups.  Mnemonics fixed by the program
+ * are kept.  The <-accelerator of the items, the shortcut shown at the
+ * right, is not affected.
+ */
 
 static status
 assignAcceletatorsMenu(Menu m)
 { MenuBar mb = getMenuBarMenu(m);
 
-  if ( mb && ws_has_native_menubar(mb) )
+  if ( (mb && ws_has_native_menubar(mb)) ||
+       !instanceOfObject(m, ClassPopup) )
   { Cell cell;
 
     for_cell(cell, m->members)		/* one may be left from before the */
     { MenuItem mi = cell->value;	/* popup reached the bar */
 
-      if ( instanceOfObject(mi, ClassMenuItem) &&
-	   auto_accelerator(mi->accelerator) )
-	send(mi, NAME_accelerator, NIL, EAV);
+      if ( instanceOfObject(mi, ClassMenuItem) && mi->mnemonic_fixed != ON )
+	assign(mi, mnemonic, NIL);
     }
 
     succeed;
@@ -2488,10 +2489,17 @@ static status
 keyMenu(Menu m, Name key)
 { Cell cell;
 
+  if ( !instanceOfObject(m, ClassPopup) )
+  { if ( m->active == ON && isName(m->accelerator) && m->accelerator == key )
+    { if ( send(m, NAME_WantsKeyboardFocus, EAV) )
+	return send(m, NAME_keyboardFocus, ON, EAV);
+    }
+  }
+
   for_cell(cell, m->members)
   { MenuItem mi = cell->value;
 
-    if ( mi->accelerator == key )
+    if ( mi->mnemonic == key )
     { EventObj ev = getValueVar(EVENT);
       return executeMenuItem(m, mi, ev);
     }

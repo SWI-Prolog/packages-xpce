@@ -372,6 +372,12 @@ labelFormatDialogGroup(DialogGroup g, Name fmt)
 
 
 static CharArray
+getMnemonicNameDialogGroup(DialogGroup g, Name name)
+{ answer(get(name, NAME_mnemonic, EAV));
+}
+
+
+static CharArray
 getLabelNameDialogGroup(DialogGroup g, Name name)
 { Any suffix, label = get(name, NAME_labelName, EAV);
 
@@ -757,6 +763,8 @@ static getdecl get_diagroup[] =
      NAME_area, "Top-side of tab"),
   GM(NAME_labelName, 1, "name", "name", getLabelNameDialogGroup,
      NAME_label, "Determine default-label from the name"),
+  GM(NAME_mnemonicName, 1, "char_array", "name", getMnemonicNameDialogGroup,
+     NAME_accelerator, "Preferred accelerator letter for item called name"),
   GM(NAME_defaultButton, 1, "button", "delegate=[bool]",
      getDefaultButtonDialogGroup,
      NAME_accelerator, "Current Button connected to `RET'")

@@ -69,10 +69,17 @@ message_level(silent).
 %   @arg Modifications    List of Key-Method
 
 %   Text entry in dialogs.  On Windows and Linux (`cua`), native wins
-%   over Emacs for Control-A, which selects all.
+%   over Emacs for Control-A, which selects all.  Alt-<letter> belongs
+%   to the accelerators of the dialog, so the Emacs Meta keys of the
+%   basic tables are hidden (`none`), and Escape to the `cancel` button,
+%   so it is no Meta prefix.
 
 binding(cua, text_item,
-        [ '\\C-a'                 = select_all,
+        [ '\\e'                   = none,
+          '\\C-a'                 = select_all,
+          '\\eb'                  = none,
+          '\\ef'                  = none,
+          '\\ed'                  = none,
           '\\C-x'                 = cut,
           '\\C-<cursor_left>'     = backward_word,
           '\\C-<cursor_right>'    = forward_word,
@@ -82,14 +89,21 @@ binding(cua, text_item,
           '\\C-DEL'               = kill_word
         ]).
 binding(cua, text_item_view,
-        [ '\\C-a'                 = select_all,
+        [ '\\e'                   = none,
+          '\\C-a'                 = select_all,
+          '\\eb'                  = none,
+          '\\ef'                  = none,
           '\\C-<cursor_left>'     = backward_word,
           '\\C-<cursor_right>'    = forward_word,
           '\\C-\\S-<cursor_left>'  = backward_word,
           '\\C-\\S-<cursor_right>' = forward_word
         ]).
 binding(cua, text,
-        [ '\\C-a'                 = select_all,
+        [ '\\e'                   = none,
+          '\\C-a'                 = select_all,
+          '\\eb'                  = none,
+          '\\ef'                  = none,
+          '\\ed'                  = none,
           '\\C-x'                 = cut,
           '\\C-<cursor_left>'     = backward_word,
           '\\C-<cursor_right>'    = forward_word,
@@ -100,10 +114,15 @@ binding(cua, text,
         ]).
 
 %   On MacOS the Emacs control keys are native too, so the two styles
-%   only meet on Option, which moves by word as \e<cursor_left>.
+%   only meet on Option, which moves by word as \e<cursor_left>.  As
+%   with `cua`, Option-<letter> is left to the dialog accelerators.
 
 binding(apple, text_item,
-        [ '\\s-c'                 = copy,
+        [ '\\e'                   = none,
+          '\\s-c'                 = copy,
+          '\\eb'                  = none,
+          '\\ef'                  = none,
+          '\\ed'                  = none,
           '\\s-x'                 = cut,
           '\\s-v'                 = paste,
           '\\s-a'                 = select_all,
@@ -117,7 +136,10 @@ binding(apple, text_item,
           '\\e\\S-<cursor_right>'  = forward_word
         ]).
 binding(apple, text_item_view,
-        [ '\\s-c'                 = copy,
+        [ '\\e'                   = none,
+          '\\s-c'                 = copy,
+          '\\eb'                  = none,
+          '\\ef'                  = none,
           '\\s-a'                 = select_all,
           '\\s-<cursor_left>'     = beginning_of_line,
           '\\s-<cursor_right>'    = end_of_line,
@@ -129,7 +151,11 @@ binding(apple, text_item_view,
           '\\e\\S-<cursor_right>'  = forward_word
         ]).
 binding(apple, text,
-        [ '\\s-c'                 = copy,
+        [ '\\e'                   = none,
+          '\\s-c'                 = copy,
+          '\\eb'                  = none,
+          '\\ef'                  = none,
+          '\\ed'                  = none,
           '\\s-x'                 = cut,
           '\\s-v'                 = paste,
           '\\s-a'                 = select_all,

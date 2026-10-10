@@ -108,7 +108,7 @@ fill_dialog(V) :->
     ),
     send(Dialog, append, new(I, menu(modifiers, marked))),
     forall(modifier(M, _),
-           send(I, append, menu_item(M, label:=M, accelerator := @nil))).
+           send(I, append, menu_item(M, label:=M, mnemonic := @nil))).
 
 update_dialog(V, Ev:event) :->
     get(V, member, dialog, Dialog),

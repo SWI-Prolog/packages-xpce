@@ -359,16 +359,197 @@ accelerator_items(Device root, Chain items, Chain tabs)
 }
 
 
+/* Remove the items that do not take an accelerator of their own from
+ * `items`.  A menu_bar has the accelerators of its popups, which are
+ * reserved in `taken`.  A label cannot act on one.
+ */
+
+static void
+reserve_accelerators(Chain items, unsigned char *taken)
+{ Chain skip = answerObject(ClassChain, EAV);
+  Graphical gr;
+  Cell cell;
+
+  for_cell(cell, items)
+  { gr = cell->value;
+
+    if ( instanceOfObject(gr, ClassMenuBar) )
+    { MenuBar mb = (MenuBar)gr;
+      Cell bc;
+
+      autoAccelerator(mb, NIL);
+      if ( !ws_has_native_menubar(mb) )
+      { send(mb, NAME_assignAccelerators, EAV);
+	for_cell(bc, mb->buttons)
+	  markAccelerator(((Button)bc->value)->accelerator, taken);
+      }
+      appendChain(skip, gr);
+    } else if ( instanceOfObject(gr, ClassLabel) )
+    { autoAccelerator(gr, NIL);
+      appendChain(skip, gr);
+    }
+  }
+
+  while( (gr = getDeleteHeadChain(skip)) )
+    deleteChain(items, gr);
+  doneObject(skip);
+}
+
+
+/* Mark the accelerators of the items of `root` in `taken`: all of
+ * them (ACC_ALL), the strong ones, fixed or preferred (ACC_STRONG), or
+ * the weak ones, assigned automatically (ACC_WEAK).  See
+ * strongAccelerator().  The windows inside root are left alone.
+ */
+
+#define ACC_ALL    0
+#define ACC_STRONG 1
+#define ACC_WEAK   2
+
+static void
+mark_item_accelerator(Any gr, int which, unsigned char *taken)
+{ if ( which == ACC_ALL || (which == ACC_STRONG) == strongAccelerator(gr) )
+    markAccelerator(currentAccelerator(gr), taken);
+}
+
+
+static void
+mark_dialog_accelerators(Device root, int which, unsigned char *taken)
+{ Chain agenda = answerObject(ClassChain, root, EAV);
+  Device dev;
+
+  while( (dev = getDeleteHeadChain(agenda)) )
+  { Cell cell;
+
+    for_cell(cell, dev->graphicals)
+    { Graphical gr = cell->value;
+
+      if ( instanceOfObject(gr, ClassMenuBar) )
+      { Cell bc;
+
+	if ( which != ACC_WEAK )
+	{ for_cell(bc, ((MenuBar)gr)->buttons)
+	    markAccelerator(((Button)bc->value)->accelerator, taken);
+	}
+      } else if ( instanceOfObject(gr, ClassDialogItem) ||
+		  instanceOfObject(gr, ClassLabelBox) )
+      { mark_item_accelerator(gr, which, taken);
+      } else if ( instanceOfObject(gr, ClassDevice) &&
+		  !instanceOfObject(gr, ClassWindow) )
+      { appendChain(agenda, gr);
+      }
+    }
+  }
+
+  doneObject(agenda);
+}
+
+
+static bool
+any_common(const unsigned char *a, const unsigned char *b)
+{ for(int i=0; i<ACC_CHARSETSIZE; i++)
+  { if ( a[i] && b[i] )
+      return true;
+  }
+
+  return false;
+}
+
+
+/* True if window `sw` is the page of a tab, such as a dialog on a tab of
+ * a tabbed_window.
+ */
+
+static bool
+is_page_window(PceWindow sw)
+{ Device dev;
+
+  for(dev = sw->device; notNil(dev); dev = dev->device)
+  { if ( instanceOfObject(dev, ClassTab) )
+      return true;
+  }
+
+  return false;
+}
+
+
+/* The dialogs of the frame of `d`, other than `d`, including those
+ * displayed inside other windows.
+ */
+
+static Chain
+frame_dialogs(Dialog d)
+{ Chain dialogs = answerObject(ClassChain, EAV);
+  FrameObj fr = getFrameGraphical((Graphical)d);
+
+  if ( fr )
+  { Chain agenda = answerObject(ClassChain, EAV);
+    Device dev;
+    Cell cell;
+
+    for_cell(cell, fr->members)
+      appendChain(agenda, cell->value);
+    while( (dev = getDeleteHeadChain(agenda)) )
+    { if ( instanceOfObject(dev, ClassDialog) && dev != (Device)d )
+	appendChain(dialogs, dev);
+      for_cell(cell, dev->graphicals)
+      { if ( instanceOfObject(cell->value, ClassDevice) )
+	  appendChain(agenda, cell->value);
+      }
+    }
+    doneObject(agenda);
+  }
+
+  return dialogs;
+}
+
+
+/* Assign the accelerators of the items of a dialog.  The other dialogs
+ * of the frame pass keys they do not handle to each other (see
+ * typedFrame() and keyWindow()), so their letters are avoided.  The
+ * pages of tabs are different: only one of them is visible.  They do
+ * not avoid each other's letters, and the other dialogs only avoid
+ * their strong letters.  Likewise, the items around a tab stack avoid
+ * the strong letters on its tabs.
+ *
+ * A strong letter (fixed or preferred, see strongAccelerator()) wins: a
+ * preferred letter may be taken from the weak letters of another
+ * dialog, which is then redone.  That does not cascade any further.
+ */
+
+static int assigning_others = 0;
+
 static status
 assignAcceletatorsDialog(Dialog d)
 { Name prefix = CtoName("\\e");
   Chain items = answerObject(ClassChain, EAV);
   Chain tabs = answerObject(ClassChain, EAV);
+  Chain others = frame_dialogs(d);
+  bool page = is_page_window((PceWindow)d);
   unsigned char around[ACC_CHARSETSIZE] = {0};
+  unsigned char soft[ACC_CHARSETSIZE] = {0};
+  unsigned char outer[ACC_CHARSETSIZE];
+  Dialog other;
+  Cell cell;
   Tab tab;
 
+  for_cell(cell, others)
+  { if ( !is_page_window(cell->value) )
+    { mark_dialog_accelerators(cell->value, ACC_STRONG, around);
+      mark_dialog_accelerators(cell->value, ACC_WEAK, soft);
+    } else if ( !page )
+    { mark_dialog_accelerators(cell->value, ACC_STRONG, around);
+    }
+  }
+
   accelerator_items((Device)d, items, tabs);
-  assignAcceleratorsTaken(items, prefix, NAME_label, around);
+  reserve_accelerators(items, around);
+  memcpy(outer, around, sizeof(outer));	/* + strong letters on the tabs */
+  for_cell(cell, tabs)
+    mark_dialog_accelerators(cell->value, ACC_STRONG, outer);
+  assignAcceleratorsSoft(items, prefix, NAME_label, outer, soft);
+  for_cell(cell, items)
+    mark_item_accelerator(cell->value, ACC_ALL, around);
 
   while( (tab = getDeleteHeadChain(tabs)) )
   { unsigned char taken[ACC_CHARSETSIZE];
@@ -376,11 +557,34 @@ assignAcceletatorsDialog(Dialog d)
     memcpy(taken, around, sizeof(taken));
     clearChain(items);
     accelerator_items((Device)tab, items, NIL);
-    assignAcceleratorsTaken(items, prefix, NAME_label, taken);
+    reserve_accelerators(items, taken);
+    assignAcceleratorsSoft(items, prefix, NAME_label, taken, soft);
   }
 
   doneObject(items);
   doneObject(tabs);
+
+  if ( !assigning_others )
+  { unsigned char mine[ACC_CHARSETSIZE] = {0};
+    unsigned char mine_strong[ACC_CHARSETSIZE] = {0};
+
+    mark_dialog_accelerators((Device)d, ACC_ALL, mine);
+    mark_dialog_accelerators((Device)d, ACC_STRONG, mine_strong);
+
+    assigning_others++;
+    while( (other = getDeleteHeadChain(others)) )
+    { bool opage = is_page_window((PceWindow)other);
+      unsigned char theirs[ACC_CHARSETSIZE] = {0};
+
+      if ( page && opage )
+	continue;
+      mark_dialog_accelerators((Device)other, ACC_WEAK, theirs);
+      if ( any_common(theirs, page ? mine_strong : mine) )
+	send(other, NAME_assignAccelerators, EAV);
+    }
+    assigning_others--;
+  }
+  doneObject(others);
 
   succeed;
 }

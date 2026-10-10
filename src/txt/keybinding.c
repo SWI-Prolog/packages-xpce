@@ -163,7 +163,10 @@ getFunctionKeyBinding(KeyBinding kb, EventId id)
   Name key = characterName(id);
 
   if ( (cmd = get_function_key_binding(kb, key)) )
+  { if ( cmd == NAME_none )		/* hides an inherited binding */
+      fail;
     answer(cmd);
+  }
 
 					/* deal with UNICODE characters */
   if ( key->data.s_size == 1 )
@@ -538,7 +541,7 @@ static senddecl send_keyBinding[] =
   SM(NAME_reset, 1, "[graphical]*", resetKeyBinding,
      NAME_abort, "Reset <-receiver and <-prefix"),
   SM(NAME_function, 2, T_function, functionKeyBinding,
-     NAME_binding, "Append function association"),
+     NAME_binding, "Append function association (`none' hides inherited)"),
   SM(NAME_receiver, 1, "graphical*", receiverKeyBinding,
      NAME_client, "Client of the key_binding object"),
   SM(NAME_event, 1, "event", eventKeyBinding,

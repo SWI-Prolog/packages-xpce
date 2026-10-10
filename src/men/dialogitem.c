@@ -64,6 +64,7 @@ createDialogItem(Any obj, Name name)
   assign(di, auto_value_align,	 ON);
   assign(di, auto_align,	 ON);
   assign(di, accelerator,	 DEFAULT);
+  assign(di, accelerator_fixed,	 OFF);
 
   succeed;
 }
@@ -188,6 +189,16 @@ getLabelNameDialogItem(DialogItem di, Name name)
 }
 
 
+/* The letter an item called `name` prefers as accelerator.  See
+ * char_array<-mnemonic.
+ */
+
+static CharArray
+getMnemonicNameDialogItem(DialogItem di, Name name)
+{ answer(get(name, NAME_mnemonic, EAV));
+}
+
+
 static status
 nameDialogItem(DialogItem di, Name name)
 { Any label = get(di, NAME_labelName, name, EAV);
@@ -206,9 +217,121 @@ lookDialogItem(DialogItem di, Name look)
 }
 
 
+/* ->accelerator: a letter (`s` or `\es`) or @nil fixes the accelerator;
+ * `dialog ->assign_accelerators` keeps it and gives the other items
+ * other letters.  @default makes it automatic again.  The dialog
+ * reassigns its accelerators to account for the change.
+ */
+
+Any
+normaliseAccelerator(Any acc)
+{ if ( isName(acc) )
+  { const char *s = strName(acc);
+
+    if ( s[0] && !s[1] && isalnum((unsigned char)s[0]) )
+    { char buf[4] = { '\\', 'e', (char)tolower((unsigned char)s[0]), 0 };
+
+      return CtoKeyword(buf);
+    }
+  }
+
+  return acc;
+}
+
+
+/* Reassign the accelerators of the dialog of `gr` after one of its items
+ * fixed or released its accelerator.
+ */
+
+void
+reassignAcceleratorsOf(Graphical gr)
+{ PceWindow sw = getWindowGraphical(gr);
+
+  if ( sw && instanceOfObject(sw, ClassDialog) && !isFreeingObj(sw) )
+    send(sw, NAME_assignAccelerators, EAV);
+}
+
+
 static status
 acceleratorDialogItem(DialogItem di, Name acc)
-{ return assignGraphical(di, NAME_accelerator, acc);
+{ assign(di, accelerator_fixed, isDefault(acc) ? OFF : ON);
+  assignGraphical(di, NAME_accelerator, normaliseAccelerator(acc));
+  reassignAcceleratorsOf((Graphical)di);
+
+  succeed;
+}
+
+
+/* True if obj has an accelerator its program fixed.  See
+ * ->accelerator.
+ */
+
+bool
+fixedAccelerator(Any obj)
+{ if ( instanceOfObject(obj, ClassDialogItem) )
+    return ((DialogItem)obj)->accelerator_fixed == ON;
+  if ( instanceOfObject(obj, ClassLabelBox) )
+    return ((LabelBox)obj)->accelerator_fixed == ON;
+  if ( instanceOfObject(obj, ClassMenuItem) )
+    return ((MenuItem)obj)->mnemonic_fixed == ON;
+
+  return false;
+}
+
+
+/* The current accelerator of obj, @nil if it has none.  For a menu_item
+ * this is its <-mnemonic: its <-accelerator is the shortcut shown at the
+ * right.
+ */
+
+Any
+currentAccelerator(Any obj)
+{ Any acc;
+
+  if ( instanceOfObject(obj, ClassMenuItem) )
+    return ((MenuItem)obj)->mnemonic;
+  if ( hasGetMethodObject(obj, NAME_accelerator) &&
+       (acc = get(obj, NAME_accelerator, EAV)) )
+    return acc;
+
+  return NIL;				/* e.g., a plain graphical */
+}
+
+
+/* Set an automatically assigned accelerator.  It is not fixed, so it is
+ * reassigned if needed.
+ */
+
+void
+autoAccelerator(Any obj, Any acc)
+{ if ( instanceOfObject(obj, ClassDialogItem) )
+  { assignGraphical(obj, NAME_accelerator, acc);
+  } else if ( instanceOfObject(obj, ClassLabelBox) )
+  { LabelBox lb = obj;
+
+    if ( lb->accelerator != acc )
+    { assign(lb, accelerator, acc);
+      changedDialogItem(lb);
+    }
+  } else if ( instanceOfObject(obj, ClassMenuItem) )
+  { assign((MenuItem)obj, mnemonic, acc);
+  } else
+    send(obj, NAME_accelerator, acc, EAV);
+}
+
+
+/* The accelerator of an item without a ->key of its own, such as a
+ * slider, moves the keyboard focus to it.
+ */
+
+static status
+keyDialogItem(DialogItem di, Name key)
+{ if ( di->active == ON && isName(di->accelerator) &&
+       di->accelerator == key &&
+       send(di, NAME_WantsKeyboardFocus, EAV) )
+    return send(di, NAME_keyboardFocus, ON, EAV);
+
+  fail;
 }
 
 
@@ -465,7 +588,14 @@ acc_index(Abin a, unsigned char *used)
 { int i;
 
   if ( a->mode == ACC_WSEP )
-  { i = a->index+1;
+  { i = 0;
+    if ( a->index >= 0 )		/* resume at the next word */
+    { i = a->index;
+      while( a->label[i] && !isspace(a->label[i]) )
+	i++;
+      while( a->label[i] && isspace(a->label[i]) )
+	i++;
+    }
 
     do
     { int acc = a->label[i];
@@ -541,9 +671,19 @@ acc_index(Abin a, unsigned char *used)
   fail;
 }
 
+/* True if obj wants an automatic accelerator.  For an object that
+ * knows whether its accelerator is fixed, that is all its program
+ * did not fix.  For others, all that do not have @nil.
+ */
+
 static bool
 wantsAccelerator(Any obj)
-{ if ( hasSendMethodObject(obj, NAME_accelerator) &&
+{ if ( instanceOfObject(obj, ClassDialogItem) ||
+       instanceOfObject(obj, ClassLabelBox) ||
+       instanceOfObject(obj, ClassMenuItem) )
+    return !fixedAccelerator(obj);
+
+  if ( hasSendMethodObject(obj, NAME_accelerator) &&
        hasGetMethodObject(obj, NAME_accelerator) )
   { Any acc0 = get(obj, NAME_accelerator, EAV);
     return !isNil(acc0);
@@ -553,17 +693,128 @@ wantsAccelerator(Any obj)
 }
 
 
+/* The default button and the cancel button are run by Return and
+ * Escape, so they do not need a letter, as in the dialogs of Windows
+ * and Gnome.
+ */
+
+static bool
+keyedButton(Any obj)
+{ return ( instanceOfObject(obj, ClassButton) &&
+	   ( ((Button)obj)->default_button == ON ||
+	     ((Button)obj)->name == NAME_cancel ) );
+}
+
+
+/* The label of obj as a narrow C string, or NULL.
+ */
+
+static const char *
+accelerator_label(Any obj, Name label_method)
+{ Any lbl;
+
+  if ( hasGetMethodObject(obj, label_method) &&
+       (lbl = get(obj, label_method, EAV)) &&
+       ( !instanceOfObject(lbl, ClassCharArray) ||
+	 !((CharArray)lbl)->data.s_iswide ) )
+    return toCharp(lbl);
+
+  return NULL;
+}
+
+
+/* The letter obj prefers according to <-mnemonic_name for its name, if
+ * that is in label `s`, or 0.
+ */
+
+static int
+preferred_letter(Any obj, const char *s)
+{ Any name, mn;
+  const char *m;
+
+  if ( hasGetMethodObject(obj, NAME_mnemonicName) &&
+       (name = ( instanceOfObject(obj, ClassMenuItem)
+		   ? ((MenuItem)obj)->value
+		   : get(obj, NAME_name, EAV) )) &&
+       isName(name) &&
+       (mn = get(obj, NAME_mnemonicName, name, EAV)) &&
+       instanceOfObject(mn, ClassCharArray) &&
+       (m = toCharp(mn)) && m[0] && !m[1] &&
+       isalnum((unsigned char)m[0]) )
+  { int c = tolower((unsigned char)m[0]);
+
+    for( ; *s; s++ )
+    { if ( tolower((unsigned char)*s) == c )
+	return c;
+    }
+  }
+
+  return 0;
+}
+
+
+/* Mark accelerator `acc`, if it is <prefix><char>, in `taken`.
+ */
+
+void
+markAccelerator(Any acc, unsigned char *taken)
+{ const char *a;
+
+  if ( isName(acc) && (a = strName(acc)) &&
+       a[0] == '\\' && a[1] == 'e' && a[2] && !a[3] )
+    taken[tolower((unsigned char)a[2])] = 1;
+}
+
+
 /* Assign accelerators to the objects, avoiding the characters marked in
  * `taken`, an array of ACC_CHARSETSIZE flags, if not NULL.  The
  * characters assigned are added to `taken`.  This allows for sets of
  * objects that share the accelerators of another set, such as the
  * items on the tabs of a dialog, which share the items around the
  * tabs.
+ *
+ * Fixed accelerators (see ->accelerator) are kept and reserved first.
+ * Then buttons get theirs, as they are used most and have short labels,
+ * and then the other objects, each preferring the first letter of a
+ * word of its label.
  */
+
+/* True if obj has a strong accelerator: one that is fixed or its
+ * preferred letter.  Another dialog yields a weak (automatic) letter to
+ * it.
+ */
+
+bool
+strongAccelerator(Any obj)
+{ Any acc;
+  const char *a, *s;
+
+  if ( fixedAccelerator(obj) )
+    return true;
+
+  return ( (acc = currentAccelerator(obj)) && isName(acc) &&
+	   (a = strName(acc)) && a[0] == '\\' && a[1] == 'e' &&
+	   a[2] && !a[3] &&
+	   (s = accelerator_label(obj, NAME_label)) &&
+	   preferred_letter(obj, s) == tolower((unsigned char)a[2]) );
+}
+
 
 status
 assignAcceleratorsTaken(Chain objects, Name prefix, Name label_method,
 			unsigned char *taken)
+{ return assignAcceleratorsSoft(objects, prefix, label_method, taken, NULL);
+}
+
+
+/* As assignAcceleratorsTaken(), where the letters marked in `soft` are
+ * avoided as well, except for a preferred letter.  These are the weak
+ * letters of other dialogs.
+ */
+
+status
+assignAcceleratorsSoft(Chain objects, Name prefix, Name label_method,
+		       unsigned char *taken, const unsigned char *soft)
 { int  size = valInt(objects->size);
   Abin bins = alloca(sizeof(abin) * size);
   int  n;
@@ -582,34 +833,68 @@ assignAcceleratorsTaken(Chain objects, Name prefix, Name label_method,
   { memset(none, 0, sizeof(none));
     taken = none;
   }
+  for_cell(cell, objects)
+  { if ( fixedAccelerator(cell->value) )
+      markAccelerator(currentAccelerator(cell->value), taken);
+  }
   for(n=0; n<ACC_CHARSETSIZE; n++)
     used[n] = taken[n];
 
-  for_cell(cell, objects)
-  { Any lbl;
-    const char *s;
+  /* Passes 0 and 1 give the buttons and then the other objects their
+   * preferred letter (see <-mnemonic_name).  Passes 2 and 3 do the
+   * rest automatically.
+   */
+  Chain done = answerObject(ClassChain, EAV);
+  for(int pass = 0; pass < 4; pass++)
+  { if ( pass == 2 && soft )		/* automatic: avoid soft */
+    { for(n=0; n<ACC_CHARSETSIZE; n++)
+      { if ( soft[n] )
+	  used[n] = taken[n] = 1;
+      }
+    }
 
-    if ( !wantsAccelerator(cell->value) )
-      continue;
+    for_cell(cell, objects)
+    { const char *s;
 
-    if ( hasGetMethodObject(cell->value, label_method) &&
-	 (lbl = get(cell->value, label_method, EAV)) &&
-	 ( !instanceOfObject(lbl, ClassCharArray) ||
-	   !((CharArray)lbl)->data.s_iswide ) &&
-	 (s = toCharp(lbl)) )
-    { a->label = s;
-      a->index = -1;
-      a->mode  = ACC_WSEP;
-      if ( acc_index(a, taken) )
-      { used[tolower(a->acc)]++;
-	a->object = cell->value;
-	DEBUG(NAME_accelerator,
-	      Cprintf("Proposing %c for %s\n", a->acc, pp(cell->value)));
-	a++;
+      if ( !wantsAccelerator(cell->value) ||
+	   (pass%2 == 0) != instanceOfObject(cell->value, ClassButton) ||
+	   memberChain(done, cell->value) )
+	continue;
+      if ( keyedButton(cell->value) )
+      { autoAccelerator(cell->value, NIL);
+	continue;
+      }
+
+      s = accelerator_label(cell->value, label_method);
+      if ( pass < 2 )
+      { int pc;
+
+	if ( s && (pc = preferred_letter(cell->value, s)) && !used[pc] )
+	{ char buf[100];
+
+	  used[pc] = taken[pc] = 1;
+	  snprintf(buf, sizeof(buf), "%s%c", strName(prefix), pc);
+	  autoAccelerator(cell->value, CtoKeyword(buf));
+	  appendChain(done, cell->value);
+	}
+	continue;
+      }
+
+      if ( s )
+      { a->label = s;
+	a->index = -1;
+	a->mode  = ACC_WSEP;
+	if ( acc_index(a, taken) )
+	{ used[tolower(a->acc)]++;
+	  a->object = cell->value;
+	  DEBUG(NAME_accelerator,
+		Cprintf("Proposing %c for %s\n", a->acc, pp(cell->value)));
+	  a++;
+	} else
+	  autoAccelerator(cell->value, NIL);
       } else
-	send(cell->value, NAME_accelerator, NIL, EAV);
-    } else
-      send(cell->value, NAME_accelerator, NIL, EAV);
+	autoAccelerator(cell->value, NIL);
+    }
   }
 
   size = a - bins;
@@ -643,11 +928,12 @@ assignAcceleratorsTaken(Chain objects, Name prefix, Name label_method,
 
       taken[acc] = 1;
       snprintf(buf, sizeof(buf), "%s%c", strName(prefix), acc);
-      send(bins[n].object, NAME_accelerator, CtoKeyword(buf), EAV);
+      autoAccelerator(bins[n].object, CtoKeyword(buf));
     } else
-      send(bins[n].object, NAME_accelerator, NIL, EAV);
+      autoAccelerator(bins[n].object, NIL);
   }
 
+  doneObject(done);
   if ( do_free )
     pceFree(bins);
 
@@ -711,7 +997,9 @@ static vardecl var_dialogItem[] =
   IV(NAME_autoValueAlign, "bool", IV_BOTH,
      NAME_layout, "Automatically align value"),
   SV(NAME_accelerator, "[name]*", IV_GET|IV_STORE, acceleratorDialogItem,
-     NAME_layout, "Automatically align value")
+     NAME_accelerator, "Alt-key; a letter or @nil fixes it, @default: auto"),
+  IV(NAME_acceleratorFixed, "bool", IV_GET,
+     NAME_accelerator, "@on if ->accelerator fixed it")
 };
 
 /* Send Methods */
@@ -719,6 +1007,8 @@ static vardecl var_dialogItem[] =
 static senddecl send_dialogItem[] =
 { SM(NAME_initialise, 1, "name=name", createDialogItem,
      DEFAULT, "Create from name"),
+  SM(NAME_key, 1, "key=name", keyDialogItem,
+     NAME_accelerator, "Focus me if key is my accelerator"),
   SM(NAME_device, 1, "device*", deviceDialogItem,
      DEFAULT, "Device I'm displayed on"),
   SM(NAME_name, 1, "name", nameDialogItem,
@@ -754,6 +1044,8 @@ static getdecl get_dialogItem[] =
      NAME_apply, "Virtual method (return @off)"),
   GM(NAME_labelName, 1, "name", "name", getLabelNameDialogItem,
      NAME_label, "Determine default-label from the name"),
+  GM(NAME_mnemonicName, 1, "char_array", "name", getMnemonicNameDialogItem,
+     NAME_accelerator, "Preferred accelerator letter for item called name"),
   GM(NAME_labelWidth, 0, "int", NULL, getVirtualObject,
      NAME_layout, "Virtual method"),
   GM(NAME_reference, 0, "point", NULL, getReferenceDialogItem,
@@ -767,7 +1059,9 @@ static getdecl get_dialogItem[] =
 /* Resources */
 
 static classvardecl rc_dialogItem[] =
-{ RC(NAME_alignment, "{column,left,center,right}", "column",
+{ RC(NAME_acceleratorCues, "{alt,always,never}", "alt",
+     "When to underline accelerators: while Alt is held, always or never"),
+  RC(NAME_alignment, "{column,left,center,right}", "column",
      "Alignment in the row"),
   RC(NAME_background, "colour*", "@_dialog_bg",
      "Background of the item"),

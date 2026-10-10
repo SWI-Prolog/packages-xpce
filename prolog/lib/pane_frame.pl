@@ -1796,10 +1796,6 @@ popup(MD, Name:name, Create:[bool], Popup:pane_popup) :<-
         send(Popup, message, message(MD, action, @arg1))
     ).
 
-assign_accelerators(_) :->
-    "Accelerators are defined by the panes"::
-    true.
-
 :- pce_end_class(pane_menu_dialog).
 
 
@@ -1878,10 +1874,6 @@ append(MB, Popup:'member=popup', Alignment:'[{left,right}]',
     ->  send_super(MB, append, Popup, Alignment, TheBefore)
     ;   send_super(MB, append, Popup, Alignment)
     ).
-
-assign_accelerators(_) :->
-    "Accelerators are defined by the panes"::
-    true.
 
 :- pce_end_class(pane_menu_bar).
 
@@ -2026,10 +2018,6 @@ untick_commands(P) :->
              get(Item, condition, @nil)
            ),
            send(Item, selected, @off)).
-
-assign_accelerators(_) :->
-    "Accelerators are defined by the panes"::
-    true.
 
 :- pce_end_class(pane_popup).
 

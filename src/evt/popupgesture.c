@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/dialog.h>
 
 static status
 initialisePopupGesture(PopupGesture g, PopupObj popup,
@@ -132,20 +133,24 @@ dispatchPopupGesture(PopupGesture g, EventObj ev)
  */
 
 static void
+open_popup_below(PopupGesture g, Graphical rec)
+{ Point pos = tempObject(ClassPoint, ZERO, rec->area->h, EAV);
+  Int bw = rec->area->w;
+
+  if ( valInt(g->current->value_width) < valInt(bw) )
+    send(g->current, NAME_valueWidth, bw, EAV); /* at least as wide */
+  send(g->current, NAME_open, rec, pos, OFF, OFF, ON, EAV);
+  considerPreserveObject(pos);
+}
+
+static void
 open_popup(PopupGesture g, EventObj ev)
 { Any rec = ev->receiver;
 
   if ( instanceOfObject(rec, ClassButton) &&
        ((Button)rec)->popup == g->current )
-  { Point pos = tempObject(ClassPoint,
-			   ZERO, ((Graphical)rec)->area->h, EAV);
-    Int bw = ((Graphical)rec)->area->w;
-
-    if ( valInt(g->current->value_width) < valInt(bw) )
-      send(g->current, NAME_valueWidth, bw, EAV); /* at least as wide */
-    send(g->current, NAME_open, rec, pos, OFF, OFF, ON, EAV);
-    considerPreserveObject(pos);
-  } else
+    open_popup_below(g, rec);
+  else
     send(g->current, NAME_open, rec, getAreaPositionEvent(ev, DEFAULT), EAV);
 }
 
@@ -180,7 +185,34 @@ eventPopupGesture(PopupGesture g, EventObj ev)
 
     succeed;
   } else if ( notNil(g->current) && g->current->displayed == ON )
-    return postEvent(ev, (Graphical) g->current, DEFAULT);
+  { status rc = postEvent(ev, (Graphical) g->current, DEFAULT);
+
+    /* A stay-up popup closed by the keyboard: Return selected an item
+     * or Escape cancelled.  There is no up event to terminate.
+     */
+    if ( isAEvent(ev, NAME_keyboard) && notNil(g->current) &&
+	 g->current->displayed == OFF )
+    { PceWindow sw;
+      Any context = g->context;
+      PopupObj current = g->current;
+
+      if ( !(sw = getWindowGraphical(ev->receiver)) )
+	sw = ev->window;
+
+      assign(g, context, NIL);
+      assign(g, current, NIL);
+      deleteAttributeObject(g, NAME_Stayup);
+      assign(g, status, NAME_inactive);
+      grabPointerWindow(sw, OFF);
+      focusWindow(sw, NIL, NIL, NIL, NIL);
+      if ( notNil(current->selected_item) )
+	send(current, NAME_execute, context, EAV);
+
+      succeed;
+    }
+
+    return rc;
+  }
 
   if ( dispatchPopupGesture(g, ev) )
     succeed;
@@ -376,6 +408,60 @@ postPopupGestureEvent(EventObj ev)
   assign(g, button, button);
 
   return rc;
+}
+
+
+/* Open the popup of `rec`, a button, from the keyboard, as a stay-up
+ * popup with an item previewed.  The keyboard then operates it: see
+ * eventPopupGesture() and eventWindow().
+ */
+
+status
+keyboardPopupGesture(Graphical rec)
+{ PopupGesture g = (PopupGesture)popupGesture();
+  PceWindow sw;
+  PopupObj p;
+
+  if ( g->status == NAME_active )
+    fail;
+  if ( !(sw = getWindowGraphical(rec)) ||
+       !(p = get(rec, NAME_popup, EAV)) ||
+       !instanceOfObject(p, ClassPopup) )
+    fail;
+
+  assign(g, current, p);
+  assign(g, context, notNil(p->context) ? p->context : (Any)rec);
+  send(p, NAME_update, g->context, EAV);
+  if ( p->active == OFF || emptyChain(p->members) )
+  { assign(g, current, NIL);
+    assign(g, context, NIL);
+    fail;
+  }
+  attributeObject(p, NAME_keyboard, ON);
+  open_popup_below(g, rec);
+  if ( p->displayed != ON )
+  { assign(g, current, NIL);
+    assign(g, context, NIL);
+    fail;
+  }
+  if ( isNil(p->preview) )
+  { Cell cell;
+
+    for_cell(cell, p->members)
+    { MenuItem mi = cell->value;
+
+      if ( mi->active == ON )
+      { previewMenu((Menu)p, mi);
+	break;
+      }
+    }
+  }
+  assign(g, status, NAME_active);
+  attributeObject(g, NAME_Stayup, ON);
+  grabPointerWindow(sw, ON);
+  focusWindow(sw, rec, (Recogniser) g, g->cursor, NIL);
+
+  succeed;
 }
 
 
