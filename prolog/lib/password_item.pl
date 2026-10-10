@@ -80,7 +80,9 @@ event(I, Ev:event) :->
     (   send(Ev, is_a, keyboard)
     ->  (   item_key(Ev)
         ->  send_super(I, event, Ev)
-        ;   send(Shadow, event, Ev),
+        ;   copy_key(Ev)
+        ->  send(I, alert)              % never put the password on the
+        ;   send(Shadow, event, Ev),    % clipboard
             send(I, update)
         )
     ;   send(Ev, is_a, mouse)
@@ -96,9 +98,15 @@ event(I, Ev:event) :->
     ).
 
 item_key(Ev) :-
-    get(Ev, id, Id),
-    get(key_binding(text_item), function, Id, Function),
+    key_function(Ev, Function),
     memberchk(Function, [enter, next, previous]).
+
+copy_key(Ev) :-
+    key_function(Ev, Function),
+    memberchk(Function, [copy, cut, prefix_or_copy, prefix_or_cut]).
+
+key_function(Ev, Function) :-
+    get(key_binding(text_item), function, Ev, Function).
 
 
 update(I) :->
@@ -110,11 +118,24 @@ update(I) :->
     bullet_string(Size, Bullets),
     send_super(I, displayed_value, Bullets),
     send(I, caret, Caret),
+    copy_selection(Shadow, I),
     (   get(Shadow, modified, @on),
         get(I, device, Dev),
         Dev \== @nil
     ->  ignore(send(Dev, modified_item, I, @on))
     ;   true
+    ).
+
+
+%   The bullets are one per character, so the selection of the shadow
+%   (e.g., after select-all or Shift-Left) is shown at the same place.
+
+copy_selection(From, To) :-
+    get(From, value_text, FT),
+    get(To, value_text, TT),
+    (   get(FT, selection, point(S, E))
+    ->  send(TT, selection, S, E)
+    ;   send(TT, selection, @nil)
     ).
 
 

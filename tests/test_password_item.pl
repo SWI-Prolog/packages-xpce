@@ -157,7 +157,62 @@ test(click_on_undisplayed_text_item, true) :-
              ignore(send(T, event, Ev)) )),
     send(D, destroy).
 
+test(select_all_shows, [forall(member(Style, [cua, apple])),
+                        setup(dialog_style(Style, Old)),
+                        cleanup(dialog_style(Old, _)),
+                        Sel-Value == (0-3)-x]) :-
+    password_dialog(D, P),
+    click(D, P, right),
+    type(D, `abc`),
+    select_all_key(Style, Id, Buttons),
+    post(D, Id, 0, 0, Buttons),
+    shown_selection(P, Sel),
+    type(D, `x`),                       % replaces the selection
+    password(P, Value),
+    send(D, destroy).
+test(shift_left_shows, Sel == 2-3) :-
+    password_dialog(D, P),
+    click(D, P, right),
+    type(D, `abc`),
+    post(D, cursor_left, 0, 0, 0x2),    % Shift-Left
+    shown_selection(P, Sel),
+    send(D, destroy).
+test(no_copy, [Pasted-Value == before-abc]) :-
+    password_dialog(D, P),
+    click(D, P, right),
+    type(D, `abc`),
+    post(D, cursor_home, 0, 0, 0x2),    % Shift-Home
+    send(@display, copy, before),
+    post(D, 3, 0, 0, 0x1),              % Control-C
+    post(D, 24, 0, 0, 0x1),             % Control-X
+    get(@display, paste, S),
+    get(S, value, Pasted),
+    password(P, Value),
+    send(D, destroy).
+
 :- end_tests(password_item).
+
+shown_selection(P, From-To) :-
+    get(P?value_text, selection, point(From, To)).
+
+%   select_all_key(+Style, -Id, -Buttons)
+%
+%   The key that selects all in a text item for a dialog key binding
+%   style: Control-A for `cua` (Windows, Unix), Command-A for `apple`
+%   (MacOS), where Control-A goes to the start of the line.
+
+select_all_key(cua,   1,   0x1).            % Control-A
+select_all_key(apple, 0'a, 0x8).            % Command-A
+
+dialog_style(New, Old) :-
+    get(@pce, dialog_key_binding_style, Old),
+    send(@pce, dialog_key_binding_style, New).
+
+native_dialog_style :-
+    get(@pce, convert, key_binding, class, Class),
+    get(Class, class_variable, dialog_style, Var),
+    get(Var, value, Style),
+    Style \== emacs.
 
 log_password(Log, Passwd) :-
     get(Passwd, value, Value),
