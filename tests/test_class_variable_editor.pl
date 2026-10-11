@@ -50,15 +50,11 @@ Run with:
 %   configuration of the user running the tests.  Must be done before
 %   xpce is initialised.
 
-sandbox_app_config :-                   % an existing dir is preferred
-    tmp_file(xpce_config, Dir),
-    directory_file_path(Dir, xpce, XpceDir),
-    make_directory_path(XpceDir),
-    asserta(user:file_search_path(user_app_config, Dir)).
-
-:- initialization(sandbox_app_config, now).
+:- use_module(xpce_test_sandbox).
+:- initialization(sandbox_app_config(_), now).
 
 :- use_module(library(pce)).
+:- initialization(remove_sandbox_at_exit, now).
 :- use_module(library(plunit)).
 :- use_module(library(readutil)).
 :- use_module(library(pce_class_variable_editor)).

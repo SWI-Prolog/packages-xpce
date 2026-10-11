@@ -59,7 +59,15 @@ Run with:
 :- set_prolog_flag('SDL_VIDEODRIVER', dummy).
 :- set_prolog_flag(emacs_server, false).
 
+%   Opening PceEmacs and the IDE windows writes the bookmarks, window
+%   arrangements and geometry to the user's xpce configuration.  Use a
+%   configuration of our own.
+
+:- use_module(xpce_test_sandbox).
+:- initialization(sandbox_app_config(_), now).
+
 :- use_module(library(pce)).
+:- initialization(remove_sandbox_at_exit, now).
 :- use_module(library(plunit)).
 :- use_module(library(pce_emacs)).
 :- use_module(library(pce_util), [chain_list/2]).

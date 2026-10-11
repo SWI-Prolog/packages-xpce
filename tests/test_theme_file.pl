@@ -42,25 +42,27 @@ Tests library(pce_theme_file).  The theme files are written to the
 library directory of a sandbox configuration directory.
 */
 
+:- use_module(library(filesex), [directory_file_path/3,
+                                  make_directory_path/1]).
+:- use_module(xpce_test_sandbox).
+
 %   The sandbox has no lib/theme directory.  A second configuration
 %   directory with lower priority has one.  New themes must be saved
 %   in the sandbox.
 
-sandbox_app_config :-                   % an existing dir is preferred
-    tmp_file(xpce_config, Dir),
-    directory_file_path(Dir, xpce, XpceDir),
-    make_directory_path(XpceDir),
-    asserta(user:file_search_path(user_app_config, Dir)),
+sandbox_app_configs :-
+    sandbox_app_config(Dir),
     asserta(sandbox(Dir)),
-    tmp_file(xpce_other_config, Other),
+    sandbox_dir(xpce_other_config, Other),
     directory_file_path(Other, 'lib/theme', OtherThemeDir),
     make_directory_path(OtherThemeDir),
     assertz(user:file_search_path(user_app_config, Other)).
 
 :- dynamic sandbox/1.
-:- initialization(sandbox_app_config, now).
+:- initialization(sandbox_app_configs, now).
 
 :- use_module(library(pce)).
+:- initialization(remove_sandbox_at_exit, now).
 :- use_module(library(plunit)).
 :- use_module(library(readutil)).
 :- use_module(library(apply)).

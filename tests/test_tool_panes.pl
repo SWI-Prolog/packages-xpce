@@ -76,7 +76,15 @@ sandbox_tracer_config :-
 
 :- initialization(sandbox_tracer_config, now).
 
+%   Opening PceEmacs and the IDE windows writes the bookmarks, window
+%   arrangements and geometry to the user's xpce configuration.  Use a
+%   configuration of our own.
+
+:- use_module(xpce_test_sandbox).
+:- initialization(sandbox_app_config(_), now).
+
 :- use_module(library(pce)).
+:- initialization(remove_sandbox_at_exit, now).
 :- use_module(library(plunit)).
 :- use_module(library(swi_ide)).
 :- use_module(library(epilog)).
