@@ -347,7 +347,14 @@ divisor(N, D) :-
 :- pce_begin_class(colour_item, label_box,
                    "Show a colour and buttons to change it").
 
-variable(selection, colour, get, "Current colour").
+variable(selection,    colour, get,  "Current colour").
+variable(edit_message, code*,  both, "Called with start, ok or cancel").
+
+%   The colour editor changes the colour while the user edits it.  If
+%   there is an <-edit_message, it is called with `start` before the
+%   editor opens and with `ok` or `cancel` when it closes.  The receiver
+%   then restores the colour on `cancel`.  Otherwise Cancel selects the
+%   initial colour again.
 
 initialise(CI, Name:[name], Selection:[colour], Msg:[code]*) :->
     "Create from label, initial colour and message"::
@@ -409,8 +416,14 @@ choose_theme_colour(CI) :->
 
 edit_colour(CI) :->
     "Edit the colour in the HSV/RGB model"::
+    get(CI, edit_message, EndMsg),
+    (   EndMsg == @nil
+    ->  true
+    ;   send(EndMsg, forward, start)
+    ),
     new(Editor, colour_editor(CI?selection,
-                              message(CI, user_selection, @arg1))),
+                              message(CI, user_selection, @arg1),
+                              EndMsg)),
     open_for(Editor, CI).
 
 %   open_for(+Window, +Item)
@@ -494,9 +507,21 @@ colour(AI, Index:'1..16', Colour:colour) :<-
 edit_colour(AI, Index:'1..16') :->
     "Edit the colour at Index"::
     get(AI, colour, Index, Colour),
+    get(AI, selection, Old),
     new(Editor, colour_editor(Colour,
-                              message(AI, user_colour, Index, @arg1))),
+                              message(AI, user_colour, Index, @arg1),
+                              message(AI, end_edit, @arg1, Old))),
     open_for(Editor, AI).
+
+end_edit(AI, How:{ok,cancel}, Old:vector*) :->
+    "The colour editor closed; Cancel restores the colours"::
+    (   How == cancel,
+        get(AI, selection, Current),
+        Current \== Old
+    ->  send(AI, selection, Old),
+        send(AI, forward)
+    ;   true
+    ).
 
 user_colour(AI, Index:'1..16', Colour:colour) :->
     "The user set the colour at Index"::

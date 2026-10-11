@@ -41,22 +41,35 @@
 
 /** <module> Edit a colour using the HSV or RGB model
 
-Class colour_editor is a dialog to edit a colour.  It shows the colour
-as hue, saturation and value as well as red, green and blue sliders,
-together with the named colours closest to it.  If it has a message,
-OK and Apply call it with the colour.
+Class colour_editor is a dialog to edit a colour.  It shows a colour
+wheel, the colour as hue, saturation and value as well as red, green
+and blue sliders, together with the named colours closest to it.  If it
+has a message, every change of the colour calls it, so the user sees
+the colour in place.  OK keeps the colour and Cancel calls the message
+with the initial colour again, unless the editor has an end message.
+Then the end message is called with `ok` or `cancel` and the receiver
+is responsible for undoing the changes.
 
 ```
 ?- new(E, colour_editor(red, message(@prolog, writeln, @arg1))),
    send(E, open).
 ```
+
+The editor can show a palette of colours, such as the 256 colours of
+a terminal.  If the user selects a colour from the palette, the
+message is called with the index of the colour as second argument.
+Otherwise the second argument is @nil.
 */
 
 :- pce_begin_class(colour_editor, dialog,
                    "Edit a colour in the HSV or RGB model").
 
-variable(current_colour, colour,  get, "Current colour value").
-variable(message,        code*,   both, "Called with the colour on OK/Apply").
+variable(current_colour, colour,  get,  "Current colour value").
+variable(initial_colour, colour,  get,  "Colour when the editor opened").
+variable(palette_index,  int*,    get,  "Index of the colour in the palette").
+variable(message,        code*,   both, "Called with the colour on a change").
+variable(end_message,    code*,   both, "Called with ok or cancel").
+variable(changed,        bool := @off, get, "The message was called").
 
 item('H', hue,         0-360).
 item('S', saturation, 0-100).
@@ -65,27 +78,33 @@ item('R', red,         0-255).
 item('G', green,       0-255).
 item('B', blue,        0-255).
 
-initialise(D, Init:[colour], Message:[code]*) :->
+initialise(D, Init:[colour], Message:[code]*, EndMessage:[code]*) :->
     send_super(D, initialise, 'Edit colour'),
     default(Message, @nil, Msg),
-    send(D, message, Msg),
-    send(D, append, colour_candidate(hex, ' Exact: ')),
-    send(D, append, colour_candidate(named_1, ' Named 1: ')),
-    send(D, append, colour_candidate(named_2, ' Named 2: ')),
-    send(D, append, colour_candidate(named_3, ' Named 3: ')),
+    default(EndMessage, @nil, EndMsg),
+    send(D, append, new(Picker, dialog_group(picker, group))),
+    send(Picker, append, colour_wheel(80, message(D, hue_saturation,
+                                                  @arg1, @arg2))),
+    send(D, append, new(Controls, dialog_group(controls, group)), right),
+    send(Controls, append, colour_candidate(hex, ' Exact: ')),
+    send(Controls, append, colour_candidate(named_1, ' Named 1: ')),
+    send(Controls, append, colour_candidate(named_2, ' Named 2: ')),
+    send(Controls, append, colour_candidate(named_3, ' Named 3: ')),
     forall(item(Label, Selector, Low-High),
-           append_slider(D, Label, Selector, Low, High)),
+           append_slider(D, Controls, Label, Selector, Low, High)),
     (   Msg == @nil
     ->  send(D, append, button(close))
     ;   send(D, append, button(ok)),
-        send(D, append, button(apply)),
         send(D, append, button(cancel))
     ),
-    send(D, resize_message, message(D, layout, @arg2)),
     (   Init \== @default
     ->  send(D, current_colour, Init)
     ;   send(D, current_colour, @display?foreground)
-    ).
+    ),
+    get(D, current_colour, Initial),
+    send(D, slot, initial_colour, Initial),
+    send(D, message, Msg),             % after the initial colour
+    send(D, end_message, EndMsg).
 
 %   slider_help(?Selector, ?Help)
 %
@@ -98,46 +117,97 @@ slider_help(red,        'Red component (0-255)').
 slider_help(green,      'Green component (0-255)').
 slider_help(blue,       'Blue component (0-255)').
 
-append_slider(D, Label, Selector, Low, High) :-
-    send(D, append,
+append_slider(D, Controls, Label, Selector, Low, High) :-
+    send(Controls, append,
          new(Slider, slider(Label, Low, High, Low,
                             message(D, Selector, @arg1)))),
     send(Slider, drag, @on),
-    send(Slider, attribute, hor_stretch, 100),
     send(Slider, width, 300),
     slider_help(Selector, Help),
     send(Slider, help_message, tag, Help).
+
+open(D, Pos:[point]) :->
+    "Open; closing the window cancels"::
+    send_super(D, open, Pos),
+    send(D?frame, done_message, message(D, cancel)).
+
+palette(D, Colours:vector) :->
+    "Show a palette of colours to choose from"::
+    get(D, member, picker, Picker),
+    send(Picker, append,
+         colour_palette(Colours, message(D, palette_colour, @arg1))),
+    send(D, fit),
+    send(D, show_palette).
+
+palette_colour(D, Index:int) :->
+    "The user selected a colour from the palette"::
+    picker(D, colour_palette, P),
+    get(P, colour, Index, Colour),
+    send(D, current_colour, Colour, @default, Index).
+
+palette_selection(D, Index:int) :->
+    "Show the colour at Index of the palette as current"::
+    picker(D, colour_palette, P),
+    get(P, colour, Index, Colour),
+    send(D, show_colour, Colour, @default, Index).
+
+show_palette(D) :->
+    "Mark the current colour in the palette"::
+    (   picker(D, colour_palette, P)
+    ->  get(D, palette_index, Index),
+        send(P, mark, Index)
+    ;   true
+    ).
 
 close(D) :->
     "Close the editor"::
     send(D, destroy).
 
 cancel(D) :->
-    "Close the editor without applying"::
-    send(D, destroy).
-
-apply(D) :->
-    "Call <-message with the current colour"::
-    get(D, current_colour, C),
+    "Close the editor and restore the initial colour"::
+    get(D, end_message, EndMsg),
     get(D, message, Msg),
-    forward_colour(Msg, C).
-
-forward_colour(@nil, _) :- !.
-forward_colour(Msg, C) :-
-    ignore(send(Msg, forward, C)).
+    get(D, changed, Changed),
+    get(D, initial_colour, Initial),
+    send(D, destroy),
+    (   EndMsg \== @nil
+    ->  ignore(send(EndMsg, forward, cancel))
+    ;   Changed == @on
+    ->  forward_colour(Msg, Initial, @nil)
+    ;   true
+    ).
 
 ok(D) :->
-    "Close and call <-message with the current colour"::
-    get(D, current_colour, C),
-    get(D, message, Msg),
+    "Close the editor and keep the colour"::
+    get(D, end_message, EndMsg),
     send(D, destroy),
-    forward_colour(Msg, C).
+    (   EndMsg \== @nil
+    ->  ignore(send(EndMsg, forward, ok))
+    ;   true
+    ).
+
+forward_colour(@nil, _, _) :- !.
+forward_colour(Msg, C, Index) :-
+    ignore(send(Msg, forward, C, Index)).
 
 :- pce_group(update).
 
-current_colour(D, C:colour, From:[{rgb,hsv}]) :->
+current_colour(D, C:colour, From:[{rgb,hsv}], Index:[int]*) :->
+    "Set the current colour, updating all items and call <-message"::
+    send(D, show_colour, C, From, Index),
+    get(D, message, Msg),
+    (   Msg == @nil
+    ->  true
+    ;   send(D, slot, changed, @on),
+        get(D, palette_index, PI),
+        forward_colour(Msg, C, PI)
+    ).
+
+show_colour(D, C:colour, From:[{rgb,hsv}], Index:[int]*) :->
     "Set the current colour, updating all items"::
     send(D, slot, current_colour, C),
+    default(Index, @nil, PI),
+    send(D, slot, palette_index, PI),
     (   From \== hsv
     ->  update(D, 'H', C, hue),
         update(D, 'S', C, saturation),
@@ -150,12 +220,18 @@ current_colour(D, C:colour, From:[{rgb,hsv}]) :->
         update(D, 'B', C, blue)
     ;   true
     ),
+    get(D, value, hue, H),
+    get(D, value, saturation, S),
+    get(D, value, value, V),
+    picker(D, colour_wheel, W),
+    send(W, hsv, H, S, V),
     send(D, show, hex, C),
-    send(D, show_named, C).
+    send(D, show_named, C),
+    send(D, show_palette).
 
 show(D, As:name, C:colour) :->
     "Show colour in item named As"::
-    get(D, member, As, Item),
+    control(D, As, Item),
     send(Item, value, C).
 
 show_named(D, C:colour) :->
@@ -167,16 +243,32 @@ show_named(D, C:colour) :->
 
 update(D, Name, Colour, Selector) :-
     get(Colour, Selector, Value),
-    get(D, member, Name, Item),
+    control(D, Name, Item),
     send(Item, selection, Value).
 
 value(D, Selector:name, Val) :<-
     "Get value from corresponding item"::
     item(ItemName, Selector, _),
-    get(D, member, ItemName, Item),
+    control(D, ItemName, Item),
     get(Item, selection, Val).
 
+control(D, Name, Item) :-
+    get(D, member, controls, Controls),
+    get(Controls, member, Name, Item).
+
+picker(D, Name, Item) :-
+    get(D, member, picker, Picker),
+    get(Picker, member, Name, Item).
+
 :- pce_group(hsv).
+
+hue_saturation(D, H:'0..360', S:'0..100') :->
+    "Set hue and saturation from the colour wheel"::
+    H2 is min(H, 359),
+    control(D, 'H', HI), send(HI, selection, H2),
+    control(D, 'S', SI), send(SI, selection, S),
+    get(D, value, value, V),
+    send(D, current_colour, colour(@default, H2, S, V, model := hsv), hsv).
 
 hue(D, H:'0..360') :->
     H2 is min(H, 359),
@@ -214,14 +306,206 @@ blue(D, B:'0..255') :->
 :- pce_end_class(colour_editor).
 
 
+                 /*******************************
+                 *         COLOUR WHEEL         *
+                 *******************************/
+
+%   The wheel shows hue as the angle, with red at the right, and
+%   saturation as the distance from the centre.  The image is drawn at
+%   full value.  A black disc over it, as transparent as the value is
+%   high, shows the wheel at the current value.
+
+:- pce_begin_class(colour_wheel, device,
+                   "Select hue and saturation").
+
+variable(radius,  int,   get,  "Radius of the wheel").
+variable(message, code*, both, "Called with hue and saturation").
+
+initialise(W, Radius:int, Msg:[code]*) :->
+    "Create from radius and message"::
+    send_super(W, initialise),
+    default(Msg, @nil, TheMsg),
+    send(W, slot, radius, Radius),
+    send(W, message, TheMsg),
+    wheel_image(Radius, Image),
+    send(W, display, bitmap(Image)),
+    D is 2*Radius,
+    send(W, display, new(Shade, circle(D))),
+    send(Shade, name, shade),
+    send(Shade, pen, 0),
+    send(W, display, new(Rim, circle(D))),
+    send(Rim, colour, grey50),
+    send(W, display, new(M, device)),
+    send(M, name, marker),
+    send(M, display, new(Out, circle(11)), point(-5, -5)),
+    send(Out, colour, black),
+    send(M, display, new(In, circle(9)), point(-4, -4)),
+    send(In, colour, white),
+    send(W, recogniser, new(colour_wheel_gesture)),
+    send(W, cursor, crosshair),
+    send(W, help_message, tag, 'Click or drag to select hue and saturation').
+
+wheel_image(Radius, Image) :-
+    D is 2*Radius,
+    new(Image, image(@nil, D, D, pixmap)),
+    new(Transparent, colour(@default, 0, 0, 0, 0)),
+    D1 is D-1,
+    forall(( between(0, D1, X),
+             between(0, D1, Y)
+           ),
+           ( wheel_hs(Radius, X, Y, H, S, Dist),
+             (   Dist =< Radius
+             ->  send(Image, pixel, X, Y,
+                      colour(@default, H, S, 100, model := hsv))
+             ;   send(Image, pixel, X, Y, Transparent)
+             )
+           )).
+
+%   wheel_hs(+Radius, +X, +Y, -Hue, -Saturation, -Distance)
+%
+%   Hue and saturation at X,Y relative to the top-left of the wheel.
+
+wheel_hs(Radius, X, Y, H, S, Dist) :-
+    DX is X - Radius + 0.5,
+    DY is Radius - Y - 0.5,
+    Dist is sqrt(DX*DX + DY*DY),
+    H is round(atan2(DY, DX)*180/pi + 360) mod 360,
+    S is min(100, round(100*Dist/Radius)).
+
+hsv(W, H:'0..360', S:'0..100', V:'0..100') :->
+    "Show the colour H,S,V"::
+    get(W, radius, R),
+    get(W, member, shade, Shade),
+    Alpha is round(255*(100-V)/100),
+    send(Shade, fill, colour(@default, 0, 0, 0, Alpha)),
+    A is H*pi/180,
+    Dist is R*S/100,
+    X is round(R + Dist*cos(A)),
+    Y is round(R - Dist*sin(A)),
+    get(W, member, marker, M),
+    send(M, position, point(X, Y)).
+
+pick(W, Ev:event) :->
+    "Select the hue and saturation at the event"::
+    get(Ev, position, W, point(X, Y)),
+    get(W, radius, R),
+    wheel_hs(R, X, Y, H, S, _),
+    get(W, message, Msg),
+    (   Msg == @nil
+    ->  true
+    ;   send(Msg, forward, H, S)
+    ).
+
+:- pce_end_class(colour_wheel).
+
+:- pce_begin_class(colour_wheel_gesture, gesture,
+                   "Click or drag in a colour wheel").
+
+initialise(G) :->
+    send_super(G, initialise, left, '').
+
+initiate(_G, Ev:event) :->
+    get(Ev, receiver, W),
+    send(W, pick, Ev).
+
+drag(_G, Ev:event) :->
+    get(Ev, receiver, W),
+    send(W, pick, Ev).
+
+terminate(_G, Ev:event) :->
+    get(Ev, receiver, W),
+    send(W, pick, Ev).
+
+:- pce_end_class(colour_wheel_gesture).
+
+
+                 /*******************************
+                 *            PALETTE           *
+                 *******************************/
+
+%   A palette is a grid of 16 columns of colour squares.  Clicking a
+%   square calls the message with the index of the colour, counting
+%   from 0.
+
+:- pce_begin_class(colour_palette, device,
+                   "Grid of colours to choose from").
+
+variable(colours, vector, get,  "Colours of the palette").
+variable(message, code*,  both, "Called with the index of a colour").
+
+palette_cell(10).
+palette_columns(16).
+
+initialise(P, Colours:vector, Msg:[code]*) :->
+    "Create from colours and message"::
+    send_super(P, initialise),
+    default(Msg, @nil, TheMsg),
+    send(P, slot, colours, Colours),
+    send(P, message, TheMsg),
+    palette_cell(Size),
+    palette_columns(Cols),
+    get(Colours, size, N),
+    Last is N-1,
+    forall(between(0, Last, I),
+           ( get(Colours, element, I+1, C),
+             X is (I mod Cols)*Size,
+             Y is (I // Cols)*Size,
+             send(P, display, new(B, box(Size, Size)), point(X, Y)),
+             send(B, fill, C),
+             send(B, pen, 0),
+             format(string(Tip), '~d', [I]),
+             send(B, help_message, tag, Tip),
+             send(B, recogniser,
+                  click_gesture(left, '', single,
+                                message(P, select, I)))
+           )),
+    send(P, display, new(M, device)),
+    send(M, name, mark),
+    Outer is Size+2,
+    send(M, display, new(Out, box(Outer, Outer)), point(-1, -1)),
+    send(Out, colour, black),
+    send(M, display, new(In, box(Size, Size))),
+    send(In, colour, white),
+    send(M, displayed, @off).
+
+colour(P, Index:int, Colour:colour) :<-
+    "Colour at Index, counting from 0"::
+    get(P, colours, Colours),
+    get(Colours, element, Index+1, Colour).
+
+select(P, Index:int) :->
+    "The user clicked the colour at Index"::
+    get(P, message, Msg),
+    (   Msg == @nil
+    ->  true
+    ;   send(Msg, forward, Index)
+    ).
+
+mark(P, Index:int*) :->
+    "Mark the colour at Index"::
+    get(P, member, mark, M),
+    (   Index == @nil
+    ->  send(M, displayed, @off)
+    ;   palette_cell(Size),
+        palette_columns(Cols),
+        X is (Index mod Cols)*Size,
+        Y is (Index // Cols)*Size,
+        send(M, position, point(X, Y)),
+        send(M, displayed, @on),
+        send(M, expose)
+    ).
+
+:- pce_end_class(colour_palette).
+
+
 :- pce_begin_class(colour_candidate, dialog_group,
                    "Show a colour with its name").
 
 variable(candidate_colour, colour*, get, "Colour shown").
 
 %   The exact colour can be copied as a name.  The named colours close
-%   to it can be selected, after which OK and Apply pass the named
-%   colour.
+%   to it can be selected using the button or by clicking the colour or
+%   its name, which passes the named colour.
 
 initialise(Candidate, Name:name, Label:name) :->
     send_super(Candidate, initialise, Name, group),
@@ -244,6 +528,16 @@ initialise(Candidate, Name:name, Label:name) :->
     send(Txt, alignment, right),
     send(Txt, name, label),
     send(Txt, background, @display?background),
+    (   Name == hex
+    ->  true
+    ;   forall(member(Gr, [Box, Nme]),
+               ( send(Gr, recogniser,
+                      click_gesture(left, '', single,
+                                    message(Candidate, use))),
+                 send(Gr, cursor, hand2),
+                 send(Gr, help_message, tag, 'Use this named colour')
+               ))
+    ),
     send(Candidate, attribute, hor_stretch, 100).
 
 value(Candidate, Value:colour) :->
@@ -265,7 +559,8 @@ use(Candidate) :->
     "Make our (named) colour the current colour of the editor"::
     get(Candidate, candidate_colour, Colour),
     Colour \== @nil,
-    send(Candidate?device, current_colour, Colour).
+    get(Candidate, container, colour_editor, Editor),
+    send(Editor, current_colour, Colour).
 
 :- pce_end_class(colour_candidate).
 

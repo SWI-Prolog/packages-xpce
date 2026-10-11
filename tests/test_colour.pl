@@ -377,12 +377,98 @@ test(editor_use_named, [Name-Kind == salmon-named]) :-
     new(L, chain),
     new(E, colour_editor(colour(@default, 250, 130, 110),
                          message(L, append, @arg1))),
-    get(E, member, named_1, Candidate),
+    get(E, member, controls, Controls),
+    get(Controls, member, named_1, Candidate),
     send(Candidate, use),
     send(E, ok),
     get(L, head, C),
     get(C, name, Name),
     get(C, kind, Kind).
+test(editor_click_named, [Name-Kind == Expected-named]) :-
+    %  Clicking the colour of a named candidate uses it, also after
+    %  changing the colour using the wheel
+    new(L, chain),
+    new(E, colour_editor(colour(@default, 250, 130, 110),
+                         message(L, append, @arg1))),
+    send(E, hue_saturation, 20, 60),
+    get(E, member, controls, Controls),
+    get(Controls, member, named_1, Candidate),
+    get(Candidate?candidate_colour, name, Expected),
+    get(Candidate, member, box, Box),
+    get(Box, all_recognisers, Recognisers),
+    get(Recognisers, find, @arg1?class_name == click_gesture, Click),
+    get(Click, execute_message, Msg),
+    send(Msg, forward),
+    get(L, tail, C),
+    get(C, name, Name),
+    get(C, kind, Kind),
+    send(E, destroy).
+test(editor_live, [Before-Name == 0-blue]) :-
+    new(L, chain),
+    new(E, colour_editor(red, message(L, append, @arg1))),
+    get(L, size, Before),               % not called for the initial colour
+    send(E, current_colour, blue),
+    get(L?tail, name, Name),
+    send(E, destroy).
+test(editor_cancel, [Names == [blue, red]]) :-
+    new(L, chain),
+    new(E, colour_editor(red, message(L, append, @arg1?name))),
+    send(E, current_colour, blue),
+    send(E, cancel),
+    chain_list(L, Names).
+test(editor_cancel_unchanged, [Names == []]) :-
+    new(L, chain),
+    new(E, colour_editor(red, message(L, append, @arg1?name))),
+    send(E, cancel),
+    chain_list(L, Names).
+test(editor_end_message, [Names-Ends == [blue]-[cancel]]) :-
+    new(L, chain),
+    new(Ends0, chain),
+    new(E, colour_editor(red, message(L, append, @arg1?name),
+                         message(Ends0, append, @arg1))),
+    send(E, current_colour, blue),
+    send(E, cancel),
+    chain_list(L, Names),
+    chain_list(Ends0, Ends).
+test(editor_wheel, [Name-H-S == '#00ff00'-120-100]) :-
+    new(E, colour_editor(red)),
+    send(E, hue_saturation, 120, 100),
+    get(E, current_colour, C),
+    get(C, name, Name),
+    get(E, value, hue, H),
+    get(E, value, saturation, S),
+    send(E, destroy).
+test(editor_wheel_pick, [true(abs(H-180) =< 1), true(S >= 99)]) :-
+    %  The left edge of the wheel is cyan
+    pce_colour_editor:wheel_hs(50, 0, 49, H, S, _).
+test(editor_palette, [Name-Index == green-1]) :-
+    new(L, chain),
+    new(E, colour_editor(red, message(L, append,
+                                      create(tuple, @arg1?name, @arg2)))),
+    send(E, palette, vector(red, green, blue)),
+    send(E, palette_colour, 1),
+    get(L?tail, first, Name),
+    get(L?tail, second, Index),
+    send(E, destroy).
+test(editor_palette_cleared, [Index == @nil]) :-
+    %  Changing the colour otherwise is not a colour of the palette
+    new(L, chain),
+    new(E, colour_editor(red, message(L, append, @arg2))),
+    send(E, palette, vector(red, green, blue)),
+    send(E, palette_selection, 2),
+    send(E, hue_saturation, 60, 50),
+    get(L, tail, Index),
+    send(E, destroy).
+test(item_edit_message, [Ends == [start, cancel]]) :-
+    new(Ends0, chain),
+    new(CI, colour_item(c, red)),
+    send(CI, edit_message, message(Ends0, append, @arg1)),
+    send(CI, edit_colour),
+    get(@display?frames, find,
+        @arg1?members?head?class_name == colour_editor, Frame),
+    get(Frame?members, head, E),
+    send(E, cancel),
+    chain_list(Ends0, Ends).
 
 :- end_tests(colour_item).
 
@@ -421,5 +507,13 @@ test(edit, [Size-Edited-Other-Sent == 16-orange-ansi_red-orange]) :-
     get(Log, head, Sent0),
     get(Sent0, element, 3, SentColour),
     get(SentColour, name, Sent).
+test(edit_cancel, [Sel-Sent == @nil-1]) :-
+    new(Log, chain),
+    new(I, ansi_colours_item(ansi, @nil, message(Log, append, @arg1))),
+    send(I, user_colour, 3, colour(orange)),
+    send(I, end_edit, cancel, @nil),
+    get(I, selection, Sel),
+    get(Log, size, Sent0),
+    Sent is Sent0 - 1.                  % user_colour sent too
 
 :- end_tests(ansi_colours_item).
