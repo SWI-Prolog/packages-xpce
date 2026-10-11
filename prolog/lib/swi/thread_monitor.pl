@@ -285,7 +285,8 @@ start_profile(TS, How:[{cpu,wall}]) :->
     (   get(TS, profiling, @on)
     ->  send(TS, report, warning, 'Already profiling')
     ;   get(TS, key, TID),
-        profile_arg(How, TS, Arg),
+        default(How, cpu, How1),
+        profile_arg(How1, Arg),
         thread_signal(TID,
                       (       reset_profiler,
                               profiler(_, Arg)
@@ -295,15 +296,8 @@ start_profile(TS, How:[{cpu,wall}]) :->
     ).
 
 
-:- if(current_predicate('$profile'/2)).
-profile_arg(cpu,  _, cputime).
-profile_arg(wall, _, walltime).
-:- else.
-profile_arg(cpu,  _, true).
-profile_arg(wall, TS, true) :-
-    send(TS, report, warning,
-         'Wall time profiling requires a more recent Prolog version').
-:- endif.
+profile_arg(cpu,  cputime).
+profile_arg(wall, walltime).
 
 end_profile(TS) :->
     "End profiling"::
