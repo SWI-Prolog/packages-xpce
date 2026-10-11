@@ -1207,6 +1207,31 @@ getSubChain(Chain ch, Int start, Int end)
 
 
 
+/* <-slice: a new chain holding the elements from the 1-based start.
+ * The part outside the chain is left out.
+ */
+
+static Chain
+getSliceChain(Chain ch, Int start, Int length)
+{ intptr_t from = valInt(start);
+  intptr_t to   = isDefault(length) ? valInt(ch->size)
+				    : from + valInt(length) - 1;
+  Chain r = answerObject(classOfObject(ch), EAV);
+  intptr_t i = 1;
+  Cell cell;
+
+  for_cell(cell, ch)
+  { if ( i > to )
+      break;
+    if ( i >= from )
+      appendChain(r, cell->value);
+    i++;
+  }
+
+  answer(r);
+}
+
+
 static status
 uniqueChain(Chain ch)
 { Cell cell;
@@ -1523,6 +1548,8 @@ static char *T_swap[] =
         { "value_1=any", "value_2=any" };
 static char *T_sort[] =
 	{ "compare=[code|function]", "unique=[bool]" };
+static char *T_slice[] =
+        { "start=int", "length=[0..]" };
 static char *T_gsub[] =
         { "start=int", "end=[int]" };
 
@@ -1676,7 +1703,9 @@ static getdecl get_chain[] =
   GM(NAME_Arity, 0, "int", NULL, getArityChain,
      NAME_term, "Number of arguments for object description"),
   GM(NAME_sub, 2, "chain", T_gsub, getSubChain,
-     NAME_list, "Get sub-chain from 0-based start and end")
+     NAME_list, "Get sub-chain from 0-based start and end"),
+  GM(NAME_slice, 2, "chain", T_slice, getSliceChain,
+     NAME_list, "New chain with length elements from 1-based start")
 };
 
 /* Resources */

@@ -185,3 +185,11 @@ applications, sparse arrays are better realised using class hash_table.
     @see vector<-find
     @see vector<-index
 
+- vector<-slice: start=int, length=[0..] -> vector
+    New vector holding `length` elements from index `start`, where
+    `start` is an index of the vector, i.e., it takes <-low_index into
+    account.  `length` defaults to the elements up to <-high_index.
+    The part of the range outside the vector is left out, so the
+    result may be shorter or empty.  The result is indexed from 1 and
+    is of the class of the receiver.  See also `chain<-slice`.
+

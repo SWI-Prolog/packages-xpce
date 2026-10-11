@@ -490,6 +490,18 @@ inside PCE.  Notably look at ->member, ->empty,. ->for_all, ->for_some,
     first appearance is returned.  See also <-next, <-nth1, <-head
     and <-tail.
 
+- chain<-slice: start=int, length=[0..] -> chain
+    New chain holding `length` elements from the 1-based `start`.
+    `length` defaults to the remainder of the chain.  The part of the
+    range outside the chain is left out, so the result may be shorter
+    or empty.  The result is of the class of the receiver.  Example:
+
+    	?- get_object(chain(a,b,c,d,e), slice, 2, 3, X).
+
+    	X = chain(b,c,d)
+
+    See also <-sub and `vector<-slice`.
+
 - chain<-sub: start=int, end=[int] -> chain
     Get new sub-chain from 0-based start and end.  End defaults to
     <-size.  The object at <-end is not included.  Example:

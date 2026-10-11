@@ -291,6 +291,30 @@ getCopyVector(Vector v)
 }
 
 
+/* <-slice: a new vector holding the elements from start.  The part
+ * outside the range of the vector is left out.  The result is indexed
+ * from 1.
+ */
+
+static Vector
+getSliceVector(Vector v, Int start, Int length)
+{ intptr_t low  = valInt(v->offset) + 1;
+  intptr_t high = valInt(v->offset) + valInt(v->size);
+  intptr_t from = valInt(start);
+  intptr_t to   = isDefault(length) ? high : from + valInt(length) - 1;
+
+  if ( from < low )
+    from = low;
+  if ( to > high )
+    to = high;
+
+  intptr_t n = to >= from ? to - from + 1 : 0;
+
+  answer(answerObjectv(classOfObject(v), (int)n,
+		       n > 0 ? &v->elements[from-low] : NULL));
+}
+
+
 status
 fillVector(Vector v, Any obj, Int from, Int to)
 { int f, t;
@@ -709,6 +733,8 @@ static char *T_swap[] =
         { "index_1=int", "index_2=int" };
 static char *T_fill[] =
         { "value=any", "from=[int]", "to=[int]" };
+static char *T_slice[] =
+        { "start=int", "length=[0..]" };
 static char *T_range[] =
         { "from=[int]", "to=[int]" };
 static char *T_sort[] =
@@ -771,6 +797,8 @@ static getdecl get_vector[] =
      DEFAULT, "Get arity for term"),
   GM(NAME_copy, 0, "vector", NULL, getCopyVector,
      NAME_copy, "Create a copy of a vector"),
+  GM(NAME_slice, 2, "vector", T_slice, getSliceVector,
+     NAME_copy, "New vector with length elements from index start"),
   GM(NAME_element, 1, "any", "index=int", getElementVector,
      NAME_element, "Get element at index"),
   GM(NAME_head, 0, "any", NULL, getHeadVector,
