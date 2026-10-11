@@ -34,10 +34,8 @@
 
 :- module(pce_colour_editor, []).
 :- use_module(library(pce)).
-:- use_module(library(apply)).
-:- use_module(library(lists)).
-:- use_module(library(pairs)).
 :- use_module(library(help_message)).
+:- use_module(library(pce_util)).
 
 /** <module> Edit a colour using the HSV or RGB model
 
@@ -303,6 +301,22 @@ blue(D, B:'0..255') :->
     get(D, value, green, G),
     send(D, current_colour, colour(@default, R, G, B), rgb).
 
+%!  closest_named_colours(+Colour, +Count, -Names) is det.
+%
+%   Names are the Count named colours closest to Colour.
+
+closest_named_colours(From, Count, Closest) :-
+    new(Ch, chain),
+    send(@colour_names, for_all,
+         message(Ch, append, create(tuple, @arg1, ?(From,distance,@arg2)))),
+    send(Ch, sort, ?(@arg1?second, compare, @arg2?second)),
+    get(Ch, slice, 1, Count, Ch2),
+    free(Ch),
+    get(Ch2, map, @arg1?first, Ch3),
+    free(Ch2),
+    chain_list(Ch3, Closest),
+    free(Ch2).
+
 :- pce_end_class(colour_editor).
 
 
@@ -343,7 +357,9 @@ initialise(W, Radius:int, Msg:[code]*) :->
     send(In, colour, white),
     send(W, recogniser, new(colour_wheel_gesture)),
     send(W, cursor, crosshair),
-    send(W, help_message, tag, 'Click or drag to select hue and saturation').
+    send(W, help_message, tag,
+         'Click or drag to select hue and saturation\n\c
+          Change \'V\' for a lighter or darker wheel').
 
 wheel_image(Radius, Image) :-
     D is 2*Radius,
@@ -563,20 +579,3 @@ use(Candidate) :->
     send(Editor, current_colour, Colour).
 
 :- pce_end_class(colour_candidate).
-
-%!  closest_named_colours(+Colour, +Count, -Names) is det.
-%
-%   Names are the Count named colours closest to Colour.
-
-closest_named_colours(From, Count, Closest) :-
-    chain_list(@colour_list, Names),
-    maplist(colour_distance(From), Names, Distances),
-    pairs_keys_values(Pairs, Distances, Names),
-    keysort(Pairs, Sorted),
-    pairs_values(Sorted, ByDistance),
-    length(Closest, Count),
-    append(Closest, _, ByDistance).
-
-colour_distance(Colour, Name, Distance) :-
-    get(@colour_names, member, Name, RGB),
-    get(Colour, distance, RGB, Distance).
