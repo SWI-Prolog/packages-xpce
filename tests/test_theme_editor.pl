@@ -146,6 +146,16 @@ test(class_variable, nondet) :-
     colour_class_variable(ui_button_background, button, face_colour),
     \+ colour_class_variable(ui_button_background, pce, _),
     send(B, destroy).
+test(isearch_class_variables,
+     Classes == [editor, list_browser, terminal_image]) :-
+    %  Editors, lists and terminals refer to the same theme colour for
+    %  the hit of an incremental search
+    forall(member(Class, [editor, list_browser, terminal_image]),
+           get(@pce, convert, Class, class, _)),
+    findall(Class, colour_class_variable(ui_isearch_background,
+                                         Class, isearch_style),
+            Classes0),
+    sort(Classes0, Classes).
 test(console_sample, true(memberchk(s('Call'), Segments))) :-
     console_sample(port(call), Segments).
 test(console_sample_default, Segments == [s('?- member(X, [a,b]).')]) :-

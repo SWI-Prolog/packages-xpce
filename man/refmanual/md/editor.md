@@ -98,6 +98,15 @@ although the latter is the principal way of manipulating a text.
 - editor.indent_increment: int = 2
     @see editor-indent_increment
 
+- editor.isearch_style: style* = style(background := ui_isearch_background)
+    Style of the hit of an incremental search.  If `@nil`, the hit is
+    shown as the selection.  The same as `terminal_image.isearch_style`.
+
+- editor.isearch_other_style: style* = style(background := ui_isearch_other_background)
+    Style of the other matches of an incremental search on the page,
+    or `@nil` to leave them alone.  The same as
+    `terminal_image.isearch_other_style`.
+
 
 ## Instance variables {#class-editor-instvars}
 

@@ -1159,9 +1159,14 @@ fetch_editor(Any obj, TextChar tc)
 
   if ( e->mark_status != NAME_inactive &&
        InRegion(index, valInt(e->mark), valInt(e->caret)) )
-  { Style s = (isisearchingEditor(e)
-	       ? getClassVariableValueObject(e, NAME_isearchStyle)
-	       : e->selection_style);
+  { Style s = e->selection_style;
+
+    if ( isisearchingEditor(e) )	/* @nil: as the selection */
+    { Style is = getClassVariableValueObject(e, NAME_isearchStyle);
+
+      if ( is && notNil(is) )
+	s = is;
+    }
 
     if ( !s || isDefault(s) )
     { tc->attributes ^= TXT_HIGHLIGHTED;
@@ -5787,11 +5792,12 @@ static classvardecl rc_editor[] =
      "Font used to display the label"),
   RC(NAME_indentIncrement, "int", "2",
      "Indent/undent amount"),
-  RC(NAME_isearchStyle, "style", "@_isearch_style",
-     "Style for incremental search"),
-  RC(NAME_isearchOtherStyle, "style",
+  RC(NAME_isearchStyle, "style*",
+     "style(background := ui_isearch_background)",
+     "Style for the hit of an incremental search (@nil: as the selection)"),
+  RC(NAME_isearchOtherStyle, "style*",
      "style(background := ui_isearch_other_background)",
-     "Style for `other matches' in incremental search"),
+     "Style for its other matches on the page (@nil for none)"),
   RC(NAME_keyBinding, "string", "",
      "`Key = selector' binding list"),
   RC(NAME_accentColour, "colour", "ui_accent",

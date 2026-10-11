@@ -4370,7 +4370,7 @@ static classvardecl rc_terminal_image[] =
      "Style for <-selection"),
   RC(NAME_isearchStyle, "style*",
      "style(background := ui_isearch_background)",
-     "Style for the hit of an incremental search"),
+     "Style for the hit of an incremental search (@nil: as the selection)"),
   RC(NAME_isearchOtherStyle, "style*",
      "style(background := ui_isearch_other_background)",
      "Style for its other matches on the page (@nil for none)"),

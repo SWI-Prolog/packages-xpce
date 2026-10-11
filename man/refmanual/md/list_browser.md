@@ -62,6 +62,11 @@ the `dir.bm` icon, use the following code as a starting point:
 
 ## Class variables {#class-list_browser-classvars}
 
+- list_browser.isearch_style: [style] = style(background := ui_isearch_background)
+    Style of the part of the item that matches the incremental search.
+    If `@default`, the match is shown inverted.  See also
+    `editor.isearch_style`.
+
 - list_browser.search_ignore_case: bool = @on
 
 
