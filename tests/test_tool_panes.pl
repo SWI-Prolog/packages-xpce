@@ -1839,6 +1839,36 @@ test(and_so_does_a_text_of_the_details) :-
     send(Text, details).
 :- endif.
 
+%       Methods of classes defined in Prolog are in the profile as the
+%       callees of a predicate.  Walking the call graph finds the data
+%       of a callee by comparing it with the predicates of the profile,
+%       which raised a type error for a method and a predicate in module
+%       user.
+
+profile_methods(F, Data) :-
+    retractall(user:prof_method_work),
+    assertz(user:(prof_method_work :-
+                     forall(between(1, 2000, _),
+                            ( new(P, prolog_predicate(foo/1)),
+                              free(P)
+                            )))),
+    profile(user:prof_method_work, [time(cpu)]),
+    profile_data(Data),
+    pce_profile:show_profile(Data),
+    get(@prolog_ide, tool, prof_frame, F).
+
+test(the_graph_walks_past_methods, true(memberchk(Method, Callees))) :-
+    no_frames,
+    profile_methods(F, Data),
+    member(Node, Data.nodes),
+    Node.predicate == user:prof_method_work/0,
+    !,
+    member(node(Method, _, _, _, _, _, _), Node.callees),
+    object(Method),
+    !,
+    pce_profile:call_graph(F, Node, limits(1, 2, 0, 10, 30), Edges),
+    findall(Callee, member(edge(_, Callee, _, _), Edges), Callees).
+
 %       The details window carries no label of its own: a label puts a row
 %       on the window_decorator it is held in, and the grip that drags the
 %       profiler around would land in that row rather than in the corner

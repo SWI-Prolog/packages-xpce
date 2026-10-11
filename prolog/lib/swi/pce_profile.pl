@@ -547,9 +547,13 @@ unqualify(user:X, X) :- !.
 unqualify(X, X).
 
 same_pred_(X, X) :- !.
-same_pred_(Head, Name/Arity) :-
+same_pred_(Head, PI) :-                 % not an xpce method
+    callable(Head),
+    same_head(Head, PI).
+
+same_head(Head, Name/Arity) :-
     pi_head(Name/Arity, Head).
-same_pred_(Head, user:Name/Arity) :-
+same_head(Head, user:Name/Arity) :-
     pi_head(Name/Arity, Head).
 
 compare(DI, DI2:prof_dict_item,
