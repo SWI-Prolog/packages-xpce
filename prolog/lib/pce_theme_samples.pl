@@ -327,6 +327,21 @@ build(thread_graph(Colour), D) :-
              send(D, display, P)
            )).
 
+%   A terminal shows what a command wrote, using the styles of class
+%   terminal_image.  The OSC 8 escape sequence makes a hyperlink and
+%   the OSC 133 marks make the commands that can be folded.
+
+build(terminal(What), T) :-
+    terminal_lines(What, Lines),
+    length(Lines, N),
+    get(@pce, convert, tt, font, Font),
+    get(Font, height, FH),
+    get(Font, avg_char_width, CW),
+    W is round(40*CW),
+    H is (N+1)*FH,
+    new(T, terminal_image(W, H)),
+    terminal_output(What, T).
+
 thread_graph_colour(thread_graph_local).
 thread_graph_colour(thread_graph_global).
 thread_graph_colour(thread_graph_trail).
@@ -342,21 +357,6 @@ graph_points(Nth, Points) :-
                    X is 8 + I*8,
                    Y is round(44 - 6*Nth - 8*sin(I/3 + Nth))
                  ), Points).
-
-%   A terminal shows what a command wrote, using the styles of class
-%   terminal_image.  The OSC 8 escape sequence makes a hyperlink and
-%   the OSC 133 marks make the commands that can be folded.
-
-build(terminal(What), T) :-
-    terminal_lines(What, Lines),
-    length(Lines, N),
-    get(@pce, convert, tt, font, Font),
-    get(Font, height, FH),
-    get(Font, avg_char_width, CW),
-    W is round(40*CW),
-    H is (N+1)*FH,
-    new(T, terminal_image(W, H)),
-    terminal_output(What, T).
 
 terminal_lines(text,      ['?- X = 42.', 'X = 42.']).
 terminal_lines(link,      ['?- help(member/2).', 'See https://www.swi-prolog.org']).
