@@ -128,6 +128,8 @@ variable(own_label_format, [name]* := @default, none,
          "Format asked for on me alone; @default: ask elsewhere").
 variable(updating,        bool := @off,   none,
          "->pane_changed is running").
+variable(status_pane,     window*,        none,
+         "The pane the status bar speaks for").
 variable(append_at_end,   bool := @off,   none,
          "->append_pane puts its tab at the end of the row").
 variable(arranged,        bool := @off,   get,
@@ -705,15 +707,30 @@ pane_changed(F) :->
 
 %       What the pane before had to say is not about the pane now in
 %       view, also if there is none yet, as while a pane is being moved
-%       out: clear the bar, and drop it if no pane left uses it.
+%       out: clear the bar, and drop it if no pane left uses it.  Every
+%       click in a pane gets here, as it sets the keyboard focus.  If the
+%       pane did not change, the bar stays as it is: putting back what the
+%       pane said last would repeat an old warning on every click.
 
 do_pane_changed(F) :->
     "Follow the current pane; see ->pane_changed"::
-    ignore(send(F, clear_status)),
-    ignore(send(F, update_status_bar)),
-    get(F, current_pane, Pane),
+    (   get(F, current_pane, Pane)
+    ->  true
+    ;   Pane = @nil
+    ),
+    (   get(F, slot, status_pane, Pane),
+        Pane \== @nil
+    ->  true
+    ;   send(F, slot, status_pane, Pane),
+        ignore(send(F, clear_status)),
+        ignore(send(F, update_status_bar)),
+        (   Pane == @nil
+        ->  true
+        ;   ignore(send(F, restore_report, Pane))
+        )
+    ),
+    Pane \== @nil,
     send(F?menu_dialog, client, Pane),
-    ignore(send(F, restore_report, Pane)),
     ignore(send(F, update_menu_bar)),
     ignore(send(F, update_tab_label)),
     ignore(send(F, update_label)),

@@ -500,6 +500,21 @@ test(a_source_in_another_tab_does_not_write_on_the_bar,
     send(Behind?editor, report, status, 'From behind'),
     bar_report(F, Said).
 
+%       A pane says again what it said last when it comes back into view,
+%       but a click in the pane in view sets the keyboard focus without
+%       changing the pane, and must not repeat an old warning.
+
+test(a_click_does_not_repeat_a_warning, true(Said == '')) :-
+    emacs,
+    mixed_window(F),
+    get(F, current_pane, View),
+    send(F, keyboard_focus, View),      % the user works in View
+    send(View?editor, report, warning, 'An old warning'),
+    get(F, status_dialog, SD),
+    send(SD, clear),                    % as when it times out
+    send(F, keyboard_focus, View),      % what a click does
+    bar_report(F, Said).
+
 %!  bar_report(+Frame, -Message) is det.
 %
 %   What the bar of Frame was last told to say.
