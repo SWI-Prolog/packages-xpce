@@ -174,7 +174,19 @@ action(parindent, PB, Mode) :-          % \parindent
 
 action(group(Group), PB, Mode) :-
     get(Mode, clone, Clone),
-    emit(Group, PB, Clone).
+    emit_inline(Group, PB, Mode, Clone).
+
+%   emit_inline(+Content, +ParBox, +Mode, +Clone)
+%
+%   Emit Content that is part of the text using Clone, a copy of Mode
+%   with different properties.  Whether blanks are ignored continues
+%   after Content.  Otherwise, if the text starts with Content, the
+%   blank after it is lost.
+
+emit_inline(Content, PB, Mode, Clone) :-
+    emit(Content, PB, Clone),
+    get(Clone, ignore_blanks, Blanks),
+    send(Mode, ignore_blanks, Blanks).
 
 %       Font and appearance manipulation
 
@@ -268,7 +280,7 @@ action(button(Message, Content, Balloon), PB, Mode) :-
     get(Mode, clone, Clone),
     send(Clone, colour, LinkColour),
     send(Clone, underline, @on),
-    emit(Content, PB, Clone),
+    emit_inline(Content, PB, Mode, Clone),
     send(PB, append, BC).
 action(anchor(Label, Content), PB, Mode) :-
     new(AO, anchor_box(Label)),
