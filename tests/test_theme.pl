@@ -38,6 +38,7 @@
 :- use_module(library(pce)).
 :- use_module(library(pce_theme)).
 :- use_module(library(plunit)).
+:- use_module(library(ansi_term), []).
 
 /** <module> Test semantic colours and themes
 
@@ -48,6 +49,7 @@ installed theme files.
 
 test_theme :-
     run_tests([ theme,
+                edited_theme,
                 theme_files
               ]).
 
@@ -88,6 +90,54 @@ colours_changed(F) :->
     N is N0+1,
     send(F, notified, N).
 :- pce_end_class(test_theme_frame).
+
+%   Only consider the issues about the test colours, as the other
+%   semantic colours depend on the loaded libraries.
+
+test_issues(Issues0, Issues) :-
+    include(test_issue, Issues0, Issues).
+
+test_issue(Issue) :-
+    arg(1, Issue, Name),
+    atom(Name),
+    sub_atom(Name, 0, _, _, test_theme_).
+
+theme_rgb(Name, RGB) :-
+    get(@pce, convert, Name, colour, C),
+    colour_rgb(C, RGB).
+
+dark_system :-
+    get(@pce, convert, sys_window_background, colour, C),
+    get(C, intensity, I),
+    I < 128.
+
+%   Make the system window colours dark.  ->system_colours_changed
+%   reloads the real values, as they differ from the faked values in
+%   @colour_names.
+
+fake_dark_system :-
+    get(@pce, convert, sys_window_background, colour, Bg),
+    get(@pce, convert, sys_window_foreground, colour, Fg),
+    get(@pce, convert, '#101010', colour, Dark),
+    get(@pce, convert, '#f0f0f0', colour, Light),
+    get(Dark, rgba, DarkRGBA),
+    get(Light, rgba, LightRGBA),
+    send(@colour_names, append, sys_window_background, DarkRGBA),
+    send(@colour_names, append, sys_window_foreground, LightRGBA),
+    send(Bg, slot, rgba, DarkRGBA),
+    send(Fg, slot, rgba, LightRGBA).
+
+restore_system :-
+    send(@display_manager, system_colours_changed).
+
+theme_colour(Name, C) :-
+    ensure_theme_colours,
+    get(@colours, member, Name, C).
+
+colour_rgb(C, rgb(R,G,B)) :-
+    get(C, red, R),
+    get(C, green, G),
+    get(C, blue, B).
 
 :- begin_tests(theme, [cleanup(apply_theme(light))]).
 
@@ -297,6 +347,17 @@ test(syntax_default, RGB == RGB0) :-
     theme_colour(syntax_comment, C),
     colour_rgb(C, RGB).
 
+test(theme_label, Labels == ['Dark theme', 'My light theme']) :-
+    maplist(theme_label, [dark, my_light], Labels).
+test(syntax_lookup, Pairs =@= All) :-
+    %  Looking up a name gives the same as enumerating all names
+    use_module(library(prolog_colour), []),
+    findall(N-C, pce_theme:syntax_colour(N, C, _), All0),
+    sort(1, @<, All0, All),
+    findall(N-C, ( member(N-_, All),
+                   pce_theme:syntax_colour(N, C, _)
+                 ), Pairs).
+
 test(issues_dark, Issues == [ missing(test_theme_alias),
                               missing(test_theme_alias2)
                             ]) :-
@@ -407,55 +468,113 @@ adaptive_issue(Issue) :-
     atom(Name),
     sub_atom(Name, 0, _, _, test_adaptive_).
 
-%   Only consider the issues about the test colours, as the other
-%   semantic colours depend on the loaded libraries.
-
-test_issues(Issues0, Issues) :-
-    include(test_issue, Issues0, Issues).
-
-test_issue(Issue) :-
-    arg(1, Issue, Name),
-    atom(Name),
-    sub_atom(Name, 0, _, _, test_theme_).
-
-theme_rgb(Name, RGB) :-
-    get(@pce, convert, Name, colour, C),
-    colour_rgb(C, RGB).
-
-dark_system :-
-    get(@pce, convert, sys_window_background, colour, C),
-    get(C, intensity, I),
-    I < 128.
-
-%   Make the system window colours dark.  ->system_colours_changed
-%   reloads the real values, as they differ from the faked values in
-%   @colour_names.
-
-fake_dark_system :-
-    get(@pce, convert, sys_window_background, colour, Bg),
-    get(@pce, convert, sys_window_foreground, colour, Fg),
-    get(@pce, convert, '#101010', colour, Dark),
-    get(@pce, convert, '#f0f0f0', colour, Light),
-    get(Dark, rgba, DarkRGBA),
-    get(Light, rgba, LightRGBA),
-    send(@colour_names, append, sys_window_background, DarkRGBA),
-    send(@colour_names, append, sys_window_foreground, LightRGBA),
-    send(Bg, slot, rgba, DarkRGBA),
-    send(Fg, slot, rgba, LightRGBA).
-
-restore_system :-
-    send(@display_manager, system_colours_changed).
-
-theme_colour(Name, C) :-
-    ensure_theme_colours,
-    get(@colours, member, Name, C).
-
-colour_rgb(C, rgb(R,G,B)) :-
-    get(C, red, R),
-    get(C, green, G),
-    get(C, blue, B).
-
 :- end_tests(theme).
+
+:- begin_tests(edited_theme, [cleanup(apply_theme(light))]).
+
+%   The theme `test_edit` is created in memory, based on `test_dark`.
+
+edit_setup :-
+    create_theme(test_edit, test_dark).
+
+edit_cleanup :-
+    discard_theme(test_edit),
+    apply_theme(light).
+
+test(inherits, [ setup(edit_setup), cleanup(edit_cleanup),
+                 RGB == rgb(0,0,255)
+               ]) :-
+    apply_theme(test_edit),
+    theme_rgb(test_theme_fg, RGB).
+test(live_change, [ setup(edit_setup), cleanup(edit_cleanup),
+                    [Set,Reset] == [rgb(5,5,5),rgb(0,0,255)]
+                  ]) :-
+    %  Changing a setting of the active theme updates the colours
+    apply_theme(test_edit),
+    set_theme_setting(test_edit, colour(test_theme_fg, '#050505')),
+    theme_rgb(test_theme_fg, Set),
+    reset_theme_setting(test_edit, colour(test_theme_fg, _)),
+    theme_rgb(test_theme_fg, Reset).
+test(replace, [ setup(edit_setup), cleanup(edit_cleanup),
+                Settings == [colour(test_theme_fg, '#060606')]
+              ]) :-
+    set_theme_setting(test_edit, colour(test_theme_fg, '#050505')),
+    set_theme_setting(test_edit, colour(test_theme_fg, '#060606')),
+    findall(S, theme_setting(test_edit, S), Settings).
+test(ui_inherited_follows_desktop, [ setup(edit_setup),
+                                     cleanup(edit_cleanup),
+                                     RGB == rgb(16,16,16)
+                                   ]) :-
+    %  test_dark does not override the desktop colours
+    setup_call_cleanup(
+        ( fake_dark_system,
+          apply_theme(test_edit)
+        ),
+        theme_rgb(ui_window_background, RGB),
+        restore_system).
+test(ui_own_overrides_desktop, [ setup(edit_setup), cleanup(edit_cleanup),
+                                 [RGB,Origin] == [rgb(2,2,2),theme(test_edit)]
+                               ]) :-
+    %  A derived theme overrides the desktop colours it defines
+    setup_call_cleanup(
+        ( fake_dark_system,
+          set_theme_setting(test_edit,
+                            colour(ui_window_background, '#020202')),
+          apply_theme(test_edit)
+        ),
+        ( theme_rgb(ui_window_background, RGB),
+          theme_colour_origin(ui_window_background, Origin)
+        ),
+        restore_system).
+test(origin, [ setup(edit_setup), cleanup(edit_cleanup),
+               [Inherited,Own] == [theme(test_dark),theme(test_edit)]
+             ]) :-
+    set_theme_setting(test_edit, colour(test_theme_bg, '#070707')),
+    apply_theme(test_edit),
+    theme_colour_origin(test_theme_fg, Inherited),
+    theme_colour_origin(test_theme_bg, Own).
+test(issues, [ setup(edit_setup), cleanup(edit_cleanup),
+               Issues == [ missing(test_theme_alias2),
+                           redundant(test_theme_fg)
+                         ]
+             ]) :-
+    %  Missing colours are those no ancestor defines.  A value that is
+    %  the same as the inherited one is redundant.
+    set_theme_setting(test_edit, colour(test_theme_alias, test_theme_bg)),
+    set_theme_setting(test_edit, colour(test_theme_fg, blue)),
+    theme_issues(test_edit, Issues0),
+    test_issues(Issues0, Issues).
+test(console, [ setup(edit_setup), cleanup(edit_cleanup),
+                Attrs == [bold]
+              ]) :-
+    set_theme_setting(test_edit, console(test_edit_class, [bold])),
+    apply_theme(test_edit),
+    ansi_term:class_attrs(test_edit_class, Attrs).
+test(pldoc, [ setup(edit_setup), cleanup(edit_cleanup),
+              nondet, true(memberchk(color(cyan), CSS))
+            ]) :-
+    use_module(library(lynx/pldoc_style), []),
+    set_theme_setting(test_edit, pldoc(code, true, [color(cyan)])),
+    apply_theme(test_edit),
+    html_text:style(code, true, CSS).
+test(discard_active, [ setup(edit_setup), cleanup(apply_theme(light)),
+                       [Theme,Settings] == [test_dark,[]]
+                     ]) :-
+    set_theme_setting(test_edit, colour(test_theme_fg, '#050505')),
+    apply_theme(test_edit),
+    discard_theme(test_edit),
+    current_theme(Theme),
+    findall(S, theme_setting(test_edit, S), Settings).
+test(create_existing, error(permission_error(create, theme, test_dark))) :-
+    create_theme(test_dark, light).
+test(invalid_colour, [ setup(edit_setup), cleanup(edit_cleanup),
+                       error(domain_error(colour, no_such_colour_name))
+                     ]) :-
+    set_theme_setting(test_edit, colour(test_theme_fg, no_such_colour_name)).
+test(not_edited, error(existence_error(edited_theme, test_dark))) :-
+    set_theme_setting(test_dark, colour(test_theme_fg, red)).
+
+:- end_tests(edited_theme).
 
 %   user_theme_dir(-Dir)
 %

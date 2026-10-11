@@ -35,7 +35,9 @@
 :- module(pce_class_variable_editor,
           [ class_variable_editor/0,
             class_variable_editor/1,    % +Object
-            save_class_variable/3       % +Class, +Name, +Value
+            save_class_variable/3,      % +Class, +Name, +Value
+            class_variable_help/3,      % +Class, +Name, +TransientFor
+            class_variable_doc/3        % +Class, +Name, -Markdown
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_configeditor), [config_item/4]).
@@ -1115,15 +1117,12 @@ show_help(R) :->
     "Show the manual entry of the class variable"::
     get(R, class, Class),
     get(R, name, Name),
-    (   class_variable_entry(Class, Name, Entry, _)
-    ->  get(Class, name, ClassName),
-        format(atom(Title), '~w.~w', [ClassName, Name]),
-        new(W, class_variable_help_window(Title, Entry)),
-        (   get(R?item, frame, Frame)
-        ->  send(W, transient_for, Frame)
-        ;   true
-        ),
-        send(W, open)
+    (   get(R?item, frame, Frame)
+    ->  true
+    ;   Frame = @nil
+    ),
+    (   class_variable_help(Class, Name, Frame)
+    ->  true
     ;   send(R?item, report, warning, 'No manual entry')
     ).
 
@@ -1446,12 +1445,32 @@ save(R, File:name) :->
                  *         DOCUMENTATION        *
                  *******************************/
 
+%!  class_variable_help(+Class, +Name, +TransientFor) is semidet.
+%
+%   Open a window with the manual entry of the class variable Name of
+%   Class.  Class is a class object or name.  TransientFor is a frame or
+%   @nil.  Fails if there is no manual entry.
+
+class_variable_help(Class0, Name, TransientFor) :-
+    get(@pce, convert, Class0, class, Class),
+    class_variable_entry(Class, Name, Entry, _),
+    get(Class, name, ClassName),
+    format(atom(Title), '~w.~w', [ClassName, Name]),
+    new(W, class_variable_help_window(Title, Entry)),
+    (   TransientFor == @nil
+    ->  true
+    ;   send(W, transient_for, TransientFor)
+    ),
+    send(W, open).
+
 %!  class_variable_doc(+Class, +Name, -Markdown:string) is semidet.
 %
 %   Markdown is the description of the class variable Name of Class
-%   from the reference manual.  See class_variable_entry/4.
+%   from the reference manual.  Class is a class object or name.  See
+%   class_variable_entry/4.
 
-class_variable_doc(Class, Name, Markdown) :-
+class_variable_doc(Class0, Name, Markdown) :-
+    get(@pce, convert, Class0, class, Class),
     class_variable_entry(Class, Name, _Entry, Markdown).
 
 %!  class_variable_entry(+Class, +Name, -Entry, -Markdown:string) is semidet.

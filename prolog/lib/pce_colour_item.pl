@@ -32,12 +32,17 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(pce_colour_item, []).
+:- module(pce_colour_item,
+          [ colour_trace/3,             % +Colour, -Lines, -Source
+            colour_trace_steps/3        % +Colour, -Steps, -Source
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
 :- pce_autoload(colour_editor, library(pce_colour_editor)).
-:- autoload(library(pce_theme), [available_theme/1, theme_colour_origin/2]).
+:- autoload(library(pce_theme),
+            [available_theme/1, theme_colour_origin/2, theme_label/2]).
 :- autoload(library(aggregate), [aggregate_all/3]).
+:- autoload(library(apply), [maplist/3]).
 :- require([ between/3
            , default/3
            , forall/2
@@ -733,7 +738,7 @@ source_column_width(Font, Width) :-
                     get(Font, width, Text, W)
                   ), Width).
 
-%   colour_trace(+Colour, -Lines, -Source)
+%!  colour_trace(+Colour, -Lines, -Source) is det.
 %
 %   Lines describes how the theme colour Colour gets its value, one
 %   line for each step.  For example, in the light theme:
@@ -746,9 +751,24 @@ source_column_width(Font, Width) :-
 %   desktop, the theme that defines it or `default`.
 
 colour_trace(Colour, Lines, Source) :-
-    colour_trace(Colour, [], Lines, Source).
+    colour_trace_steps(Colour, Steps, Source),
+    maplist(step_line, Steps, Lines).
 
-colour_trace(Colour, Seen, [Line|Lines], Source) :-
+step_line(step(Name, Value, Why), Line) :-
+    (   Why == ''
+    ->  format(atom(Line), '~w = ~w', [Name, Value])
+    ;   format(atom(Line), '~w = ~w (~w)', [Name, Value, Why])
+    ).
+
+%!  colour_trace_steps(+Colour, -Steps, -Source) is det.
+%
+%   As colour_trace/3, but Steps is a list of step(Name, Value, Why),
+%   where Why is a text or '' if there is nothing to say.
+
+colour_trace_steps(Colour, Steps, Source) :-
+    colour_trace_steps(Colour, [], Steps, Source).
+
+colour_trace_steps(Colour, Seen, [step(Name, From, Why)|Steps], Source) :-
     get(Colour, name, Name),
     get(Colour, derived_from, From0),
     colour_value_name(From0, From),
@@ -758,26 +778,25 @@ colour_trace(Colour, Seen, [Line|Lines], Source) :-
     ;   Why = 'created by the program',
         Source0 = program
     ),
-    format(atom(Line), '~w = ~w (~w)', [Name, From, Why]),
     (   memberchk(From, Seen)
-    ->  Lines = [],
+    ->  Steps = [],
         Source = Source0
     ;   get(@theme_colours, find, @arg1?name == From, Next)
-    ->  colour_trace(Next, [Name|Seen], Lines, Source)
-    ;   value_trace(From, Lines, Source1),
+    ->  colour_trace_steps(Next, [Name|Seen], Steps, Source)
+    ;   value_steps(From, Steps, Source1),
         (   var(Source1)
         ->  Source = Source0
         ;   Source = Source1
         )
     ).
 
-%   value_trace(+Value, -Lines, -Source)
+%   value_steps(+Value, -Steps, -Source)
 %
-%   Lines describes the value of the colour Value that is not a theme
+%   Steps describes the value of the colour Value that is not a theme
 %   colour.  For a system colour, Source tells whether the value comes
 %   from the desktop.
 
-value_trace(Value, [Line], Source) :-
+value_steps(Value, [step(Value, Hex, Why)], Source) :-
     sub_atom(Value, 0, _, _, sys_),
     !,
     colour_hex(Value, Hex),
@@ -786,16 +805,14 @@ value_trace(Value, [Line], Source) :-
     ->  system_origin_text(Origin, Why),
         system_origin_source(Origin, Source)
     ;   Why = 'system colour'
-    ),
-    format(atom(Line), '~w = ~w (~w)', [Value, Hex, Why]).
-value_trace(Value, [], _) :-
+    ).
+value_steps(Value, [], _) :-
     sub_atom(Value, 0, _, _, #),
     !.
-value_trace(Value, [Line], _) :-
+value_steps(Value, [step(Value, Hex, '')], _) :-
     colour_hex(Value, Hex),
-    !,
-    format(atom(Line), '~w = ~w', [Value, Hex]).
-value_trace(_, [], _).
+    !.
+value_steps(_, [], _).
 
 colour_value_name(Value, Name) :-
     atomic(Value),
@@ -955,13 +972,6 @@ initialise(TI, Name:[name], Selection:[name], Msg:[code]*) :->
              send(TI, append, menu_item(Theme, @default, Label))
            )),
     send(TI, selection, Selection).
-
-theme_label(Theme, Label) :-
-    atom_concat(Theme, ' theme', Label0),
-    sub_atom(Label0, 0, 1, _, First),
-    sub_atom(Label0, 1, _, 0, Rest),
-    upcase_atom(First, Up),
-    atom_concat(Up, Rest, Label).
 
 selection(TI, Selection:[name]) :->
     "Select a theme; @default follows the desktop"::

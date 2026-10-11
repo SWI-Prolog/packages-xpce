@@ -420,6 +420,97 @@ display.theme: dark
 \end{code}
 \end{itemlist}
 
+\paragraph{The theme editor}		\label{sec:themeeditor}
+
+\index{theme editor}%
+The theme editor creates and changes themes interactively.  It is
+started from \emph{Settings/Theme/Edit theme \ldots} of the IDE tools
+or using theme_editor/0 or theme_editor/1 from library
+\pllib{pce_theme_editor}.  Without argument, it edits the active theme.
+If this is a theme of the user, a file in the user configuration
+directory, the editor edits it.  Otherwise, e.g., for the \const{light}
+or \const{dark} theme that come with SWI-Prolog, it asks for the name of
+a new theme that is based on the active theme (see
+\secref{themevariations}).  \emph{New theme \ldots} creates a new theme
+based on any of the available themes.
+
+While editing, the theme exists in memory and is the active theme, so
+all windows show the effect of every change immediately.  The theme
+only becomes a file when it is saved.  The editor shows all
+\jargon{settings} a theme can have in a list on the left:
+
+\begin{itemlist}
+    \item [Colours]
+The theme colours (see below), grouped as \emph{User interface},
+\emph{Terminal colours}, \emph{Development tools} and \emph{PceEmacs
+syntax}.
+    \item [Console]
+The colours and style of the messages of the Prolog console by
+message class, as defined by prolog:console_color/3.
+    \item [Online help]
+The styles of the online help (help/1) in the console, as defined by
+the hook pldoc_style:theme/4.
+\end{itemlist}
+
+The menus above the list select a group and the settings that this
+theme changes (\emph{Changed}) or that have an issue (\emph{Issues}).
+The field next to them filters the list using a regular expression on
+the name and description.  The status column shows a pencil for a
+setting that the theme changes and a symbol for the most severe issue
+of a colour: an error, a warning or information, e.g., the theme
+defines a colour to the value it would have anyway.  The tooltip of a
+row explains its status.
+
+Selecting a setting shows it on the right.  For a colour, these are:
+
+\begin{itemlist}
+    \item [Value]
+The \emph{Theme \ldots} button selects another theme colour, such that
+the colour follows that colour.  \emph{Colour \ldots} opens the colour
+editor, which shows a colour wheel, sliders for hue, saturation and
+value and for red, green and blue, and the named colours closest to
+the current colour.  Clicking a named colour uses it.  Every change is
+shown in all windows immediately.  \emph{Ok} keeps the colour and
+\emph{Cancel} restores the setting as it was.  \emph{Use inherited
+value} removes the setting from the theme, such that it uses the value
+of its base theme.
+    \item [Derivation]
+How the colour gets its value: the steps from the theme colour through
+other theme colours to a system colour or an RGB value, and the theme
+that defines each step.  Theme colours in the steps are links that
+select that colour.
+    \item [Used for]
+Samples of the user interface that use the colour, such as a button, a
+selected item of a list, a few lines of Prolog code with a syntax
+colour or a terminal with a hyperlink, and the class variables whose
+default refers to the colour.  Documented class variables link to their
+description.  The samples change with the colour.
+\end{itemlist}
+
+The style of a console message class is edited using menus for the
+foreground and background colour and toggles for bold, italic,
+underline and faint, or by typing the list of attributes of
+ansi_format/3.  \emph{Other \ldots} in the colour menus opens the
+colour editor with the 256 colours of the terminal: selecting one of
+these uses \term{fg8}{N} or \term{bg8}{N}, any other colour uses the
+24-bit colour.  The styles of the online help are edited the same way,
+but use the CSS properties of pldoc_style:theme/4.
+
+\emph{Save} writes the theme to
+\file{lib/theme/}\arg{Name}\file{.pl} in the user configuration
+directory (see the Prolog file search path \const{user_app_config}),
+which makes it available as any other theme.  The file only defines
+the settings the theme changes and declares its base using
+prolog:theme_base/2.  If the file exists, only the values that changed
+are replaced and new settings are added after a similar one, such that
+comments and the layout of the file are preserved.  \emph{Save as \ldots}
+saves the theme under another name, \emph{Revert} undoes the changes
+since it was saved and \emph{Edit theme file} opens the file in the
+editor.  Closing the editor with unsaved changes asks to save them.
+To use a saved theme in a new session, select it using the
+\emph{Settings/Theme} menu, \exam{swipl -Dtheme=}\arg{Name} or
+\const{display.theme} as described above.
+
 \paragraph{Theme colours}
 
 A \idx{theme colour} is an instance of class \class{theme_colour}, a
@@ -527,6 +618,34 @@ After changing a theme file, use make/0 and apply_theme/1 to see the
 result.  A theme file may also define the colours of the Prolog console
 using prolog:console_color/3, as \file{library(theme/dark)} does.
 
+\paragraph{Variations of a theme}	\label{sec:themevariations}
+
+A theme can be a variation of another theme, its \jargon{base}, using
+the hook prolog:theme_base/2.  It uses the theme colours, console
+colours and online help styles of its base that it does not define
+itself.  A variation of the \const{light} or \const{dark} theme thus
+defines only the colours it changes:
+
+\begin{code}
+:- module(prolog_theme_my_dark, []).
+:- use_module(library(theme/dark)).
+:- multifile
+    prolog:theme/1,
+    prolog:theme_base/2,
+    pce_theme:colour/3.
+
+prolog:theme(my_dark).
+prolog:theme_base(my_dark, dark).
+
+pce_theme:colour(my_dark, syntax_comment, '#6a9955').
+\end{code}
+
+The roles of a theme that is based on another theme always use the
+value of the theme rather than the system colour.  Thus, if
+\const{my_dark} defines \const{ui_window_background}, this colour is
+also used on a dark desktop.  Roles that it inherits from \const{dark}
+follow the desktop as described above.
+
 \paragraph{Theme colours of an application}
 
 An application that wants its colours to follow the theme declares
@@ -608,6 +727,10 @@ Declare the theme colours of an application.  \arg{List} is a list of
 Define the theme colour \arg{Name} from a colour chosen by the user.
     \predicate{check_theme}{1}{+Theme}
 Report problems with the colours defined by \arg{Theme}.
+    \predicate{create_theme}{2}{+Theme, +Base}
+Create \arg{Theme} in memory as a variation of \arg{Base}.  Its
+settings are changed using set_theme_setting/2 and
+reset_theme_setting/2.  This is used by the theme editor.
 \end{description}
 
 The console colours of a theme, prolog:console_color/3, follow the

@@ -55,7 +55,10 @@
 :- autoload(library(pce_image), [pce_image_directory/1]).
 :- autoload(library(threadutil), [tdebug/0]).
 :- autoload(library(pce_theme),
-            [select_theme/1, current_theme_selection/1, available_theme/1]).
+            [ select_theme/1, current_theme_selection/1, available_theme/1,
+              edited_theme/2, theme_label/2
+            ]).
+:- autoload(library(pce_theme_editor), [theme_editor/0]).
 
 /** <module> SWI-Prolog IDE controller
 
@@ -435,24 +438,38 @@ theme(_IDE, Theme:name) :->
     "Select the colour theme"::
     select_theme(Theme).
 
-update_theme_menu(_IDE, Popup:popup) :->
+edit_theme(_IDE) :->
+    "Open the theme editor"::
+    theme_editor.
+
+update_theme_menu(IDE, Popup:popup) :->
     "Offer the available themes and tick the current one"::
     send(Popup, clear),
     send(Popup, append,
          menu_item(system, @default, 'Follow the desktop', @on)),
-    forall(available_theme(Theme),
-           ( atom_concat(Theme, ' theme', Label0),
-             upcase_first(Label0, Label),
+    forall(menu_theme(Theme),
+           ( theme_label(Theme, Label),
              send(Popup, append, menu_item(Theme, @default, Label))
            )),
+    send(Popup?members?tail, end_group, @on),
+    send(Popup, append,
+         menu_item(edit_theme, message(IDE, edit_theme), 'Edit theme…')),
     current_theme_selection(Selection),
-    send(Popup, selection, Selection).
+    (   get(Popup, member, Selection, _)
+    ->  send(Popup, selection, Selection)
+    ;   true
+    ).
 
-upcase_first(In, Out) :-
-    sub_atom(In, 0, 1, _, First),
-    sub_atom(In, 1, _, 0, Rest),
-    upcase_atom(First, Up),
-    atom_concat(Up, Rest, Out).
+%   menu_theme(-Theme)
+%
+%   Themes offered by the menu: the available themes and the themes
+%   created by the theme editor.
+
+menu_theme(Theme) :-
+    available_theme(Theme).
+menu_theme(Theme) :-
+    edited_theme(Theme, _),
+    \+ available_theme(Theme).
 
 update_tool_placement_menu(IDE, Popup:popup) :->
     "Tick where a tool goes now"::

@@ -42,14 +42,30 @@
             adaptive_colour/3,          % +Name, +Spec, +Reference
             current_theme/1,            % -Theme
             syntax_colour_name/3,       % +Class, +Attribute, -Name
+            syntax_colour/3,            % ?Name, -Class, -Default
             check_theme/1,              % +Theme
             load_theme_libraries/0,
             theme_issues/2,             % +Theme, -Issues
-            theme_colour_origin/2       % +Name, -Origin
+            issue_level/2,              % +Issue, -Level
+            theme_label/2,              % +Theme, -Label
+            theme_colour_origin/2,      % +Name, -Origin
+            theme_colour_value/4,       % +Theme, +Name, -Value, -Source
+            theme_ancestor/2,           % +Theme, -Ancestor
+            create_theme/2,             % +Theme, +Base
+            create_theme/3,             % +Theme, +Base, +Settings
+            edited_theme/2,             % ?Theme, ?Base
+            semantic_colour_name/2,     % ?Name, ?Default
+            set_theme_setting/2,        % +Theme, +Setting
+            reset_theme_setting/2,      % +Theme, +Setting
+            theme_setting/2,            % ?Theme, ?Setting
+            discard_theme/1             % +Theme
           ]).
 :- use_module(library(pce)).
-:- autoload(library(apply), [maplist/3, exclude/3]).
-:- autoload(library(error), [must_be/2, existence_error/2]).
+:- autoload(library(apply), [maplist/3, exclude/3, foldl/4]).
+:- autoload(library(error),
+            [ must_be/2, existence_error/2, permission_error/3,
+              domain_error/2
+            ]).
 :- autoload(library(lists), [member/2, append/2, append/3]).
 :- autoload(library(ordsets), [ord_subtract/3]).
 :- autoload(library(pairs), [pairs_keys/2, group_pairs_by_key/2]).
@@ -85,18 +101,41 @@ A theme is a set of colour/3 facts that map a semantic colour name to a
 value.  Names a theme does not map keep their `light` value.  Theme
 files therefore do not change anything when they are loaded and
 apply_theme/1 can switch between themes at any time.
+
+A theme may be based on another theme using prolog:theme_base/2.  It
+uses the values of its base theme for the names it does not map.  For
+example, a theme may be the `dark` theme with different colours for
+PceEmacs.
+
+The `ui_<role>` colours are special.  If the theme is as dark or as
+light as the desktop, they use the colours of the desktop, the system
+colours `sys_<role>`, rather than the values of the theme.  This applies
+to the values of themes that are not based on another theme, such as
+`light` and `dark`.  A theme that is based on another theme uses its
+own values for these colours, which allows a user to override the
+desktop colours.
+
+The theme editor defines a new theme in memory using create_theme/2
+and set_theme_setting/2.  Such a theme can be applied as any other
+theme, so the user can see the effect of each change.
 */
 
 :- multifile
     semantic_colour/3,                  % ?Name, ?Default, ?Comment
-    colour/3.                           % ?Theme, ?Name, ?Value
+    colour/3,                           % ?Theme, ?Name, ?Value
+    prolog:theme/1,                     % ?Theme
+    prolog:theme_base/2,                % ?Theme, ?Base
+    prolog:console_color/3,             % ?Theme, ?Class, ?Attributes
+    pldoc_style:theme/4.                % ?Theme, ?Element, ?Cond, ?CSS
 
 :- dynamic
     adaptive_colour_/3,                 % Name, Spec, Reference
     theme_selection_/1,
     builtin_colours_/1,
     declared_colour/3,                  % Name, Default, Module
-    declared_summary/2.                 % Name, Summary
+    declared_summary/2,                 % Name, Summary
+    edited_theme_/2,                    % Theme, Base
+    edited_setting_/2.                  % Theme, Setting
 
 :- meta_predicate
     theme_colours(:).
@@ -301,15 +340,25 @@ update_theme(Theme0) :-
     with_mutex(pce_theme, update_colours(Theme)).
 
 update_colours(Theme) :-
+    matches_system_bool(Theme, Match),
+    forall(semantic_colour_name(Name, _),
+           update_colour(Theme, Match, Name)).
+
+%   update_colour(+Theme, +MatchesSystem, +Name)
+%
+%   Set the theme colour Name to its value in Theme.  Other theme
+%   colours refer to it by name, so they need no update.
+
+update_colour(Theme, Match, Name) :-
+    theme_value(Theme, Match, Name, Value),
+    colour_summary(Name, Summary),
+    new(_, theme_colour(Name, Value, Summary)).
+
+matches_system_bool(Theme, Match) :-
     (   matches_system(Theme)
     ->  Match = true
     ;   Match = false
-    ),
-    forall(semantic_colour_name(Name, _),
-           ( theme_value(Theme, Match, Name, Value),
-             colour_summary(Name, Summary),
-             new(_, theme_colour(Name, Value, Summary))
-           )).
+    ).
 
 %!  colour_summary(+Name, -Summary) is det.
 %
@@ -325,6 +374,7 @@ colour_summary(Name, Summary) :-
     !,
     Summary = Summary0.
 colour_summary(Name, Summary) :-
+    sub_atom(Name, 0, _, _, syntax_),
     syntax_colour(Name, Class, _),
     !,
     (   sub_atom(Name, _, _, 0, '_bg')
@@ -341,9 +391,10 @@ colour_summary(_, @default).
 %
 %   Value is the value of the semantic colour Name in Theme.  The
 %   _roles_ `ui_<role>` are the system colours `sys_<role>` if the
-%   brightness of the theme matches the system colours.  Otherwise the
-%   theme replaces them, for example to use a dark theme on a light
-%   desktop.
+%   brightness of the theme matches the system colours and the value
+%   comes from a theme that follows the desktop (see
+%   follows_desktop/1).  Otherwise the theme replaces them, for example
+%   to use a dark theme on a light desktop.
 
 theme_value(Theme, Match, Name, Value) :-
     adaptive_colour_(Name, _, _),
@@ -352,9 +403,10 @@ theme_value(Theme, Match, Name, Value) :-
 theme_value(Theme, Match, Name, Value) :-
     role(Name, System),
     !,
-    (   Match == true
-    ->  Value = System
-    ;   colour(Theme, Name, Value0)
+    (   theme_definition(Theme, Name, Definer, Value0),
+        \+ ( Match == true,
+             follows_desktop(Definer)
+           )
     ->  Value = Value0
     ;   Value = System
     ).
@@ -371,7 +423,8 @@ theme_value(Theme, _, Name, Value) :-
 %       `sys_<role>`.  Why is `matches` if Theme is as dark as the
 %       desktop or `undefined` if Theme does not define Name.
 %     - theme(Theme)
-%       The value is defined by Theme.
+%       The value is defined by Theme, which is the current theme or
+%       a theme it is based on.
 %     - adaptive(Reference)
 %       The value is a colour chosen by the user, adapted to the
 %       brightness of Reference.  See adaptive_colour/3.
@@ -413,14 +466,16 @@ colour_origin(_, _, Name, adaptive(Reference)) :-
 colour_origin(Theme, Match, Name, Origin) :-
     role(Name, _),
     !,
-    (   Match == true
-    ->  Origin = desktop(Theme, matches)
-    ;   colour(Theme, Name, _)
-    ->  Origin = theme(Theme)
+    (   theme_definition(Theme, Name, Definer, _)
+    ->  (   Match == true,
+            follows_desktop(Definer)
+        ->  Origin = desktop(Theme, matches)
+        ;   Origin = theme(Definer)
+        )
     ;   Origin = desktop(Theme, undefined)
     ).
-colour_origin(Theme, _, Name, theme(Theme)) :-
-    colour(Theme, Name, _),
+colour_origin(Theme, _, Name, theme(Definer)) :-
+    theme_definition(Theme, Name, Definer, _),
     !.
 colour_origin(_, _, Name, default(Source)) :-
     default_source(Name, Source).
@@ -448,6 +503,15 @@ role(Name, System) :-
     atom_concat(sys_, Role, System),
     atom_concat(ui_, Role, Name).
 
+%!  follows_desktop(+Theme) is semidet.
+%
+%   True if the `ui_<role>` values of Theme are only used if the
+%   desktop does not match the theme.  This holds for themes that are
+%   not based on another theme.
+
+follows_desktop(Theme) :-
+    \+ prolog:theme_base(Theme, _).
+
 %!  matches_system(+Theme) is semidet.
 %
 %   True if Theme and the system colours are both dark or both light.
@@ -455,7 +519,7 @@ role(Name, System) :-
 %   does not define `ui_window_background` matches any system.
 
 matches_system(Theme) :-
-    (   colour(Theme, ui_window_background, Value)
+    (   theme_definition(Theme, ui_window_background, _, Value)
     ->  dark_colour(Value, ThemeDark),
         dark_colour(sys_window_background, SystemDark),
         ThemeDark == SystemDark
@@ -535,6 +599,16 @@ current_theme_selection(Selection) :-
     ;   Selection = system
     ).
 
+%!  theme_label(+Theme, -Label) is det.
+%
+%   Label is the text for Theme in a menu, e.g., `My light theme` for
+%   `my_light`.  See `name <-label_name`.
+
+theme_label(Theme, Label) :-
+    get(Theme, label_name, Name),
+    get(Name, value, Text),
+    atom_concat(Text, ' theme', Label).
+
 %!  available_theme(?Theme) is nondet.
 %
 %   True when Theme can be selected.  These are `light` and the themes
@@ -576,22 +650,106 @@ canonical_theme(auto, Theme) :- !,
     display_theme(Theme).
 canonical_theme(Theme, Theme).
 
-load_theme(light) :-
-    !.
+%   load_theme(+Theme)
+%
+%   Load the theme files of Theme and the themes it is based on.  The
+%   base of a theme is known after loading its file, which is why we
+%   load each theme while enumerating the ancestors.
+
 load_theme(Theme) :-
+    forall(theme_ancestor(Theme, Ancestor),
+           load_theme_file(Ancestor)),
+    (   known_theme(Theme)
+    ->  true
+    ;   existence_error(theme, Theme)
+    ).
+
+load_theme_file(light) :-
+    !.
+load_theme_file(Theme) :-
+    prolog:theme(Theme),                % defined, e.g., edited
+    !.
+load_theme_file(Theme) :-
     exists_source(library(theme/Theme)),
     !,
     use_module(library(theme/Theme)).
-load_theme(Theme) :-
+load_theme_file(_).
+
+known_theme(light) :-
+    !.
+known_theme(Theme) :-
+    exists_source(library(theme/Theme)),
+    !.
+known_theme(Theme) :-
     colour(Theme, _, _),
     !.
-load_theme(Theme) :-
-    existence_error(theme, Theme).
+known_theme(Theme) :-
+    prolog:theme_base(Theme, _),
+    !.
+known_theme(Theme) :-
+    edited_theme_(Theme, _),
+    !.
+
+%   defined_theme(+Theme)
+%
+%   True if Theme is defined.  Unlike known_theme/1, this is not the
+%   case if Theme only has a theme file that is not loaded.
+
+defined_theme(light).
+defined_theme(Theme) :-
+    prolog:theme(Theme).
+defined_theme(Theme) :-
+    colour(Theme, _, _).
+defined_theme(Theme) :-
+    edited_theme_(Theme, _).
+
+%!  theme_ancestor(+Theme, -Ancestor) is nondet.
+%
+%   Ancestor is Theme or a theme it is based on, nearest first.  See
+%   prolog:theme_base/2.
+
+theme_ancestor(Theme, Ancestor) :-
+    '$messages':theme_ancestor(Theme, Ancestor).
+
+%!  theme_definition(+Theme, +Name, -Definer, -Value) is semidet.
+%
+%   Value is the value of the semantic colour Name that is defined by
+%   Theme or the nearest theme it is based on, Definer.
+
+theme_definition(Theme, Name, Definer, Value) :-
+    theme_ancestor(Theme, Definer),
+    colour(Definer, Name, Value),
+    !.
+
+%!  theme_colour_value(+Theme, +Name, -Value, -Source) is semidet.
+%
+%   Value is the value of the semantic colour Name in Theme according
+%   to the definitions of the theme.  Source is theme(Definer) if Theme
+%   or a theme it is based on, Definer, defines Name and `default` if
+%   Value is the `light` value.  Note that the `ui_<role>` colours may
+%   use the system colours rather than Value.  See theme_value/4.
+
+theme_colour_value(Theme, Name, Value, theme(Definer)) :-
+    theme_definition(Theme, Name, Definer, Value),
+    !.
+theme_colour_value(_, Name, Value, default) :-
+    default_colour(Name, Value).
 
 colour_value(Theme, Name, Value) :-
-    colour(Theme, Name, Value),
+    theme_definition(Theme, Name, _, Value),
     !.
 colour_value(_, Name, Value) :-
+    default_colour(Name, Value).
+
+%   inherited_value(+Theme, +Name, -Value)
+%
+%   Value is the value of Name if Theme would not define it.
+
+inherited_value(Theme, Name, Value) :-
+    prolog:theme_base(Theme, Base),
+    !,
+    colour_value(Base, Name, Value).
+inherited_value(_, Name, Value) :-
     default_colour(Name, Value).
 
 default_colour(Name, Value) :-
@@ -650,6 +808,12 @@ attribute_suffix(background, [bg]).
 %   classes.  If two classes map to the same name, the first wins, as
 %   syntax_colour/2 is used with first-match semantics.
 
+syntax_colour(Name, Class, Default) :-
+    atom(Name),
+    !,
+    once(syntax_colour_(Name, Class0, Default0)),  % the first wins
+    Class = Class0,
+    Default = Default0.
 syntax_colour(Name, Class, Default) :-
     findall(N-(C-D), syntax_colour_(N, C, D), Pairs),
     first_per_key(Pairs, Unique),
@@ -797,6 +961,224 @@ fixed_theme :-
 
 
 		 /*******************************
+		 *         EDITED THEMES	*
+		 *******************************/
+
+%!  create_theme(+Theme, +Base) is det.
+%
+%   Create Theme as a new theme in memory that is based on Base.  Theme
+%   initially has the same settings as Base.  Use set_theme_setting/2
+%   to change them and apply_theme/1 to use the theme.  Base is `none`
+%   to create a theme that is not based on another theme.  Such a
+%   theme uses the `light` values for the semantic colours it does not
+%   define and the desktop colours for the `ui_<role>` colours if it
+%   matches the desktop.
+%
+%   @error permission_error(create, theme, Theme) if Theme is defined.
+
+create_theme(Theme, Base) :-
+    create_theme(Theme, Base, []).
+
+%!  create_theme(+Theme, +Base, +Settings) is det.
+%
+%   As create_theme/2, setting the settings of Settings as
+%   set_theme_setting/2.  A setting that is not valid is ignored after
+%   printing a warning.  If a setting appears more than once, the first
+%   is used.  If Theme is the active theme, e.g., because Theme is
+%   loaded from a file for editing, the windows are updated.
+
+create_theme(Theme, Base, Settings) :-
+    must_be(atom, Theme),
+    must_be(atom, Base),
+    (   Base == none
+    ->  true
+    ;   load_theme(Base)
+    ),
+    with_mutex(pce_theme,
+               (   defined_theme(Theme)
+               ->  permission_error(create, theme, Theme)
+               ;   assertz(edited_theme_(Theme, Base))
+               )),
+    foldl(add_setting(Theme), Settings, [], _),
+    current_theme(Current),
+    (   theme_ancestor(Current, Theme)
+    ->  with_mutex(pce_theme, update_colours(Current)),
+        send(@display_manager, colours_changed)
+    ;   true
+    ).
+
+add_setting(Theme, Setting, Keys0, Keys) :-
+    setting_key(Setting, Key),
+    (   member(Key0, Keys0),
+        Key0 =@= Key
+    ->  Keys = Keys0
+    ;   catch(valid_setting(Theme, Setting), E,
+              ( print_message(warning, E),
+                fail
+              ))
+    ->  assertz(edited_setting_(Theme, Setting)),
+        Keys = [Key|Keys0]
+    ;   Keys = Keys0
+    ).
+
+%!  set_theme_setting(+Theme, +Setting) is det.
+%
+%   Change a setting of the theme Theme that was created using
+%   create_theme/2.  Setting is one of
+%
+%     - colour(Name, Value)
+%       The semantic colour Name has Value.  See colour/3.
+%     - console(Class, Attributes)
+%       The console colours for Class.  See prolog:console_color/3.
+%     - pldoc(Element, Condition, CSS)
+%       The style of the online help.  See pldoc_style:theme/4.
+%
+%   If Theme is the active theme or a theme the active theme is based
+%   on, the windows are updated.
+
+set_theme_setting(Theme, Setting) :-
+    must_be_edited_theme(Theme),
+    valid_setting(Theme, Setting),
+    setting_key(Setting, Key),
+    with_mutex(pce_theme,
+               ( retract_setting(Theme, Key),
+                 assertz(edited_setting_(Theme, Setting))
+               )),
+    setting_changed(Theme, Setting).
+
+%!  reset_theme_setting(+Theme, +Setting) is det.
+%
+%   Remove a setting from the theme Theme that was created using
+%   create_theme/2, such that Theme uses the setting of its base theme.
+%   Setting is as for set_theme_setting/2.  The value is ignored.
+
+reset_theme_setting(Theme, Setting) :-
+    must_be_edited_theme(Theme),
+    setting_key(Setting, Key),
+    with_mutex(pce_theme, retract_setting(Theme, Key)),
+    setting_changed(Theme, Setting).
+
+%!  theme_setting(?Theme, ?Setting) is nondet.
+%
+%   True when Setting is set for the theme Theme that was created using
+%   create_theme/2.  The settings are enumerated in the order they were
+%   first set.
+
+theme_setting(Theme, Setting) :-
+    edited_setting_(Theme, Setting).
+
+%!  discard_theme(+Theme) is det.
+%
+%   Remove the theme Theme that was created using create_theme/2.  If
+%   Theme is active, apply its base theme or, if it has no base, the
+%   `light` theme.
+
+discard_theme(Theme) :-
+    must_be_edited_theme(Theme),
+    edited_theme_(Theme, Base),
+    current_theme(Current),
+    with_mutex(pce_theme,
+               ( retractall(edited_setting_(Theme, _)),
+                 retractall(edited_theme_(Theme, _))
+               )),
+    (   Current == Theme
+    ->  (   Base == none
+        ->  apply_theme(light)
+        ;   apply_theme(Base)
+        )
+    ;   true
+    ).
+
+%!  edited_theme(?Theme, ?Base) is nondet.
+%
+%   True when Theme was created using create_theme/2 as a variation of
+%   Base.
+
+edited_theme(Theme, Base) :-
+    edited_theme_(Theme, Base).
+
+must_be_edited_theme(Theme) :-
+    must_be(atom, Theme),
+    (   edited_theme_(Theme, _)
+    ->  true
+    ;   existence_error(edited_theme, Theme)
+    ).
+
+valid_setting(Theme, colour(Name, Value)) :-
+    !,
+    must_be(atom, Name),
+    must_be(atom, Value),
+    (   once(semantic_colour_name(Name, _))
+    ->  true
+    ;   existence_error(semantic_colour, Name)
+    ),
+    (   valid_value(Theme, Value)
+    ->  true
+    ;   domain_error(colour, Value)
+    ).
+valid_setting(_, console(Class, Attributes)) :-
+    !,
+    must_be(nonvar, Class),
+    must_be(list, Attributes).
+valid_setting(_, pldoc(Element, Condition, CSS)) :-
+    !,
+    must_be(atom, Element),
+    must_be(nonvar, Condition),
+    must_be(list, CSS).
+valid_setting(_, Setting) :-
+    domain_error(theme_setting, Setting).
+
+%   setting_key(+Setting, -Key)
+%
+%   Key identifies the setting, i.e., a setting with a variant Key
+%   replaces it.
+
+setting_key(colour(Name, _), colour(Name)).
+setting_key(console(Class, _), console(Class)).
+setting_key(pldoc(Element, Condition, _), pldoc(Element, Condition)).
+
+retract_setting(Theme, Key) :-
+    forall(( edited_setting_(Theme, Setting),
+             setting_key(Setting, Key0),
+             Key0 =@= Key
+           ),
+           retract(edited_setting_(Theme, Setting))).
+
+%   setting_changed(+Theme, +Setting)
+%
+%   Update the windows if a colour of the active theme changed.  The
+%   console and online help use the new settings when they are used.
+
+setting_changed(Theme, colour(Name, _)) :-
+    current_theme(Current),
+    theme_ancestor(Current, Theme),
+    !,
+    matches_system_bool(Current, Match),
+    with_mutex(pce_theme, update_colour(Current, Match, Name)),
+    send(@display_manager, colours_changed).
+setting_changed(_, _).
+
+%   The settings of edited themes are clauses of the hooks that define
+%   the themes.
+
+prolog:theme(Theme) :-
+    edited_theme_(Theme, _).
+
+prolog:theme_base(Theme, Base) :-
+    edited_theme_(Theme, Base),
+    Base \== none.
+
+colour(Theme, Name, Value) :-
+    edited_setting_(Theme, colour(Name, Value)).
+
+prolog:console_color(Theme, Class, Attributes) :-
+    edited_setting_(Theme, console(Class, Attributes)).
+
+pldoc_style:theme(Theme, Element, Condition, CSS) :-
+    edited_setting_(Theme, pldoc(Element, Condition, CSS)).
+
+
+		 /*******************************
 		 *            CHECK		*
 		 *******************************/
 
@@ -844,6 +1226,11 @@ load_theme_libraries :-
     forall(theme_library(Lib),
            use_module(Lib, [])).
 
+%!  issue_level(+Issue, -Level) is det.
+%
+%   Level is the severity of an issue of theme_issues/2: `error`,
+%   `warning` or `informational`.
+
 issue_level(missing(_),        warning).
 issue_level(unknown(_),        error).
 issue_level(duplicate(_),      error).
@@ -857,9 +1244,10 @@ issue_level(collision(_,_),    warning).
 %   Each issue is one of:
 %
 %     - missing(Name)
-%       Theme does not define the semantic colour Name.  It uses the
-%       `light` value, which is likely wrong for a dark theme.  Not
-%       reported for the `light` theme.
+%       Neither Theme nor a theme it is based on defines the semantic
+%       colour Name.  It uses the `light` value, which is likely wrong
+%       for a dark theme.  Not reported for the `light` theme and the
+%       themes based on it.
 %     - unknown(Name)
 %       Theme defines Name, which is not a semantic colour.
 %     - duplicate(Name)
@@ -867,7 +1255,8 @@ issue_level(collision(_,_),    warning).
 %     - invalid(Name, Value)
 %       Value is not a semantic colour nor a known colour.
 %     - redundant(Name)
-%       Theme defines Name as its `light` value.
+%       Theme defines Name as the value it would have otherwise: the
+%       value of its base theme or the `light` value.
 %     - collision(Name, Classes)
 %       Several syntax highlighting classes map to Name and have
 %       different values.
@@ -884,9 +1273,10 @@ theme_issues(Theme0, Issues) :-
     pairs_keys(Defined, DefinedNames0),
     msort(DefinedNames0, DefinedNames),
     sort(DefinedNames, DefinedSet),
-    (   Theme == light
+    (   theme_ancestor(Theme, light)
     ->  Missing = []
-    ;   ord_subtract(Names, DefinedSet, MissingNames),
+    ;   ord_subtract(Names, DefinedSet, MissingNames0),
+        exclude(inherited(Theme), MissingNames0, MissingNames),
         maplist(wrap(missing), MissingNames, Missing)
     ),
     ord_subtract(DefinedSet, Names, UnknownNames),
@@ -899,11 +1289,17 @@ theme_issues(Theme0, Issues) :-
             ), Invalid),
     findall(redundant(N),
             ( member(N-V, Defined),
-              memberchk(N-V, Known)
+              memberchk(N-_, Known),
+              inherited_value(Theme, N, V0),
+              V0 == V
             ), Redundant),
     findall(collision(N, Classes), syntax_collision(N, Classes), Collision),
     append([Unknown, Duplicate, Invalid, Missing, Collision, Redundant],
            Issues).
+
+inherited(Theme, Name) :-
+    prolog:theme_base(Theme, Base),
+    theme_definition(Base, Name, _, _).
 
 wrap(Functor, Arg, Term) :-
     Term =.. [Functor, Arg].

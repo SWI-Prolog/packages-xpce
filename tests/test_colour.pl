@@ -430,11 +430,11 @@ test(editor_end_message, [Names-Ends == [blue]-[cancel]]) :-
     send(E, cancel),
     chain_list(L, Names),
     chain_list(Ends0, Ends).
-test(editor_wheel, [Name-H-S == '#00ff00'-120-100]) :-
+test(editor_wheel, [RGB-H-S == [0,255,0]-120-100]) :-
     new(E, colour_editor(red)),
     send(E, hue_saturation, 120, 100),
     get(E, current_colour, C),
-    get(C, name, Name),
+    maplist([Sel,V]>>get(C, Sel, V), [red,green,blue], RGB),
     get(E, value, hue, H),
     get(E, value, saturation, S),
     send(E, destroy).
