@@ -607,10 +607,19 @@ computeTerminalImage(TerminalImage ti)
 static status
 RedrawAreaTerminalImage(TerminalImage ti, Area a)
 { int x, y, w, h;
+  Any obg;
 
   initialiseDeviceGraphical(ti, &x, &y, &w, &h);
 
+  /* A terminal may share its window with other graphicals.  rlc_redraw()
+   * paints whole lines, including a partial one at the bottom, and sets
+   * the background: keep both to the terminal.
+   */
+  obg = r_background(ti->background);
+  d_clip(x, y, w, h);
   rlc_redraw(ti->data, x, y, w, h);
+  d_clip_done();
+  r_background(obg);
 
   return RedrawAreaGraphical(ti, a);
 }
@@ -7009,8 +7018,10 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
     tl->changed = CHG_RESET;
 
     if ( l == b->last )			/* clear to end of window */
-    { int yb = y+b->ch * (pl+1);
-      r_clear(x, yb, w, h-yb);
+    { int yb = y+b->ch * (pl+1);	/* both in window coordinates */
+
+      if ( y+h > yb )
+	r_clear(x, yb, w, y+h-yb);
       break;
     }
     l = rlc_view_next(b, l);		/* a closed fold is walked over */
