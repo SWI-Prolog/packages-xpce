@@ -92,7 +92,6 @@ apply_theme/1 can switch between themes at any time.
     colour/3.                           % ?Theme, ?Name, ?Value
 
 :- dynamic
-    current_theme_/1,
     adaptive_colour_/3,                 % Name, Spec, Reference
     theme_selection_/1,
     builtin_colours_/1,
@@ -257,26 +256,43 @@ rgb_name(rgb(R,G,B), Name) :-
 
 %!  current_theme(-Theme) is det.
 %
-%   Theme is the active theme.  This is `light` if no theme has been
-%   applied.
+%   Theme is the active theme.  This is the value of the Prolog flag
+%   `theme`, where `default` is `light`.
 
 current_theme(Theme) :-
-    current_theme_(Theme0),
-    !,
-    Theme = Theme0.
-current_theme(light).
+    current_prolog_flag(theme, Theme0),
+    canonical_theme(Theme0, Theme).
 
 %!  apply_theme(+Theme) is det.
 %
-%   Make Theme the active theme.  This loads library(theme/Theme) if
-%   it exists, sets the value of all semantic colours and redraws all
-%   windows.  The `light` theme uses the default values of
-%   the semantic colours and does not load library(theme/light), which
-%   only defines colours for the Prolog console.
+%   Make Theme the active theme by setting the Prolog flag `theme`.
+%   Our prolog:theme_hook/1 loads library(theme/Theme) if it exists,
+%   sets the value of all semantic colours and redraws all windows.
+%   If Theme is already the active theme, we apply it again, as the
+%   system colours may have changed.
 
-apply_theme(Theme) :-
+apply_theme(Theme0) :-
+    must_be(atom, Theme0),
+    canonical_theme(Theme0, Theme),
+    (   current_prolog_flag(theme, Theme)
+    ->  update_theme(Theme),
+        send(@display_manager, colours_changed)
+    ;   set_prolog_flag(theme, Theme)
+    ).
+
+%   The hook is called before the flag gets its new value, so
+%   current_theme/1 still returns the old theme while it runs.
+
+:- multifile
+    prolog:theme_hook/1.
+
+prolog:theme_hook(Theme) :-
     update_theme(Theme),
     send(@display_manager, colours_changed).
+
+%   The `light` theme uses the default values of the semantic colours
+%   and does not load library(theme/light), which only defines colours
+%   for the Prolog console.
 
 update_theme(Theme0) :-
     must_be(atom, Theme0),
@@ -285,8 +301,6 @@ update_theme(Theme0) :-
     with_mutex(pce_theme, update_colours(Theme)).
 
 update_colours(Theme) :-
-    retractall(current_theme_(_)),
-    assertz(current_theme_(Theme)),
     (   matches_system(Theme)
     ->  Match = true
     ;   Match = false
@@ -558,6 +572,8 @@ not_a_theme(light).
 not_a_theme(auto).
 
 canonical_theme(default, light) :- !.
+canonical_theme(auto, Theme) :- !,
+    display_theme(Theme).
 canonical_theme(Theme, Theme).
 
 load_theme(light) :-
@@ -719,20 +735,28 @@ builtin_colours(Pairs) :-
 %
 %   Select the initial theme and make the theme follow the system if
 %   the user did not fix the theme.  This runs when this library is
-%   loaded, which library(pce) does after setting up the theme.
+%   loaded.  If the Prolog flag `theme` names a theme, e.g., using
+%   ``-Dtheme=dark``, this is the selection of the user.  Otherwise
+%   we use a theme file loaded by the user or the theme of the desktop.
 
 :- public init_theme/0.
 :- initialization(init_theme).
 
 init_theme :-
-    initial_theme(Theme),
-    update_theme(Theme),
+    (   selected_theme(Theme)
+    ->  retractall(theme_selection_(_)),
+        assertz(theme_selection_(Theme))
+    ;   initial_theme(Theme)
+    ),
+    apply_theme(Theme),
     send(@display_manager, system_colours_message,
          message(@prolog, system_colours_changed)).
 
-initial_theme(Theme) :-
+selected_theme(Theme) :-
     current_prolog_flag(theme, Theme),
-    !.
+    Theme \== default,
+    Theme \== auto.
+
 initial_theme(Theme) :-
     catch(prolog:theme(Theme), error(_,_), fail),
     !.
@@ -767,9 +791,6 @@ fixed_theme :-
     theme_selection_(Selection),
     !,
     Selection \== system.
-fixed_theme :-
-    current_prolog_flag(theme, _),
-    !.
 fixed_theme :-
     get(@display, class_variable_value, theme, Theme),
     Theme \== @default.

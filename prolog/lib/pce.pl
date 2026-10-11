@@ -236,7 +236,6 @@ get_pce_version :-
 %   forall(on_load, true).   The default initializes xpce's theme.
 
 on_load :-
-    setup_theme,
     use_module(library(pce_theme), []).
 
 %!  run_on_load
@@ -245,35 +244,6 @@ on_load :-
 
 run_on_load :-
     forall(on_load, true).
-
-%!  setup_theme
-%
-%   Set the theme based on `@display<-theme`. This   is only used if the
-%   theme is not set  using  ``-Dtheme=<theme>``   or  a  theme file has
-%   already been loaded.
-
-setup_theme :-
-    current_prolog_flag(theme, _),
-    !.
-setup_theme :-
-    predicate_property(prolog:theme(_,_), multifile),
-    prolog:theme(_),
-    !.
-setup_theme :-
-    get(@display, theme, Theme),
-    !,
-    (   exists_source(library(theme/Theme))
-    ->  use_module(library(theme/Theme))
-    ;   Theme == default
-    ->  true
-    ;   print_message(warning, error(existence_error(theme, Theme),_))
-    ).
-setup_theme :-
-    current_prolog_flag(epilog, true),
-    !,
-    use_module(library(theme/light)).
-setup_theme.
-
 
 %!  init_pce
 %

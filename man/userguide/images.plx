@@ -524,7 +524,8 @@ The predicate check_theme/1 verifies a theme against the theme colours
 of xpce and the development tools.  It reports theme colours that are
 not defined, defined twice or unknown, and values that are not colours.
 After changing a theme file, use make/0 and apply_theme/1 to see the
-result.
+result.  A theme file may also define the colours of the Prolog console
+using prolog:console_color/3, as \file{library(theme/dark)} does.
 
 \paragraph{Theme colours of an application}
 
@@ -588,14 +589,17 @@ the documentation of the library for details.
 
 \begin{description}
     \predicate{apply_theme}{1}{+Theme}
-Make \arg{Theme} the active theme and redraw all windows.  This loads
-\file{library(theme/}\arg{Theme}\file{)} if it exists.
+Make \arg{Theme} the active theme and redraw all windows.  This sets
+the Prolog flag \prologflag{theme}, which loads
+\file{library(theme/}\arg{Theme}\file{)} if it exists.  Setting the flag
+directly using set_prolog_flag/2 has the same effect.
     \predicate{select_theme}{1}{+Theme}
 Select \arg{Theme} or, if \arg{Theme} is \const{system}, follow the
 desktop for the running session.  This is used by the Settings/Theme
 menu.
     \predicate{current_theme}{1}{-Theme}
-\arg{Theme} is the active theme.
+\arg{Theme} is the active theme: the value of the Prolog flag
+\prologflag{theme}, where \const{default} is \const{light}.
     \predicate{theme_colours}{1}{+List}
 Declare the theme colours of an application.  \arg{List} is a list of
 \arg{Name} \const{=} \arg{Value}, where \arg{Value} is the value in the
@@ -606,9 +610,8 @@ Define the theme colour \arg{Name} from a colour chosen by the user.
 Report problems with the colours defined by \arg{Theme}.
 \end{description}
 
-The console colours of a theme, prolog:console_color/2, only apply
-while the theme is active.  Text that is already written keeps its
-colours.
+The console colours of a theme, prolog:console_color/3, follow the
+active theme.  Text that is already written keeps its colours.
 
 
 \subsubsection{Display colour depth}		\label{sec:colourdepth}

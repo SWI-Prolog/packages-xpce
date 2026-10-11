@@ -141,6 +141,27 @@ test(current_theme, [Dark == test_dark, Light == light]) :-
     current_theme(Light).
 test(unknown_theme, error(existence_error(theme, test_no_such_theme))) :-
     apply_theme(test_no_such_theme).
+test(apply_sets_flag, Flag == test_dark) :-
+    apply_theme(test_dark),
+    current_prolog_flag(theme, Flag),
+    apply_theme(light).
+test(flag_applies, RGB == rgb(0,0,255)) :-
+    %  Setting the Prolog flag switches the theme through
+    %  prolog:theme_hook/1
+    apply_theme(light),
+    theme_colour(test_theme_fg, C),
+    set_prolog_flag(theme, test_dark),
+    colour_rgb(C, RGB),
+    apply_theme(light).
+test(flag_unknown, [Flag == light, RGB == rgb(255,0,0)]) :-
+    %  An unknown theme raises an error and keeps the old theme
+    apply_theme(light),
+    catch(set_prolog_flag(theme, test_no_such_theme),
+          error(existence_error(theme, test_no_such_theme), _),
+          true),
+    current_prolog_flag(theme, Flag),
+    theme_colour(test_theme_fg, C),
+    colour_rgb(C, RGB).
 test(system_colours_message, RGB == rgb(0,0,255)) :-
     %  The message installed by init_theme re-applies a fixed theme
     %  after the system colours are reloaded.
