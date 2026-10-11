@@ -168,6 +168,12 @@ unlink(IV) :->
     send(IV, send_super, unlink).
 
 
+%   The word list searches for the word being typed.  Rather than
+%   passing it the keys, which gets out of step as soon as the list
+%   rejects a character for which there is no word, it searches for the
+%   last word of the search string every time.  The list keeps the
+%   longest prefix of the word it has.
+
 typed_in_search_item(IV, Id:event_id, Current:char_array) :->
     "Handle typing in the search string"::
     get(IV, member, wordlist, WL),
@@ -177,15 +183,28 @@ typed_in_search_item(IV, Id:event_id, Current:char_array) :->
         send(List, clear),
         get(IV, manual, Manual),
         send(Manual, search_patterns, @nil)
-    ;   send(Current, suffix, ' ')
-    ->  send(WL, cancel_search)
     ;   Id == 13                    % return
     ->  true
-    ;   get(WL, key_binding, KB),
-        get(KB, function, Id, F),
-        F \== alert
-    ->  send(WL, typed, Id)
-    ;   true
+    ;   get(Current, value, Text),
+        last_word(Text, Word),
+        send(WL, cancel_search),
+        forall(sub_atom(Word, _, 1, _, Char),
+               ( char_code(Char, Code),
+                 ignore(send(WL, insert_self, 1, Code))
+               ))
+    ).
+
+%   last_word(+Text, -Word)
+%
+%   Word is the text after the last space in Text, which is '' if Text
+%   ends in a space.
+
+last_word(Text, Word) :-
+    (   sub_atom(Text, B, 1, _, ' '),
+        \+ ( sub_atom(Text, B2, 1, _, ' '), B2 > B )
+    ->  B1 is B+1,
+        sub_atom(Text, B1, _, 0, Word)
+    ;   Word = Text
     ).
 
 

@@ -17,6 +17,7 @@ test_libs(class_variable       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(class_variable_editor OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(doc_render           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_graphical   OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(man_search           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bool_item            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(cursor_item          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(help_message         OPTIONS ${XPCE_TEST_OPTIONS})
@@ -84,6 +85,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:class_variable_editor
                      xpce:doc_render
                      xpce:terminal_graphical
+                     xpce:man_search
                      xpce:bool_item
                      xpce:cursor_item
                      xpce:help_message
