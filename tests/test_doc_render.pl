@@ -40,6 +40,7 @@
 :- use_module(library(plunit)).
 :- use_module(library(doc/load)).
 :- use_module(doc(html)).
+:- use_module(doc(vfont)).
 
 /** <module> Test the HTML renderer of library(doc/load)
 */
@@ -74,6 +75,13 @@ box(B, space) :-
     get(B, width, W),
     W > 0.
 
+font_props(VF, Family-Style-Weight-Points) :-
+    get(VF, font, Font),
+    get(Font, family, Family),
+    get(Font, style, Style),
+    get(Font, weight, Weight),
+    get(Font, points, Points).
+
 :- begin_tests(doc_render).
 
 test(space_after_group,
@@ -86,4 +94,21 @@ test(space_after_link,
     boxes([element(p, [], [element(a, [href=x], [a]), ' b'])], Boxes).
 test(leading_space, true(\+ append(_, [space, text(a)|_], Boxes))) :-
     boxes([element(p, [], [' a b'])], Boxes).
+test(vfont_fixed, [Family-Points == mono-NormalPoints]) :-
+    %  Fixed-width text has the size of the text around it
+    get(@pce, convert, normal, font, Normal),
+    get(Normal, points, NormalPoints),
+    new(VF, vfont),
+    send(VF, fixed, @on),
+    font_props(VF, Family-_-_-Points).
+test(vfont_style, [Props == sans-italic-bold-Points]) :-
+    get(@pce, convert, normal, font, Normal),
+    get(Normal, points, NormalPoints),
+    Points is round(NormalPoints*1.5),
+    new(VF, vfont),
+    send(VF, slant, i),
+    send(VF, weight, bold),
+    send(VF, font_size, 3),
+    font_props(VF, Props).
+
 :- end_tests(doc_render).

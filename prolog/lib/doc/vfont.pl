@@ -41,8 +41,8 @@ that can be manipulated without having to  worry about the physical font
 that is available for satisfying the   specification.  The method <-font
 extracts the best match physical font.
 
-The initial font-map is rather limited, but may be expanded by the user
-using the multifile predicate
+The font is computed from these properties.  A virtual font may be
+mapped to a specific font using the multifile predicate
 
         vfont:font_map(Family,          % an atom
                        Encoding,        % an atom
@@ -53,6 +53,8 @@ using the multifile predicate
                        Font).           % Resulting font
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+:- multifile
+    font_map/7.
 
                  /*******************************
                  *         CLASS VFONT          *
@@ -84,9 +86,11 @@ font(VF, Font:font) :<-
     get(VF, weight, W),
     get(VF, fixed, Fixed),
     get(VF, size, Size),
-    font(Fam, Enc, Slant, W, Fixed, Size, Font0),
-    catch(get(@pce, convert, Font0, font, Font), _, fail),
-    !.
+    (   font_map(Fam, Enc, Slant, W, Fixed, Size, Font0),
+        catch(get(@pce, convert, Font0, font, Font1), _, fail)
+    ->  Font = Font1
+    ;   font(Fam, Slant, W, Fixed, Size, Font)
+    ).
 
 font_size(VF, Diff:int) :->
     "Change relative size of font"::
@@ -94,29 +98,42 @@ font_size(VF, Diff:int) :->
     Size is max(1, min(7, Size0+Diff)),
     send(VF, size, Size).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Font table.  Currently very incomplete.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+%   font(+Family, +Slant, +Weight, +Fixed, +Size, -Font)
+%
+%   Font is the xpce font for the virtual font.  Its size is the size of
+%   the font `normal`, scaled for the size index.  A fixed-width font
+%   uses the same size, so code has the size of the text around it.
 
-:- multifile
-    font_map/7.
+font(Family0, Slant, Weight, Fixed, Size, Font) :-
+    (   Fixed == @on
+    ->  Family = mono
+    ;   Family = Family0
+    ),
+    slant_style(Slant, Style),
+    weight(Weight, FontWeight),
+    get(@pce, convert, normal, font, Normal),
+    get(Normal, points, Points0),
+    size_scale(Size, Scale),
+    Points is round(Points0*Scale),
+    new(Font, font(Family, Style, Points, FontWeight)).
 
-font(F, E, S, W,    Fix,  Size,  Font) :-
-    font_map(F, E, S, W, Fix, Size, Font),
-    !.
+slant_style(r, normal).
+slant_style(i, italic).
 
-font(_, _,      _, _,    @on,  _, fixed).
-font(_, _,      _, bold, @off, S, boldhuge)             :- S >= 6.
-font(_, _,      _, bold, @off, S, boldlarge)            :- S >= 4.
-font(_, _,      i, _,    _,    _, italic).
-font(_, _,      _, bold, @on,  _, boldtt).
-font(_, _,      _, bold, @off, _, bold).
-font(_, _,      r, _,    _,    S, small)                :- S =< 2.
-font(_, _,      r, _,    _,    4, large).
-font(_, _,      r, _,    _,    5, large).
-font(_, _,      r, _,    _,    S, huge)                 :- S >= 6.
-font(_, symbol, _, _,    _,    _, symbol).
-font(_, _,      _, _,    _,    _, normal).
+weight(medium, normal).
+weight(bold,   bold).
+
+%   size_scale(?Size, ?Scale)
+%
+%   Scale of the HTML font size index, where 3 is the normal size.
+
+size_scale(1, 0.75).
+size_scale(2, 0.85).
+size_scale(3, 1.0).
+size_scale(4, 1.17).
+size_scale(5, 1.33).
+size_scale(6, 1.5).
+size_scale(7, 1.75).
 
 :- pce_end_class.
 
