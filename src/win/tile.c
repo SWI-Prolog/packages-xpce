@@ -327,25 +327,38 @@ borderTile(TileObj t, Int border)
 }
 
 
-/* The colour between and around the tiles is drawn by the manager of
-   the root: a frame fills its background with it and a tab_frame shows
-   it in its gaps.
+/* The colours between and around the tiles are drawn by the manager of
+   the root: a frame fills its background with them and a tab_frame
+   shows the gap colour in its gaps.
 */
+
+static void
+redrawGapsTile(TileObj t)
+{ if ( getRootTile(t) == t )
+  { Any mgr = t->manager;
+
+    if ( instanceOfObject(mgr, ClassFrame) )
+      redrawGapsFrame(mgr);
+    else if ( instanceOfObject(mgr, ClassGraphical) )
+      send(mgr, NAME_redraw, EAV);
+  }
+}
 
 static status
 gapColourTile(TileObj t, Colour c)
 { if ( t->gap_colour != c )
-  { TileObj root = getRootTile(t);
+  { assign(t, gap_colour, c);
+    redrawGapsTile(t);
+  }
 
-    assign(t, gap_colour, c);
-    if ( root == t )
-    { Any mgr = t->manager;
+  succeed;
+}
 
-      if ( instanceOfObject(mgr, ClassFrame) )
-	redrawGapsFrame(mgr);
-      else if ( instanceOfObject(mgr, ClassGraphical) )
-	send(mgr, NAME_redraw, EAV);
-    }
+static status
+borderColourTile(TileObj t, Colour c)
+{ if ( t->border_colour != c )
+  { assign(t, border_colour, c);
+    redrawGapsTile(t);
   }
 
   succeed;
@@ -362,6 +375,7 @@ inheritTile(TileObj t, TileObj from)
   assign(t, border_root, from->border_root);
   assign(t, fixed_border, from->fixed_border);
   assign(t, gap_colour,  from->gap_colour);
+  assign(t, border_colour, from->border_colour);
   assign(t, enforced,    from->enforced);
 }
 
@@ -1788,7 +1802,9 @@ static vardecl var_tile[] =
   IV(NAME_fixedBorder, "int", IV_BOTH,
      NAME_appearance, "Distance between areas that cannot be resized"),
   SV(NAME_gapColour, "colour", IV_GET|IV_STORE, gapColourTile,
-     NAME_appearance, "Colour between and around the tiles"),
+     NAME_appearance, "Colour between the tiles"),
+  SV(NAME_borderColour, "colour", IV_GET|IV_STORE, borderColourTile,
+     NAME_appearance, "Colour of <-border_root around the tiles"),
   IV(NAME_orientation, "{none,horizontal,vertical}", IV_GET,
      NAME_layout, "Direction of adjacent sub-tiles"),
   IV(NAME_members, "chain*", IV_GET,
@@ -1878,9 +1894,11 @@ static classvardecl rc_tile[] =
      "Border around the root tile"),
   RC(NAME_fixedBorder, "int", "0",
      "Border between subtiles that cannot be resized"),
-  RC(NAME_gapColour, "colour", "ui_dialog_background",
-     "Colour between and around the tiles"),
-  RC(NAME_separatorColour, "colour*", "@nil",
+  RC(NAME_gapColour, "colour", "ui_tile_gap",
+     "Colour between the tiles"),
+  RC(NAME_borderColour, "colour", "ui_tile_border",
+     "Colour of <-border_root around the tiles"),
+  RC(NAME_separatorColour, "colour*", "ui_tile_separator",
      "Colour of the separator lines (@nil: foreground)"),
   RC(NAME_separatorPen, "0..", "1",
      "Thickness of the separator lines (0: no line)")

@@ -62,10 +62,13 @@ higher in the hierarchy whenever needed.
 - tile.border_root: int = 4
     Distance around the root tile.
 
-- tile.gap_colour: colour = ui_dialog_background
+- tile.gap_colour: colour = ui_tile_gap
     Default for <-gap_colour.
 
-- tile.separator_colour: colour* = @nil
+- tile.border_colour: colour = ui_tile_border
+    Default for <-border_colour.
+
+- tile.separator_colour: colour* = ui_tile_separator
     Colour of the line drawn in a gap that can be dragged.  If @nil,
     the foreground colour is used.  Used by the frame or tab_frame
     holding the root tile.
@@ -85,10 +88,16 @@ higher in the hierarchy whenever needed.
     @see tile<->fixed_border
 
 - tile<->gap_colour: colour
-    Colour between and around the tiles.  Only the value of the root
-    tile is used: a frame fills the space between and around its
-    windows with it and a tab_frame its resizable gaps.  A tile created
-    above the root takes over the value.
+    Colour between the tiles.  Only the value of the root tile is
+    used: a frame fills the space between its windows with it and a
+    tab_frame its resizable gaps.  A tile created above the root takes
+    over the value.
+
+- tile<->border_colour: colour
+    Colour of the border of <-border_root around the tiles.  Only the
+    value of the root tile is used: a frame fills the space around its
+    windows with it.  A tile created above the root takes over the
+    value.
 
 - tile<->fixed_border: int
     Width of the gaps between the sub-tiles that cannot be resized,

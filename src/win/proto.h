@@ -55,6 +55,8 @@ COMMON(status)	forwardColourMapChangeFrame(FrameObj fr);
 COMMON(status)	busyCursorFrame(FrameObj fr, CursorObj c, BoolObj block_events);
 COMMON(TileObj)	getTileFrame(FrameObj fr);
 COMMON(Colour)	gapColourFrame(FrameObj fr);
+COMMON(Colour)	borderColourFrame(FrameObj fr);
+COMMON(bool)	innerAreaFrame(FrameObj fr, int *x, int *y, int *w, int *h);
 COMMON(void)	redrawGapsFrame(FrameObj fr);
 COMMON(status)	AppendFrame(FrameObj fr, PceWindow sw);
 COMMON(status)	DeleteFrame(FrameObj fr, PceWindow sw);

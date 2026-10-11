@@ -1115,6 +1115,12 @@ static const struct builtin_theme_colour
     "Margin of an editor, e.g., with line numbers" },
   { "ui_scrollbar_background",	    "ui_dialog_background",
     "Trough of scrollbars" },
+  { "ui_tile_gap",		    "ui_dialog_background",
+    "Gaps between the panes of a window" },
+  { "ui_tile_border",		    "ui_dialog_background",
+    "Border around the panes of a window" },
+  { "ui_tile_separator",	    "ui_window_foreground",
+    "Line in a gap that can be dragged to resize the panes" },
   /* Text */
   { "ui_text_selection_background", "sys_text_selection_background",
     "Background of selected text" },

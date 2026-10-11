@@ -969,10 +969,21 @@ ws_draw_frame(FrameObj fr)
   if ( SDL_GetWindowFlags(wfr->ws_window) & SDL_WINDOW_TRANSPARENT )
   { SDL_SetRenderDrawColor(wfr->ws_renderer, 0, 0, 0, 0);
   } else
-  { SDL_Color c = pceColour2SDL_Color(gapColourFrame(fr));
+  { SDL_Color c = pceColour2SDL_Color(borderColourFrame(fr));
     SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
   }
   SDL_RenderClear(wfr->ws_renderer);
+  if ( !(SDL_GetWindowFlags(wfr->ws_window) & SDL_WINDOW_TRANSPARENT) )
+  { int x, y, w, h;			/* the gaps inside the border */
+
+    if ( innerAreaFrame(fr, &x, &y, &w, &h) )
+    { float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
+      SDL_FRect r = { x*scale, y*scale, w*scale, h*scale };
+
+      set_draw_colour(wfr, gapColourFrame(fr));
+      SDL_RenderFillRect(wfr->ws_renderer, &r);
+    }
+  }
   Cell cell;
   for_cell(cell, fr->members)
   { foffset off = {0.0f,0.0f};
@@ -1776,9 +1787,18 @@ ws_image_of_frame(FrameObj fr)
   int     fh    = (int)(valInt(fr->area->h) * scale);
 
   cairo_surface_t *surf;
-  cairo_t *cr = pixel_image_start(&surf, fw, fh, gapColourFrame(fr));
+  cairo_t *cr = pixel_image_start(&surf, fw, fh, borderColourFrame(fr));
   if ( !cr )
     return NULL;
+
+  int ix, iy, iw, ih;			/* the gaps inside the border */
+  if ( innerAreaFrame(fr, &ix, &iy, &iw, &ih) )
+  { SDL_Color c = pceColour2SDL_Color(gapColourFrame(fr));
+
+    cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
+    cairo_rectangle(cr, ix*scale, iy*scale, iw*scale, ih*scale);
+    cairo_fill(cr);
+  }
 
   Cell cell;
   for_cell(cell, fr->members)

@@ -3574,6 +3574,7 @@ scope('R.text_margin.gap', advanced).
 scope('R.text_margin.icon_size', advanced).
 scope('R.text_margin.placement', advanced).
 scope('R.tile.border', basic).
+scope('R.tile.border_colour', basic).
 scope('R.tile.fixed_border', basic).
 scope('R.tile.gap_colour', basic).
 scope('R.tile.separator_colour', basic).

@@ -232,7 +232,8 @@ NewClass(tileobj)
   Int		border;			/* Border between subtiles */
   Int		border_root;		/* Border around the root tile */
   Int		fixed_border;		/* Border between non-resizable tiles */
-  Colour	gap_colour;		/* Colour between and around tiles */
+  Colour	gap_colour;		/* Colour between the tiles */
+  Colour	border_colour;		/* Colour around the root tile */
   Name		orientation;		/* none, horizontal, vertical */
   Chain		members;		/* subtiles */
   TileObj	super;			/* Super tile */

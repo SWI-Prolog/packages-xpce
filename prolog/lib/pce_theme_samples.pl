@@ -107,6 +107,9 @@ sample(ui_shadow,               shadow,         'Shadow').
 sample(ui_text_selection_background, selection, 'Selected text').
 sample(ui_text_selection_background, terminal(selection),
        'Selected text in a terminal').
+sample(ui_tile_gap,             panes,          'Gap between two panes').
+sample(ui_tile_border,          panes,          'Border around the panes').
+sample(ui_tile_separator,       panes,          'Line in the gap between two panes').
 sample(ui_tooltip_background,   tooltip,        'Balloon help').
 sample(ui_tooltip_foreground,   tooltip,        'Balloon help').
 sample(ui_window_background,    editor,         'An editor').
@@ -245,6 +248,22 @@ build(shadow, B) :-
     new(B, box(120, 24)),
     send(B, fill, ui_window_background),
     send(B, shadow, 3).
+build(panes, D) :-
+    new(D, device),
+    send(D, display, new(Border, box(220, 76))),
+    send(Border, pen, 0),
+    send(Border, fill, ui_tile_border),
+    send(D, display, new(G, box(204, 60)), point(8, 8)),
+    send(G, pen, 0),
+    send(G, fill, ui_tile_gap),
+    send(D, display, new(L, box(96, 60)), point(8, 8)),
+    send(D, display, new(R, box(96, 60)), point(116, 8)),
+    forall(member(B, [L, R]),
+           ( send(B, fill, ui_window_background),
+             send(B, colour, ui_separator)
+           )),
+    send(D, display, new(Sep, line(110, 12, 110, 64))),
+    send(Sep, colour, ui_tile_separator).
 build(tooltip, D) :-
     new(D, device),
     new(T, text('Help on an item', left, normal)),

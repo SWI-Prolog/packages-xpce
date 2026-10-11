@@ -213,7 +213,7 @@ general(theme,
                   ])
         ]).
 general(layout,
-        [ tile - [ border, fixed_border, gap_colour,
+        [ tile - [ border, fixed_border, gap_colour, border_colour,
                    separator_pen, separator_colour
                  ]
         ]).

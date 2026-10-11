@@ -932,8 +932,9 @@ bellFrame(FrameObj fr, Int volume)
 }
 
 
-/* What is visible between and around the windows is the
- * `tile <-gap_colour` of the root tile.
+/* What is visible between the windows is the `tile <-gap_colour` of
+ * the root tile and around them its `tile <-border_colour`.  The border
+ * is `tile <-border_root` wide; see innerAreaFrame().
  */
 
 Colour
@@ -943,7 +944,38 @@ gapColourFrame(FrameObj fr)
   if ( t )
     answer(t->gap_colour);
 
-  answer(newObject(ClassColour, CtoName("ui_dialog_background"), EAV));
+  answer(newObject(ClassColour, CtoName("ui_tile_gap"), EAV));
+}
+
+Colour
+borderColourFrame(FrameObj fr)
+{ TileObj t = getTileFrame(fr);
+
+  if ( t )
+    answer(t->border_colour);
+
+  answer(newObject(ClassColour, CtoName("ui_tile_border"), EAV));
+}
+
+/* The area inside the border around the root tile, in the coordinates of
+ * the frame.  Fails if there is no tile.
+ */
+
+bool
+innerAreaFrame(FrameObj fr, int *x, int *y, int *w, int *h)
+{ TileObj t = getTileFrame(fr);
+
+  if ( !t )
+    return false;
+
+  int b = valInt(t->border_root);
+
+  *x = valInt(t->area->x) + b;
+  *y = valInt(t->area->y) + b;
+  *w = valInt(t->area->w) - 2*b;
+  *h = valInt(t->area->h) - 2*b;
+
+  return *w > 0 && *h > 0;
 }
 
 

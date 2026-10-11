@@ -251,7 +251,7 @@ test(gap_per_resizable_gap, Gaps == 1) :-
     tabbed(_TW, TF, P1),
     send(TF, split, new(_P2, picture), P1, vertically),
     get(TF?gaps, size, Gaps).
-test(gap_default, Colour == ui_dialog_background) :-
+test(gap_default, Colour == ui_tile_gap) :-
     tabbed(_TW, TF, P1),
     send(TF, split, new(_P2, picture), P1, vertically),
     gap_colour(TF, Colour).
@@ -278,7 +278,7 @@ test(gap_colour_survives_split, Colour == red) :-
 
 :- begin_tests(frame_gap_colour).
 
-test(gap_colour_default, Name == ui_dialog_background) :-
+test(gap_colour_default, Name == ui_tile_gap) :-
     new(F, frame),
     send(F, append, new(picture)),
     get(F?tile?gap_colour, name, Name),
@@ -290,6 +290,35 @@ test(gap_colour_survives_new_root, Name == red) :-
     send(new(_P2, picture), right, P1),
     get(F?tile?gap_colour, name, Name),
     send(F, destroy).
+test(border_colour_default, Name == ui_tile_border) :-
+    new(F, frame),
+    send(F, append, new(picture)),
+    get(F?tile?border_colour, name, Name),
+    send(F, destroy).
+test(border_and_gap, [Border-Gap == red-blue]) :-
+    %  The border around the windows and the gap between them have
+    %  their own colour.  frame <-image paints them as the window.
+    new(F, frame),
+    send(F, append, new(W1, window(a, size(100,100)))),
+    send(new(_W2, window(b, size(100,100))), right, W1),
+    get(F, tile, T),
+    send(T, border_root, 8),
+    send(T, border, 10),
+    send(T, border_colour, red),
+    send(T, gap_colour, blue),
+    send(F, open),
+    send(F, wait),
+    get(F, image, I),
+    pixel_name(I, 2, 60, Border),
+    get(W1?area, x, X1),
+    get(W1?area, width, W),
+    GX is X1+W+3,
+    pixel_name(I, GX, 60, Gap),
+    send(F, destroy).
+
+pixel_name(Image, X, Y, Name) :-
+    get(Image, pixel, X, Y, C),
+    get(C, name, Name).
 
 :- end_tests(frame_gap_colour).
 
