@@ -93,6 +93,23 @@ initialise(G, Fill:any) :->
 
 :- pce_end_class(tcr_filler).
 
+%   A graphical that draws a filled square with a thick black outline
+%   using ->draw_poly.
+
+:- pce_begin_class(tcr_poly, graphical,
+                   "Draw a filled polygon using ->draw_poly").
+
+initialise(G) :->
+    send_super(G, initialise, 0, 0, 20, 20).
+
+'_redraw_area'(G, _A:area) :->
+    send(G, graphics_state, 4, none, black),
+    send(G, draw_poly,
+         chain(point(2,2), point(18,2), point(18,18), point(2,18)),
+         @on, colour(red)).
+
+:- pce_end_class(tcr_poly).
+
 filled_box(Fill, B) :-
     new(B, box(20,20)),
     send(B, pen, 0),
@@ -119,5 +136,10 @@ test(figure_gradient_background, RGBA == 0xffff0000) :-
     send(F, display, new(B, box(20, 20))),
     send(B, pen, 0),
     pixel_after_drawing(F, 20, 10, 10, RGBA).
+
+test(draw_poly_strokes_over_fill, Inner-Outline == 0xffff0000-0xff000000) :-
+    new(G, tcr_poly),
+    pixel_after_drawing(G, 20, 10, 10, Inner),
+    pixel_after_drawing(G, 20, 3, 10, Outline).
 
 :- end_tests(cairo_render).

@@ -2123,11 +2123,6 @@ r_fill_polygon(FPoint pts, int n)
 { if ( n <= 0 ) return;
 
   cairo_new_path(CR);
-
-  // 2. Set background to transparent (optional)
-  cairo_set_source_rgba(CR, 0, 0, 0, 0);
-  cairo_paint(CR);
-
   pce_cairo_set_source_fill(CR, context.fill);
   double x = pts[0].x;
   double y = pts[0].y;

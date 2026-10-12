@@ -3308,11 +3308,11 @@ drawPolyGraphical(Graphical gr, Any points, BoolObj closed, Any fill)
 	       });
   }
 
-  r_polygon(pts, npts, closed == ON);
   if ( notDefault(fill) && notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
     r_fill_polygon(pts, npts);
   }
+  r_polygon(pts, npts, closed == ON);
 
   succeed;
 }
