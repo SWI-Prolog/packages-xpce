@@ -70,6 +70,8 @@ toRBG(Int *r, Int *g, Int *b, Name model)
 }
 
 
+static bool parse_hex_colour(const char *s, int rgba[4]);
+
 static Name
 defcolourname(Int r, Int g, Int b, Int a)
 { if ( notDefault(r) && notDefault(g) && notDefault(b) )
@@ -96,8 +98,20 @@ defcolourname(Int r, Int g, Int b, Int a)
 
 static status
 initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
-{ if ( notDefault(name) )
+{ int hex[4];
+
+  if ( notDefault(name) )
     assign(c, name, name);
+
+  if ( notDefault(name) &&
+       isDefault(r) && isDefault(g) && isDefault(b) &&
+       parse_hex_colour(strName(name), hex) )
+  { r = toInt(hex[0]);
+    g = toInt(hex[1]);
+    b = toInt(hex[2]);
+    if ( isDefault(a) )
+      a = toInt(hex[3]);
+  }
 
   if ( isDefault(a) )
     a = toInt(255);
@@ -285,58 +299,63 @@ take_hex(char *s, int digits)
 }
 
 
+/* Parse #RGB, #RGBA, #RRGGBB or #RRGGBBAA into rgba[] (0..255).
+ */
+
+static bool
+parse_hex_colour(const char *s, int rgba[4])
+{ int dgs;
+  bool has_alpha = false;
+
+  if ( s[0] != '#' )
+    return false;
+
+  switch(strlen(s)-1)
+  { case 4:			/* #RGBA */
+      has_alpha = true;
+      /*FALLTHROUGH*/
+    case 3:			/* #RGB */
+      dgs = 1;
+      break;
+    case 8:			/* #RRGGBBAA */
+      has_alpha = true;
+      /*FALLTHROUGH*/
+    case 6:			/* #RRGGBB */
+      dgs = 2;
+      break;
+    default:
+      return false;
+  }
+
+  s++;				/* skip # */
+  rgba[3] = 255;
+  for(int i=0; i < (has_alpha ? 4 : 3); i++, s += dgs)
+  { int v = take_hex((char*)s, dgs);
+
+    if ( v < 0 )
+      return false;
+    rgba[i] = (dgs == 1 ? v*16 + v : v);
+  }
+
+  return true;
+}
+
+
 static Colour
 getConvertColour(Class class, Name name)
 { Colour c;
-  char *s;
 
   ensure_theme_colours();
   if ( (c = getMemberHashTable(ColourTable, name)) )
     answer(c);
 
-  if ( (s=strName(name))[0] == '#' )
-  { int r, g, b, a = 255;
-    int dgs = 0;
-    size_t l = strlen(s);
-    bool has_alpha = false;
-
-    switch(l-1)
-    { case 4:			/* #RGBA */
-	has_alpha = true;
-      case 3:			/* #RGB */
-	dgs = 1;
-	break;
-      case 8:			/* #RRGGBBAA */
-	has_alpha = true;
-      case 6:			/* #RRGGBB */
-	dgs = 2;
-	break;
-      default:
-	fail;
-    }
-
-    s++;				/* skip # */
-    r = take_hex(s, dgs); s+= dgs;
-    g = take_hex(s, dgs); s+= dgs;
-    b = take_hex(s, dgs); s+= dgs;
-    if ( has_alpha )
-      a = take_hex(s, dgs);
-
-    if ( r >= 0 && g >= 0 && b >= 0 && a >= 0 )
-    { if ( dgs == 1 )
-      { r = r*16 + r;
-	g = g*16 + g;
-	b = b*16 + b;
-	if ( has_alpha )
-	  a = a*16 + a;
-      }
-
-      answer(answerObject(ClassColour, name,
-			  toInt(r), toInt(g), toInt(b), toInt(a), EAV));
-    }
-
+  int rgba[4];
+  if ( parse_hex_colour(strName(name), rgba) )
+    answer(answerObject(ClassColour, name,
+			toInt(rgba[0]), toInt(rgba[1]), toInt(rgba[2]),
+			toInt(rgba[3]), EAV));
+  if ( strName(name)[0] == '#' )
     fail;
-  }
 
   answer(answerObject(ClassColour, name, EAV));
 }

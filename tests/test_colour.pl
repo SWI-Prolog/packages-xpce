@@ -232,6 +232,18 @@ sys_colour(sys_accent).
 sys_colour(sys_separator).
 sys_colour(sys_shadow).
 
+test(hex_name, RGB == rgb(255,255,1)) :-
+    new(C, colour('#ffff01')),           % not created before
+    colour_rgb(C, RGB).
+test(hex_name_short_with_alpha, [RGB, A] == [rgb(255,0,17), 136]) :-
+    new(C, colour('#f018')),
+    colour_rgb(C, RGB),
+    get(C, alpha, A).
+test(hex_name_as_argument, RGB == rgb(0,255,1)) :-
+    new(B, box(10, 10)),
+    send(B, fill, colour('#00ff01')),
+    get(B, fill, C),
+    colour_rgb(C, RGB).
 test(unknown_name_is_grey, RGB == rgb(127,127,127)) :- % with a warning
     new(C, colour(test_colour_no_such_name)),
     colour_rgb(C, RGB).
