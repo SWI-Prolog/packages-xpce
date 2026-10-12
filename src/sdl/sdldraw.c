@@ -592,8 +592,8 @@ pce_cairo_set_source_gradient(cairo_t *cr, Gradient g)
       { double frac = valNum(t->first);
 	SDL_Color c = pceColour2SDL_Color((Colour)t->second);
 	cairo_pattern_add_color_stop_rgba(pat, frac,
-					  c.r/256.0, c.g/256.0,
-					  c.b/256.0, c.a/256.0);
+					  c.r/255.0, c.g/255.0,
+					  c.b/255.0, c.a/255.0);
       }
     }
   }
