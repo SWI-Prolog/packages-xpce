@@ -1204,3 +1204,78 @@ pceEnumElements(PceObject collection,
   assert(0);
   fail;
 }
+
+
+struct pce_snapshot
+{ size_t	size;			/* # elements */
+  size_t	index;			/* next element to return */
+  PceObject	elements[];		/* the elements */
+};
+
+/* Take a snapshot of the elements of `chain`.  If `chain` is a function
+ * (e.g., `?(Obj, members)`), it is evaluated first.  Returns NULL if
+ * the function fails or the result is not a chain.
+ */
+
+PceSnapshot
+pceSnapshotChain(PceObject chain)
+{ if ( !(chain = expandFunction(chain)) ||
+       !instanceOfObject(chain, ClassChain) )
+    return NULL;
+
+  Chain ch = chain;
+  size_t size = valInt(ch->size);
+  PceSnapshot s = pceMalloc(sizeof(*s) + size*sizeof(PceObject));
+  size_t i = 0;
+  Cell cell;
+
+  for_cell(cell, ch)
+  { PceObject e = cell->value;
+
+    if ( isObject(e) )
+      addCodeReference(e);
+    s->elements[i++] = e;
+  }
+  s->size  = i;
+  s->index = 0;
+
+  return s;
+}
+
+/* Get the next element that has not been freed.  Returns false at the
+ * end of the snapshot.
+ */
+
+bool
+pceSnapshotNext(PceSnapshot s, PceObject *e)
+{ while ( s->index < s->size )
+  { PceObject e0 = s->elements[s->index++];
+
+    if ( nonObject(e0) || !isFreedObj(e0) )
+    { *e = e0;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/* True if no elements are left.  pceSnapshotNext() may still return
+ * false if it is not, as the remaining elements may be freed.
+ */
+
+bool
+pceSnapshotEnd(PceSnapshot s)
+{ return s->index >= s->size;
+}
+
+void
+pceFreeSnapshot(PceSnapshot s)
+{ for(size_t i = 0; i < s->size; i++)
+  { PceObject e = s->elements[i];
+
+    if ( isObject(e) )
+      delCodeReference(e);
+  }
+  pceFree(s);
+}

@@ -69,7 +69,7 @@ Run with:
 :- use_module(library(emacs/emacs)).
 :- use_module(library(emacs/bookmarks), []).
 :- use_module(library(emacs/buffer_menu), []).
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [member_chain/2]).
 :- use_module(library(lists), [member/2, subtract/3, length/2,
                                memberchk/2]).
 :- use_module(library(filesex), [directory_file_path/3]).
@@ -94,8 +94,7 @@ emacs :-
 
 classes(F, Classes) :-
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(C, (member(P, Panes), get(P, class_name, C)), Classes).
+    findall(C, (member_chain(P, Chain), get(P, class_name, C)), Classes).
 
 %!  menus(+Frame, -Names) is det.
 %
@@ -104,8 +103,7 @@ classes(F, Classes) :-
 menus(F, Names) :-
     get(F, menu_bar, MB),
     get(MB, buttons, Chain),
-    chain_list(Chain, Buttons),
-    findall(N, (member(B, Buttons), get(B, name, N)), Names).
+    findall(N, (member_chain(B, Chain), get(B, name, N)), Names).
 
 %!  editor(+Frame, -View) is det.
 %!  terminal(+Frame, -Window) is det.
@@ -116,14 +114,12 @@ menus(F, Names) :-
 
 windows(F, Windows) :-
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(W, ( member(P, Panes), pane_window(P, W) ), Windows).
+    findall(W, ( member_chain(P, Chain), pane_window(P, W) ), Windows).
 
 pane_window(P, W) :-
     (   send(P, instance_of, emacs_pane)
     ->  get(P, members, Chain),
-        chain_list(Chain, Views),
-        member(W, Views)
+        member_chain(W, Chain)
     ;   W = P
     ).
 
@@ -132,12 +128,10 @@ editor(F, V) :-
     member(V, Windows), send(V, instance_of, emacs_view), !.
 
 editor_pane(F, EP) :-
-    get(F, panes, Chain), chain_list(Chain, Panes),
-    member(EP, Panes), send(EP, instance_of, emacs_pane), !.
+    get(F, panes, Chain), member_chain(EP, Chain), send(EP, instance_of, emacs_pane), !.
 
 terminal(F, W) :-
-    get(F, panes, Chain), chain_list(Chain, Panes),
-    member(W, Panes), send(W, instance_of, epilog_window), !.
+    get(F, panes, Chain), member_chain(W, Chain), send(W, instance_of, epilog_window), !.
 
 
 %       The warning the search used to give -- <-text_buffer sent to a
@@ -199,8 +193,7 @@ text_buffer(P, TB:text_buffer) :<-
 
 no_frames :-
     get(@prolog_ide, members, Members),
-    chain_list(Members, List),
-    forall(( member(F, List),
+    forall(( member_chain(F, Members),
              send(F, instance_of, pane_frame)
            ),
            send(F, destroy)).
@@ -350,9 +343,8 @@ source_with_room(File) :-
 
 history_places(File, Count) :-
     get(@emacs?history, backward_list, Chain),
-    chain_list(Chain, Entries),
     findall(HE,
-            ( member(HE, Entries),
+            ( member_chain(HE, Chain),
               get(HE, get_hyper, fragment, text_buffer, TB),
               get(TB, file, PceFile),
               PceFile \== @nil,
@@ -663,8 +655,7 @@ test(the_bar_walks_the_menus_in_the_order_it_draws_them,
     send(@prolog_ide, new_editor, F),
     menus(F, Buttons),
     get(F, menu_bar, MB),
-    chain_list(MB?members, Popups),
-    findall(N, (member(P, Popups), get(P, name, N)), Members).
+    findall(N, (member_chain(P, MB?members), get(P, name, N)), Members).
 
 %       The point of one application for the whole IDE: dropping a
 %       terminal onto an editor and dropping an editor onto a terminal
@@ -1074,8 +1065,7 @@ hits(BM, Marks) :-
 node_bookmark(Node, M) :-
     get(Node, sons, Sons),
     Sons \== @nil,
-    chain_list(Sons, List),
-    member(Son, List),
+    member_chain(Son, Sons),
     (   get(Son, identifier, M),
         send(M, instance_of, emacs_bookmark)
     ;   node_bookmark(Son, M)

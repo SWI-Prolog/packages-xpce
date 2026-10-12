@@ -135,8 +135,7 @@ preference(Name) :-
     get(class(prolog_debug_settings), class_variable, Name, _).
 preference(Name) :-
     get(class(prolog_debug_settings), class_variables, CVs),
-    chain_list(CVs, List),
-    member(CV, List),
+    member_chain(CV, CVs),
     get(CV, name, Name).
 
 preference_value(portray_text, Enabled) :-

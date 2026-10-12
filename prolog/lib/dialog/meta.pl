@@ -34,8 +34,7 @@
 
 :- module(dia_meta, [class_of_type/2]).
 :- use_module(library(pce)).
-:- require([ chain_list/2
-           , member/2
+:- require([ member_chain/2
            ]).
 
 :- pce_extend_class(object).
@@ -66,6 +65,5 @@ class_of_type(Type, Class) :-
 class_of_type(Type, Class) :-
     get(Type, supers, Supers),
     Supers \== @nil,
-    chain_list(Supers, List),
-    member(T, List),
+    member_chain(T, Supers),
     class_of_type(T, Class).

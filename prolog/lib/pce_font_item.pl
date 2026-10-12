@@ -334,8 +334,7 @@ generic_monospace(serif, @off).
 %   map it, the one in use.
 
 family_mapping(Families, Generic, Pango) :-
-    chain_list(Families, Bindings),
-    member(Binding, Bindings),
+    member_chain(Binding, Families),
     object(Binding, Generic := Pango0),
     !,
     pango_text(Pango0, Pango).

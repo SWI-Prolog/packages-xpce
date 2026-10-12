@@ -45,6 +45,7 @@
            , forall/2
            , last/2
            , member/2
+           , member_chain/2
            , send_list/2
            , append/3
            , get_chain/3
@@ -190,8 +191,7 @@ alignment(Gr1, Gr2, Request) :-
 
 alignment(What, Gr1, Gr2, Request) :-
     get(Gr1, connections, Gr2, Chain),
-    chain_list(Chain, Connections),
-    member(Connection, Connections),
+    member_chain(Connection, Chain),
     get(Connection, width, W),
     get(Connection, height, H),
     (   W > H
@@ -303,13 +303,11 @@ max_attribute([Obj?Att|Rest], Value) :-
 close_handle(Gr1, Gr2, t(D, DX, DY)) :-
     get(Gr1, common_device, Gr2, Dev),
     get(Gr1, handles, CH1),
-    chain_list(CH1, L1),
-    member(H1, L1),
+    member_chain(H1, CH1),
     get(H1, kind, Kind),
     get(H1, position, Gr1, Dev, Pos1),
     get(Gr2, handles, Pos1, Kind, 15, CH2),
-    chain_list(CH2, L2),
-    member(H2, L2),
+    member_chain(H2, CH2),
     get(H2, position, Gr2, Dev, Pos2),
     get(Pos1, distance, Pos2, D),
     object(Pos2, point(X2, Y2)),

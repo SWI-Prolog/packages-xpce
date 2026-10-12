@@ -43,7 +43,7 @@
 :- autoload(library(apply), [maplist/3, exclude/3]).
 :- autoload(library(lists),
             [member/2, max_list/2, nth1/3, append/3]).
-:- autoload(library(pce_util), [chain_list/2]).
+:- autoload(library(pce_util), [chain_list/2, member_chain/2]).
 
 /** <module> Show what a theme colour is used for
 
@@ -629,8 +629,7 @@ colour_class_variable(Name, Class, Variable) :-
     get(C, realised, @on),
     \+ get(C, name, pce),
     get(C, class_variables, Vars),
-    chain_list(Vars, VarList),
-    member(V, VarList),
+    member_chain(V, Vars),
     get(V, context, C),
     get(V, default, Default),
     atomic_default(Default, Text),

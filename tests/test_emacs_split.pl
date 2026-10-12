@@ -70,7 +70,7 @@ Run with:
 :- initialization(remove_sandbox_at_exit, now).
 :- use_module(library(plunit)).
 :- use_module(library(pce_emacs)).
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [chain_list/2, member_chain/2]).
 :- use_module(library(swi_ide), []).
 :- use_module(library(lists), [member/2]).
 :- use_module(library(pane_frame), [open_pane_frame/3]).
@@ -267,8 +267,7 @@ test(closing_the_last_tab_of_an_editor_takes_it_out_of_the_window) :-
     send(EP, split, vertically),         % a second editor beside it
     get(F?panes, size, 2),
     get(EP, members, Chain),
-    chain_list(Chain, Views),
-    forall(member(W, Views), send(W, close_pane)),
+    forall(member_chain(W, Chain), send(W, close_pane)),
     get(F?panes, size, 1),
     \+ object(EP).
 

@@ -34,7 +34,7 @@
 
 :- module(tab_frame, []).
 :- use_module(library(pce)).
-:- use_module(library(pce_util), [default/3, chain_list/2]).
+:- use_module(library(pce_util), [default/3, chain_list/2, member_chain/2]).
 :- use_module(library(dragdrop), []).
 :- use_module(library(tabbed_window), []).
 :- use_module(library(help_message), []).
@@ -1671,9 +1671,8 @@ bar_backdrop(TW, Above, DX, Height) :-
     get(TW, display_position, point(TX, TY)),
     get(TW, size, size(TWidth, _)),
     get(Frame, members, Members),
-    chain_list(Members, List),
     findall(Bottom-W,
-            ( member(W, List),
+            ( member_chain(W, Members),
               W \== TW,
               send(W, instance_of, window),
               get(W, display_position, point(WX, WY)),
@@ -2145,8 +2144,7 @@ candidate_tab(Source, Tab) :-
     ;   window_positions_known,
         get(Frame, display, Display),
         get(Display, frames, Chain),
-        chain_list(Chain, Frames),
-        member(Other, Frames),
+        member_chain(Other, Chain),
         Other \== Frame,
         frame_tab_frame(Other, Tab)
     ).
@@ -2184,16 +2182,13 @@ window_positions_known :-
 
 frame_tab_frame(Frame, TF) :-
     get(Frame, members, Members),
-    chain_list(Members, Windows),
-    member(W, Windows),
+    member_chain(W, Members),
     send(W, instance_of, window),
     get(W, graphicals, Graphicals),
-    chain_list(Graphicals, Displayed),
-    member(Stack, Displayed),
+    member_chain(Stack, Graphicals),
     send(Stack, instance_of, tab_stack),
     get(Stack, graphicals, Tabs),
-    chain_list(Tabs, TabList),
-    member(TF, TabList),
+    member_chain(TF, Tabs),
     send(TF, instance_of, tab_frame),
     get(TF, status, on_top).
 

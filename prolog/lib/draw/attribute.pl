@@ -274,8 +274,7 @@ The colour menu.
 
 colour(_Draw, Colour) :-
     get_config(draw_config:resources/colour_palette, ColoursChain),
-    chain_list(ColoursChain, Colours),
-    member(ColourName, Colours),
+    member_chain(ColourName, ColoursChain),
     get(@pce, convert, ColourName, colour, Colour).
 
 make_colour_menu(Draw, Menu) :-
@@ -506,8 +505,7 @@ set_selection(Menu, Value) :-
     (   get(Menu, member, Value, Item)
     ->  send(Menu, selection, Item)
     ;   get(Menu, attribute, equal_predicates, PredChain),
-        chain_list(PredChain, Preds),
-        member(Pred, Preds),
+        member_chain(Pred, PredChain),
         get(Menu?members, find,
             message(@prolog, Pred, @arg1?value, Value),
             Item)

@@ -688,8 +688,7 @@ three_tabs(TW, TF1, TF2, TF3) :-
 
 tab_names(TW, Names) :-
     get(TW, tabs, Chain),
-    chain_list(Chain, Tabs),
-    findall(N, (member(T, Tabs), get(T, name, N)), Names).
+    findall(N, (member_chain(T, Chain), get(T, name, N)), Names).
 
 :- end_tests(tab_frame_label).
 
@@ -847,8 +846,7 @@ close_buttons(TW, Count) :-
     get(TW, tabs, Tabs),
     get(Tabs, head, Tab),
     get(Tab?device, graphicals, Graphicals),
-    chain_list(Graphicals, List),
-    findall(G, ( member(G, List),
+    findall(G, ( member_chain(G, Graphicals),
                  \+ send(G, instance_of, tab),
                  get(G, name, close_tab)
                ), Buttons),
@@ -1109,8 +1107,7 @@ test(a_window_related_before_its_neighbour_comes_along_with_it,
     send(P3, below, P2),                % P2 is in no tab yet: P3 hangs on
     send(P2, right, P1),                % it until P2 is taken in
     get(TF, windows, Chain),
-    chain_list(Chain, List),
-    findall(N, (member(W, List), get(W, name, N)), Windows).
+    findall(N, (member_chain(W, Chain), get(W, name, N)), Windows).
 
 test(and_is_laid_out_where_the_tile_says, true(Below == true)) :-
     tabbed(_TW, TF, P1),
@@ -1734,14 +1731,12 @@ test(the_handle_offers_a_window_and_a_tab_of_its_own_on_a_popup,
     new(P, picture),
     send(P, display, new(H, split_handle)),
     get(H, all_recognisers, Recognisers),
-    chain_list(Recognisers, Rs),
-    member(R, Rs),
+    member_chain(R, Recognisers),
     send(R, instance_of, popup_gesture),
     !,
     get(R, popup, Popup),
     get(Popup, members, Chain),
-    chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Items).
 
 test(the_handle_drags_the_window_it_is_displayed_on) :-
     new(P, picture),
@@ -1765,8 +1760,7 @@ test(the_handle_drags_the_window_it_is_displayed_on) :-
 
 labels(TW, Labels) :-
     get(TW, tabs, Tabs),
-    chain_list(Tabs, List),
-    findall(L, (member(T, List), get(T, label, L)), Labels).
+    findall(L, (member_chain(T, Tabs), get(T, label, L)), Labels).
 
 %!  row_x(+TabbedWindow, +Which, -X) is det.
 %

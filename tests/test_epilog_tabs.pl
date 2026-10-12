@@ -56,7 +56,7 @@ Run with:
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
 :- use_module(library(epilog)).
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [member_chain/2]).
 :- use_module(library(lists), [member/2, memberchk/2, subtract/3]).
 
 test_epilog_tabs :-
@@ -88,9 +88,8 @@ epilog(F, W) :-
 tabs(F, Tabs) :-
     get(F, tabs, TW),
     get(TW, tabs, Chain),
-    chain_list(Chain, List),
     findall(Label-Count,
-            ( member(Tab, List),
+            ( member_chain(Tab, Chain),
               get(Tab, label, Label),
               get(Tab?windows, size, Count)
             ),

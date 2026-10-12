@@ -2865,8 +2865,7 @@ unique_tab_label(F, Base, N, Label) :-
 tab_labelled(F, Label) :-
     get(F, tabs, TW),
     get(TW, tabs, Chain),
-    chain_list(Chain, Tabs),
-    member(Tab, Tabs),
+    member_chain(Tab, Chain),
     get(Tab, label, Label),
     !.
 

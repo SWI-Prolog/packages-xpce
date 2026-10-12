@@ -229,9 +229,8 @@ test(key_hides, [ condition(combo_boxes),
 
 count_tip_handlers(N) :-
     get(@display, inspect_handlers, Chain),
-    chain_list(Chain, Hs),
     aggregate_all(count,
-                  ( member(H, Hs),
+                  ( member_chain(H, Chain),
                     get(H, message, M),
                     get(M, receiver, @help_message_window)
                   ), N).

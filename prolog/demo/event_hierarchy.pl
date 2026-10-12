@@ -38,9 +38,8 @@
           ]).
 
 :- use_module(library(pce)).
-:- require([ chain_list/2
-           , forall/2
-           , member/2
+:- require([ forall/2
+           , member_chain/2
            ]).
 
 event_hierarchy :-
@@ -59,8 +58,7 @@ fill_event_hierarchy(Node, TreeNode) :-
     get(Node, sons, Sons),
     Sons \== @nil,
     !,
-    chain_list(Sons, List),
-    forall(member(S, List),
+    forall(member_chain(S, Sons),
            (send(TreeNode, son, new(N, node(text(S?value, left, normal)))),
             fill_event_hierarchy(S, N))).
 fill_event_hierarchy(_, _).

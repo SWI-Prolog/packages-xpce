@@ -49,7 +49,7 @@
 :- autoload(library(pce_class_variable_editor),
             [class_variable_editor/0, class_variable_editor/1]).
 :- autoload(library(pce_openframes), [confirm_open_frames/1]).
-:- use_module(library(pce_util), [chain_list/2, send_list/3]).
+:- use_module(library(pce_util), [chain_list/2, member_chain/2, send_list/3]).
 :- use_module(library(lists), [member/2]).
 :- autoload(library(gui_tracer), [guitracer/0]).
 :- autoload(library(pce_image), [pce_image_directory/1]).
@@ -329,8 +329,7 @@ rule_placement(split(Kinds, Side, Share), Frame, Placement) :-
 
 frame_kinds(Frame, Kinds) :-
     get(Frame, panes, Panes),
-    chain_list(Panes, List),
-    findall(Kind, ( member(Pane, List),
+    findall(Kind, ( member_chain(Pane, Panes),
                     pane_kind(Pane, Kind)
                   ), Kinds0),
     sort(Kinds0, Kinds).
@@ -342,8 +341,7 @@ frame_kinds(Frame, Kinds) :-
 tab_panes(Frame, Kinds, Panes) :-
     get(Frame, tab, Tab),
     get(Tab, windows, Windows),
-    chain_list(Windows, List),
-    findall(Pane, ( member(Pane, List),
+    findall(Pane, ( member_chain(Pane, Windows),
                     pane_kind(Pane, Kind),
                     memberchk(Kind, Kinds)
                   ), Selected),

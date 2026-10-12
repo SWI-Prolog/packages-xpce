@@ -65,6 +65,9 @@
 
             pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
 
+            '$chain_list'/2,            % +Chain, -List (for pce_util)
+            '$member_chain'/2,          % ?Elem, +Chain (for pce_util)
+
             op(200, fy,  @),
             op(250, yfx, ?),
             op(800, xfx, :=)

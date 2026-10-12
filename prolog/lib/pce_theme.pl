@@ -70,7 +70,7 @@
 :- autoload(library(ordsets), [ord_subtract/3]).
 :- autoload(library(pairs), [pairs_keys/2, group_pairs_by_key/2]).
 :- autoload(library(filesex), [directory_file_path/3]).
-:- autoload(library(pce_util), [chain_list/2]).
+:- autoload(library(pce_util), [member_chain/2]).
 
 /** <module> Semantic colours and themes
 
@@ -880,9 +880,8 @@ builtin_colours(Pairs) :-
     new(Chain, chain),
     send(@theme_colour_defaults, for_all,
          message(Chain, append, create(tuple, @arg1, @arg2))),
-    chain_list(Chain, Tuples),
     findall(Name-Default,
-            ( member(T, Tuples),
+            ( member_chain(T, Chain),
               get(T, first, Name),
               get(T, second, Default)
             ), Pairs0),

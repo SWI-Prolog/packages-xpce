@@ -58,8 +58,7 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
-:- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(pce_util), [member_chain/2]).
 
 test_fixed_graphicals :-
     run_tests([ fixed_graphicals ]).
@@ -122,8 +121,7 @@ move_to(P, X, Y, Events) :-
     findall(E, pointed(E), Events).
 
 classes(Chain, Names) :-
-    chain_list(Chain, List),
-    findall(N, (member(G, List), get(G, class_name, N)), Names).
+    findall(N, (member_chain(G, Chain), get(G, class_name, N)), Names).
 
 
 :- begin_tests(fixed_graphicals).

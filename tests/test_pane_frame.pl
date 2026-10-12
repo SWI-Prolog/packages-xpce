@@ -81,7 +81,7 @@ sandbox_tracer_config :-
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
 :- use_module(library(pane_frame)).
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [chain_list/2, member_chain/2]).
 :- use_module(library(lists), [member/2, memberchk/2, reverse/2]).
 :- use_module(library(pane_layouts), [forget_arrangements/0]).
 
@@ -262,9 +262,8 @@ pane(Name, Kind, P) :-
 menus(F, Menus) :-
     get(F, menu_bar, MB),
     get(MB, members, Popups),
-    chain_list(Popups, List),
     findall(Name-Items,
-            ( member(Popup, List),
+            ( member_chain(Popup, Popups),
               get(Popup, name, Name),
               items(Popup, Items)
             ),
@@ -272,8 +271,7 @@ menus(F, Menus) :-
 
 items(Popup, Items) :-
     get(Popup, members, Chain),
-    chain_list(Chain, List),
-    findall(V, (member(MI, List), get(MI, value, V)), Items).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Items).
 
 %!  bar_members(+MenuBar, -Names:list) is det.
 %!  bar_buttons(+MenuBar, -Names:list) is det.
@@ -284,13 +282,11 @@ items(Popup, Items) :-
 
 bar_members(MB, Names) :-
     get(MB, members, Chain),
-    chain_list(Chain, List),
-    findall(N, (member(P, List), get(P, name, N)), Names).
+    findall(N, (member_chain(P, Chain), get(P, name, N)), Names).
 
 bar_buttons(MB, Names) :-
     get(MB, buttons, Chain),
-    chain_list(Chain, List),
-    findall(N, (member(B, List), get(B, popup, P), get(P, name, N)), Names).
+    findall(N, (member_chain(B, Chain), get(B, popup, P), get(P, name, N)), Names).
 
 %!  opacities(+Frame, -Pairs:list) is det.
 %
@@ -299,9 +295,8 @@ bar_buttons(MB, Names) :-
 opacities(F, Pairs) :-
     get(F, tab, Tab),
     get(Tab, windows, Chain),
-    chain_list(Chain, Panes),
     findall(Name-Opacity,
-            ( member(P, Panes),
+            ( member_chain(P, Chain),
               get(P, name, Name),
               get(P, opacity, Opacity)
             ),
@@ -326,15 +321,13 @@ test(three_rows_when_a_status_bar_is_asked_for, Names == [pane_menu_dialog,
                                                           pane_status_dialog]) :-
     frame(F, _App, _P, @on),
     get(F, members, Chain),
-    chain_list(Chain, Members),
-    findall(N, (member(M, Members), get(M, class_name, N)), Names).
+    findall(N, (member_chain(M, Chain), get(M, class_name, N)), Names).
 
 test(two_rows_when_it_is_not, Names == [pane_menu_dialog,
                                         pane_tabbed_window]) :-
     frame(F, _App, _P),
     get(F, members, Chain),
-    chain_list(Chain, Members),
-    findall(N, (member(M, Members), get(M, class_name, N)), Names).
+    findall(N, (member_chain(M, Chain), get(M, class_name, N)), Names).
 
 %       A pane starts at the top of the window that holds it.  The stack
 %       inside my tabbed window is a device, placed by the <-offset that
@@ -371,8 +364,7 @@ test(a_bar_is_grown_when_it_is_first_wanted, true(Names == [pane_menu_dialog,
     frame(F, _App, _P),
     get(F, ensure_status_dialog, _),
     get(F, members, Chain),
-    chain_list(Chain, Members),
-    findall(N, (member(M, Members), get(M, class_name, N)), Names).
+    findall(N, (member_chain(M, Chain), get(M, class_name, N)), Names).
 
 test(and_only_one_is_ever_grown, true(SD1 == SD2)) :-
     frame(F, _App, _P),
@@ -952,8 +944,7 @@ test(detaching_takes_the_pane_out_of_the_window_it_was_in,
     send(F, append_pane, P2, @default, @on),
     send(P2, detach),
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(N, (member(P, Panes), get(P, name, N)), Names).
+    findall(N, (member_chain(P, Chain), get(P, name, N)), Names).
 
 test(and_gives_it_a_window_of_its_own, true(Alone == [second])) :-
     frame(F, _App, _P1),
@@ -963,8 +954,7 @@ test(and_gives_it_a_window_of_its_own, true(Alone == [second])) :-
     get(P2, frame, New),
     New \== F,
     get(New, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(N, (member(P, Panes), get(P, name, N)), Alone).
+    findall(N, (member_chain(P, Chain), get(P, name, N)), Alone).
 
 test(the_new_window_belongs_to_the_same_application, true(App2 == App)) :-
     frame(F, App, _P1),
@@ -1002,8 +992,7 @@ the_other_frame(Pane, Frame) :-
     get(Pane, pane_frame, Mine),
     get(Mine, application, App),
     get(App, members, Chain),
-    chain_list(Chain, Frames),
-    member(Frame, Frames),
+    member_chain(Frame, Chain),
     Frame \== Mine,
     !.
 
@@ -1132,8 +1121,7 @@ test(and_closing_takes_it_out_of_the_window, Names == [one]) :-
     send(F, split, P2, P1, vertically),
     send(P2, close_pane),
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(N, (member(P, Panes), get(P, name, N)), Names).
+    findall(N, (member_chain(P, Chain), get(P, name, N)), Names).
 
 %!  grip_offers(+Pane, -Items) is det.
 %
@@ -1144,9 +1132,8 @@ grip_offers(Pane, Items) :-
     send(H, pane, Pane),
     send(@split_handle_popup, update, H),
     get(@split_handle_popup, members, Chain),
-    chain_list(Chain, Members),
     findall(V,
-            ( member(MI, Members),
+            ( member_chain(MI, Chain),
               get(MI, active, @on),
               get(MI, value, V)
             ),
@@ -1212,8 +1199,7 @@ test(all_panes_over_all_tabs, Names == [one, three, two]) :-
     pane(two, beta, P2),
     send(F, append_pane, P2, @default, @off),
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(N, (member(P, Panes), get(P, name, N)), Names0),
+    findall(N, (member_chain(P, Chain), get(P, name, N)), Names0),
     msort(Names0, Names).
 
 test(deleting_a_pane_leaves_the_others, Names == [one]) :-
@@ -1222,8 +1208,7 @@ test(deleting_a_pane_leaves_the_others, Names == [one]) :-
     send(F, split, P3, P1, vertically),
     send(F, delete_pane, P3, @on),
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(N, (member(P, Panes), get(P, name, N)), Names).
+    findall(N, (member_chain(P, Chain), get(P, name, N)), Names).
 
 %       What the last pane going means is the application's to say --
 %       Epilog warns when the main console is closed with other windows
@@ -1266,8 +1251,7 @@ test(the_template_closes_a_pane, Names == [one]) :-
     send(F, split, P3, P1, vertically),
     send(P3, close_pane),
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(N, (member(P, Panes), get(P, name, N)), Names).
+    findall(N, (member_chain(P, Chain), get(P, name, N)), Names).
 
 test(a_pane_that_refuses_to_close_stops_the_frame, true(Reply == @off)) :-
     frame(F, _App, P),
@@ -1320,8 +1304,7 @@ test(a_pane_that_says_nothing_agrees_to_close, true(Reply == @on)) :-
 tab_row(F, Labels) :-
     get(F, tabs, TW),
     get(TW, tabs, Tabs),
-    chain_list(Tabs, List),
-    findall(L, ( member(T, List), get(T, label, L) ), Labels).
+    findall(L, ( member_chain(T, Tabs), get(T, label, L) ), Labels).
 
 %!  back_in_the_middle(-Frame, -Middle) is det.
 %
@@ -2075,8 +2058,7 @@ two_tabs(F, A, B) :-
 
 focused(F, Names) :-
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(Name, ( member(P, Panes),
+    findall(Name, ( member_chain(P, Chain),
                     get(P, input_focus, @on),
                     get(P, name, Name)
                   ), Names).

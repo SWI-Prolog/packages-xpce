@@ -102,8 +102,7 @@ cursor_item(image, pce_image, '@pce_image', Cursor) :-
     send(Cursor, summary, 'Made from @pce_image, scaled to 32x32').
 cursor_item(Kind, Name, Name, Cursor) :-
     get(@cursor_names, attribute_names, Names),
-    chain_list(Names, List),
-    member(Name, List),
+    member_chain(Name, Names),
     get(@pce, convert, Name, cursor, Cursor),
     get(Cursor, kind, Kind).
 

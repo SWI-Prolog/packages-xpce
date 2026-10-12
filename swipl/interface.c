@@ -186,6 +186,8 @@ static foreign_t	pl_object2(term_t ref, term_t description);
 static PL_blob_t	pce_blob;
 static foreign_t	pl_pce_object_blob(term_t ref, term_t blob);
 static foreign_t	pl_pce_free(term_t ref);
+static foreign_t	pl_chain_list(term_t chain, term_t list);
+static foreign_t	pl_member_chain(term_t elem, term_t chain, control_t h);
 static foreign_t	pl_pce_method_implementation(term_t id, term_t msg);
 static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
 static foreign_t	pl_pce_dispatch_event(term_t Fd, term_t timeout);
@@ -657,6 +659,10 @@ install_pl2xpce(void)
 		      pl_pce_object_blob, 0);
   PL_register_foreign("$pce_free", 1,
 		      pl_pce_free, 0);
+  PL_register_foreign("$chain_list", 2,
+		      pl_chain_list, 0);
+  PL_register_foreign("$member_chain", 2,
+		      pl_member_chain, PL_FA_NONDETERMINISTIC);
   PL_register_foreign("new", 2,
 		      pl_new, PL_FA_TRANSPARENT);
   PL_register_foreign("pce_method_implementation", 2,
@@ -2551,6 +2557,131 @@ pl_pce_object_blob(term_t ref, term_t blob)
   UNLOCK();
 
   return rval;
+}
+
+
+		 /*******************************
+		 *	      CHAINS		*
+		 *******************************/
+
+/* Take a snapshot of the chain denoted by `t`.  Must be called with the
+ * XPCE lock.  Fails silently if `t` is not a chain, as chain_list/2
+ * always did.
+ */
+
+static PceSnapshot
+get_chain_snapshot(term_t t)
+{ PceObject obj;
+
+  pceDrainHostReferences();
+  if ( !(obj = termToObject(t, NULL, NULLATOM, FALSE)) )
+    return NULL;
+
+  return pceSnapshotChain(obj);
+}
+
+
+/* '$chain_list'(+Chain, -List) is det.
+   List holds the elements of Chain.  The list is built from a snapshot
+   taken under the XPCE lock, so it is consistent if other threads use
+   the chain.
+*/
+
+static foreign_t
+pl_chain_list(term_t chain, term_t list)
+{ term_t tail = PL_copy_term_ref(list);
+  term_t head = PL_new_term_ref();
+  term_t tmp  = PL_new_term_ref();
+  PceSnapshot snap;
+  PceObject e;
+  bool rc = true;
+
+  LOCK();
+  if ( !(snap = get_chain_snapshot(chain)) )
+  { UNLOCK();
+    return false;
+  }
+  while( rc && pceSnapshotNext(snap, &e) )
+    rc = ( PL_unify_list(tail, head, tail) &&
+	   put_object(tmp, e) &&
+	   PL_unify(head, tmp) );
+  pceFreeSnapshot(snap);
+  UNLOCK();
+
+  return rc && PL_unify_nil(tail);
+}
+
+
+/* '$member_chain'(?Elem, +Chain) is nondet.
+   Enumerate the elements of a snapshot of Chain, as for_chain() does:
+   changes to Chain do not affect the enumeration and elements freed
+   before they are reached are skipped.  The snapshot lives across
+   backtracking; we take the XPCE lock only while accessing it.
+*/
+
+static void
+free_snapshot(PceSnapshot snap)
+{ LOCK();
+  pceFreeSnapshot(snap);
+  UNLOCK();
+}
+
+
+static foreign_t
+pl_member_chain(term_t elem, term_t chain, control_t h)
+{ PceSnapshot snap;
+  term_t tmp;
+
+  switch( PL_foreign_control(h) )
+  { case PL_FIRST_CALL:
+      LOCK();
+      snap = get_chain_snapshot(chain);
+      UNLOCK();
+      if ( !snap )
+	return false;
+      break;
+    case PL_REDO:
+      snap = PL_foreign_context_address(h);
+      break;
+    case PL_PRUNED:
+      free_snapshot(PL_foreign_context_address(h));
+      return true;
+    default:
+      assert(0);
+      return false;
+  }
+
+  if ( !(tmp = PL_new_term_ref()) )
+  { free_snapshot(snap);
+    return false;
+  }
+
+  for(;;)
+  { PceObject e;
+    bool found, ok = false, end;
+
+    LOCK();
+    if ( (found = pceSnapshotNext(snap, &e)) )
+      ok = put_object(tmp, e);
+    end = pceSnapshotEnd(snap);
+    UNLOCK();
+
+    if ( !found || !ok )		/* end or resource error */
+    { free_snapshot(snap);
+      return false;
+    }
+    if ( PL_unify(elem, tmp) )
+    { if ( end )
+      { free_snapshot(snap);
+	return true;
+      }
+      PL_retry_address(snap);
+    }
+    if ( PL_exception(0) )
+    { free_snapshot(snap);
+      return false;
+    }
+  }
 }
 
 

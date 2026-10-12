@@ -40,7 +40,7 @@
 :- use_module(library(pce_history)).
 :- use_module(library(pane_frame), []).
 :- use_module(library(swi_ide), []).
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [chain_list/2, member_chain/2]).
 :- use_module(library(toolbar), []).
 :- use_module(library(broadcast)).
 :- use_module(library(edit)).
@@ -512,15 +512,13 @@ view_on_buffer(Frame, B, View) :-
 
 frame_pane(Frame, Pane) :-
     get(Frame, panes, Panes),
-    chain_list(Panes, List),
-    member(P, List),
+    member_chain(P, Panes),
     pane_window(P, Pane).
 
 pane_window(P, Window) :-
     (   send(P, instance_of, emacs_pane)
     ->  get(P, members, Chain),
-        chain_list(Chain, Windows),
-        member(Window, Windows)
+        member_chain(Window, Chain)
     ;   Window = P
     ).
 

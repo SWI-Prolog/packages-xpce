@@ -45,6 +45,7 @@
 
             get_chain/3,                % +Receiver, +Selector, -List
             chain_list/2,               % ?Chain, ?List
+            member_chain/2,             % ?Elem, +Chain
 
             default/3,                  % +MethodArg, +Default, -Arg
 
@@ -69,6 +70,8 @@
 
 
 :- use_module(library(pce)).
+:- import(pce_principal:'$chain_list'/2).
+:- import(pce_principal:'$member_chain'/2).
 
 %%   get_object(+Object, +Selector, +Arg..., -Output) is semidet.
 %
@@ -222,7 +225,11 @@ get_chain(Object, Selector, List) :-
 %!  chain_list(+Chain, -List) is det.
 %!  chain_list(-Chain, +List) is det.
 %
-%   Convert between a Prolog list and an XPCE chain object.
+%   Convert between a Prolog list and an XPCE chain object.  If Chain
+%   is given, List holds its elements at the moment of the call.  This
+%   is safe if other threads use or modify the chain.  Chain may be
+%   @nil, which is converted to the empty list, or a function such as
+%   `Obj?members`.  Fails if Chain is not a chain.
 
 chain_list(Chain, List) :-
     nonvar(Chain),
@@ -230,22 +237,26 @@ chain_list(Chain, List) :-
     (   Chain == @nil
     ->  List = []
     ;   to_object(Chain, ChainObject),
-        send(ChainObject, instance_of, chain),
-        (   send(ChainObject, current_no, 1)
-        ->  chain_to_list_(ChainObject, List)
-        ;   List = []
-        )
+        '$chain_list'(ChainObject, List)
     ).
 chain_list(Chain, List) :-
     new(Chain, chain),
     send_list(Chain, append, List).
 
-chain_to_list_(Chain, [El|Rest]) :-
-    get(Chain, next, El),
-    !,
-    chain_to_list_(Chain, Rest).
-chain_to_list_(Chain, []) :-
-    \+ get(Chain, current, _).
+%!  member_chain(?Elem, +Chain) is nondet.
+%
+%   True when Elem is an element of Chain.  Elements are enumerated in
+%   order from a snapshot of Chain taken at the first call, so changes
+%   to Chain while enumerating do not affect the result, except that
+%   elements that are freed before they are reached are skipped.  This
+%   is safe if other threads use or modify the chain.  Chain may be a
+%   function such as `Obj?members`.  Fails if Chain is @nil or not a
+%   chain.
+
+member_chain(Elem, Chain) :-
+    Chain \== @nil,
+    to_object(Chain, ChainObject),
+    '$member_chain'(Elem, ChainObject).
 
 to_object(Ref, Ref) :-
     object(Ref),

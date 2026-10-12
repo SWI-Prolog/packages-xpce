@@ -45,7 +45,7 @@
           ]).                           %   -First, -Current
 :- use_module(library(pce)).
 :- use_module(library(swi_ide), []).    % get @prolog_ide application
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [chain_list/2, member_chain/2]).
 :- use_module(library(gensym), [gensym/2]).
 :- use_module(library(pce_template)).
 :- use_module(library(tabbed_window), []).
@@ -1310,8 +1310,7 @@ main_frame(F) :-
     get(F, application, App),
     App \== @nil,
     get(App, members, Members),
-    chain_list(Members, List),
-    member(Other, List),
+    member_chain(Other, Members),
     Other \== F,
     get(Other, attribute, main, @on).
 

@@ -197,6 +197,16 @@ exploit Prolog's list-processing primitives. Note however that
 XPCE chains define various operations that may be exploited to
 avoid the translation. See chain->for_all,
 chain<-find_all, etc.
+The list is built from a snapshot of the chain, which makes this
+safe if other threads use or modify the chain.
+
+    \predicate{member_chain}{2}{?Element, +Chain}
+    \label{sec:xpce-member_chain}
+Enumerate the elements of a chain on backtracking.  The elements come
+from a snapshot of the chain taken at the first call: changes to the
+chain do not affect the enumeration, but elements that are freed
+before they are reached are skipped.  This is safe if other threads
+use or modify the chain.  Fails if \arg{Chain} is @nil.
 
     \predicate{free}{1}{+Ref}
     \label{sec:xpce-free}

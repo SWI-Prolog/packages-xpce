@@ -45,6 +45,7 @@
            , list_to_set/2
            , maplist/3
            , member/2
+           , member_chain/2
            , memberchk/2
            , portray_object/2
            , subtract/3
@@ -328,9 +329,8 @@ behaviour(Object, Dyns) :-
     get(Object?graphicals, find_all,
         message(@arg1, instance_of, msg_event_port),
         Chain),
-    chain_list(Chain, EventPorts),
     findall(Name := Message,
-            (member(Port, EventPorts),
+            (member_chain(Port, Chain),
              get(Port, name, Name),
              port_message(Port, Message)),
             Dyns).
@@ -642,9 +642,8 @@ object_attribute(Object, Tmp, Attr, Value) :-
 object_attribute(Object, _Tmp, append, Value) :- % menu_items of a menu
     send(Object, instance_of, menu),
     get(Object, members, Chain),
-    chain_list(Chain, Items),
     findall(MenuItemTerm,
-            (member(Item, Items),
+            (member_chain(Item, Chain),
              new_term(Item, NewTerm),
              simplify_item(NewTerm, MenuItemTerm)),
             Value).

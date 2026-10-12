@@ -295,6 +295,22 @@ __pce_export int	pceEnumElements(PceObject collection,
 							void *closure),
 					void *closure);
 
+/* A snapshot of the elements of a chain, for walking it outside the
+ * XPCE lock.  pceSnapshotChain() evaluates a function argument and
+ * returns NULL if the result is not a chain.  The elements are
+ * protected by a code reference, so they stay valid if the chain is
+ * changed or an element is freed; pceSnapshotNext() skips elements
+ * freed after the snapshot was taken.  Call these functions holding
+ * the XPCE lock.
+ */
+
+typedef struct pce_snapshot *PceSnapshot;
+
+__pce_export PceSnapshot pceSnapshotChain(PceObject chain);
+__pce_export bool	pceSnapshotNext(PceSnapshot snapshot, PceObject *e);
+__pce_export bool	pceSnapshotEnd(PceSnapshot snapshot);
+__pce_export void	pceFreeSnapshot(PceSnapshot snapshot);
+
 
 		 /*******************************
 		 *    MULTI-THREADING SUPPORT	*

@@ -104,7 +104,7 @@ sandbox_tracer_config :-
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [chain_list/2, member_chain/2]).
 :- use_module(library(pane_frame), [pane_kind/2]).
 
 %       An arrangements file of their own: what these check is where a
@@ -138,8 +138,7 @@ test_tool_panes :-
 
 classes(F, Classes) :-
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(C, (member(P, Panes), get(P, class_name, C)), Classes).
+    findall(C, (member_chain(P, Chain), get(P, class_name, C)), Classes).
 
 %!  no_frames is det.
 %
@@ -148,8 +147,7 @@ classes(F, Classes) :-
 
 no_frames :-
     get(@prolog_ide, members, Members),
-    chain_list(Members, List),
-    forall(( member(F, List),
+    forall(( member_chain(F, Members),
              send(F, instance_of, pane_frame)
            ),
            send(F, destroy)).
@@ -197,8 +195,7 @@ placed_position(W, X, Y) :-
 menus(F, Names) :-
     get(F, menu_bar, MB),
     get(MB, buttons, Chain),
-    chain_list(Chain, Buttons),
-    findall(N, (member(B, Buttons), get(B, name, N)), Names).
+    findall(N, (member_chain(B, Chain), get(B, name, N)), Names).
 
 %!  monitor(-Monitor) is det.
 %
@@ -263,8 +260,7 @@ test(its_two_windows_are_tiled_inside_it,
      Names == [thread_browser, thread_window]) :-
     monitor(TM),
     get(TM, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, class_name, N)), Names).
 
 test(its_menu_reaches_the_bar_of_the_window_it_is_in) :-
     monitor(TM),
@@ -288,8 +284,7 @@ test(and_goes_again_when_another_pane_has_the_focus) :-
     send(MF, current_pane, TM),
     menus(MF, WithMonitor),
     memberchk(threads, WithMonitor),
-    get(MF, panes, Chain), chain_list(Chain, Panes),
-    member(Other, Panes), Other \== TM, !,
+    get(MF, panes, Chain), member_chain(Other, Chain), Other \== TM, !,
     send(MF, current_pane, Other),
     menus(MF, WithOther),
     \+ memberchk(threads, WithOther).
@@ -312,8 +307,7 @@ test(the_bar_belongs_to_the_pane_in_view,
     send(TM, report, status, watching),
     bar_message(MF, InView),
     get(MF, panes, Chain),
-    chain_list(Chain, Panes),
-    member(Other, Panes), Other \== TM, !,
+    member_chain(Other, Chain), Other \== TM, !,
     send(MF, current_pane, Other),      % the pane before it had its say
     bar_message(MF, Switched),
     send(TM, report, status, 'found a thread'),
@@ -359,8 +353,7 @@ test(it_can_be_asked_for_beside_what_is_already_there,
     get(@prolog_ide, tool, prolog_thread_monitor, TM),
     get(TM, container, tab_frame, Tab),
     get(Tab, windows, Chain),
-    chain_list(Chain, Panes),
-    findall(C, (member(P, Panes), get(P, class_name, C)), Classes).
+    findall(C, (member_chain(P, Chain), get(P, class_name, C)), Classes).
 
 test(its_windows_follow_the_size_it_is_given, true(Fits == true)) :-
     no_monitor,
@@ -571,8 +564,7 @@ monitor_side(Side, Landed) :-
               get(@prolog_ide, tool, prolog_thread_monitor, TM),
               get(TM, container, tab_frame, Tab),
               get(Tab, windows, Chain),
-              chain_list(Chain, Windows),
-              member(Other, Windows),
+              member_chain(Other, Chain),
               Other \== TM,
               !,
               side_of(TM, Other, Landed)
@@ -612,8 +604,7 @@ test(a_tool_takes_a_drop_and_is_split_by_it,
     send(Tab, drop, new(P, picture), point(PX, PY)),
     get(P, tile_manager, Tab),
     get(Tab, windows, Chain),
-    chain_list(Chain, Windows),
-    findall(C, (member(Win, Windows), get(Win, class_name, C)), Classes).
+    findall(C, (member_chain(Win, Chain), get(Win, class_name, C)), Classes).
 
 %       The outline that says where a drop would go is displayed on the
 %       window it covers.  A tool pane is drawn first and its windows
@@ -635,8 +626,7 @@ test(the_outline_of_a_drop_on_a_tool_goes_on_its_windows,
     get(TM, container, tab_frame, Tab),
     send(Tab, drop_feedback, TM, right),
     get(Tab, drop_feedback, Boxes),
-    chain_list(Boxes, List),
-    findall(N, (member(B, List), get(B?device, class_name, N)), On).
+    findall(N, (member_chain(B, Boxes), get(B?device, class_name, N)), On).
 
 test(and_is_taken_away_again_when_the_pointer_moves_on, [fail]) :-
     no_frames,
@@ -663,9 +653,8 @@ test(and_is_taken_away_again_when_the_pointer_moves_on, [fail]) :-
 
 as_subwindows(Pane) :-
     get(Pane, members, Chain),
-    chain_list(Chain, Windows),
     send(Pane, slot, subwindows, new(Subs, chain)),
-    forall(member(W, Windows), send(Subs, append, W)).
+    forall(member_chain(W, Chain), send(Subs, append, W)).
 
 %       And it is on the Settings menu, so it can be changed without
 %       editing a Defaults file.
@@ -680,8 +669,7 @@ test(the_setting_is_on_the_settings_menu,
     get(Settings, member, new_tools_open, Item),
     get(Item, popup, Popup),
     get(Popup, members, Chain),
-    chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Items).
 
 %       It says the sources too, since edit/1 goes by it; see
 %       `prolog_ide <-source_placement'.
@@ -716,9 +704,8 @@ test(it_shows_which_one_is_in_force, true(Ticked == [split])) :-
     with_placement(split,
                    ( send(Popup, update, F),
                      get(Popup, members, Chain),
-                     chain_list(Chain, Members),
                      findall(V,
-                             ( member(MI, Members),
+                             ( member_chain(MI, Chain),
                                get(MI, selected, @on),
                                get(MI, value, V)
                              ),
@@ -770,8 +757,7 @@ test(its_three_windows_are_tiled_inside_it,
      Names == [tool_dialog, sb_filter_dialog, prolog_source_structure]) :-
     navigator(SB),
     get(SB, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, class_name, N)), Names).
 
 test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Navigator')) :-
     navigator(SB),
@@ -856,8 +842,7 @@ test(and_it_lands_on_the_left_of_what_was_there, true(Landed == left)) :-
     get(@prolog_ide, tool, prolog_navigator, SB),
     get(SB, container, tab_frame, Tab),
     get(Tab, windows, Chain),
-    chain_list(Chain, Windows),
-    member(Other, Windows), Other \== SB, !,
+    member_chain(Other, Chain), Other \== SB, !,
     side_of(SB, Other, Landed).
 
 %       Expanding a file often loads files, e.g., to analyse it.  A file
@@ -1057,8 +1042,7 @@ test(its_two_windows_are_tiled_inside_it,
      Names == [prolog_debug_browser, prolog_debug_view]) :-
     debug_monitor(M),
     get(M, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, class_name, N)), Names).
 
 test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Debug monitor')) :-
     debug_monitor(M),
@@ -1078,8 +1062,7 @@ test(its_menu_reaches_the_bar_of_the_window_it_is_in,
     get(F, menu_bar, MB),
     get(MB, member, debug_monitor, Popup),
     get(Popup, members, Chain),
-    chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Items).
 
 %       An item without a message of its own goes to the pane the user is
 %       working in, which is how the actions used to reach the frame.
@@ -1110,8 +1093,7 @@ test(selecting_a_topic_highlights_its_messages) :-
         ( send(M, refresh),
           get(M, browser, B),
           get(B, members, Chain),
-          chain_list(Chain, Items),
-          member(DI, Items),
+          member_chain(DI, Chain),
           get(DI, object, test_tool_panes_topic),
           !,
           send(B, selected, DI),
@@ -1141,8 +1123,7 @@ test(and_it_lands_along_the_bottom, true(Landed == below)) :-
     get(@prolog_ide, tool, prolog_debug_monitor, M),
     get(M, container, tab_frame, Tab),
     get(Tab, windows, Chain),
-    chain_list(Chain, Windows),
-    member(Other, Windows), Other \== M, !,
+    member_chain(Other, Chain), Other \== M, !,
     side_of(M, Other, Landed).
 
 :- end_tests(debug_monitor_pane).
@@ -1229,9 +1210,8 @@ test(and_nothing_is_laid_out_under_the_grip,
     send(H, compute),
     get(H, area, Grip),
     get(D, graphicals, Chain),
-    chain_list(Chain, Graphicals),
     findall(Name-Area,
-            ( member(G, Graphicals),
+            ( member_chain(G, Chain),
               get(G, area, Area),
               send(Area, overlap, Grip),
               get(G, class_name, Name)
@@ -1245,8 +1225,7 @@ test(it_lists_what_is_being_debugged, true(Listed == ['append/3'])) :-
         ( send(D, update),
           get(D, member, list_browser, LB),
           get(LB, members, Chain),
-          chain_list(Chain, Items),
-          findall(N, (member(I, Items), get(I, key, N)), Listed)
+          findall(N, (member_chain(I, Chain), get(I, key, N)), Listed)
         ),
         nospy(lists:append/3)).
 
@@ -1329,8 +1308,7 @@ test(its_three_windows_are_tiled_inside_it,
      Names == [filter_dialog, browsers, workspaces]) :-
     xref(F),
     get(F, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, name, N)), Names).
 
 test(the_tab_is_named_after_it,
      true(Label == 'SWI-Prolog -- Cross-referencer')) :-
@@ -1394,8 +1372,7 @@ test(its_menu_reaches_the_bar_of_the_window_it_is_in,
     get(Frame, menu_bar, MB),
     get(MB, member, xref, Popup),
     get(Popup, members, Chain),
-    chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Items).
 
 test(the_settings_show_what_is_in_force,
      true(Ticked == [@off, @on, @on])) :-
@@ -1506,8 +1483,7 @@ test(a_tool_adds_a_window_with_append, true(Names == [dialog, picture])) :-
     send(Tool, append, new(P, picture)),
     send(P, name, picture),
     get(Tool, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, name, N)), Names).
 
 test(and_finds_it_back_by_name, true(Found == P)) :-
     open_manual_tool(statistics, Tool),
@@ -1861,8 +1837,7 @@ test(its_windows_are_tiled_inside_it,
     no_frames,
     profiler(F),
     get(F, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, class_name, N)), Names).
 
 test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Profile')) :-
     no_frames,
@@ -1882,8 +1857,7 @@ test(its_menu_reaches_the_bar_of_the_window_it_is_in,
     get(Frame, menu_bar, MB),
     get(MB, member, profile, Popup),
     get(Popup, members, Chain),
-    chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Items).
 
 test(it_lists_what_was_sampled, true(Listed == true)) :-
     no_frames,
@@ -1917,8 +1891,7 @@ test(and_so_does_a_text_of_the_details) :-
     send(Item, details),
     get(F, window, prof_details, W),
     get(W?tabular, graphicals, Chain),
-    chain_list(Chain, Graphicals),
-    member(Text, Graphicals),
+    member_chain(Text, Chain),
     send(Text, instance_of, prof_node_text),
     !,
     send(Text, details).
@@ -1977,8 +1950,7 @@ test(the_details_and_graph_are_tabs_of_its_right_window,
     profiler(F),
     get(F, window, prof_tabs, T),
     get(T, tabs, Chain),
-    chain_list(Chain, Tabs),
-    findall(N, (member(Tab, Tabs), get(Tab, name, N)), Names).
+    findall(N, (member_chain(Tab, Chain), get(Tab, name, N)), Names).
 
 test(the_graph_waits_until_it_can_be_seen, Stale == @on) :-
     no_frames,
@@ -2169,13 +2141,11 @@ test(every_profile_opens_a_pane_of_its_own, true(Panes == 2)) :-
     profiler(_),
     profiler(_),
     get(@prolog_ide, members, Chain),
-    chain_list(Chain, Frames),
     findall(P,
-            ( member(Frame, Frames),
+            ( member_chain(Frame, Chain),
               send(Frame, instance_of, pane_frame),
               get(Frame, panes, Ps),
-              chain_list(Ps, PL),
-              member(P, PL),
+              member_chain(P, Ps),
               send(P, instance_of, prof_frame)
             ),
             Profilers),
@@ -2240,8 +2210,7 @@ test(its_menu_reaches_the_bar_of_the_window_it_is_in,
     get(Frame, menu_bar, MB),
     get(MB, member, exceptions, Popup),
     get(Popup, members, Chain),
-    chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Items).
 
 %       The table it shows is the pane's own content now, not a window
 %       inside a frame.
@@ -2328,8 +2297,7 @@ debugger(F) :-
 
 terminal_running(Frame, Thread) :-
     get(Frame, panes, Chain),
-    chain_list(Chain, Panes),
-    member(Pane, Panes),
+    member_chain(Pane, Chain),
     pane_kind(Pane, terminal),
     !,
     get(Pane, terminal, PT),
@@ -2383,8 +2351,7 @@ test(its_four_windows_are_tiled_inside_it,
     no_frames,
     debugger(F),
     get(F, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, name, N)), Names).
 
 %       Its windows are named, and it used to find them back with
 %       `frame <-member'.
@@ -2443,8 +2410,7 @@ test(its_menu_reaches_the_bar_of_the_window_it_is_in,
 
 popup_values(Popup, Values) :-
     get(Popup, members, Chain),
-    chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Values).
+    findall(V, (member_chain(MI, Chain), get(MI, value, V)), Values).
 
 %       The tracer waits in <-confirm for an action and ->return_action
 %       gives it one.  Which answer belongs to which debugger is kept per
@@ -2602,8 +2568,7 @@ test(its_windows_are_the_controls_and_the_term,
     no_frames,
     viewer(TV),
     get(TV, members, Chain),
-    chain_list(Chain, Windows),
-    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+    findall(N, (member_chain(W, Chain), get(W, class_name, N)), Names).
 
 test(and_the_term_is_written_in_the_view, true(Text == 'foo(bar,[1,2,3])')) :-
     no_frames,
@@ -2814,8 +2779,7 @@ test(and_the_monitor_lets_go_of_them, Focused == [terminal]) :-
     console_and_monitor(F, T, _M),
     send(F, current_pane, T),
     get(F, panes, Chain),
-    chain_list(Chain, Panes),
-    findall(Kind, ( member(P, Panes),
+    findall(Kind, ( member_chain(P, Chain),
                     get(P, input_focus, @on),
                     pane_kind(P, Kind)
                   ), Focused).

@@ -399,6 +399,17 @@ topmost_graphical(Dev, Pos, Gr) :-
 \end{code}
 The second implementation is not only shorter, it also requires far less
 data conversions between Prolog and \product{} and is therefore much faster.
+When \arg{Chain} is given, \arg{List} holds its elements at the moment
+of the call.  This is safe if other threads use or modify the chain.
+
+    \predicate{member_chain}{2}{?Element, +Chain}
+True when \arg{Element} is an element of \arg{Chain}.  On backtracking
+it enumerates the elements in order from a snapshot of the chain taken
+at the first call, so changes to the chain while enumerating do not
+affect the result, except that elements that are freed before they are
+reached are skipped.  Unlike walking the chain using chain<-next, this
+is safe if other threads use or modify the chain.  Fails if \arg{Chain}
+is @nil.
 
     \predicate{get_chain}{3}{+Receiver, +Selector, -List}
 Utility predicate implemented as:
