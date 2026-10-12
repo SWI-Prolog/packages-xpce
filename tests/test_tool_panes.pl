@@ -1647,6 +1647,36 @@ test(an_undocumented_entry_has_none, Book == "") :-
     new(Class, class(test_undocumented_class)),
     summary_columns(Class, [_Kind, _Name, Book|_]).
 
+%       A class variable or method that is not documented itself is
+%       described by the instance variable with the same name.  The
+%       card says so.
+
+test(a_class_variable_is_described_by_its_variable,
+     [condition(has_manual_index), Note == delegated]) :-
+    get(@pce, convert, scroll_bar, class, Class),
+    get(Class, class_variable, distance, CV),
+    send(CV, has_help),
+    card_note(CV, Note).
+test(a_method_is_described_by_its_variable,
+     [condition(has_manual_index), Note == delegated]) :-
+    get(@pce, convert, application, class, Class),
+    get(Class, send_method, modal, M),
+    \+ send(M, instance_of, variable),
+    card_note(M, Note).
+test(a_documented_method_has_no_note,
+     [condition(has_manual_index), Note == own]) :-
+    get(@pce, convert, tile, class, Class),
+    get(Class, send_method, layout, M),
+    card_note(M, Note).
+
+card_note(Obj, Note) :-
+    pce_html_manual:load_member_dom(Obj, _Path, [_Dt, Dd|_]),
+    (   Dd = element(dd, _, [element(em, _, [Text])]),
+        sub_atom(Text, 0, _, _, 'Described by instance variable')
+    ->  Note = delegated
+    ;   Note = own
+    ).
+
 has_manual_index :-
     catch(manual_object(xpce(tile, ivar, hor_stretch), _, _, _, _), _, fail).
 

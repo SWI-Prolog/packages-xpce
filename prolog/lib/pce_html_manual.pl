@@ -277,7 +277,8 @@ load_member_dom(Obj, Path, DOM) :-
     !,
     load_html(Path, HTML, [cdata(string), max_errors(-1), syntax_errors(quiet)]),
     member_anchor_slug(Class, ResolvedKind, Name, Slug),
-    find_member_chunk(HTML, Slug, DOM).
+    find_member_chunk(HTML, Slug, DOM0),
+    delegation_note(Kind, ResolvedKind, Class, Name, DOM0, DOM).
 
 %   The live xpce class system exposes an instance variable as both
 %   a send_method and a get_method (where access permits). The
@@ -285,17 +286,19 @@ load_member_dom(Obj, Path, DOM) :-
 %   =|xpce(C, ivar, N)|=, so a lookup for any of send/get/both falls
 %   back through =|both|= (legacy both_method index) and finally to
 %   =|ivar|= so the per-member card resolves regardless of how the
-%   click site classified the member.
+%   click site classified the member.  A class variable that is not
+%   documented itself is described by the instance variable with the
+%   same name, which it provides the default for.
 
 resolve_member_kind(Class, Kind, Name, Kind, Path) :-
     manual_object(xpce(Class, Kind, Name), _, Path, _, _),
     !.
 resolve_member_kind(Class, Kind, Name, both, Path) :-
-    ( Kind == send ; Kind == get ),
+    ( Kind == send ; Kind == get ; Kind == classvar ),
     manual_object(xpce(Class, both, Name), _, Path, _, _),
     !.
 resolve_member_kind(Class, Kind, Name, ivar, Path) :-
-    ( Kind == send ; Kind == get ; Kind == both ),
+    ( Kind == send ; Kind == get ; Kind == both ; Kind == classvar ),
     manual_object(xpce(Class, ivar, Name), _, Path, _, _).
 %   Class chapters have no per-member <dt> chunk -- fall back to the
 %   whole class-<name>.html (or, eventually, the class intro section).
@@ -641,19 +644,38 @@ selection(MHC, Obj:object*) :->
 
 source_doc_dom(Obj, Path, DOM) :-
     object_spec(Obj, Spec),
-    spec_doc_object(Spec, Object),
-    xpce_doc_dom(Object, Path, DOM),
-    !.
+    spec_doc_object(Spec, Kind, Object),
+    xpce_doc_dom(Object, Path, DOM0),
+    !,
+    Object = xpce(Class, ResolvedKind, Name),
+    delegation_note(Kind, ResolvedKind, Class, Name, DOM0, DOM).
 
-spec_doc_object(Class, xpce(Class, class, Class)) :-
+spec_doc_object(Class, class, xpce(Class, class, Class)) :-
     atom(Class).
-spec_doc_object(->(C, N), xpce(C, K, N)) :-
+spec_doc_object(->(C, N), send, xpce(C, K, N)) :-
     member(K, [send, both, ivar]).
-spec_doc_object(<-(C, N), xpce(C, K, N)) :-
+spec_doc_object(<-(C, N), get, xpce(C, K, N)) :-
     member(K, [get, both, ivar]).
-spec_doc_object(<->(C, N), xpce(C, K, N)) :-
+spec_doc_object(<->(C, N), both, xpce(C, K, N)) :-
     member(K, [both, ivar, get, send]).
-spec_doc_object(xpce(classvar, C, N), xpce(C, classvar, N)).
+spec_doc_object(xpce(classvar, C, N), classvar, xpce(C, K, N)) :-
+    member(K, [classvar, both, ivar]).
+
+%!  delegation_note(+Kind, +ResolvedKind, +Class, +Name, +DOM0, -DOM)
+%
+%   If a method or class variable (Kind) is described by the instance
+%   variable with the same name (ResolvedKind), say so at the start of
+%   the description: the description is about the variable.
+
+delegation_note(Kind, Resolved, Class, Name,
+                [Dt|Rest], [Dt, Note|Rest]) :-
+    memberchk(Kind, [send, get, classvar]),
+    memberchk(Resolved, [both, ivar]),
+    !,
+    format(atom(Text), 'Described by instance variable ~w of class ~w:',
+           [Name, Class]),
+    Note = element(dd, [], [element(em, [], [Text])]).
+delegation_note(_, _, _, _, DOM, DOM).
 
 %   Intercept link clicks inside the rendered chunk: if the URL
 %   resolves to a =|class-<C>.html#class-<C>-<K>-<S>|= entry that
