@@ -117,6 +117,7 @@ pane_layouts:arrangements_file(File) :-
     current_prolog_flag(tmp_dir, Tmp),
     atom_concat(Tmp, '/test_tool_panes_store', File).
 :- use_module(library(lists), [member/2]).
+:- use_module(library(terms), [mapsubterms/3]).
 
 test_tool_panes :-
     run_tests([ tool_panes,
@@ -1760,14 +1761,91 @@ profile opens a pane of its own, as it opened a frame of its own before.
 */
 
 %!  profiler(-Tool) is det.
+%!  profiler(-Tool, -Data) is det.
 %
-%   Profile something small and show the result.
+%   Show a stored profile.  These tests are about the windows, so they
+%   do not depend on where the samples of a real profile happen to land.
 
 profiler(F) :-
-    profile(numlist(1, 10000, _), [time(cpu)]),
-    profile_data(Data),
+    profiler(F, _).
+
+profiler(F, Data) :-
+    stored_profile(Data),
     pce_profile:show_profile(Data),
     get(@prolog_ide, tool, prof_frame, F).
+
+%!  stored_profile(-Data) is det.
+%
+%   A small profile in the format of profile_data/1.  Relatives are
+%   node(Pred, Cycle, Ticks, ChildTicks, Calls, Redos, Exits).  Methods
+%   of classes defined in Prolog are callees of a predicate, but have no
+%   node of their own.  They are written as method(Class, Selector) here
+%   and resolved to the method object.
+
+stored_profile(Data) :-
+    stored_profile_data(Data0),
+    mapsubterms(resolve_method, Data0, Data).
+
+resolve_method(method(Class, Selector), Method) :-
+    get(@pce, convert, Class, class, ClassObj),
+    get(ClassObj, send_method, Selector, Method).
+
+stored_profile_data(
+    profile{ nodes:
+             [ node{ predicate: user:prof_main/0,
+                     call: 1, exit: 1, redo: 0,
+                     ticks_self: 1, ticks_siblings: 11,
+                     callers: [],
+                     callees: [ node(lists:numlist/3, 0, 7, 0, 1, 0, 1),
+                                node(user:prof_method_work/0,
+                                     0, 0, 4, 1, 0, 1)
+                              ]
+                   },
+               node{ predicate: lists:numlist/3,
+                     call: 1, exit: 1, redo: 0,
+                     ticks_self: 2, ticks_siblings: 5,
+                     callers: [ node(user:prof_main/0, 0, 2, 5, 1, 0, 1) ],
+                     callees: [ node(lists:numlist_/3, 0, 5, 0, 1, 0, 1) ]
+                   },
+               node{ predicate: lists:numlist_/3,
+                     call: 10000, exit: 10000, redo: 0,
+                     ticks_self: 5, ticks_siblings: 0,
+                     callers: [ node('<recursive>', 0, 0, 0, 9999, 0, 0),
+                                node(lists:numlist/3, 0, 5, 0, 1, 0, 1)
+                              ],
+                     callees: []
+                   },
+               node{ predicate: user:prof_method_work/0,
+                     call: 1, exit: 1, redo: 0,
+                     ticks_self: 0, ticks_siblings: 4,
+                     callers: [ node(user:prof_main/0, 0, 0, 4, 1, 0, 1) ],
+                     callees: [ node(method(prolog_predicate, initialise),
+                                     0, 2, 0, 2000, 0, 2000),
+                                node(pce_principal:free/1,
+                                     0, 1, 1, 2000, 0, 2000)
+                              ]
+                   },
+               node{ predicate: pce_principal:free/1,
+                     call: 2000, exit: 2000, redo: 0,
+                     ticks_self: 1, ticks_siblings: 1,
+                     callers: [ node(user:prof_method_work/0,
+                                     0, 1, 1, 2000, 0, 2000) ],
+                     callees: [ node(pce_principal:'$pce_free'/1,
+                                     0, 1, 0, 2000, 0, 2000) ]
+                   },
+               node{ predicate: pce_principal:'$pce_free'/1,
+                     call: 2000, exit: 2000, redo: 0,
+                     ticks_self: 1, ticks_siblings: 0,
+                     callers: [ node(pce_principal:free/1,
+                                     0, 1, 0, 2000, 0, 2000) ],
+                     callees: []
+                   }
+             ],
+             summary: summary{ accounting: 0, nodes: 6, ports: true,
+                               sample_period: 5000, samples: 12,
+                               ticks: 12, time: 0.06
+                             }
+           }).
 
 :- begin_tests(profiler_pane).
 
@@ -1831,7 +1909,6 @@ test(the_browser_reaches_the_tool_to_show_details) :-
     get(Tabular?graphicals, size, N),
     N > 0.
 
-:- if(getenv('SWIPL_TEST_FAIL_ON_UNLIKELY', y)).
 test(and_so_does_a_text_of_the_details) :-
     no_frames,
     profiler(F),
@@ -1845,7 +1922,6 @@ test(and_so_does_a_text_of_the_details) :-
     send(Text, instance_of, prof_node_text),
     !,
     send(Text, details).
-:- endif.
 
 %       Methods of classes defined in Prolog are in the profile as the
 %       callees of a predicate.  Walking the call graph finds the data
@@ -1853,21 +1929,9 @@ test(and_so_does_a_text_of_the_details) :-
 %       which raised a type error for a method and a predicate in module
 %       user.
 
-profile_methods(F, Data) :-
-    retractall(user:prof_method_work),
-    assertz(user:(prof_method_work :-
-                     forall(between(1, 2000, _),
-                            ( new(P, prolog_predicate(foo/1)),
-                              free(P)
-                            )))),
-    profile(user:prof_method_work, [time(cpu)]),
-    profile_data(Data),
-    pce_profile:show_profile(Data),
-    get(@prolog_ide, tool, prof_frame, F).
-
 test(the_graph_walks_past_methods, true(memberchk(Method, Callees))) :-
     no_frames,
-    profile_methods(F, Data),
+    profiler(F, Data),
     member(Node, Data.nodes),
     Node.predicate == user:prof_method_work/0,
     !,
