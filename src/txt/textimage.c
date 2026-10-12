@@ -1036,6 +1036,17 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     int run_tw = prt ? (int)str_advance_W(buf, (int)(out-buf), f)
 		     : (int)l->chars[e].x - sx;
 
+    /* If the next run is filled the same way (e.g., the tab after a
+     * selected word), fill up to where it starts.  The Pango advance
+     * may fall short of the stored x of the next character, which
+     * leaves a gap in a selection. */
+    if ( prt && e < to &&
+	 l->chars[e].background == bg &&
+	 (l->chars[e].attributes & TXT_HIGHLIGHTED) ==
+	 (atts & TXT_HIGHLIGHTED) &&
+	 sx + run_tw < (int)l->chars[e].x )
+      run_tw = (int)l->chars[e].x - sx;
+
     if ( atts & TXT_GREYED )		/* as an inactive graphical */
     { Any grey = getClassVariableValueObject(ti, NAME_inactiveColour);
 
