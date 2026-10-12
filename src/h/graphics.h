@@ -838,6 +838,18 @@ NewClass(gradient)
 End;
 
 
+NewClass(markup_text)
+  ABSTRACT_GRAPHICAL
+  CharArray	markup;			/* Pango markup */
+  FontObj	font;			/* Font for unmarked text */
+  Int		width;			/* Wrap width or NIL */
+  Name		alignment;		/* left, center, right */
+  BoolObj	justify;		/* Justify wrapped lines */
+  Name		ellipsize;		/* none, start, middle, end */
+  Num		line_spacing;		/* Factor; 0: font's */
+End;
+
+
 NewClass(stroke_style)
   Name		cap;			/* butt, round, square */
   Name		join;			/* miter, round, bevel */

@@ -1074,6 +1074,12 @@ show_source_files :-
 	send(D, open).
 \end{code}
 
+#class markup_text "markup_text(markup, width, font)"
+A \class{markup_text} displays read-only text formatted using Pango
+markup, mixing fonts, sizes, styles and colours, for example
+\exam{"Some <b>bold</b> text"}.  Pango wraps, aligns, justifies and
+ellipsizes the lines.  See also \class{text} for editable text.
+
 #class menu "menu(label, kind, message)"
 Class \class{menu} realises various different styles of menus and is the
 super-class for \class{popup}. Basically, a menu presents multiple

@@ -89,6 +89,21 @@ void r_complement(int x, int y, int w, int h);
 double r_thickness(double pen);
 int r_transformed(int val);
 void r_dash(Any texture);
+
+/* Pango markup, see r_markup() */
+typedef struct markup_spec
+{ CharArray	markup;			/* Pango markup */
+  FontObj	font;			/* Font for unmarked text */
+  double	width;			/* Wrap width; <= 0: do not wrap */
+  Name		alignment;		/* left, center, right */
+  bool		justify;		/* Justify wrapped lines */
+  Name		ellipsize;		/* none, start, middle, end */
+  double	line_spacing;		/* Factor; 0: the font's */
+} markup_spec;
+
+bool r_markup_extents(const markup_spec *m, double *w, double *h);
+void r_markup(const markup_spec *m, double x, double y);
+bool ws_parse_markup(CharArray markup, StringObj *plain, StringObj *error);
 void r_fillpattern(Any fill, Name which);
 void r_fix_colours(Any fg, Any bg, ColourContext ctx);
 void r_unfix_colours(ColourContext ctx);

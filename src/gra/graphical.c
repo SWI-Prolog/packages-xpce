@@ -3417,6 +3417,25 @@ drawTextGraphical(Graphical gr, CharArray txt, FontObj font,
 
 
 static status
+drawMarkupGraphical(Graphical gr, CharArray markup, FontObj font,
+		    Int x, Int y, Int width, Name alignment)
+{ markup_spec m =
+  { .markup	  = markup,
+    .font	  = font,
+    .width	  = isDefault(width) || isNil(width) ? 0.0 : valNum(width),
+    .alignment	  = isDefault(alignment) ? NAME_left : alignment,
+    .justify	  = false,
+    .ellipsize	  = NAME_none,
+    .line_spacing = 0.0
+  };
+
+  r_markup(&m, valNum(x), valNum(y));
+
+  succeed;
+}
+
+
+static status
 solidGraphical(Graphical gr, BoolObj solid)
 { if ( solid == ON )
     setFlag(gr, F_SOLID);
@@ -3486,6 +3505,9 @@ static char *T_focus[] =
 static char *T_drawText[] =
 	{ "string=char_array", "font", "x=int", "y=int", "w=[0..]", "h=[0..]",
 	  "hadjust=[{left,center,right}]", "vadjust=[{top,center,bottom}]" };
+static char *T_drawMarkup[] =
+	{ "markup=char_array", "font", "x=int", "y=int", "width=[int]*",
+	  "alignment=[{left,center,right}]" };
 static char *T_connections[] =
 	{ "to=[graphical]", "link=[link]",
 	  "from_kind=[name]", "to_kind=[name]" };
@@ -3627,6 +3649,8 @@ static senddecl send_graphical[] =
      NAME_draw, "Draw/fill a polyfon"),
   SM(NAME_drawText, 8, T_drawText, drawTextGraphical,
      NAME_draw, "Draw text-string"),
+  SM(NAME_drawMarkup, 6, T_drawMarkup, drawMarkupGraphical,
+     NAME_draw, "Draw Pango markup with its top-left corner at (x,y)"),
   SM(NAME_graphicsState, 4, T_graphicsState, graphicsStateGraphical,
      NAME_draw, "Modify the graphics state"),
   SM(NAME_restoreGraphicsState, 0, NULL, restoreGraphicsStateGraphical,

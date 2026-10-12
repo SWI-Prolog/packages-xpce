@@ -62,6 +62,25 @@ ws_init_fonts(void)
 }
 
 
+/* A new layout using the font's description, created from the same
+ * context as the layout of the font itself, so text has the same
+ * metrics.  The caller must g_object_unref() it.
+ */
+
+PangoLayout *
+ws_new_layout(FontObj f)
+{ WsFont wsf = ws_get_font(f);
+
+  if ( !wsf )
+    return NULL;
+
+  PangoLayout *layout = pango_layout_new(context);
+  pango_layout_set_font_description(layout, wsf->desc);
+
+  return layout;
+}
+
+
 /* (Re-)read font.scale, the factor for the size of all fonts.  Fonts
  * created afterwards use the new value: see reloadFonts().
  */

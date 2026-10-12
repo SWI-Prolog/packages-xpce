@@ -66,6 +66,7 @@ typedef struct
 } ws_font, *WsFont;
 
 status ws_create_font(FontObj f);
+PangoLayout *ws_new_layout(FontObj f);
 void   ws_reset_font_scale(void);
 void   ws_destroy_font(FontObj f);
 bool   s_cwidth(uint32_t c, FontObj font, float *wp);

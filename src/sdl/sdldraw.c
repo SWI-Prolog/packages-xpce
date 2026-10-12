@@ -3344,6 +3344,122 @@ s_print_utf8_scaled(const char *u, size_t len, int x, int y, FontObj font,
   }
 }
 
+		 /*******************************
+		 *	   PANGO MARKUP		*
+		 *******************************/
+
+/**
+ * Parse Pango markup.  On success, `plain' (if not NULL) is the text
+ * without the markup.  On failure, `error' (if not NULL) is Pango's
+ * message.
+ */
+bool
+ws_parse_markup(CharArray markup, StringObj *plain, StringObj *error)
+{ const char *s = charArrayToUTF8(markup);
+  char *text = NULL;
+  GError *err = NULL;
+
+  if ( pango_parse_markup(s, -1, 0, NULL, &text, NULL, &err) )
+  { if ( plain )
+      *plain = UTF8ToString(text);
+    g_free(text);
+    return true;
+  }
+
+  if ( error )
+    *error = UTF8ToString(err->message);
+  g_error_free(err);
+  return false;
+}
+
+
+/* Create a layout for `m' for drawing on `cr'.  Markup that is not
+ * valid is shown as is.  The caller must g_object_unref() the layout.
+ */
+static PangoLayout *
+markup_layout(cairo_t *cr, const markup_spec *m)
+{ PangoLayout *layout = ws_new_layout(m->font);
+
+  if ( !layout )
+    return NULL;
+
+  const char *s = charArrayToUTF8(m->markup);
+  if ( pango_parse_markup(s, -1, 0, NULL, NULL, NULL, NULL) )
+    pango_layout_set_markup(layout, s, -1);
+  else
+    pango_layout_set_text(layout, s, -1);
+
+  if ( m->width > 0.0 )
+  { pango_layout_set_width(layout, (int)(m->width*PANGO_SCALE));
+    pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+  }
+  pango_layout_set_alignment(layout,
+			     m->alignment == NAME_center ? PANGO_ALIGN_CENTER :
+			     m->alignment == NAME_right  ? PANGO_ALIGN_RIGHT :
+							   PANGO_ALIGN_LEFT);
+  pango_layout_set_justify(layout, m->justify);
+  pango_layout_set_ellipsize(layout,
+			     m->ellipsize == NAME_start  ? PANGO_ELLIPSIZE_START :
+			     m->ellipsize == NAME_middle ? PANGO_ELLIPSIZE_MIDDLE :
+			     m->ellipsize == NAME_end    ? PANGO_ELLIPSIZE_END :
+							   PANGO_ELLIPSIZE_NONE);
+#if PANGO_VERSION_CHECK(1,44,0)
+  if ( m->line_spacing > 0.0 )
+    pango_layout_set_line_spacing(layout, (float)m->line_spacing);
+#endif
+
+  pango_cairo_update_layout(cr, layout);
+
+  return layout;
+}
+
+
+/**
+ * Compute the size of the markup when drawn.  If a wrap width is
+ * given, the width is at least that.
+ */
+bool
+r_markup_extents(const markup_spec *m, double *w, double *h)
+{ cairo_t *cr = ws_font_context();
+  bool rc = false;
+
+  cairo_save(cr);
+  PangoLayout *layout = markup_layout(cr, m);
+  if ( layout )
+  { PangoRectangle logical;
+
+    pango_layout_get_extents(layout, NULL, &logical);
+    *w = ceil(P2D(logical.x + logical.width));
+    *h = ceil(P2D(logical.y + logical.height));
+    if ( m->width > 0.0 && *w < m->width )
+      *w = m->width;
+    g_object_unref(layout);
+    rc = true;
+  }
+  cairo_restore(cr);
+
+  return rc;
+}
+
+
+/**
+ * Draw the markup with its top-left corner at x,y.  Text without a
+ * colour in the markup uses the current colour.
+ */
+void
+r_markup(const markup_spec *m, double x, double y)
+{ Translate(x, y);
+  cairo_new_path(CR);
+
+  PangoLayout *layout = markup_layout(CR, m);
+  if ( layout )
+  { pce_cairo_set_source_color(CR, context.colour);
+    cairo_move_to(CR, x, y);
+    pango_cairo_show_layout(CR, layout);
+    g_object_unref(layout);
+  }
+}
+
 
 void
 s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)

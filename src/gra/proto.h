@@ -231,6 +231,9 @@ COMMON(status)	clipGraphical(Graphical gr, Area a);
 COMMON(status)	unclipGraphical(Graphical gr);
 COMMON(status)	makeClassGraphical(Class class);
 
+/* gra/markuptext.c */
+COMMON(status)	makeClassMarkupText(Class class);
+
 /* gra/strokestyle.c */
 COMMON(status)	dashStrokeStyle(StrokeStyle s, Any dash);
 COMMON(int)	capExtentGraphical(Graphical gr);

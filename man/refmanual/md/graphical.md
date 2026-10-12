@@ -603,6 +603,14 @@ for creating customised graphical objects:
     described with ->_redraw_area and should not be called outside
     this context.
 
+- graphical->draw_markup: markup=char_array, font, x=int, y=int, width=[int]*, alignment=[{left,center,right}]
+    Draw text formatted using Pango markup with its top-left corner at
+    X,Y.  Text without a font or colour in the markup uses `font` and
+    the current colour.  If `width` is given, lines are wrapped at this
+    width and aligned within it according to `alignment`.  Invalid
+    markup is drawn as is.  See class markup_text for the markup and a
+    graphical that displays it.
+
 - graphical->draw_text: string=char_array, font, x=int, y=int, w=[0..], h=[0..], hadjust=[{left,center,right}], vadjust=[{top,center,bottom}]
     Draw a string in the given font object.  If only X and Y are
     given, they describe the left-side of the baseline.  If W and H

@@ -156,6 +156,7 @@ scope('C.lbox', advanced).
 scope('C.line', basic).
 scope('C.link', basic).
 scope('C.list_browser', basic).
+scope('C.markup_text', basic).
 scope('C.menu', basic).
 scope('C.menu_bar', basic).
 scope('C.menu_item', basic).
@@ -1542,6 +1543,7 @@ scope('M.graphical.S.draw_box', advanced_programming).
 scope('M.graphical.S.draw_fill', advanced_programming).
 scope('M.graphical.S.draw_image', advanced_programming).
 scope('M.graphical.S.draw_line', advanced).
+scope('M.graphical.S.draw_markup', advanced).
 scope('M.graphical.S.draw_poly', advanced_programming).
 scope('M.graphical.S.draw_text', advanced_programming).
 scope('M.graphical.S.event', basic_programming).
@@ -1858,6 +1860,9 @@ scope('M.list_browser.S.style', basic).
 scope('M.list_browser.S.tab_stops', advanced).
 scope('M.list_browser.S.typed', basic_programming).
 scope('M.list_browser.S.unlink', basic_programming).
+scope('M.markup_text.G.text', basic).
+scope('M.markup_text.S.geometry', advanced).
+scope('M.markup_text.S.initialise', basic).
 scope('M.menu.G.active_item', advanced).
 scope('M.menu.G.contains', internal).
 scope('M.menu.G.default', obscure).
@@ -4852,6 +4857,13 @@ scope('V.list_browser.start_cell', internal).
 scope('V.list_browser.status', obscure).
 scope('V.list_browser.styles', obscure).
 scope('V.list_browser.texture', advanced).
+scope('V.markup_text.alignment', basic).
+scope('V.markup_text.ellipsize', advanced).
+scope('V.markup_text.font', basic).
+scope('V.markup_text.justify', advanced).
+scope('V.markup_text.line_spacing', advanced).
+scope('V.markup_text.markup', basic).
+scope('V.markup_text.width', basic).
 scope('V.menu.above', advanced).
 scope('V.menu.accelerator', advanced).
 scope('V.menu.accelerator_colour', advanced).
