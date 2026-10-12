@@ -335,6 +335,7 @@ erase(TF, Gr:graphical) :->
         ;   Next = @default
         ),
         send(Tile, unrelate),
+        release_tile(Tile, TF),
         send_super(TF, erase, Gr),
         (   get(TF, slot, closing, @on)
         ->  true
@@ -346,6 +347,19 @@ erase(TF, Gr:graphical) :->
             )
         )
     ;   send_super(TF, erase, Gr)
+    ).
+
+%!  release_tile(+Tile, +TF) is det.
+%
+%   `tile ->unrelate' does nothing to a root, so a window that was all
+%   I held leaves with its tile still naming me as <-manager, and I
+%   destroy myself next as I am empty.  Let go of it, as DeleteFrame()
+%   in src/win/frame.c does for a frame.
+
+release_tile(Tile, TF) :-
+    (   get(Tile, slot, manager, TF)
+    ->  send(Tile, slot, manager, @nil)
+    ;   true
     ).
 
 empty(TF) :->

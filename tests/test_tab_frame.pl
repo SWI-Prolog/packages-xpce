@@ -1141,6 +1141,16 @@ test(the_manager_follows_a_new_root) :-
     Root \== Root0,                     % the split introduced a super
     get(Root, manager, TF).
 
+%       Taking out the last window of a tab destroys the tab.  The window
+%       is the root of its own tile hierarchy then, and that root must not
+%       go on naming the destroyed tab as its manager.
+
+test(the_last_window_taken_out_lets_go_of_its_tab, [fail]) :-
+    two_tabs(_TW, TF1, _TF2),
+    get(TF1, window, P1),
+    send(TF1, delete, P1),
+    get(P1, tile_manager, _).
+
 test(current_never_answers_a_destroyed_window) :-
     tabbed(_TW, TF, P1),
     send(TF, split, new(P2, picture), P1, vertically),
