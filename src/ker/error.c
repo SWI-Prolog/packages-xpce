@@ -439,6 +439,8 @@ static const error_def errors[] =
     "%O: Must be ->create'd before `%s'" },
   { NAME_badTexture,		0,
     "%N: Unknown texture" },
+  { NAME_drawingError,		0,
+    "%N: Cannot draw: %s" },
   { NAME_badDash,		0,
     "%N: Dash pattern %N has no dashes" },
   { NAME_tooManyScreenLines,	0,

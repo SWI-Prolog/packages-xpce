@@ -20,7 +20,7 @@ set(GNU_SRC	getdate.c)
 set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c gradient.c
 		connection.c coords.c cursor.c device.c ellipse.c
 		figure.c font.c format.c graphical.c handle.c image.c
-		joint.c line.c link.c listbrowser.c node.c path.c pathseg.c strokestyle.c markuptext.c
+		joint.c line.c link.c listbrowser.c node.c path.c pathseg.c strokestyle.c markuptext.c canvas.c
 		scrollbar.c text.c transform.c tree.c visual.c
 		pixmap.c elevation.c shadow.c pen.c draw.c bezier.c hsv.c)
 

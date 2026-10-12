@@ -605,6 +605,13 @@ for creating customised graphical objects:
     described with ->_redraw_area and should not be called outside
     this context.
 
+- graphical->draw_path: path=path, fill=[colour|gradient|image|{foreground,background}]*
+    Draw the line of a path object using the current pen, texture and
+    colour (see ->graphics_state) and fill it if Fill is not @nil.  The
+    points of the path, plus its `path<-offset`, are in the
+    coordinate system of ->_redraw_area.  The path need not be
+    displayed.
+
 - graphical->draw_markup: markup=char_array, font, x=int, y=int, width=[int]*, alignment=[{left,center,right}]
     Draw text formatted using Pango markup with its top-left corner at
     X,Y.  Text without a font or colour in the markup uses `font` and

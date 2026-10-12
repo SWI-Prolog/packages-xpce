@@ -840,6 +840,12 @@ NewClass(gradient)
 End;
 
 
+NewClass(canvas)
+  ABSTRACT_GRAPHICAL
+  WsRef		ws_ref;			/* Recording and drawing state */
+End;
+
+
 NewClass(markup_text)
   ABSTRACT_GRAPHICAL
   CharArray	markup;			/* Pango markup */

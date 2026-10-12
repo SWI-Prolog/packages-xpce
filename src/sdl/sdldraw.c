@@ -38,6 +38,9 @@
 #include <cairo/cairo.h>
 #ifdef CAIRO_HAS_PDF_SURFACE
 #include <cairo/cairo-pdf.h>
+#ifdef CAIRO_HAS_SVG_SURFACE
+#include <cairo/cairo-svg.h>
+#endif
 #endif
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -54,7 +57,7 @@
 typedef enum
 { DCTX_WINDOW,
   DCTX_IMAGE,
-  DCTX_PDF
+  DCTX_FILE				/* PDF or SVG */
 } context_type;
 
 typedef struct
@@ -97,7 +100,8 @@ typedef struct
   double fh = (h)-_lw;
 
 static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
-static void pce_cairo_set_source_gradient(cairo_t *cr, Gradient g);
+static void pce_cairo_set_source_gradient(cairo_t *cr, Gradient g,
+					  double dx, double dy);
 static void pce_cairo_set_source_fill(cairo_t *cr, Any fill);
 #if 0
 static bool validate_cairo_text_consistency(cairo_t *draw_cr);
@@ -452,7 +456,7 @@ d_image(Image i, int x, int y, int w, int h)
   if ( d )
   { colour     = d->foreground;
     background = d->background;
-  } else	/* no display: an image is offscreen, so draw as d_pdf() does */
+  } else	/* no display: an image is offscreen, so draw as d_file() does */
   { d          = NIL;
     colour     = BLACK_COLOUR;
     background = WHITE_COLOUR;
@@ -473,22 +477,30 @@ d_image(Image i, int x, int y, int w, int h)
   succeed;
 }
 
-#ifdef CAIRO_HAS_PDF_SURFACE
-status
-d_pdf(const char *file, int w, int h, double scale)
-{ push_context();
+/* Draw on a surface that writes a file (PDF or SVG) of w x h points
+ * that holds the drawing scaled by `scale'.  d_done() finishes the
+ * file.
+ */
+
+static status
+d_file(const char *file, cairo_surface_t *surface, double scale)
+{ cairo_status_t rc = cairo_surface_status(surface);
+
+  if ( rc != CAIRO_STATUS_SUCCESS )
+  { cairo_surface_destroy(surface);
+    return errorPce(CtoName(file), NAME_openFile, NAME_write,
+		    CtoName(cairo_status_to_string(rc)));
+  }
+
+  push_context();
   context.open = 1;
 
-  Colour background = WHITE_COLOUR;
-  Colour colour     = BLACK_COLOUR;
-
-  context.type               = DCTX_PDF;
+  context.type               = DCTX_FILE;
   context.display            = NIL;
-  context.target             = cairo_pdf_surface_create(file,
-							w*scale, h*scale);
+  context.target             = surface;
   context.cr                 = cairo_create(context.target);
-  context.background         = background;
-  context.colour             = colour;
+  context.background         = WHITE_COLOUR;
+  context.colour             = BLACK_COLOUR;
   context.default_colour     = context.colour;
   context.default_background = context.background;
 
@@ -496,18 +508,36 @@ d_pdf(const char *file, int w, int h, double scale)
 
   succeed;
 }
-#else
-#warning "No PDF backend in Cairo"
-#endif
 
-void
-d_done_pdf(void)
+status
+d_pdf(const char *file, int w, int h, double scale)
+{ return d_file(file, cairo_pdf_surface_create(file, w*scale, h*scale),
+		scale);
+}
+
+status
+d_svg(const char *file, int w, int h, double scale)
+{
+#ifdef CAIRO_HAS_SVG_SURFACE
+  cairo_surface_t *s = cairo_svg_surface_create(file, w*scale, h*scale);
+
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 16, 0)
+  cairo_svg_surface_set_document_unit(s, CAIRO_SVG_UNIT_PX);
+#endif
+  return d_file(file, s, scale);
+#else
+  return errorPce(CtoName(file), NAME_openFile, NAME_write,
+		  CtoName("Cairo has no SVG support"));
+#endif
+}
+
+static void
+d_done_file(void)
 { cairo_show_page(context.cr);
   cairo_destroy(context.cr);
   cairo_surface_finish(context.target);
   cairo_surface_destroy(context.target);
 }
-
 
 /**
  * Define a clipping region for subsequent drawing operations.
@@ -547,8 +577,8 @@ void
 d_done(void)
 { DEBUG(NAME_redraw, Cprintf("d_done(): open = %d\n", context.open));
   if ( --context.open == 0 )
-  { if ( context.type == DCTX_PDF )
-    { d_done_pdf();
+  { if ( context.type == DCTX_FILE )
+    { d_done_file();
     } else
     { cairo_destroy(context.cr);
     }
@@ -648,20 +678,19 @@ gradient_to_bounding_box(cairo_t *cr, cairo_pattern_t *pat)
 }
 
 static void
-pce_cairo_set_source_gradient(cairo_t *cr, Gradient g)
+pce_cairo_set_source_gradient(cairo_t *cr, Gradient g, double dx, double dy)
 { cairo_pattern_t *pat;
-  /* Translate the gradient's coordinates through the current draw-
-   * context offset, the same shift shape-drawing macros apply so the
-   * pattern lines up with the shape being filled.
+  /* Translate the gradient's coordinates by dx,dy, the draw-context
+   * offset that shape-drawing macros apply, so the pattern lines up
+   * with the shape being filled.
    */
-  double x0 = X(valNum(g->p0->x));
-  double y0 = Y(valNum(g->p0->y));
-  double x1 = X(valNum(g->p1->x));
-  double y1 = Y(valNum(g->p1->y));
+  double x0 = valNum(g->p0->x) + dx;
+  double y0 = valNum(g->p0->y) + dy;
+  double x1 = valNum(g->p1->x) + dx;
+  double y1 = valNum(g->p1->y) + dy;
 
   if ( g->units == NAME_boundingBox )	/* not shifted: fractions */
-  { x0 -= context.offset_x; y0 -= context.offset_y;
-    x1 -= context.offset_x; y1 -= context.offset_y;
+  { x0 -= dx; y0 -= dy; x1 -= dx; y1 -= dy;
   }
 
   if ( g->kind == NAME_radial )
@@ -710,11 +739,12 @@ static cairo_surface_t *recolor_bw_surface(cairo_surface_t* input,
 					   Colour background,
 					   bool dbg);
 
-/* Tile the image, starting at the fill origin (see r_filloffset()).  A
- * bitmap is drawn in the current colours, as r_image() does.
+/* Tile the image, starting at ox,oy.  A bitmap is drawn in the colours
+ * fg and bg, as r_image() does.
  */
 static void
-pce_cairo_set_source_image(cairo_t *cr, Image image)
+pce_cairo_set_source_image(cairo_t *cr, Image image, double ox, double oy,
+			   Colour fg, Colour bg)
 { cairo_surface_t *surface = pceImage2CairoSurface(image);
   cairo_surface_t *copy = NULL;
 
@@ -723,18 +753,15 @@ pce_cairo_set_source_image(cairo_t *cr, Image image)
     return;
   }
   if ( image->kind == NAME_bitmap &&
-       ( context.colour != BLACK_COLOUR ||
-	 context.background != WHITE_COLOUR ) &&
-       (copy = recolor_bw_surface(surface, context.colour,
-				  context.background, false)) )
+       ( fg != BLACK_COLOUR || bg != WHITE_COLOUR ) &&
+       (copy = recolor_bw_surface(surface, fg, bg, false)) )
     surface = copy;
 
   cairo_pattern_t *pat = cairo_pattern_create_for_surface(surface);
   cairo_matrix_t m;
 
   cairo_pattern_set_extend(pat, CAIRO_EXTEND_REPEAT);
-  cairo_matrix_init_translate(&m, -X(context.fill_origin_x),
-				  -Y(context.fill_origin_y));
+  cairo_matrix_init_translate(&m, -ox, -oy);
   cairo_pattern_set_matrix(pat, &m);
   cairo_set_source(cr, pat);
   cairo_pattern_destroy(pat);		/* the context holds a reference */
@@ -749,14 +776,25 @@ is_paint(Any fill)
 	   instanceOfObject(fill, ClassImage) );
 }
 
+/* Set a colour, gradient or image as source.  Gradients are shifted by
+ * dx,dy and images are tiled from ox,oy.
+ */
+static void
+set_source_paint(cairo_t *cr, Any paint, double dx, double dy,
+		 double ox, double oy, Colour fg, Colour bg)
+{ if ( instanceOfObject(paint, ClassGradient) )
+    pce_cairo_set_source_gradient(cr, (Gradient)paint, dx, dy);
+  else if ( instanceOfObject(paint, ClassImage) )
+    pce_cairo_set_source_image(cr, (Image)paint, ox, oy, fg, bg);
+  else
+    pce_cairo_set_source_color(cr, (Colour)paint);
+}
+
 static void
 pce_cairo_set_source_fill(cairo_t *cr, Any fill)
-{ if ( instanceOfObject(fill, ClassGradient) )
-    pce_cairo_set_source_gradient(cr, (Gradient)fill);
-  else if ( instanceOfObject(fill, ClassImage) )
-    pce_cairo_set_source_image(cr, (Image)fill);
-  else
-    pce_cairo_set_source_color(cr, (Colour)fill);
+{ set_source_paint(cr, fill, context.offset_x, context.offset_y,
+		   X(context.fill_origin_x), Y(context.fill_origin_y),
+		   context.colour, context.background);
 }
 
 /* The source for drawing lines: the paint of the stroke_style if there
@@ -4060,3 +4098,308 @@ str_label(PceString s, int acc, FontObj font,
   } else
     str_draw_text_lines(acc, font, nlines, lines, 0, 0);
 }
+
+		 /*******************************
+		 *	       CANVAS		*
+		 *******************************/
+
+/* A canvas records what is drawn on it in a Cairo recording surface of
+ * its size.  Redrawing replays the recording, so the drawing remains
+ * vectors when the canvas is scaled or written to PDF or SVG.  `cr'
+ * draws on the recording and holds the Cairo state (path, source,
+ * transformation, ...) between the canvas methods.
+ */
+
+typedef struct ws_canvas
+{ cairo_surface_t *recording;
+  cairo_t	  *cr;
+  int		   saved;		/* cairo_save() nesting */
+} ws_canvas, *WsCanvas;
+
+static cairo_surface_t *
+new_recording(int w, int h)
+{ cairo_rectangle_t extents = { 0, 0, w, h };
+
+  return cairo_recording_surface_create(CAIRO_CONTENT_COLOR_ALPHA, &extents);
+}
+
+static void
+canvas_new_cr(WsCanvas wc)
+{ if ( wc->cr )
+    cairo_destroy(wc->cr);
+  wc->cr = cairo_create(wc->recording);
+  wc->saved = 0;
+}
+
+/**
+ * Create the recording for a canvas of w x h pixels.  If the canvas
+ * has a recording, its drawing is copied into the new one.  The
+ * drawing state is reset.
+ */
+void
+ws_canvas_size(Canvas c, int w, int h)
+{ WsCanvas wc = c->ws_ref;
+  cairo_surface_t *rec = new_recording(w, h);
+
+  if ( !wc )
+  { wc = alloc(sizeof(ws_canvas));
+    memset(wc, 0, sizeof(*wc));
+    c->ws_ref = wc;
+  } else
+  { cairo_t *cr = cairo_create(rec);
+
+    cairo_set_source_surface(cr, wc->recording, 0, 0);
+    cairo_paint(cr);
+    cairo_destroy(cr);
+    cairo_destroy(wc->cr);
+    wc->cr = NULL;
+    cairo_surface_destroy(wc->recording);
+  }
+
+  wc->recording = rec;
+  canvas_new_cr(wc);
+}
+
+void
+ws_canvas_destroy(Canvas c)
+{ WsCanvas wc = c->ws_ref;
+
+  if ( wc )
+  { c->ws_ref = NULL;
+    cairo_destroy(wc->cr);
+    cairo_surface_destroy(wc->recording);
+    unalloc(sizeof(ws_canvas), wc);
+  }
+}
+
+/**
+ * Erase the drawing and reset the drawing state.
+ */
+void
+ws_canvas_clear(Canvas c, int w, int h)
+{ WsCanvas wc = c->ws_ref;
+
+  if ( wc )
+  { cairo_destroy(wc->cr);
+    wc->cr = NULL;
+    cairo_surface_destroy(wc->recording);
+    wc->recording = new_recording(w, h);
+    canvas_new_cr(wc);
+  }
+}
+
+/**
+ * Replay the drawing with its top-left corner at x,y.
+ */
+void
+r_canvas(Canvas c, double x, double y)
+{ WsCanvas wc = c->ws_ref;
+
+  if ( wc )
+  { Translate(x, y);
+    cairo_save(CR);
+    cairo_set_source_surface(CR, wc->recording, x, y);
+    cairo_paint(CR);
+    cairo_restore(CR);
+  }
+}
+
+/**
+ * Open a draw context on the canvas, with its current transformation,
+ * for drawing graphicals on it.  See canvas->draw_in.
+ */
+status
+d_canvas(Canvas c)
+{ WsCanvas wc = c->ws_ref;
+  cairo_matrix_t m;
+
+  if ( !wc )
+    fail;
+
+  push_context();
+  context.open = 1;
+
+  context.type               = DCTX_IMAGE;
+  context.display            = NIL;
+  context.target             = wc->recording;
+  context.cr                 = cairo_create(context.target);
+  context.background         = WHITE_COLOUR;
+  context.colour             = BLACK_COLOUR;
+  context.default_colour     = context.colour;
+  context.default_background = context.background;
+
+  cairo_get_matrix(wc->cr, &m);
+  cairo_set_matrix(context.cr, &m);
+
+  succeed;
+}
+
+static status
+canvas_error(Canvas c, const char *msg)
+{ return errorPce(c, NAME_drawingError, CtoName(msg));
+}
+
+#define N(i) valNum(argv[i])
+#define DEG(i) (valNum(argv[i])*M_PI/180.0)
+
+/**
+ * Perform a drawing operation on the canvas.  The operations and their
+ * arguments are those of the canvas methods.  Returns `changed' to tell
+ * the caller the drawing changed.
+ */
+status
+ws_canvas_op(Canvas c, Name op, int argc, Any *argv, bool *changed)
+{ WsCanvas wc = c->ws_ref;
+  cairo_t *cr;
+
+  *changed = false;
+  if ( !wc )
+    fail;
+  cr = wc->cr;
+
+  if ( op == NAME_moveTo )
+    cairo_move_to(cr, N(0), N(1));
+  else if ( op == NAME_lineTo )
+    cairo_line_to(cr, N(0), N(1));
+  else if ( op == NAME_relMoveTo )
+  { if ( !cairo_has_current_point(cr) )
+      return canvas_error(c, "no current point");
+    cairo_rel_move_to(cr, N(0), N(1));
+  } else if ( op == NAME_relLineTo )
+  { if ( !cairo_has_current_point(cr) )
+      return canvas_error(c, "no current point");
+    cairo_rel_line_to(cr, N(0), N(1));
+  } else if ( op == NAME_curveTo )
+    cairo_curve_to(cr, N(0), N(1), N(2), N(3), N(4), N(5));
+  else if ( op == NAME_arc )
+    cairo_arc(cr, N(0), N(1), N(2), DEG(3), DEG(4));
+  else if ( op == NAME_arcNegative )
+    cairo_arc_negative(cr, N(0), N(1), N(2), DEG(3), DEG(4));
+  else if ( op == NAME_rectangle )
+    cairo_rectangle(cr, N(0), N(1), N(2), N(3));
+  else if ( op == NAME_closePath )
+    cairo_close_path(cr);
+  else if ( op == NAME_newPath )
+    cairo_new_path(cr);
+  else if ( op == NAME_newSubPath )
+    cairo_new_sub_path(cr);
+  else if ( op == NAME_path )
+  { Path p = argv[0];
+    Chain points;
+
+    ComputeGraphical(p);
+    points = (p->kind == NAME_smooth ? p->interpolation : p->points);
+    if ( notNil(points) )
+      path_emit(cr, points,
+		valNum(p->offset->x), valNum(p->offset->y),
+		p->kind == NAME_smooth ? 0.0 : valNum(p->radius),
+		p->closed == ON);
+  } else if ( op == NAME_stroke )
+  { if ( argv[0] == ON )
+      cairo_stroke_preserve(cr);
+    else
+      cairo_stroke(cr);
+    *changed = true;
+  } else if ( op == NAME_fill )
+  { if ( argv[0] == ON )
+      cairo_fill_preserve(cr);
+    else
+      cairo_fill(cr);
+    *changed = true;
+  } else if ( op == NAME_clip )
+  { if ( argv[0] == ON )
+      cairo_clip_preserve(cr);
+    else
+      cairo_clip(cr);
+  } else if ( op == NAME_resetClip )
+    cairo_reset_clip(cr);
+  else if ( op == NAME_paint )
+  { if ( isDefault(argv[0]) )
+      cairo_paint(cr);
+    else
+      cairo_paint_with_alpha(cr, N(0));
+    *changed = true;
+  } else if ( op == NAME_source )
+    set_source_paint(cr, argv[0], 0.0, 0.0, 0.0, 0.0,
+		     BLACK_COLOUR, WHITE_COLOUR);
+  else if ( op == NAME_lineWidth )
+    cairo_set_line_width(cr, N(0));
+  else if ( op == NAME_strokeStyle )
+    cairo_set_texture(cr, argv[0]);
+  else if ( op == NAME_fillRule )
+    path_set_fill_rule(cr, argv[0]);
+  else if ( op == NAME_saveState )
+  { cairo_save(cr);
+    wc->saved++;
+  } else if ( op == NAME_restoreState )
+  { if ( wc->saved == 0 )
+      return canvas_error(c, "->restore_state without ->save_state");
+    cairo_restore(cr);
+    wc->saved--;
+  } else if ( op == NAME_translate )
+    cairo_translate(cr, N(0), N(1));
+  else if ( op == NAME_scale )
+  { double sx = N(0);
+    double sy = isDefault(argv[1]) ? sx : N(1);
+
+    if ( sx == 0.0 || sy == 0.0 )
+      return canvas_error(c, "cannot scale by 0");
+    cairo_scale(cr, sx, sy);
+  } else if ( op == NAME_rotate )
+    cairo_rotate(cr, DEG(0));
+  else if ( op == NAME_transform )
+  { Transform t = argv[0];
+    cairo_matrix_t m;
+
+    cairo_matrix_init(&m, valNum(t->xx), valNum(t->yx), valNum(t->xy),
+		      valNum(t->yy), valNum(t->tx), valNum(t->ty));
+    if ( cairo_matrix_invert(&m) != CAIRO_STATUS_SUCCESS )
+      return canvas_error(c, "transform cannot be inverted");
+    cairo_matrix_init(&m, valNum(t->xx), valNum(t->yx), valNum(t->xy),
+		      valNum(t->yy), valNum(t->tx), valNum(t->ty));
+    cairo_transform(cr, &m);
+  } else if ( op == NAME_identity )
+    cairo_identity_matrix(cr);
+  else if ( op == NAME_text )
+  { markup_spec m =
+    { .markup	    = argv[0],
+      .font	    = argv[3],
+      .width	    = isDefault(argv[4]) || isNil(argv[4]) ? 0.0 : N(4),
+      .alignment    = isDefault(argv[5]) ? NAME_left : argv[5],
+      .justify	    = false,
+      .ellipsize    = NAME_none,
+      .line_spacing = 0.0
+    };
+    PangoLayout *layout = markup_layout(cr, &m);
+
+    if ( layout )
+    { cairo_move_to(cr, N(1), N(2));
+      pango_cairo_show_layout(cr, layout);
+      g_object_unref(layout);
+      cairo_new_path(cr);
+      *changed = true;
+    }
+  } else if ( op == NAME_image )
+  { cairo_surface_t *s = pceImage2CairoSurface(argv[0]);
+
+    if ( s )
+    { cairo_save(cr);
+      cairo_set_source_surface(cr, s, N(1), N(2));
+      cairo_paint(cr);
+      cairo_restore(cr);
+      *changed = true;
+    }
+  } else
+    return canvas_error(c, "unknown operation");
+
+  cairo_status_t rc = cairo_status(cr);
+  if ( rc != CAIRO_STATUS_SUCCESS )
+  { canvas_new_cr(wc);			/* an error is permanent */
+    return canvas_error(c, cairo_status_to_string(rc));
+  }
+
+  succeed;
+}
+
+#undef N
+#undef DEG

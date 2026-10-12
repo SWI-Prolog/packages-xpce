@@ -231,6 +231,9 @@ COMMON(status)	clipGraphical(Graphical gr, Area a);
 COMMON(status)	unclipGraphical(Graphical gr);
 COMMON(status)	makeClassGraphical(Class class);
 
+/* gra/canvas.c */
+COMMON(status)	makeClassCanvas(Class class);
+
 /* gra/markuptext.c */
 COMMON(status)	makeClassMarkupText(Class class);
 

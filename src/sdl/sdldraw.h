@@ -81,6 +81,7 @@ void d_ensure_display(void);
 status d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit);
 status d_image(Image i, int x, int y, int w, int h);
 status d_pdf(const char *file, int w, int h, double scale);
+status d_svg(const char *file, int w, int h, double scale);
 void d_clip(int x, int y, int w, int h);
 void d_done(void);
 void d_clip_done(void);
@@ -105,6 +106,14 @@ typedef struct markup_spec
 } markup_spec;
 
 bool r_markup_extents(const markup_spec *m, double *w, double *h);
+
+/* Canvas, see gra/canvas.c */
+void   ws_canvas_size(Canvas c, int w, int h);
+void   ws_canvas_destroy(Canvas c);
+void   ws_canvas_clear(Canvas c, int w, int h);
+status ws_canvas_op(Canvas c, Name op, int argc, Any *argv, bool *changed);
+void   r_canvas(Canvas c, double x, double y);
+status d_canvas(Canvas c);
 void r_markup(const markup_spec *m, double x, double y);
 bool ws_parse_markup(CharArray markup, StringObj *plain, StringObj *error);
 void r_fillpattern(Any fill, Name which);

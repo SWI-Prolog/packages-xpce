@@ -1612,13 +1612,14 @@ redrawAreaWindow(PceWindow sw, Area a)
 }
 
 
-/* Graphical->pdf saves <-area (the visible part).  A window's content
+/* Graphical->pdf and ->svg save <-area (the visible part).  A window's content
    may extend beyond the visible area, so override to use the full
    <-bounding_box and offset the page so the bounding box maps onto it.
 */
 
 static status
-pdfWindow(PceWindow sw, FileObj dest, Int scale)
+saveWindow(PceWindow sw, FileObj dest, Int scale,
+	   status (*open)(const char *file, int w, int h, double scale))
 { if ( isDefault(scale) )
     scale = toNum(1.0);
 
@@ -1626,9 +1627,9 @@ pdfWindow(PceWindow sw, FileObj dest, Int scale)
   Area bb = sw->bounding_box;
 
   Name fn = getOsNameFile(dest);
-  if ( fn && d_pdf(nameToFN(fn),
-		   valInt(bb->w), valInt(bb->h),
-		   valNum(scale)) )
+  if ( fn && (*open)(nameToFN(fn),
+		     valInt(bb->w), valInt(bb->h),
+		     valNum(scale)) )
   { d_offset(-valInt(bb->x), -valInt(bb->y));
     send(sw, NAME_RedrawArea, bb, EAV);
     d_done();
@@ -1637,6 +1638,18 @@ pdfWindow(PceWindow sw, FileObj dest, Int scale)
   }
 
   fail;
+}
+
+
+static status
+pdfWindow(PceWindow sw, FileObj dest, Int scale)
+{ return saveWindow(sw, dest, scale, d_pdf);
+}
+
+
+static status
+svgWindow(PceWindow sw, FileObj dest, Int scale)
+{ return saveWindow(sw, dest, scale, d_svg);
 }
 
 
@@ -2921,6 +2934,8 @@ static senddecl send_window[] =
      NAME_repaint, "Redraw (area of) the window"),
   SM(NAME_pdf, 2, T_pdf, pdfWindow,
      NAME_print, "Save PDF of the full window contents to file"),
+  SM(NAME_svg, 2, T_pdf, svgWindow,
+     NAME_print, "Save SVG of the full window contents to file"),
   SM(NAME_flash, 2, T_flash, flashWindow,
      NAME_report, "Flash (part of) the window"),
   SM(NAME_bubbleScrollBar, 1, "scroll_bar", bubbleScrollBarWindow,

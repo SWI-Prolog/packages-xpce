@@ -365,6 +365,9 @@ static struct class_definition classdefs[] =
   { NAME_pixmap, NAME_image, makeClassPixmap,
     &ClassPixmap, "Coloured image" },
 
+  { NAME_canvas, NAME_graphical, makeClassCanvas,
+    &ClassCanvas, "Graphical to draw on with Cairo-style operations" },
+
   { NAME_markupText, NAME_graphical, makeClassMarkupText,
     &ClassMarkupText, "Text formatted using Pango markup" },
 

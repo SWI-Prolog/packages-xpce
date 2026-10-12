@@ -55,7 +55,8 @@ test_cairo_render :-
                 stroke_style,
                 gradient_units,
                 clip,
-                blend
+                blend,
+                export
               ]).
 
 %!  pixel_after_drawing(+Graphical, +Size, +X, +Y, -RGBA) is det.
@@ -477,3 +478,23 @@ test(difference, RGBA == 0xffff00ff) :-
     blended_pixel(difference, RGBA).
 
 :- end_tests(blend).
+
+:- begin_tests(export).
+
+test(svg, [true(sub_string(Head, _, _, _, "<svg")), W == 40]) :-
+    tmp_file_stream(text, File, Out), close(Out),
+    filled_box(colour(red), B),
+    send(B, size, size(40, 20)),
+    send(B, svg, File),
+    read_file_to_string(File, Data, []),
+    delete_file(File),
+    sub_string(Data, 0, 200, _, Head),
+    once(sub_string(Data, Pos, _, _, "width=\"")),
+    Start is Pos+7,
+    sub_string(Data, Start, 2, _, WS),
+    number_string(W, WS).
+test(svg_cannot_write, fail) :-
+    filled_box(colour(red), B),
+    catch(send(B, svg, '/nonexistent/dir/out.svg'), _, fail).
+
+:- end_tests(export).

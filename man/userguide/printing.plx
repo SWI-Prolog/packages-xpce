@@ -17,6 +17,12 @@ Write the full contents of the window as a single page PDF document.
 Unlike the screen, the output is not restricted to the visible part
 of the window: the page covers the bounding box of all graphicals
 displayed on the window.
+    \sendmethod{graphical}{svg}{File:file, Scale:[num]}
+As `graphical ->pdf', but write an SVG image.  The size of the image is
+in pixels.  Text is written as outlines, so the image looks the same
+without the fonts.
+    \sendmethod{window}{svg}{File:file, Scale:[num]}
+As `window ->pdf', but write an SVG image.
 \end{description}
 
 The library \pllib{print_graphics} defines the class template

@@ -3423,6 +3423,26 @@ drawTextGraphical(Graphical gr, CharArray txt, FontObj font,
 }
 
 
+/* Draw the lines of a path using the current graphics state.  The
+ * path's points (plus its <-offset) are in the coordinate system of
+ * ->_redraw_area.
+ */
+
+static status
+drawPathGraphical(Graphical gr, Path p, Any fill)
+{ Chain points;
+
+  ComputeGraphical(p);
+  points = (p->kind == NAME_smooth ? p->interpolation : p->points);
+  if ( notNil(points) && valInt(points->size) >= 2 )
+    r_path(points, valNum(p->offset->x), valNum(p->offset->y),
+	   p->kind == NAME_smooth ? 0.0 : valNum(p->radius),
+	   p->closed == ON, isDefault(fill) ? NIL : fill, p->fill_rule);
+
+  succeed;
+}
+
+
 static status
 drawMarkupGraphical(Graphical gr, CharArray markup, FontObj font,
 		    Int x, Int y, Int width, Name alignment)
@@ -3458,8 +3478,13 @@ getSolidGraphical(Graphical gr)
 { answer(onFlag(gr, F_SOLID) ? ON : OFF);
 }
 
-status
-pdfGraphical(Graphical gr, FileObj dest, Int scale)
+/* Save the graphical to a PDF or SVG file using `open', which is
+ * d_pdf() or d_svg().
+ */
+
+static status
+saveGraphical(Graphical gr, FileObj dest, Int scale,
+	      status (*open)(const char *file, int w, int h, double scale))
 { if ( isDefault(scale) )
     scale = toNum(1.0);
 
@@ -3467,9 +3492,9 @@ pdfGraphical(Graphical gr, FileObj dest, Int scale)
     TRY(send(gr, NAME_compute, EAV));
 
   Name fn = getOsNameFile(dest);
-  if ( fn && d_pdf(nameToFN(fn),
-		   valInt(gr->area->w), valInt(gr->area->h),
-		   valNum(scale)) )
+  if ( fn && (*open)(nameToFN(fn),
+		     valInt(gr->area->w), valInt(gr->area->h),
+		     valNum(scale)) )
   { d_offset(-valInt(gr->area->x), -valInt(gr->area->y));
     send(gr, NAME_RedrawArea, gr->area, EAV);
     d_done();
@@ -3478,6 +3503,16 @@ pdfGraphical(Graphical gr, FileObj dest, Int scale)
   }
 
   fail;
+}
+
+status
+pdfGraphical(Graphical gr, FileObj dest, Int scale)
+{ return saveGraphical(gr, dest, scale, d_pdf);
+}
+
+static status
+svgGraphical(Graphical gr, FileObj dest, Int scale)
+{ return saveGraphical(gr, dest, scale, d_svg);
 }
 
 /* Type declaractions */
@@ -3512,6 +3547,8 @@ static char *T_focus[] =
 static char *T_drawText[] =
 	{ "string=char_array", "font", "x=int", "y=int", "w=[0..]", "h=[0..]",
 	  "hadjust=[{left,center,right}]", "vadjust=[{top,center,bottom}]" };
+static char *T_drawPath[] =
+	{ "path=path", "fill=" TYPE_FILL_ARG };
 static char *T_drawMarkup[] =
 	{ "markup=char_array", "font", "x=int", "y=int", "width=[int]*",
 	  "alignment=[{left,center,right}]" };
@@ -3656,6 +3693,8 @@ static senddecl send_graphical[] =
      NAME_draw, "Draw/fill a polyfon"),
   SM(NAME_drawText, 8, T_drawText, drawTextGraphical,
      NAME_draw, "Draw text-string"),
+  SM(NAME_drawPath, 2, T_drawPath, drawPathGraphical,
+     NAME_draw, "Draw (and fill) a path using the graphics state"),
   SM(NAME_drawMarkup, 6, T_drawMarkup, drawMarkupGraphical,
      NAME_draw, "Draw Pango markup with its top-left corner at (x,y)"),
   SM(NAME_graphicsState, 4, T_graphicsState, graphicsStateGraphical,
@@ -3764,7 +3803,9 @@ static senddecl send_graphical[] =
      virtualObject,
      NAME_area, "<-width or <-height of <-contained_in changed"),
   SM(NAME_pdf, 2, T_pdf, pdfGraphical,
-     NAME_print, "Save PDF for graphical to file")
+     NAME_print, "Save PDF for graphical to file"),
+  SM(NAME_svg, 2, T_pdf, svgGraphical,
+     NAME_print, "Save SVG for graphical to file")
 };
 
 /* Get Methods */

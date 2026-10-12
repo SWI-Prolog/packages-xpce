@@ -263,6 +263,14 @@ starts a destructive action.
 		 message(@pce, write_ln, hello))).
 \end{code}
 
+#class canvas "canvas(width, height)"
+A \class{canvas} is a graphical to draw on using operations modelled after
+Cairo: build a path using `canvas ->move_to', `canvas ->line_to',
+`canvas ->curve_to', `canvas ->arc', etc.\ and draw it using `canvas
+->stroke' or `canvas ->fill' with the current source, line width and
+transformation.  The drawing is recorded as vectors, so the canvas
+redraws itself and remains sharp when scaled or written as PDF or SVG.
+
 #class chain "chain(any...)"
 Class \class{chain} represents a single-linked list of arbitrary
 objects.  Chains are commonly used inside \product{} to represent collections.
@@ -831,8 +839,8 @@ defined in \chapref{udc}.
 #class graphical "graphical(x, y, width, height)"
 The most generic graphical object.  This class defines generic geometry
 management, display, update, event-handling, opacity (see
-\secref{opacity}), etc.  `graphical ->pdf' writes the graphical as a PDF
-file.  This class can be sub-classed to define specialised graphics.
+\secref{opacity}), etc.  `graphical ->pdf' and `graphical ->svg' write
+the graphical as a PDF or SVG file.  This class can be sub-classed to define specialised graphics.
 See \secref{ugraphics}.
 
 #class grbox "grbox(graphical, alignment, rubber)"
@@ -1972,8 +1980,8 @@ for windows holding text, \class{browser} for windows displaying a list
 of items and finally, \class{picture} for displaying graphics.
 
 Class \class{window} can be used as a graphics window if no scrollbars
-are needed.  `window ->pdf' writes the entire contents of the window
-as a PDF file.
+are needed.  `window ->pdf' and `window ->svg' write the entire contents
+of the window as a PDF or SVG file.
 
 #class window_decorator "window_decorator(window, scrollbars, label)"
 A \class{window_decorator} is a window that displays another window and
