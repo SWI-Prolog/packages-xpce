@@ -36,7 +36,6 @@
 
 :- use_module(library(pce)).
 :- use_module(library(toolbar)).
-:- use_module(library(pce_report)).
 :- require([ between/3
            , nth1/3
            , portray_object/2
@@ -879,7 +878,6 @@ initialise(F, Manual:man_manual) :->
               ]),
     send(new(Inspector, isp_inspector_window), below, TD),
     asserta(inspector_window(Inspector)),
-    send(new(report_dialog), below, Inspector),
 
     send(TD, append, graphical(0,0,20,0), right),
     send(TD, append,

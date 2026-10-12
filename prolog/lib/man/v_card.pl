@@ -41,7 +41,6 @@
 :- use_module(library(pce_history)).
 
 :- pce_autoload(behaviour_item, library(man/behaviour_item)).
-:- pce_autoload(report_dialog,  library(pce_report)).
 :- use_module(library(pce_html_manual), []).
 
 :- pce_begin_class(man_card_editor,     man_frame,
@@ -56,7 +55,6 @@ initialise(CE, Manual:man_manual) :->
     send(CE, send_super, initialise, Manual, 'Card Viewer'),
     send(CE, append, new(D, dialog)),
     send(new(TE, man_html_card), below, D),
-    send(new(report_dialog), below, TE),
     send(TE, name, html_card),
     send(CE, fill_dialog),
     send(CE, selected, Manual?selection).      % a pane is laid out by the

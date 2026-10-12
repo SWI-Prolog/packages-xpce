@@ -1528,6 +1528,33 @@ test(a_window_of_a_tool_asks_the_tool_to_show_something) :-
     send(Window, select_node, Class),
     send(Window, open_node, Class).
 
+%       A tool reports on the status bar of the window it is in.  Some
+%       had a reporter of their own below them that stayed blank, as all
+%       reports went to the bar.
+
+test(a_tool_has_no_reporter_of_its_own,
+     [ forall(member(Name, [visual_hierarchy, card_viewer, inspector])),
+       Reporters == []
+     ]) :-
+    no_frames,
+    open_manual_tool(Name, Tool),
+    get(Tool, members, Members),
+    findall(W, ( member_chain(W, Members),
+                 get(W, member, reporter, _)
+               ), Reporters).
+
+test(selecting_an_object_reports_on_the_bar, Shown == "Object: ") :-
+    no_frames,
+    open_manual_tool(visual_hierarchy, Tool),
+    get(Tool, window, Window),
+    send(Window, select_node, @display),
+    get(Tool, frame, Frame),
+    get(Frame, status_dialog, SD),
+    get(SD, member, reporter, Reporter),
+    get(Reporter, selection, Text),
+    get(Text, value, String),
+    sub_string(String, 0, 8, _, Shown).
+
 %       The class field of the class browser shows the class it browses,
 %       also after a class was entered in it.
 

@@ -38,7 +38,6 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(toolbar)).
-:- use_module(library(pce_report)).
 :- use_module(library(pce_manual), []). % Provide @manual
 :- use_module(pce_op).                  % should move
 :- require([ atomic_list_concat/2
@@ -298,8 +297,7 @@ initialise(F, Manual:[man_manual]) :->
                 right),
     TI->>reference(point(0, TI?height)),
 
-    new(V, vis_window)->>below(TD),
-    new(report_dialog)->>below(V).
+    new(vis_window)->>below(TD).
 
 window(F, Window:vis_window) :<-
     Window = F->>member(vis_window).
