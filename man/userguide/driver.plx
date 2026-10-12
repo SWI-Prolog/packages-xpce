@@ -17,6 +17,11 @@ be retrieved using `pce<-window_system_driver`, e.g.,
 Driver = wayland.
 \end{code}
 
+\noindent
+Typical drivers are \const{windows} on MS-Windows, \const{cocoa} on
+MacOS and \const{x11} or \const{wayland} on Unix-like systems.  The
+driver in use is also shown by `pce->banner'.
+
 If multiple drivers are supported, a specific driver may be selected
 using the environment variable \const{SDL_VIDEODRIVER} or using the
 SWI-Prolog flag \prologflag{'SDL_VIDEODRIVER'}.  The latter allows for

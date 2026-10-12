@@ -1,7 +1,7 @@
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-A typical XPCE/Prolog module header.  Always   make  sure to load module
-library(pce) explicitly if you want  to   write  modules portable to the
-various Prolog dialects supported by XPCE.
+A typical XPCE/Prolog module header.  Always make sure to load module
+library(pce) explicitly, so the module does not depend on xpce being
+loaded already.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- module(wysiwyg,

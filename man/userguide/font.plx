@@ -20,7 +20,6 @@ font.pango_families: [ sans  := "Noto Sans,sans", \
 \end{code}
 
     \item \textbf{style} is one of \const{normal}, \const{bold},
-
     \const{italic} or \const{oblique}.  Note that \const{bold}
     is a compatibility shorthand for \const{normal} with the
     weight \const{bold}.
@@ -35,12 +34,12 @@ font.pango_families: [ sans  := "Noto Sans,sans", \
     \const{ultraheavy}
 \end{itemize}
 
-\subsection{Logical fonts}		\label{sec:fontalias}.
+\subsection{Logical fonts}		\label{sec:fontalias}
 
 It is not wise let your application code speak about physical fonts as
 the user or interface guidelines may prefer using a different
-font-palette. For this reason the display defines a mapping between
-logical font names and \class{font} objects. Applications are encouraged
+font-palette. For this reason class \class{font} defines a mapping
+between logical font names and \class{font} objects. Applications are encouraged
 to use logical font names as much as possible and leave the assignment
 to physical fonts to the users preferences. \product{} predefines the
 following logical font-names. The value gives the default assignment for
@@ -80,7 +79,14 @@ Bold slanted terminal font.
 \end{itemize}
 
 The end-user of an \product{} application can define the class-variable
-\classvar{font.system_fonts} to overrule fonts.
+\classvar{font}{system_fonts} to overrule fonts.  Only the aliases that
+should change need to be mentioned; the others keep their default.  The
+class-variable \classvar{font}{scale} (default 1.0) scales all fonts,
+for example on a high-resolution screen.  The method
+\classget{font}{rescale} returns the same font scaled by a factor and
+the class method \classget{font}{font_families}, called as
+\exam{get(class(font), font_families, Sheet)}, lists the font families
+known to Pango.
 
 Class \class{font}'s predefined conversion will translate names to font
 objects.  This implies that for any method expecting a font object the
@@ -97,8 +103,7 @@ way to make the conversion is using the font type object:
 
 \subsection{Unicode}
 
-\product{} fully supports Unicode on non-Windows platforms. On Windows,
-many parts of \product{} handle strings as UCS2 encoded, which implies
-that only characters up to 0xffff are handled properly. On most
-platforms Pango supports coloured glyphs, which allows \product{} to
+\product{} fully supports Unicode.  Internally, text is stored as one
+code point per character on all platforms, including Windows, so
+characters above 0xffff are handled properly.  On most platforms Pango supports coloured glyphs, which allows \product{} to
 use Unicode emoji symbols.

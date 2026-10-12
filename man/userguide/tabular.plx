@@ -11,7 +11,7 @@ in stacked controllers. etc.  Layout of controllers is described
 in \chapref{controller}.
 
     \item [ Simple tabular layout using \class{format} ]
-In instance of class \class{format} can be attached to a \class{device}
+An instance of class \class{format} can be attached to a \class{device}
 using `device->format'.  This causes the device to place its graphicals
 according to the specification in the format object.  This technique is
 frequently used to label images, place images in an image browser, etc.
@@ -65,7 +65,7 @@ window is the library \pllib{pce_image_browser}.
 The class \class{table} acts much the same way as class \class{format}
 in the sense that it is attached to a \class{device} and modifies the
 layout management of this device.  For this purpose it uses an interface
-defined in \product{} version 5.0 and realised using the methods
+realised using the methods
 `device<->layout_manager' and `graphical<->layout_interface'.
 \Figref{layoutmgr} gives an overview of the classes realising
 tabular layout.
@@ -82,14 +82,15 @@ hidden in the \productpl{} class \class{tabular}, a subclass of
 guiding the messages for common usage.
 
 \begin{description}
-    \sendmethod{tabular}{initialise}{}
-Create a device with associated table.
+    \sendmethod{tabular}{initialise}{Table:[table]}
+Create a device with associated table.  If \arg{Table} is omitted, a
+new table is created.
 
     \sendmethod{tabular}{append}{%
-       Label:name{\tt |}graphical,
+       Label:name{\tt |}graphical{\tt |}table_cell,
        Font:[font],
        HAlign:[\{left,center,right\}],
-       Valign[\{top,center,bottom\}],
+       VAlign:[\{top,center,bottom\}],
        Colspan:[1..],
        Rowspan:[1..],
        Background:[colour],
@@ -98,8 +99,9 @@ Append a new cell. Cells are places left-to-right.  The arguments are:
 
 \begin{itemlist}
     \item[\arg{Label}]
-Defines the content. It this is a \class{name}, a \class{text} is created.
-Otherwise the graphical is immediately placed in the table.  
+Defines the content. If this is a \class{name}, a \class{text} is created.
+A graphical is immediately placed in a new cell of the table and a
+\class{table_cell} is appended as is.
 
     \item[\arg{Font}]
 Defines the \class{font} if a \class{text} is created from a
@@ -120,7 +122,7 @@ Number of columns spanned.  Default is 1.
 Number of rows spanned.  Default is 1.
 
     \item[\arg{Background}]
-Colour or pattern used to fill the background of the cell.  When
+Colour used to fill the background of the cell.  When
 omitted, the value from row or column is used or the background is
 left untouched.
 

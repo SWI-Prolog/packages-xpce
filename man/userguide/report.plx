@@ -71,8 +71,7 @@ The user requested information and this is the reply. Handled as
 invoke `@display ->inform', presenting a messagebox.
     \tick{progress}
 Indicates progress in ongoing computation. Feedback is generally similar
-to {\tt status}, but followed by a `graphical ->flush' to take immediate
-effect.  A sequence of {\tt progress} reports should be closed with a
+to {\tt status}.  A sequence of {\tt progress} reports should be closed with a
 {\tt done} report.
     \tick{done}
 Terminates a (sequence of) ->report: progress messages.
@@ -100,7 +99,7 @@ answer, the report is forwarded to this answer. For example, class
 its associated editor object.
 
 The {\em presentation} is changed by changing the implementation of
-`label ->report' or `display ->report.  As this determines the look
+`label ->report' or `display ->report'.  As this determines the look
 and feel of an application, applications should be reluctant using
 this.
 
@@ -141,14 +140,12 @@ reportdemo :-
 
 Now suppose the implementation of the `load' action takes considerable
 time.  The implementation below reads a file assuming each line in the
-file contains a word.  
+file contains a word.  The file is selected using `frame <-open_file',
+which uses the file dialog of the operating system.
 
 \begin{pcecode}
-:- pce_autoload(finder, library(find_file)).
-:- pce_global(@finder, new(finder)).
-
 load(Frame) :-
-	get(@finder, file, exists := @on, FileName),
+	get(Frame, open_file, FileName),
 	send(Frame, report, progress,
 	     'Loading %s ...', FileName),
 	get(Frame, member, browser, Browser),

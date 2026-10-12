@@ -18,9 +18,10 @@ representation of data and dealing with object-references in
 Data managed by Prolog consists of logical variables, atoms, integers,
 floats and compound terms (including lists). \product{} has natural
 counterparts for atoms (a \class{name} object), integers (a \product{}
-int) and floating point numbers (a \class{real} object). Prolog logical
-variables and compound terms however have no direct counterpart in the
-\product{} environment. \product{} has variables (class \class{var}),
+int) and floating point numbers (a \class{real} object; many methods
+use the type \type{num}, which accepts both integers and floats).
+Prolog logical variables and compound terms however have no direct
+counterpart in the \product{} environment. \product{} has variables (class \class{var}),
 but these obey totally different scoping and binding rules.
 
 Where Prolog uses a compound term to represent data that belongs
@@ -76,9 +77,9 @@ and automatic translation is defined for atoms, and numbers (both integers
 and floating point).  As we have seen in \secref{starting}, compound terms
 are translated into instances using the functor-name as class-name.
 
-In \plainproduct{} 5.0 we added the possibility to embed arbitrary
-Prolog data in an object. There are three cases where Prolog data is
-passed natively embedded in a instance of the class \class{prolog_term}.
+\plainproduct{} can also embed arbitrary Prolog data in an object.
+There are three cases where Prolog data is passed natively embedded in
+an instance of the class \class{prolog_term}.
 
 \begin{itemlist}
     \item [ Explicit usage of \term{prolog}{Data} ]
@@ -121,7 +122,7 @@ have a natural representation in both languages.  However:
 4 ?- send(@m, forward, 3 + 4).
 7
 5 ?- send(@m, forward, [hello, world]).
-<pce>(0x7f8a12c5d0,chain)
+<pce>(0x7f8a12c5d0,code_vector)
 \end{code}
 
 In all these examples the argument is a Prolog compound term which
@@ -131,7 +132,9 @@ instance of class \class{chain}.  In 4) this is an instance of class
 \class{+}.  Class \class{+} however is a subclass of the \product{} class
 \class{function} and \idx{function} objects are evaluated when given
 to a method that does not accept a function-type argument.  Example
-5) illustrates that a list is converted to a \plainproduct{} \class{chain}.
+5) illustrates that a list is converted to a \plainproduct{} object
+as well: a \class{chain} or \class{vector} if the argument type
+demands so and a \class{code_vector} otherwise.
 
 We can fix these problems using the \functor{prolog}{1} functor.  Example
 7) illustrates that also non-ground terms may be passed.
@@ -140,9 +143,9 @@ We can fix these problems using the \functor{prolog}{1} functor.  Example
 6 ?- send(@m, forward, prolog(chain(hello))).
 chain(hello)
 7 ?- send(@m, forward, prolog(X)).
-_G335
+_26380
 
-X = _G335
+X = _26380
 \end{code}
 
 Below is a another realistic example of this misconception.
@@ -153,8 +156,9 @@ Below is a another realistic example of this misconception.
 			  message(@prolog, assert,
 				  verbose(on)))),
    send(D, open).
-[PCE warning: new: Unknown class: verbose
-        in: new(verbose(on)) ]
+[PCE warning: verbose: Unknown class
+	...
+]
 \end{pcecode}
 
 One correct solution for this task is below.  An alternative is to
@@ -171,7 +175,7 @@ make_verbose_dialog :-
 \end{pcecode}
 
 
-\subsection{Life-time of Prolog terms in \plainproduct{}}.
+\subsection{Life-time of Prolog terms in \plainproduct{}}
 
 \index{prolog-term,life-time}%
 \plainproduct{} is connected to Prolog through the foreign language

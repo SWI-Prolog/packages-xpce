@@ -30,8 +30,10 @@ and externally visible names:
     This method may be redefined to return another name or image
     object, depending on the current language mapping.
 	
-	\getmethod{menu_item}{label_name}{Id}{Label}
-    Similar to `dialog_item <-label_name'.
+	\getmethod{menu_item}{default_label}{Value}{Label}
+    Similar to `dialog_item <-label_name', computing the label of a
+    \class{menu_item} that is created without an explicit label from
+    its <-value.
 
 	\getmethod{dialog_group}{label_name}{Id}{Label}
     Similar to `dialog_item <-label_name', but is, in the current
@@ -63,8 +65,8 @@ and externally visible names:
     help-texts, etc.
 \end{itemlist}
 
-Below is a summary of the file \file{language.pl} as using in the
-optics simulator to reach at an English/Dutch application.
+Below is a summary of the file \file{language.pl} as used in the
+optics simulator to realise an English/Dutch application.
 
 \hr
 \begin{pcecode}
@@ -73,12 +75,7 @@ optics simulator to reach at an English/Dutch application.
 	    current_language/1,		% -Language
 	    set_language/1		% +Language
 	  ]).
-:- use_module(pce).
-:- use_module(configdb).
-:- require([ concat_atom/2
-	   , is_list/1
-	   , memberchk/2
-	   ]).
+:- use_module(library(pce)).
 
 :- dynamic
 	current_language/1.
@@ -105,7 +102,7 @@ message(Term, Translation) :-
 	->  T =.. [Lan, Translation0],
 	    memberchk(T, Translations),
 	    (	is_list(Translation0)
-	    ->	concat_atom(Translation0, Translation)
+	    ->	atomic_list_concat(Translation0, Translation)
 	    ;	Translation = Translation0
 	    )
 	;   Translation = Translations
@@ -168,7 +165,7 @@ term(settings,
      [ dutch('Instellingen')
      ]).
 term(label,
-     image('label.lbl')).
+     image('label.png')).
 term(start_named_test(Name),
      [ english(['Click "OK" to start test "', Name, '"']),
        dutch(['Klik op "OK" om aan de toets "', Name,
@@ -192,9 +189,9 @@ term(start_named_test(Name),
 %		...
 
 error(max_instruments, error,
-      [ dutch('%IU kunt niet meer dan %d van deze \
+      [ dutch('%IU kunt niet meer dan %d van deze \c
                instrumenten gebruiken'),
-	english('%IYou can not use more than %d of \
+	english('%IYou can not use more than %d of \c
 		 these instruments')
       ]).
 

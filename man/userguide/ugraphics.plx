@@ -93,7 +93,7 @@ online manual.
 \hline
 ->draw_arc		& Draw ellipse-part \\
 ->draw_box		& Draw rectangle (rounded, filled, etc.) \\
-->draw_fill		& Fill/invert/clear rectangle \\
+->draw_fill		& Fill rectangle with colour or gradient \\
 ->draw_image		& Paint (part of) image \\
 ->draw_line		& Draw a line segment \\
 ->draw_poly		& Draw a polygon \\
@@ -133,11 +133,7 @@ variable(grid_pen, pen,               get,
 
 initialise(P, Lbl:[name], Size:[size], Disp:[display]) :->
 	send(P, send_super, initialise, Lbl, Size, Disp),
-	(   get(@display, visual_type, monochrome)
-	->  Texture = dotted, Colour = black
-	;   Texture = none,   Colour = grey90
-	),
-	send(P, slot, grid_pen, pen(1, Texture, Colour)).
+	send(P, slot, grid_pen, pen(1, none, grey90)).
 
 '_redraw_area'(P, A:area) :->
 	"Draw a grid"::
@@ -146,7 +142,7 @@ initialise(P, Lbl:[name], Size:[size], Disp:[display]) :->
 	->  (   integer(Grid)
 	    ->	GX = Grid,
 		GY = Grid
-	    ;	object(Grid, size(GX< GY))
+	    ;	object(Grid, size(GX, GY))
 	    ),
 	    send(P, save_graphics_state),
 	    get(P, grid_pen, pen(Pen, Texture, Colour)),
@@ -178,7 +174,7 @@ grid(P, Grid:'1..|size*') :->
 	send(P, slot, grid, Grid),
 	send(P, redraw).		% changed?
 
-grid_pen(P, Penn:pen) :->
+grid_pen(P, Pen:pen) :->
 	send(P, slot, grid_pen, Pen),
 	send(P, redraw).		% changed?
 
@@ -225,7 +221,7 @@ initialise(S, Str:string=char_array, Shape:shape={box,ellipse},
 	send(S, slot, shape, Shape),
 	send(S, slot, font, TheFont).
 
-'_redraw_area'(S, _A:area) :->
+'_redraw_area'(S, A:area) :->
 	get(S, area, area(X, Y, W, H)),
 	get(S, string, String),
 	get(S, font, Font),
@@ -239,7 +235,7 @@ initialise(S, Str:string=char_array, Shape:shape={box,ellipse},
 	     String, Font, X, Y, W, H,
 	     center, center),
 	send(S, unclip),
-	send(S, send_super, redraw).
+	send(S, send_super, '_redraw_area', A).
 
 :- pce_end_class.
 \end{pcecode}

@@ -15,40 +15,39 @@ case:
 
 \begin{quote}
 We want to create a frame, consisting of a dialog window and a picture
-window.  The dialog contains a menu holding fill-patterns.  The picture
+window.  The dialog contains a menu holding fill colours.  The picture
 contains a box with a popup-menu that fills the interior of the box
-with the currently selected fill-pattern.
+with the currently selected colour.
 \end{quote}
 
 
 To reduce the code of the individual examples, the following predicate
-creating the fill-pattern menu is assumed to be available:
+creating the fill colour menu is assumed to be available:
 
 \begin{pcecode}
-fill(@white_image).
-fill(@grey12_image).
-fill(@grey25_image).
-fill(@grey50_image).
-fill(@grey75_image).
-fill(@black_image).
+fill(white).
+fill(light_grey).
+fill(grey).
+fill(dark_grey).
+fill(black).
 
-make_fill_pattern_menu(M) :-
+make_fill_menu(M) :-
 	new(M, menu(fill, marked)),
 	send(M, layout, horizontal),
-	forall(fill(P),
-	       send(M, append, menu_item(P, @default, P))).
+	forall(fill(C),
+	       send(M, append, menu_item(C, @default, C))).
 \end{pcecode}
 
 \subsection{Global named references}
 
-Using this approach, we will call the menu @fill_pattern_menu. It leads
+Using this approach, we will call the menu @fill_menu. It leads
 to the following (minimal) program:
 
 \begin{pcecode}
 fill_1(P) :-
 	new(D, dialog('Fill 1')),
-	make_fill_pattern_menu(@fill_pattern_menu),
-	send(D, append, @fill_pattern_menu),
+	make_fill_menu(@fill_menu),
+	send(D, append, @fill_menu),
 	send(new(P, picture), below, D),
 	send(D, open).
 
@@ -58,7 +57,7 @@ add_box_1(P) :-
 	send(Pop, append,
 	     menu_item(fill,
 		       message(B, fill,
-			       @fill_pattern_menu?selection))).
+			       @fill_menu?selection))).
 \end{pcecode}
 
 \begin{code}
@@ -89,7 +88,7 @@ Global references are part of PCE to keep track of objects that are
 created once and will remain in existence during the entire PCE session.
 Examples are the predefined global objects @pce, @prolog, @display, etc.
 Other examples are reusable objects such as relations, messages,
-recognisers, methods, images to be used as fill-patterns, etc. See
+recognisers, methods, images to be used as icons, etc. See
 below:
 
 \begin{code}
@@ -108,20 +107,20 @@ PCE users.  Using dynamic predicates the ``label'' would result in:
 
 \begin{pcecode}
 :- dynamic
-	fill_pattern_menu/1.
+	fill_menu/1.
 
 fill_2(P) :-
 	new(D, dialog('Fill 2')),
-	make_fill_pattern_menu(M),
+	make_fill_menu(M),
 	send(D, append, M),
-	asserta(fill_pattern_menu(M)),
+	asserta(fill_menu(M)),
 	send(new(P, picture), below, D),
 	send(D, open).
 
 add_box_2(P) :-
 	send(P, display, new(B, box(100,100)), point(20,20)),
 	send(B, popup, new(Pop, popup)),
-	fill_pattern_menu(M),
+	fill_menu(M),
 	send(Pop, append,
 	     menu_item(fill,
 		       message(B, fill,
@@ -139,7 +138,7 @@ using Prolog modules to establish storage of the dynamic predicates
 local to the module that uses them.  More seriously, using implicit
 object references, PCE assumes it is allowed to destroy the object
 whenever no other PCE object has a reference to it.  The
-fill_pattern_menu/1 predicate then holds an invalid reference.
+fill_menu/1 predicate then holds an invalid reference.
 
 
 \subsection{Using object-level attributes}
@@ -149,16 +148,16 @@ PCE object-level attributes provide another approach:
 \begin{pcecode}
 fill_3(P) :-
 	new(D, dialog('Fill 3')),
-	make_fill_pattern_menu(M),
+	make_fill_menu(M),
 	send(D, append, M),
 	send(new(P, picture), below, D),
-	send(P, attribute, fill_pattern_menu, M),
+	send(P, attribute, fill_menu, M),
 	send(D, open).
 
 add_box_3(P) :-
 	send(P, display, new(B, box(100,100)), point(20,20)),
 	send(B, popup, new(Pop, popup)),
-	get(P, fill_pattern_menu, M),
+	get(P, fill_menu, M),
 	send(Pop, append,
 	     menu_item(fill,
 		       message(B, fill,
@@ -176,8 +175,8 @@ proper memory management. Two disadvantages remain. First of all, the
 message object has a direct reference to `P' and therefore the entire
 recogniser object cannot be shared by multiple graphical objects
 (reused\index{re-usability}). Second, the code for the box assumes the
-picture has an attribute fill_pattern_menu and this attribute refers to
-a menu holding fill-patterns.
+picture has an attribute fill_menu and this attribute refers to
+a menu holding fill colours.
 
 
 \subsection{Using window and graphical behaviour} \label{sec:devicemember}
@@ -191,15 +190,16 @@ dialog-items it is the label of the item.  Using <-member results in:
 \begin{pcecode}
 fill_4(P) :-
 	new(D, dialog('Fill 4')),
-	make_fill_pattern_menu(M),
+	make_fill_menu(M),
 	send(D, append, M),
 	send(new(P, picture), below, D),
 	send(D, open).
 
-:- pce_global(@fill_with_current_pattern,
-	      make_fill_with_current_pattern).
+:- pce_global(@fill_with_current_colour,
+	      make_fill_with_current_colour).
 
-make_fill_with_current_pattern(G) :-
+make_fill_with_current_colour(G) :-
+	Gr = @arg1,
 	new(G, popup),
 	send(G, append,
 	     menu_item(fill,
@@ -210,7 +210,7 @@ make_fill_with_current_pattern(G) :-
 
 add_box_4(P) :-
 	send(P, display, new(B, box(100,100)), point(20,20)),
-	send(B, popup, @fill_with_current_pattern).
+	send(B, popup, @fill_with_current_colour).
 \end{pcecode}
 
 \begin{code}
@@ -227,7 +227,7 @@ This example has largely the same (dis)advantages as the previous two.
 As an advantage, the attribute object may be omitted. The assumption
 here is that the frame the box is in contains a dialog which in turn
 contains a graphical object named `fill' that implements
-a <-selection method yielding an image.
+a <-selection method yielding a colour.
 
 
 \subsection{Using user defined classes}
@@ -241,14 +241,14 @@ make objects depend on each other in a much more organised manner.
 initialise(F) :->
 	send(F, send_super, initialise, 'Fill 5'),
 	send(F, append, new(D, dialog)),
-	make_fill_pattern_menu(M),
+	make_fill_menu(M),
 	send(D, append, M),
 	send(new(picture), below, D).
 
-current_fill_pattern(F, P:image) :<-
+current_fill_colour(F, C:colour) :<-
 	get(F, member, dialog, D),
 	get(D, member, fill, M),
-	get(M, selection, P).
+	get(M, selection, C).
 
 draw_box(F) :->
 	get(F, member, picture, P),
@@ -265,7 +265,7 @@ make_fillbox_recogniser(G) :-
 	send(P, append,
 	     menu_item(fill,
 		       message(Gr, fill,
-			       Gr?frame?current_fill_pattern))).
+			       Gr?frame?current_fill_colour))).
 
 event(B, Ev:event) :->
 	(   send(B, send_super, event, Ev)
@@ -280,9 +280,9 @@ event(B, Ev:event) :->
 \end{code}
 
 The fillbox now only assumes it is contained in an application window
-that defines <-current_fill_pattern, while the application (the frame)
+that defines <-current_fill_colour, while the application (the frame)
 hides its internal window organisation using the methods
-<-current_fill_pattern and ->draw_box.
+<-current_fill_colour and ->draw_box.
 
 
 \subsection{Summary}

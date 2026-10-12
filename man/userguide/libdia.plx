@@ -15,9 +15,11 @@ error and message handling is described in \secref{errors}.  The library
 
 \begin{itemlist}
     \item[\class{reporter}]
-This is a refinement of class \class{label}, displayed using the
-fashionable lowered 3D-style.  In addition, it redefines the ->report
-message to colour error messages red.
+This is a refinement of class \class{label} for displaying messages.
+It redefines the ->report message to colour error messages red and keeps
+errors and warnings visible for a few seconds (see <-error_delay and
+<-warning_delay) before they are overwritten by less important
+messages.
 
     \item[\class{report_dialog}]
 This is a trivial subclass of \class{dialog}, displaying a
@@ -81,6 +83,13 @@ and \var{action}:@off when returning to normal state.  If the <-action
 is a code object this boolean will for forwarded over the code object.
 See \secref{exeobjects}.
 
+The library also defines the class \class{tool_dialog}, a \class{dialog}
+that manages a \class{menu_bar} and \class{tool_bar} for a client.
+`tool_dialog->append' accepts \class{popup} objects (added to the menu
+bar), \class{menu_item} objects (added to the popup named by the second
+argument) and \class{tool_button} objects (added to the tool bar).
+Selected menu items send their value as a message to the client.
+
 
 \subsection{Example}
 
@@ -99,8 +108,8 @@ to arrive at a typical modern application layout.
 
 %	Define icons as program resources
 
-resource(printer,	image,	image('16x16/print.xpm')).
-resource(floppy,	image,	image('16x16/save.xpm')).
+resource(printer,	image,	image('tool/print.svg')).
+resource(floppy,	image,	image('tool/save.svg')).
 
 %	Define the application as a subclass of frame.
 
@@ -164,9 +173,13 @@ load(MyApp) :->
 :- pce_end_class(myapp).
 
 
-%	dummy class for the work-area of your application
+%	dummy class for the work-area of your application.  The
+%	print_graphics template defines ->print.
+
+:- use_module(library(print_graphics)).
 
 :- pce_begin_class(myapp_workspace, window).
+:- use_class_template(print_graphics).
 
 :- pce_end_class(myapp_workspace).
 \end{pcecode}

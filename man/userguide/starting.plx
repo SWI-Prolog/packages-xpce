@@ -17,69 +17,30 @@ explicitly using
 :- use_module(library(pce)).
 \end{code}
 
-In Unix XPCE/SWI-Prolog distribution the program \program{xpce} is
-a symbolic link to \program{pl} and causes the system to pull in and
-announce the \product{} library with the banner:
+\product{} can be used from \program{swipl} running in a terminal as
+well as from \program{swipl-win}, which runs the Prolog toplevel in an
+\jargon{Epilog} console window.  On MS-Windows, Prolog programs are
+normally loaded and started by double-clicking a \fileext{.pl} file,
+which starts \program{swipl-win}.  \product{}, being
+a normal library, does not change this.  Loading \product{} does not
+print a banner.  The version and platform may be obtained using
+`pce->banner':
 
 \begin{code}
-% xpce
-XPCE 6.0.0, February 2002 for i686-gnu-linux-gnu and X11R6
-Copyright (C) 1993-2002 University of Amsterdam.
+1 ?- send(@pce, banner).
+XPCE 9.0.0 for x86_64-linux-Linux and SDL3.4.18 on wayland
+Copyright (C) 1993-2026 University of Amsterdam, SWI-Prolog Solutions b.v.
 XPCE comes with ABSOLUTELY NO WARRANTY. This is free software,
 and you are welcome to redistribute it under certain conditions.
-The host-language is SWI-Prolog version 5.0.0
-
-For HELP on prolog, please type help. or apropos(topic).
-         on xpce, please type manpce.
-
-1 ?-
+The host-language is SWI-Prolog version 10.1.17
 \end{code}
 
 \index{version}%
 SWI-Prolog's prompt is ``<n> ?-'' where <n> is the history-number of the
-command. The banner indicates the \product{} version. The indicated
-version is 5.1 and the patch-level is 0.
-
-On MS-Windows, Prolog programs are normally loaded and started by
-double-clicking a \fileext{.pl} file. \product{}, being a normal
-library, does not change this. Note that \product{} can only be used
-fully with the GUI-based \program{swipl-win.exe}. Using the the
-console-based \program{swipl.exe} program only the non-GUI
-functionality of \product{} is accessible.
-
-
+command. The banner indicates the \product{} version, the version of the SDL
+library and the SDL video driver used (see \appref{sdl-driver}).  The
+version is also available as `pce <-version'.
 \end{xpceonly}
-
-\begin{pwonly}
-\product{} is distributed as a \quintus{} library package, called
-\file{prowindows3.1}.  This implies it may be loaded on top of the
-running \quintus{} Prolog system using:
-
-\begin{code}
-| ?- [library(pce)].
-% loading file /usr/local/quintus/prowindows3.1/library/pce.qof
-...
-\end{code}
-
-Regarding the size and loading time of \product{}, a separate executable
-named \program{pw3} is created that contains the \product{} kernel, and
-basic development and debugging libraries.  This is the executable that
-is normally used for interactive development and debugging.
-
-\begin{code}
-% pw3
-Quintus Prolog Release 3.3 (ProWindows 3.1)
-Originally developed by Quintus Corporation, USA.
-Copyright (C) 1996, AI International Ltd.  All rights reserved.
-Castle Chambers, High Street, Berkhamsted, Herts, UK. +44 (0)1442 873873
-Email: support@aiil.co.uk    WWW: http://www.aiil.co.uk
-Licensed to University of Amsterdam
-Quintus ProWindows 3.1 (XPCE 4.9.3, April 1997) Interface
-Copyright (C) 1997, AIIL / University of Amsterdam. All Rights Reserved.
-
-| ?-
-\end{code}
-\end{pwonly}
 
 
 \section{Prolog ... and what?}
@@ -182,9 +143,7 @@ opens the dialog window.
 If everything is ok, a window as shown in \figref{dialog}
 appears on your screen. The border (in the figure this is the title-bar
 displayed above the window) is determined by the window manager you are
-using. It should look the same as any other window on your terminal. If
-an error of any kind appears, please refer to
-\appref{trouble}.
+using. It should look the same as any other window on your desktop.
 
 
 \postscriptfig{dialog}{Example Dialog Window}
@@ -197,22 +156,23 @@ same as for send/2. The last argument is unified with the return-value.
 The return value is normally an object reference, except for \product{}
 \class{name} objects, that are returned as a Prolog \idx{atom},
 \product{} integers (\idx{int}) that are translated to Prolog integers
-and \product{} \class{real} objects, that are translated to Prolog
-\idx{floating point} numbers. Examples:
+and \product{} floating point numbers (type \const{num}) as well as
+\class{real} objects, that are translated to Prolog \idx{floating
+point} numbers. Examples:
 
 \begin{code}
 6 ?- get(<pce>(0x7f8a12c400,point), y, Y).
-Y = 20
+Y = 20.
 7 ?- get(@demo, display, D).
-D = @display/display
+D = <pce>(0x7f8a12c290,display).
 8 ?- get(<pce>(0x7f8a12c400,point), distance(point(100,100)), Distance).
-Distance = 117
+Distance = 117.
 \end{code}
 
 The first example just obtains the value of the `y' instance variable.
 The second example returns the display object on which @demo is
 displayed.  This is the reference to an object of class display that
-represents your screen.%
+represents the screen (monitor) showing the window.%
     \footnote{An anonymous reference prints itself as
 	      \const{<pce>(\arg{Address},\arg{Class})}.  For named
 	      references the \pllib{pce_portray} defines a clause for the
@@ -228,12 +188,16 @@ distance between the point and point(100,100).
 The second example illustrates that get/3 returns objects by
 their reference.  This reference may be used for further queries.
 The example below computes the width and height of your screen.
+Here, @display refers to the {\em current} display, i.e., the screen
+on which \product{} opens new windows by default.
 
 \begin{code}
 9 ?- get(@display, size, Size),
      get(Size, width, W),
      get(Size, height, H).
-Size = <pce>(0x7f8a12c5d0,size), W = 1152, H = 900
+Size = <pce>(0x7f8a12c5d0,size),
+W = 1920,
+H = 1080.
 \end{code}
 
 As a final example, type something in the text entry field and try
@@ -242,7 +206,8 @@ the following:
 \begin{code}
 10 ?- get(@demo, member(name), TextItem),
       get(TextItem, selection, Text).
-TextItem = <pce>(0x7f8a12c7a0,text_item), Text = hello
+TextItem = <pce>(0x7f8a12c7a0,text_item),
+Text = hello.
 \end{code}
 
 \index{graphical,finding}\index{finding,graphical}
@@ -262,8 +227,8 @@ the object from the \product{} object base.  Examples:
 \begin{code}
 12 ?- free(<pce>(0x7f8a12c400,point)).
 13 ?- free(@demo).
-14 ?- free(@display).
-No
+14 ?- free(@display_manager).
+false.
 \end{code}
 
 The second example not only removed the dialog window object from
@@ -289,7 +254,7 @@ arguments of which you generally only want to specify a few. A good
 example is the creation of a \class{style} object. A style is an object
 used to control the attributes of displayed text: font, fore- and
 background colour, underline, etc. Its ->initialise method, serving the
-same role the {\em \idx{constructor}} in \idx{C++}, takes 7 arguments.
+same role the {\em \idx{constructor}} in \idx{C++}, takes 13 arguments.
 Both calls below create a style object representing an underlined
 text-fragment:
 
@@ -365,22 +330,22 @@ send(Text, string(10)),		% int  --> string
 \section{Send and get with more arguments}	\label{sec:sendmanyargs}
 
 Though the principal predicates for invoking behaviour are send/2 and
-get/3, \product{} provides an alternative using send/[2-12] and
-get/[3-13].  The following goals are all identical.
+get/3, \product{} provides an alternative using send/[2-8] and
+get/[3-8].  The following goals are all identical.
 
 \begin{center}
 \begin{tabular}{ll}
 \tt send(Box, width(100)) &
 \tt send(Box, width, 100) \\
-\tt get(Point, distance(point(10,10), D) &
-\tt get(Point, distance, point(10,1), D) \\
+\tt get(Point, distance(point(10,10)), D) &
+\tt get(Point, distance, point(10,10), D) \\
 \end{tabular}
 \end{center}
 
 This alternative is provided for compatibility to pre-5.0 versions as
-well as to support users that dislike the new-style send/2 and get/3. It
-is realised using goal_expansion/2 and thus poses only a small
-compile-time overhead.
+well as to support users that dislike the new-style send/2 and get/3. In
+compiled code it is realised using goal_expansion/2 and thus poses only
+a small compile-time overhead.
 
 
 \section{Notation}
@@ -532,8 +497,8 @@ will deal with this.
 \product{}'s world consists of objects. An object is an entity with persistent
 state that belongs to a class. The \productpl{} interface defines four
 basic predicates, new/2 to create objects from a description and returns
-an object reference, send/[2-12] to change the state of an object and
-succeeds if the requested change could be made, get/[3-13] to request an
+an object reference, send/[2-8] to change the state of an object and
+succeeds if the requested change could be made, get/[3-8] to request an
 object to compute a value and return it, and free/1 to remove objects
 from the \product{} database.
 

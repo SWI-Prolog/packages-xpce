@@ -23,7 +23,7 @@ Resources can be handled both from Prolog as for \product{}.  From
 Prolog, this is achieved using open_resource/3:
 
 \begin{description}
-    \predicate{open_resource}{4}{+Name, ?Class, -Stream}
+    \predicate{open_resource}{3}{+Name, ?Class, -Stream}
 Opens the resource specified by \arg{Name} and \arg{Class}.  If the
 latter is a variable, it will be unified to the class of the first
 resource found that has the specified \arg{Name}.  If successful,
@@ -51,7 +51,7 @@ making resources a suitable candidate.
 Below is the preferred way to specify and use an icon.
 
 \begin{code}
-resource(my_icon,	image,	image('my_icon.xpm')).
+resource(my_icon,	image,	image('my_icon.png')).
 
 	...,
 	send(Button, label, image(resource(my_icon))),
@@ -64,18 +64,6 @@ search-path for images (represented in the class-variable
 \classvar{image}{path}), as well as to the \functor{image}{1} definition
 of file_search_path/2.
 
-Please note that MS-Windows formatted image files can currently not
-be loaded through \class{resource} objects. The Windows API only
-provides functions to extract these objects from a single file, or
-nested as Windows resources in a \fileext{dll} or \fileext{exe} file.
-
-Right now, it is advised to translate the images into \fileext{xpm}
-format using the following simple command:
-
-\begin{code}
-?- send(image('myicon.ico'), save, 'myicon,xpm', xpm).
-\end{code}
-
-This transformation is complete as the \fileext{XPM} image format covers
-all aspects of the Microsoft image formats.  For further details on
-image formats and manipulation, see \secref{images}.
+Images are loaded using the SDL_image library (see \secref{images}).
+Loading from a \class{resource} object supports the same image formats
+as loading from a file, including SVG.

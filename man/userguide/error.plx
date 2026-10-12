@@ -10,8 +10,8 @@ Errors may also be discriminated according to their `seriousness': If
 a certain font cannot be found it can easily be substituted by
 another.  If a method expects an integer argument but the actual
 argument is a graphical object it is impossible to carry-out the
-operation.  In such cases \product{} will normally trap the tracer. If the
-user decides to continue execution the method will return failure to
+operation.  In such cases \product{} normally prints a warning with a
+backtrace of the \product{} goal stack and the method returns failure to
 its caller.  Finally, some problems are categorised as `fatal'.  When
 such a problem is encountered \product{} does not know how execution can
 be continued.
@@ -30,9 +30,9 @@ The kind describes how serious the error is considered to be.  The
 possible values are: {\em ignored} if the error is (currently) not
 regarded an error at all; {\em warning} if the error is to be
 reported, but no further action is required; {\em error} if the
-error is to be fixed.  After printing the error the system will
-start the tracer, allowing a programmer to examine the problem
-context.  Finally, {\em fatal} errors do not allow execution to
+error is to be fixed.  After printing the error the system prints
+the goal in which the error occurred and switches \product{} into
+debug mode, allowing a programmer to examine the problem context.  Finally, {\em fatal} errors do not allow execution to
 be continued.  The system will print context information and
 request Prolog to abort back to the Prolog interactive top level.
     \tick{feedback}
@@ -42,7 +42,13 @@ error is reported using the report mechanism described in
 \secref{report}.  The `report' mechanism is for errors that
 may be caused by application users, for example file errors.
 If \const{throw} and there is a Prolog goal on the stack, the
-error is mapped to a Prolog exception.  See below.
+error is mapped to a Prolog exception.  See below.  Finally,
+\const{backtrace} is as \const{print}, but also prints a backtrace of
+the \product{} goal stack.  Most errors that result from programming
+errors, such as calling a non-existing method or passing an argument of
+the wrong type, are warnings with feedback \const{backtrace}.  A
+backtrace for any error may be forced using e.g.,
+\exam{send(error(no_behaviour), feedback, backtrace)}.
 
 In the \idx{runtime-system}, all errors use feedback `report'.
     \tick{format}
@@ -70,7 +76,7 @@ be silenced using pce_catch_error/2:
 
 \begin{description}
     \predicate{pce_catch_error}{2}{+ErrorSpec, :Goal}
-Run \arg{Goal} like once/1. It an error matching \arg{ErrorSpec} is
+Run \arg{Goal} like once/1. If an error matching \arg{ErrorSpec} is
 raised, this error is not reported, but stored in `@pce<-last_error'.
 \arg{ErrorSpec} is the <-id of an error, a chain holding error-ids
 or @default.  The latter implies none but fatal errors are reported.
@@ -97,10 +103,9 @@ the form
 For example:
 
 \begin{code}
-?- catch(send(@pce, foobar), E, true).
-
-E = error(pce(no_behaviour, [@pce/pce,  (->), foobar]),
-          send(@pce/pce, foobar))
+?- catch(send(file(foo), append, bar), E, true).
+E = error(pce(not_open_file, [<pce>(0x13dcdda0,file), write]),
+          send(file(foo), append(bar))).
 \end{code}
 
 
@@ -178,9 +183,9 @@ An attempt is made to create an object with the same symbolic
 reference as an already existing object.  @arg1 is bound to the
 already existing reference name.  This trap is used by
 \pllib{pce_renew}.
-    \tick{initialisation_failed}
+    \tick{initialise_failed}
 \index{new,failed}\index{initialisation,failed}%
-The ->initialisation method for some instance failed.  @arg1
+The ->initialise method for some instance failed.  @arg1
 is bound to the (partial) instance; @arg2, ... are bound to the arguments
 given to the new-operation.
 \end{itemize}

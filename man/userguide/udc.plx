@@ -93,7 +93,7 @@ describes the class to be created.  Besides giving the class-name, the
 meta-class (class of the class) may be specified.  When omitted, 
 the meta-class of the {\em Super} will be used, which is normally
 class \class{class}.  An example of meta-class programming can be found
-in PceDraw's file {\tt shape.pl}\ifpw{}{, see \cite{XPCE:draw}}.
+in PceDraw's file {\tt shapes.pl}\ifpw{}{, see \cite{XPCE:draw}}.
 
 The class-name may be followed by a list of {\em TermNames} that define
 the result of object/2.  object/2 unifies its second argument
@@ -105,13 +105,13 @@ as arguments.  When omitted, the term-description of the super-class
 is inherited.
     \directive{use_class_template}{1}{TemplateClass}%
 Import a class template.  See \secref{template}.
-    \directive{send}{[2-12]}{@class, ...}%
+    \directive{send}{[2-8]}{@class, ...}%
 Directives like this may be used to invoke methods on the class under
 construction. This can be used to modify the class in ways that are not
 defined by this preprocessor. The following example tells the system
 that the `visual' attribute of an imaginary user-defined class should
 not be saved to file when the object is saved using
-`object->_save_in_file'.
+`object ->save_in_file'.
 
 \begin{code}
 :- send(@class, save_style_variable, nil).
@@ -150,7 +150,7 @@ value specified in the \file{Defaults} file.   Example:
 \begin{code}
 class_variable(size, size, size(400,200), "Default size of object").
 \end{code}
-    \predicate{handle}{3,4}{X, Y, Kind, Name}%
+    \predicate{handle}{[3,4]}{X, Y, Kind, Name}%
 Equivalent to the expression below.  See also \secref{connection}.
 \begin{code}
 :- send(@class, handle, handle(X, Y, Kind, Name)).
@@ -167,7 +167,7 @@ End the definition of the named \arg{Class}.  \arg{Class} must be the
 same as the class-name used by the most recent pce_begin_class/[2,3].
 This variation of pce_end_class/0 provides better documentation and
 error correction.
-    \directive{pce_begin_class}{0}{}
+    \directive{pce_end_class}{0}{}
 Close the definition of the most recently started class.  See also
 pce_end_class/1.
 \end{description}
@@ -229,8 +229,9 @@ notation.
 				     \secref{moretypes} \\
 <PrologBody>	&&		&    Ordinary Prolog code \\ 
 <Value>		&&		&    Initial value for the instance variable.
-				     At this moment, only using constants
-				     is supported (int, name, bool) \\
+				     Either a constant (e.g., int, name,
+				     bool) or \term{new}{Term} to create
+				     a new object for each instance \\
 \hline
 \end{tabular}
 \caption{Syntax details for User Defined Classes} \label{tab:udcsyntax}
@@ -260,7 +261,7 @@ initialise(D, Type:name, ...) :->
 	send(T, name, type),
 	...
 
-type(D, Type:type) :->
+type(D, Type:name) :->
 	"Modify the epistemological type"::
 	send(D, slot, type, Type),
 	get(D, member, type, Text),
@@ -291,7 +292,7 @@ super-class. For this reason there are two additional interface
 predicates to access the behaviour of a specific class. In 99\% of the
 cases we wish to invoke a method of the immediate super-class. For this
 reason the class-compiler realises compile-time rewrite of
-send_super/[2-12] and get_super/[3-13] to send_class/2 and get_class/3.
+send_super/[2-8] and get_super/[3-8] to send_class/3 and get_class/4.
 
 \begin{description}
     \predicate{send_class}{3}{+Object, +Class, +Message}
@@ -312,10 +313,10 @@ cannot use send_super/2.
 This is the get-equivalent of send_super/2.
 \end{description}
 
-Similar as the predicates send/2 and get/3 may be written as send/[3-12]
-and get/[4-13] this is possible for send_super/2 and get_super/3.  In
-addition the pre-5.0 `object->send_super' and `object<-get_super' are
-expanded to send_class/2 and get_class/3.  The following calls are
+Similar as the predicates send/2 and get/3 may be written as send/[3-8]
+and get/[4-8] this is possible for send_super/2 and get_super/3.  In
+addition the old `object->send_super' and `object<-get_super' are
+expanded to send_class/3 and get_class/4.  The following calls are
 all equivalent.  The last one should not be used by new code.
 
 \begin{pcecode}
@@ -582,21 +583,23 @@ Used to specify and compute defaults for arguments.  {\em Argument}
 is the actual argument passed to the method implementation, {\em
 Default} is any valid \product{} object description (reference, integer,
 real, atom or compound ground term describing an object, see
-send/[2-12]).  {\em Default} can also be the term
+send/[2-8]).  {\em Default} can also be the term
 \begin{code}
-resource(<Object>, <Name>)
+class_variable(<Object>, <Name>)
 \end{code}
-In which case the <-resource_value: <Name> from <Object> will be
-used as default value.  {\em Value} is unified with {\em Argument}
-if {\em Argument} is not @default and with {\em Default} otherwise.
+In which case the `object <-class_variable_value: <Name>' from
+<Object> will be used as default value (see \chapref{classvar}).
+{\em Value} is unified with {\em Argument} if {\em Argument} is not
+@default and with {\em Default} otherwise.
 
 The following is an example that sets the volume to a specified value or
-the value of the resource `volume' if @default is passed as an argument.
+the value of the class-variable `volume' if @default is passed as an
+argument.
 \begin{code}
-resource(volume, 0..130,  75, "Volume in decibels").
+class_variable(volume, 0..130,  75, "Volume in decibels").
 
 volume(X, Vol:[0..130]) :->
-	default(Vol, resource(X, volume), V),
+	default(Vol, class_variable(X, volume), V),
 	<set the volume here>.
 \end{code}
 \end{description}
@@ -610,9 +613,9 @@ The basic \product{} type-syntax is described in \secref{atype} of
 this manual.  Types are first-class reusable \product{} objects that are
 created from the type-declaration in arguments and variables.  The
 conversion from the textual representation to the object is performed
-by \product{} itself (together with the resource syntax, one of the few
-places where \product{} defines syntax).  All types can be specified as
-Prolog quoted atoms.  For example:
+by \product{} itself (together with the syntax of the \file{Defaults}
+file, one of the few places where \product{} defines syntax).  All
+types can be specified as Prolog quoted atoms.  For example:
 
 \begin{code}
 mymethod(Me, A:'graphical|dict_item|0..') :->
@@ -626,9 +629,9 @@ the atom '[point]', which is interpreted by \product{} as ``an instance of
 class \class{point} or the constant @default''.  The atoms {\tt *} and
 {\tt ...} are defined as postfix operators, while {\tt ..} is an infix
 operator.  This makes `\mbox{\tt any ...}' a valid notation for ``any
-number of anything'' (see \secref{varargs} below) and `{\tt
+number of anything'' (see \secref{varargs} below) and `\mbox{\tt
 0..5}' a valid expression for ``an integer in the range 0 to 5
-(including the boundaries).
+(including the boundaries)''.
 
 Also, {\tt [box|circle]} is a valid description for ``an instance of
 \class{box} or \class{circle} or the constant @default. Note however
@@ -726,8 +729,6 @@ event(G, Ev:event) :->
 The main program can now be defined as:
 
 \begin{pcecode}
-:- require([use_class_template/1]).
-
 :- pce_begin_class(editable_box, box).
 :- use_class_template(editable_graphical).
 :- pce_end_class.
@@ -753,8 +754,6 @@ subclass the definition of editable_box above and further refine the
 event method in the subclass.
 
 \begin{pcecode}
-:- require([use_class_template/1]).
-
 :- pce_begin_class(editable_box, box).
 :- use_class_template(editable_graphical).
 
@@ -797,8 +796,8 @@ gnats(X, A:name, B:int) :-> ...
 is translated into
 
 \begin{code}
-pce_principal:send_implementation('gnus$+$->gnu', gnu(A), O) :- ...
-pce_principal:send_implementation('gnats$+$->gnu', gnats(A, B), O) :- ...
+pce_principal:send_implementation('gnus->gnu', gnu(A), O) :- ...
+pce_principal:send_implementation('gnus->gnats', gnats(A, B), O) :- ...
 \end{code}
 
 The remainder of the class specification is translated into a number of
@@ -825,9 +824,8 @@ from the Prolog module in which the class is defined.
 
 \index{runtime generation}%
 The main reason for the above approach is to exploit the
-runtime-generation facilities of the hosting Prolog system to create
-fast-starting portable and (depending on the hosting Prolog's
-capabilities) stand-alone executables.
+saved-state facilities of SWI-Prolog (see qsave_program/2) to create
+fast-starting and stand-alone executables.
 
 One of the consequences of the chosen approach is that the
 class-building directives are not accessible as predicates.  There is

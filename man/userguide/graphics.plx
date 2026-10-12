@@ -35,7 +35,7 @@ picture.
 3 ?- send(@p, display,
 	  new(@ci, circle(50)), point(25,25)).
 4 ?- send(@p, display,
-	  new(@bm, bitmap('32x32/books.xpm')), point(100,100)).
+	  new(@bm, bitmap('32x32/books.png')), point(100,100)).
 5 ?- send(@p, display,
 	  new(@tx, text('Hello')), point(120, 50)).
 6 ?- send(@p, display,
@@ -67,8 +67,6 @@ request to update it.  The following code illustrates this.  Running
 a circle without showing any of the intermediate results.
 
 \begin{code}
-:- require([between/3, forall/2]).
-
 square_to_circle(Box) :-
 	get(Box, height, H),
 	MaxRadius is H // 2,
@@ -76,18 +74,18 @@ square_to_circle(Box) :-
 	       send(Box, radius, Radius)).
 \end{code}
 
-To get the intended animating behaviour, use `graphical ->flush' to
-explicitly force redraw right now:
+To get the intended animating behaviour, use `window ->flush' on the
+window displaying the graphical to explicitly force redraw right now:
 
 \begin{code}
-:- require([between/3, forall/2]).
-
 square_to_circle(Box) :-
 	get(Box, height, H),
 	MaxRadius is H // 2,
+	get(Box, window, Window),
 	forall(between(0, MaxRadius, Radius),
 	       (   send(Box, radius, Radius),
-		   send(Box, flush)
+		   send(Window, flush),
+		   sleep(0.02)
 	       )).
 \end{code}
 
@@ -101,19 +99,18 @@ overview of the primitive graphicals.
 
 \begin{table}
 \begin{center}
-\begin{tabularlp}{\class{ellipse}}
+\begin{tabularlp}{\class{bezier_curve}}
 \hline
 \class{arrow}	& Arrow-head.  Normally used implicitly
 		  by class \class{line}. \\
 \hline
-\class{bezier}	& Bezier curve.  Both quadratic and cubic Biezer
+\class{bezier_curve} & Bezier curve.  Both quadratic and cubic Bezier
 	          curves are supported. \\
 \hline
-\class{bitmap}	& Visualisation of an image.  Both monochrome and
-		  full-colour images are supported.  Images can have
-		  shape. See \secref{images}. \\
-\hline
-\class{pixmap}  & Subclass of bitmap only for coloured images. \\
+\class{bitmap}	& Visualisation of an \class{image}.  Images may
+		  be loaded from various formats, including PNG, JPEG
+		  and SVG, and can have an alpha channel (transparency).
+		  See \secref{images}. \\
 \hline
 \class{box}	& Rectangle.  Can be rounded and filled. \\
 \hline
@@ -149,7 +146,7 @@ displayed below it.
 
 \begin{code}
 9 ?- new(@ic, device),
-     send(@ic, display, bitmap('happy.bm')),
+     send(@ic, display, bitmap('happy.png')),
      send(@ic, display, text('Happy'), point(0, 64)),
      send(@p, display, @ic, point(250, 20)).
 \end{code}

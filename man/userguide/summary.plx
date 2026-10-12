@@ -1,6 +1,6 @@
 \chapter{Class summary descriptions}		\label{sec:summary}
 
-This appendix provides a complete overview of all built-in classes of
+This appendix provides an overview of the built-in classes of
 \product{}. For each class, it presents the name, arguments needed to create
 an instance, place in the inheritance and delegation hierarchies as well
 as a summary description. For many classes we added a small illustrative
@@ -105,11 +105,11 @@ get(Box, area, area(X, Y, W, H)),
 #class arrow "arrow(length, wing)"
 Arrow-head. Normally only used implicitly to attach arrows to a
 \class{line}, \class{arc} or \class{path}, the subclasses of class
-\class{joint}. See `joint ->arrows'. \class{arrow} can be used directory
+\class{joint}. See `joint ->arrows'. \class{arrow} can be used directly
 to create fancy arrows.
 
 \begin{code}
-?- new(L, line(0, 0, 100, 50, second))
+?- new(L, line(0, 0, 100, 50, second)).
 \end{code}
 
 #class assign "assign(var, value, scope)"
@@ -176,10 +176,11 @@ send(Box, height, Text?height + 10),
 \end{code}
 
 #class bitmap "bitmap(image)"
-A bitmap turns an \class{image} or \class{pixmap} into a graphical
-object that can be displayed on a \class{device}.
+A bitmap turns an \class{image} into a graphical object that can be
+displayed on a \class{device}.  Transparency is defined by the alpha
+channel of the image.
 \begin{code}
-?- new(I, image('pce.bm')),
+?- new(I, image('pce.svg')),
    new(B, bitmap(I)).
 \end{code}
 
@@ -197,20 +198,36 @@ hello world
 
 #class bool "bool(self)"
 Class \class{bool} defines two instances: @on and @off, representing
-`true' and `false'.  The use cannot create instances of this class.
+`true' and `false'.  The user cannot create instances of this class.
 \begin{code}
 ...,
 send(Text, transparent, @on)
 ...
 \end{code}
 
+#class bool_item "bool_item(name, selection, message)"
+Controller that edits a boolean value using a \jargon{switch}: a track
+with a knob that slides to the other side when clicked.  The message is
+called with @on or @off.  For a set of boolean options, a \class{menu}
+with \const{marked} items and `menu ->multiple_selection' is an
+alternative.
+\begin{code}
+...,
+send(Dialog, append,
+     bool_item(dark_mode, @off,
+	       message(@prolog, set_dark_mode, @arg1))),
+...
+\end{code}
+
 #class box "box(width, height)"
-Graphical representing a rectangle. Corners can be rounded, the interior
-can be filled, the texture and thickness of the line can be controlled
-and a shadow can be defined.
+Graphical representing a rectangle. Corners can be rounded, the
+interior can be filled with a \class{colour} or \class{gradient}, the
+texture and thickness of the line can be controlled and a drop
+\class{shadow} can be defined.
 \begin{code}
 ?- new(B, box(100, 50)),
-   send(B, radius, 10).
+   send(B, radius, 10),
+   send(B, shadow, 5).
 \end{code}
 
 #class browser "browser(label)"
@@ -234,8 +251,9 @@ Internal class dealing with selection handling in class
 #class button "button(label, message, accelerator)"
 A button is a push-button controller. It has an associated
 \class{message} that is executed if the button is activated using the
-mouse.  Inside a \class{dialog}, one button can be assigned as `default'
-button.
+mouse or the keyboard.  Inside a \class{dialog}, one button can be
+assigned as `default' button.  `button ->danger' marks a button that
+starts a destructive action.
 \begin{code}
 ?- new(B, button(hello,
 		 message(@pce, write_ln, hello))).
@@ -246,11 +264,13 @@ Class \class{chain} represents a single-linked list of arbitrary
 objects.  Chains are commonly used inside \product{} to represent collections.
 Chains have methods to find elements, sort the chain, delete elements,
 etc. The predicate chain_list/2 converts between an \product{} chain and a
-Prolog list. It also provides methods to run code on all elements of the
-list, which is generally faster than translating the chain to a Prolog
-list and using Prolog iteration.  In the example, `device<-graphicals'
-returns a chain holding the graphicals displayed on the device.  The
-example changes the font of all objects of class \class{text} to `bold'.
+Prolog list and member_chain/2 enumerates the elements of a chain.
+Class \class{chain} also provides methods to run code on all elements
+of the list, which is generally faster than translating the chain to a
+Prolog list and using Prolog iteration.  In the example,
+`device<-graphicals' returns a chain holding the graphicals displayed on
+the device.  The example changes the font of all objects of class
+\class{text} to `bold'.
 \begin{code}
 ...,
 send(Device?graphicals, for_all,
@@ -306,9 +326,9 @@ X = @graphical_class/class.
 
 #class class_variable "class_variable(class, name, default, type, summary)"
 
-A \class{class_variable} provides can be used to describe class
-properties as well as to provide access to the \product{}
-\file{Defaults} database.  Typically, class-variables are defined
+A \class{class_variable} can be used to describe class properties as
+well as to provide access to the \product{} \file{Defaults} database.
+See \chapref{classvar}.  Typically, class-variables are defined
 similar to instance-variables in the \product{}/Prolog class definition:
 
 \begin{code}
@@ -326,7 +346,8 @@ This class is normally used to make graphical objects sensitive to clicks.
 \begin{code}
 ...,
 send(Bitmap, recogniser,
-     click_gesture(left, double, message(Bitmap, open))),
+     click_gesture(left, '', double,
+		   message(Bitmap, open))),
 ...
 \end{code}
 
@@ -351,22 +372,27 @@ represent functions as well as normal objects.  It is used for packing
 multiple arguments passed to a variable-argument method.  Do not use
 this class directly.  See \secref{varargs}.
 
-#class colour "colour(name, [r], [g], [b])"
-A \class{colour} represents an `RGB' triple.%
-	\footnote{Colour screens create their colour by mixing the `primary'
-		  colours `red', `green' and `blue'.  With an `RBG' triple,
-		  we refer to a triple of three numeric values representing
-		  the intensities of the three primary colours}
-Colours are used as attributes to graphicals, windows, \classs{style} and
-\classs{pixmap}
+#class colour "colour(name, [red], [green], [blue], [alpha], [model])"
+A \class{colour} represents an `RGBA' value: the intensities of the
+primary colours `red', `green' and `blue' and the opacity (`alpha').
+Colours are created from a name, which is a CSS or X11 colour name, a
+system colour (see \secref{syscolours}) or a hexadecimal specification
+such as \const{\#ff000080}, or from the numeric components using the
+\const{rgb} or \const{hsv} model.  Colours are used as attributes to
+graphicals, windows and \classs{style}.  See also \class{theme_colour}
+and \class{gradient}.
+\begin{code}
+?- new(C, colour(@default, 255, 0, 0, 128)),
+   get(C, name, Name).
+Name = '#ff000080'.
+\end{code}
 
 #class connect_gesture "connect_gesture(button, modifier, link)"
 A \class{connect_gesture} allows the user to connect two graphicals
 by dragging from the first to the second.  This requires two graphicals
 with \classs{handle}s attached, a \class{link} that is compatible with the
-handles and a \class{connect_gesture} associated width the graphical at
-which the connection should start.  The demo program PceDraw as well
-as the \product{} Dialog Editor described in \chapref{dialogeditor} exploit
+handles and a \class{connect_gesture} associated with the graphical at
+which the connection should start.  The demo program PceDraw exploits
 connections and connect_gestures.
 
 #class connection "connection(from, to, link, from_handle, to_handle)"
@@ -381,7 +407,7 @@ choose the `best-looking' handle.
 #class constant "constant(name, [summary])"
 A \class{constant} is a unique handle.  \product{} predefines the following
 constants: @nil, @default, and from the subclass \class{bool}, @on
-and @off.  The use can define additional constants and give them their
+and @off.  The user can define additional constants and give them their
 own unique meaning.  The most obvious usage is to indicate a slot
 that can hold arbitrary data including @nil and @default is in
 a special state.
@@ -434,11 +460,15 @@ send_methods_of_class(ClassName) :-
 
 #class cursor "cursor(name)"
 A \class{cursor} defines the shape that indicates the position of the
-\idx{pointer} (also called \idx{mouse}).  The system provides a large
-set of predefined cursors from \idx{X11}.  The Win32 version adds the
-standard Windows cursors to this set.  Cursors can also be created from
-an \class{image}. The demo program \demo{Cursors} displays all defined
-cursors.
+\idx{pointer} (also called \idx{mouse}).  The system provides the
+standard cursors of the platform using CSS-like names such as
+\const{default}, \const{pointer}, \const{text}, \const{move},
+\const{wait} and \const{ew_resize}.  For compatibility, the most
+commonly used old \idx{X11} cursor names are mapped to these.  Cursors
+can also be created from an \class{image} and a hot spot.  `cursor
+<-kind' tells whether the cursor is a \const{standard}, \const{x11} or
+\const{image} cursor.  The demo program \demo{Cursors} displays all
+defined cursors.
 
 Cursors can be associated with graphicals and windows using the ->cursor
 method.  They are also associated to \classs{gesture}, where they define
@@ -450,7 +480,7 @@ of cursors is rarely used.
 
 \begin{code}
 ...,
-send(Box, cursor, gobbler),
+send(Box, cursor, pointer),
 ...
 \end{code}
 
@@ -496,7 +526,8 @@ created by simply ->append{}ing a number of controllers to a dialog
 window. The \class{frame}- and \class{dialog}-layout services take care
 of proper window sizes and layout of the controllers. Dialog windows are
 also involved in forwarding ->report messages (see \secref{report}) and
-keyboard accelerators, handling the default button.
+keyboard accelerators, handling the default button and moving the
+keyboard focus between the controllers.
 
 \begin{code}
 :- pce_autoload(file_item, library(file_item)).
@@ -504,9 +535,9 @@ keyboard accelerators, handling the default button.
 edit_file_dialog :-
 	new(D, dialog('Edit File')),
 	send(D, append,
-	     file_item(edit_file, '')),
+	     new(F, file_item(edit_file, ''))),
 	send(D, append,
-	     button(edit, message(@prolog, emacs, @arg1))),
+	     button(edit, message(@prolog, edit, F?selection))),
 	send(D, append,
 	     button(cancel, message(D, destroy))),
 	send(D, open).
@@ -555,19 +586,23 @@ and sub directories.  Directory objects can also be used to create or
 delete directories from the file-system.
 
 \begin{code}
-?- get(directory(.), files, Files).
+?- get(directory('.'), files, Files).
 \end{code}
 
-#class display "display(address)"
-A \class{display} represents what X11 calls a \idx{screen}, a desktop on
-which windows can be displayed with a mouse and keyboard attached to it.
-\product{} support multiple display instances under X11 and only the predefined
-default display @display under Win32.  The display implements a number of
-global operations: getting the screen <-size, showing modal message
-boxes using ->inform and ->confirm, etc.
+#class display "display(name, area)"
+A \class{display} represents a \idx{monitor} attached to the computer.
+Display objects are created by the system for each monitor that is
+found; their <-area and <-work_area describe the position and size of
+the monitor in the desktop.  @display is a function that evaluates to
+the current display: the display of the last event or, if there is
+none, the primary display.  The display
+implements a number of global operations: getting the screen <-size,
+showing modal message boxes using ->inform and ->confirm, accessing the
+clipboard and the selection, finding the light or dark <-system_theme of
+the desktop, etc.
 \begin{code}
-?- get(@display. size, size(W, H)).
-W = 1024, H = 786
+?- get(@display, size, size(W, H)).
+W = 1920, H = 1080.
 \end{code}
 
 #class display_manager "display_manager()"
@@ -575,7 +610,9 @@ The object @display_manager is the only instance of this class.
 It represents the collection of available \class{display} objects and
 provides access to the system-wide event-dispatching services.  It is
 the root of the consist-of hierarchy of \class{visual} objects as
-displayed by the \tool{Visual Hierarchy} tool.
+displayed by the \tool{Visual Hierarchy} tool.  After the theme or
+system colours change, `display_manager ->colours_changed' notifies all
+frames and graphicals.
 
 #class edit_text_gesture "edit_text_gesture(button, modifier)"
 Used internally to handle selection inside a \class{text} object. See
@@ -606,13 +643,15 @@ etc.) either use class view or class editor to display the text.
 
 #class elevation "elevation(name, height, colour, relief, shadow)"
 An \class{elevation} object describes an elevated region on the screen.
-Elevations come in two flavours: as a shadow for monochrome displays
-and using light and dark edges on colour displays.  The elevation object
-itself just contains the colour definitions.  The actual painting is
-left to the graphical object the elevation is attached to.
+Elevations come in two flavours (`elevation <-kind'): \const{3d}, using
+light and dark edges, and \const{shadow}.  The elevation object itself
+just contains the colour definitions.  The actual painting is left to
+the graphical object the elevation is attached to.
 
-Most controllers handle elevations.  The only general purpose graphical
-supporting an elevation is \class{figure}.
+Some controllers handle elevations, although most have a flat, themed
+look.  The only general purpose graphical supporting an elevation is
+\class{figure}.  For a drop shadow around a graphical, see class
+\class{shadow}.
 
 #class ellipse "ellipse(width, height)"
 Elliptical shape.  Class \class{ellipse} defines similar attributes as
@@ -637,7 +676,8 @@ references, etc.) to the terminal and start the tracer. See also
 An \class{event} represents an action from the application user:
 pressing a key, moving the mouse, pressing a mouse-button, or entering
 or leaving an area with the mouse.  The main loop of \product{} will read
-window-system events from the computing environment (X11 or Win32).
+window-system events from SDL, the library that connects \product{} to
+the window system.
 If the event concerns a repaint or similar system event, it will be
 handled appropriately.  If it can be expressed as an \product{} event, an
 \class{event} object will be created and send to the window for which
@@ -653,7 +693,7 @@ to do'. For processing events during computation, see `graphical
 
 #class event_node "event_node(value, parent)"
 An \class{event_node} is a node in the event `is_a' hierarchy.  See the
-demo program \demo{Events}.  Event-types are normally tested using
+demo program \demo{EventHierarchy}.  Event-types are normally tested using
 `event ->is_a'.
 
 \begin{code}
@@ -672,11 +712,14 @@ Event `is_a' hierarchy.  The only instance is @event_tree.
 #class figure "figure()"
 A \class{figure} is a refinement of a \class{device}. It is a compound
 graphical, but in addition can define a background, surrounding box with
-margin, possibly rounded corners and \class{elevation} and a
-\idx{clipping} region. Finally, figures may be used not only to display
-all member graphicals, but also to show `one of' the member graphicals
-only. See `figure ->status'. An example of the usage of figures are the
-`object cards' of the \tool{Inspector} tool.
+margin, possibly rounded corners, an \class{elevation} or \class{shadow}
+and a \idx{clipping} region.  A figure may have a \class{transform},
+which rotates, scales or shears its contents (see `figure ->rotate',
+`figure ->scale' and the demo \demo{Transform}).  Finally, figures may
+be used not only to display all member graphicals, but also to show
+`one of' the member graphicals only. See `figure ->status'. An example
+of the usage of figures are the `object cards' of the \tool{Inspector}
+tool.
 
 #class file "file(name)"
 An \product{} \class{file} object represents a file on the computers
@@ -684,13 +727,13 @@ file-system.  It can be used to specify a file, query a file for
 various attributes, read a file, etc.  See also \class{directory}.
 
 \begin{code}
-?- get(file('summary.doc', size, Size).
-Size = 30762
+?- get(file('summary.plx'), size, Size).
 \end{code}
 
-#class font "font(family, style, points)"
+#class font "font(family, style, points, weight)"
 A \class{font} is a reusable object that describes the typeface of text.
-\Secref{font} documents the specification of physical and logical fonts.
+Fonts are rendered using the Pango library.  \Secref{font} documents
+the specification of physical and logical fonts.
 \begin{code}
 ...,
 send(Text, font, bold),
@@ -718,13 +761,16 @@ new(_, fragment(Editor, Start, Len, title)),
 ...
 \end{code}
 
-#class frame "frame(label, kind, display)"
+#class frame "frame(label, kind, display, application)"
 A \class{frame} is a collection of \class{tile}{\em d} windows.  Frames
 handle the layout, resizing, etc. of its member windows. Any \product{} window
 is enclosed in a frame, though it is often not necessary to specify a
 frame explicitly.  Applications are often implemented as subclasses
 of \class{frame}.  \Secref{framelayout} describes the layout of windows
-inside a frame.
+inside a frame.  `frame <-open_file' and `frame <-save_file' prompt for
+a file using the dialog of the operating system.  The libraries
+\pllib{tab_frame} and \pllib{pane_frame} build windows that hold tabs
+and panes on top of class \class{frame}; see \secref{panes}.
 
 \begin{code}
 ...,
@@ -747,6 +793,25 @@ conditions, handles the cursor and focus and activates the ->initiate,
 ->drag and ->terminate methods that are redefined in its subclasses.
 This class is often sub-classed.
 
+#class gradient "gradient(kind, p0, p1, r0, r1, stops)"
+A \class{gradient} is a linear or radial colour gradient that can be
+used instead of a \class{colour} to fill a graphical such as a
+\class{box}, \class{ellipse} or \class{path} (`box ->fill') or as the
+background of a \class{figure}.  A linear gradient runs from point
+\arg{p0} to \arg{p1}; a radial gradient from a circle around \arg{p0}
+with radius \arg{r0} to a circle around \arg{p1} with radius
+\arg{r1}.  The points use the coordinate system of the device on which
+the graphical is displayed.  The colours are given as a \class{chain}
+of \exam{tuple(Fraction, Colour)} stops, where \arg{Fraction} is
+between 0 and 1.
+\begin{code}
+?- new(B, box(100, 50)),
+   send(B, fill,
+	gradient(linear, point(0, 0), point(100, 0),
+		 stops := chain(tuple(0, white),
+				tuple(1, steel_blue)))).
+\end{code}
+
 #class get_method "get_method(name, return_type, types, message, summary, source)"
 Specification of get-behaviour that is associated with a class using
 `class ->get_method' or with an individual object using `object
@@ -755,8 +820,10 @@ defined in \chapref{udc}.
 
 #class graphical "graphical(x, y, width, height)"
 The most generic graphical object.  This class defines generic geometry
-management, display, update, event-handling, etc.  This class can be
-sub-classed to defined specialised graphics.  See \secref{ugraphics}.
+management, display, update, event-handling, opacity (see
+\secref{opacity}), etc.  `graphical ->pdf' writes the graphical as a PDF
+file.  This class can be sub-classed to define specialised graphics.
+See \secref{ugraphics}.
 
 #class grbox "grbox(graphical, alignment, rubber)"
 Embed a graphical in a \class{parbox}. Using \const{left} or
@@ -775,9 +842,9 @@ encountered regularly:
 :- pce_global(@south_handle,
 	      new(handle(w/2, h, link, south))).
 :- pce_global(@east_handle,
-	      new(handle(0, h/2, link, east))).
+	      new(handle(w, h/2, link, east))).
 :- pce_global(@west_handle,
-	      new(handle(w, h/2, link, west))).
+	      new(handle(0, h/2, link, west))).
 \end{code}
 
 #class handler "handler(event, message, region)"
@@ -810,17 +877,20 @@ graphical, while move gestures do not have such a limitation.
 			new(move_gesture)))).
 \end{code}
 
-#class hash_table "hash_table(buckets)"
+#class hash_table "hash_table(buckets, refer)"
 A \class{hash_table} is a fast association table between pairs of
 objects.  For example, @classes is a hash_table mapping class-names
 into class objects.  Names are often used as {\em keys}, but the
-implementation poses no limit on the type of the key.
+implementation poses no limit on the type of the key.  The optional
+second argument determines whether the table protects its keys and/or
+values from being garbage collected.
 
 \begin{code}
 ?- new(@ht, hash_table),
-   send(@ht, append, gnu, image('gnu.img')).
+   send(@ht, append, gnu, 'GNU is Not Unix').
 
-?- get(@ht, member, gnu, Image).
+?- get(@ht, member, gnu, Expansion).
+Expansion = 'GNU is Not Unix'.
 \end{code}
 
 #class hbox "hbox(width, ascent, descent, rubber)"
@@ -877,14 +947,17 @@ send(Device?graphicals, for_all,
 ...
 \end{code}
 
-#class image "image(name)"
+#class image "image(name, width, height, kind)"
 An \class{image} is a two-dimensional array of pixels.  Images come in
-two flavours: monochrome, where each pixel represents a boolean and
-colour, where each pixel represents a colour.  \product{} can save and load
-both monochrome and colour images.  Images are displayed on a graphical
-device using a \class{bitmap}. They are also used to specify
-\class{cursor} objects and the icon associated with a `frame'.
-See \secref{images}.
+two flavours (`image <-kind'): \const{pixmap}, the default, where each
+pixel is a colour with an alpha channel, and \const{bitmap}, where each
+pixel represents a boolean that is painted in the current foreground
+colour.  Images are loaded using the SDL_image library, which supports
+the common formats such as PNG, JPEG, GIF and SVG.  `image ->save' saves
+an image to a PNG file.  Images are displayed on a graphical device
+using a \class{bitmap}. They are also used to specify \class{cursor}
+objects, the icons of \classs{menu_item} and the icon associated with a
+`frame'.  See \secref{images}.
 
 #class int_item "int_item(name, default, message, low, high)"
 Subclass of \class{text_item} for entering integer values.  Has stepper
@@ -972,7 +1045,10 @@ visualisation of a list of items (\class{dict_item}) stored in a
 controllers on a \class{dialog} window. The example created a
 \class{list_browser} holding all current Prolog source files.
 Double-clicking a file will start \tool{PceEmacs} on the file. Selecting
-a file and pressing {\sf Consult} will (re)consult the file.
+a file and pressing {\sf Consult} will (re)consult the file.  A
+list_browser can be operated using the keyboard; typing searches the
+items incrementally.  The hook `list_browser ->selection_changed' is
+called after the selection changed and may be redefined in a subclass.
 
 \begin{code}
 show_source_files :-
@@ -991,10 +1067,15 @@ show_source_files :-
 #class menu "menu(label, kind, message)"
 Class \class{menu} realises various different styles of menus and is the
 super-class for \class{popup}. Basically, a menu presents multiple
-values, allows the user to choose one or more items (`menu
-->multiple_selection') and defines a `look'.  The `menu ->kind' set the
-various attributes to often-used combinations. The other `look-and-feel'
-attributes may be used to fine-tune the result afterwards.
+values and allows the user to choose one or more items.  `menu ->kind'
+defines only the presentation: \const{cycle} shows the selection in a
+combo box, \const{marked} shows the items with a radio button or check
+box, \const{choice} shows a segmented control and \const{popup} is used
+for the items of a popup menu.  Whether the user may select one or more
+items is defined by `menu ->multiple_selection'.  The kind
+\const{toggle} is an old name for a \const{marked} menu with multiple
+selection.  The other `look-and-feel' attributes may be used to
+fine-tune the result afterwards.
 
 Menu-items can have a textual or \class{image} label.  Labels can be
 coloured and specify a different \class{font}.
@@ -1003,29 +1084,30 @@ coloured and specify a different \class{font}.
 ...,
 new(M, menu(gender, choice)),
 send_list(M, append, [male, female]),
-send(M, layout, horizontal),
+new(S, menu(style, marked)),
+send(S, multiple_selection, @on),
+send_list(S, append, [bold, italic, underline]),
 ...,
 \end{code}
 
 #class menu_bar "menu_bar(label)"
 A menu-bar is a row of pull-down menus. Many applications define a single
 menu-bar at the top of the frame presenting the various commands in the
-application.
+application.  On MacOS, `menu_bar <-native' tells whether the menu bar
+is shown in the native menu bar at the top of the screen.
 
 \begin{code}
 :- pce_begin_class(my_application, frame).
 
 initialise(F) :->
-	send(F, send_super, initialise,
-	     'My Application'),
+	send_super(F, initialise, 'My Application'),
 	send(F, append, new(MBD, dialog)),
-	new(V, view),
-	send(new(B, browser, left, V)),
-	send(B, below, MBD),
+	send(new(B, browser), below, MBD),
+	send(new(_V, view), right, B),
 	send(MBD, append, new(MB, menu_bar)),
-	send(MB, append, new(F, popup(file))),
-	send(MB, append, new(E, popup(edit))),
-	send_list(F, append,
+	send(MB, append, new(File, popup(file))),
+	send(MB, append, new(_Edit, popup(edit))),
+	send_list(File, append,
 		  [ menu_item(load,
 			      message(F, load)),
 		    ...
@@ -1049,15 +1131,17 @@ many examples in this chapter.
 Class \class{method} is the super-class of \class{send_method} and
 \class{get_method}.  Instances of this class itself are useless.
 
-#class modifier "modifier(shift, control, meta)"
+#class modifier "modifier(shift, control, meta, gui)"
 A \class{modifier} is a reusable object that defines a condition on the
-status of the three `modifier keys' \idx{shift}, \idx{control} and
-\idx{meta}/\idx{alt}.  Modifiers are used by class \class{gesture} and
-its sub-classes.  They are normally specified through their conversion
+status of the four `modifier keys' \idx{shift}, \idx{control},
+\idx{meta}/\idx{alt} and \idx{gui}, the Windows key or the Apple
+command key.  Modifiers are used by class \class{gesture} and its
+sub-classes.  They are normally specified through their conversion
 method, which translates a \class{name} consisting of the letters
-\const{s}, \const{c} and \const{m} into a modifier that requires the
-shift, control and/or meta-key to be down an the other modifier keys
-to be up.  The example specifies a `\idx{shift-click}' gesture.
+\const{s}, \const{c}, \const{m} and \const{g} into a modifier that
+requires the shift, control, meta and/or gui key to be down and the
+other modifier keys to be up.  The example specifies a
+`\idx{shift-click}' gesture.
 
 \begin{code}
 ...,
@@ -1073,7 +1157,7 @@ See also \class{move_outline_gesture}.
 
 \begin{code}
 ...,
-send(Box, gesture, new(move_gesture)),
+send(Box, recogniser, new(move_gesture)),
 ...
 \end{code}
 
@@ -1089,10 +1173,7 @@ move_gesture would be too slow.
 A \class{name} is a unique textual constant, similar to an \idx{atom}
 in Prolog.  Whenever an atom is handed to \product{}, the interface will
 automatically create a \class{name} for it.  There is no limit to the
-number of characters that can be stored in a name, but some Prolog
-implementations may limit the number of characters in an atom.  On
-these platforms, it is implementation-dependent what will happen to
-long names that are handed to the Prolog interface.
+number of characters that can be stored in a name.
 
 #class node "node(image)"
 A {\em node} is a node in a \class{tree} of \class{graphical} objects.
@@ -1116,13 +1197,13 @@ primitives(Device, Primitives) :-
 \end{code}
 
 #class number "number(value)"
-A \class{number} is the object version of an integer (\idx{int}). If may
-be as a storage bin.  To compute the widest graphical of a device:
+A \class{number} is the object version of an integer (\idx{int}). It may
+be used as a storage bin.  To compute the widest graphical of a device:
 
 \begin{code}
 widest_graphical(Device, Width) :-
 	new(N, number(0)),
-	send(Device, for_all,
+	send(Device?graphicals, for_all,
 	     message(N, maximum, @arg1?width)),
 	get(N, value, Width),
 	send(N, done).
@@ -1190,14 +1271,14 @@ A \class{picture} is a \class{window} with scrollbars, normally used for
 application graphics. If a graphical window without scrollbars is
 required, \class{window} should be considered.
 
-#class pixmap "pixmap(source)"
+#class pixmap "pixmap(source, width, height)"
 A \class{pixmap} is a subclass of \class{image} that is reserved for
 colour images. All functionality of this class is in class
 \class{image}.  The main reason for its existence is that some graphical
 operations {\em require} a colour image and the introduction of a class
 for it is the only way to allow this to be specified using \product{}'s type
-system.  The ->initialise method is specialised for handling colour
-images.
+system.  As images are colour images (<-kind \const{pixmap}) by
+default, this class is rarely needed.
 
 #class point "point(x, y)"
 Position in a two-dimensional plane.  Together with \class{size} and
@@ -1257,9 +1338,10 @@ make_graph_node_gesture(G) :-
 A \class{process} encapsulates a stream- or terminal program to get its
 input from a graphical program and redirect its output to the same
 graphical program.  Various of the \product{} tools and demo programs exploit
-processes: The {\tt M-x shell}, {\tt M-x grep} and other shell commands
-of \tool{PceEmacs}, the \demo{ispell} program and the \demo{chess}
-front-end.  See also \class{socket}.
+processes: The {\tt M-x grep} and similar commands of \tool{PceEmacs},
+the \demo{ispell} program and the \demo{chess} front-end.  Interactive
+programs such as a shell are better run in a \class{terminal_image}.
+See also \class{socket}.
 
 #class progn "progn(statement, ..., function|any)"
 Code object with semantics like the LISP progn function. A \class{progn}
@@ -1271,7 +1353,7 @@ simply return it.  Used infrequently in the \productpl{} context.
 #class program_object "program_object()"
 The super-class of almost the entire `meta-word' of XPCE: classes,
 behaviour, attributes, types, etc.  Class \class{program_object} defines
-the \product{} tracer.  See tracepce/1 and breakpce/1.
+the \product{} tracer.  See tracepce/1 and spypce/1.
 
 #class quote_function "quote_function(function)"
 Most of \product{} is defined to evaluate function objects at the appropriate
@@ -1302,8 +1384,11 @@ send(ChainOfChains, for_all,
 
 #class real "real(value)"
 A \class{real} is \product{}'s notion of a floating-point number.  Reals are
-represented using a C single-precision `\idx{float}'.  Reals define
+represented using a C double-precision `\idx{double}'.  Reals define
 the same operation as class \class{number}, its integer equivalent.
+Most methods that accept a floating point number use the type
+\const{num}, which accepts both integers and floats without creating a
+\class{real} object.
 
 #class recogniser "recogniser()"
 Class \class{recogniser} is the super-class of all event-parsing
@@ -1313,20 +1398,22 @@ be used for all events.  The main purpose of this class itself is
 to provide a type for all its sub-classes.
 
 #class regex "regex(pattern)"
-A \class{regex} is \product{}'s encapsulation of the (GNU) \idx{Regular
-Expression} library.  Regular expression form a powerful mechanism
-for the analysis of text.  Class \class{regex} can be used to search
-both \class{char_array} (\class{name} and  \class{string}) text and
-text from a \class{text_buffer} as used by \class{editor}.  It is
-possible to access the `registers' of the regular expression.
+A \class{regex} is \product{}'s encapsulation of Henry Spencer's
+\idx{Regular Expression} library as also used by Tcl.  Regular
+expression form a powerful mechanism for the analysis of text.  By
+default, the \jargon{advanced} syntax is used; `regex <-syntax' also
+supports the POSIX \const{basic} and \const{extended} syntax.  Class
+\class{regex} can be used to search both \class{char_array}
+(\class{name} and \class{string}) text and text from a
+\class{text_buffer} as used by \class{editor}.  It is possible to access
+the `registers' of the regular expression.
 
 \begin{code}
 ?- new(S, string('Hello World')),
-   new(R, regex('Hello\s +\(\w+\)')),
+   new(R, regex('Hello\\s+(\\w+)')),
    send(R, match, S),
    get(R, register_value, S, 1, name, W).
-
-W = 'World'
+W = 'World'.
 \end{code}
 
 #class region "region(x, y, width, height)"
@@ -1356,7 +1443,7 @@ Outline version of the \class{resize_gesture}, often used to resize
 objects that are expensive to resize, such as \class{editor} or
 \class{list_browser}.
 
-#class resize_table_slice_gesture "resize_table_slice_gesture(mode, button, modifier"
+#class resize_table_slice_gesture "resize_table_slice_gesture(mode, button, modifier)"
 Gesture that can be used together with class \class{table} to allow the
 user dragging the boundaries between columns and rows in a table.  See
 also \secref{tabular}.
@@ -1367,19 +1454,16 @@ A \class{resource} is data associated with the application.  It is most
 commonly used to get access to image-data.  Example:
 
 \begin{code}
-resource(splash, image, image('splash.gif')).
+resource(splash, image, image('splash.png')).
 
 show_splash_screen :-
-	new(W, window),
-	send(W, kind, popup),		% don't show border
 	new(I, image(resource(splash))),
-	get(I, size, size(W, H)),
-	send(W, size, size(W, H)),
+	get(I, size, Size),
+	new(W, window(splash, Size)),
 	send(W, display, bitmap(I)),
 	send(W, open_centered),
 	send(timer(2), delay),
 	send(W, destroy).
-
 \end{code}
 
 #class rubber "rubber(level, stretch, shrink, linebreak)"
@@ -1406,6 +1490,22 @@ implementation and defines various attributes of the method, such as
 the required arguments, the source-location, etc.  Send-methods are
 normally specified through user-defined classes preprocessor as
 described in \chapref{udc}.
+
+#class shadow "shadow(x_offset, y_offset, blur, colour, spread)"
+A \class{shadow} describes a CSS-like \idx{drop shadow} that is painted
+outside a \class{box}, \class{ellipse}, \class{circle} or
+\class{figure} using `graphical ->shadow'.  It defines the offset of
+the shadow, the width of the blurred edge, the colour (normally with
+an alpha value) and how much larger than the shape the shadow is.  An
+integer $N$ is converted into a soft shadow at distance $N$ to the
+bottom-right.  Popup menus use a shadow as defined by the class
+variable \classvar{popup}{shadow}.
+\begin{code}
+?- new(B, box(100, 50)),
+   send(B, radius, 8),
+   send(B, shadow,
+	shadow(0, 4, 12, colour(@default, 0, 0, 0, 70))).
+\end{code}
 
 #class sheet "sheet(attribute ...)"
 A \class{sheet} is a dynamic set of attribute/value pairs. The
@@ -1436,12 +1536,10 @@ send(Done, synchronise),
 #class socket "socket(address)"
 Communication end-point for a \idx{TCP/IP} or Unix-domain interprocess
 communication stream.  \product{} supports both `server' and `client' sockets.
-On the Win32 platform, only TCP/IP sockets are provided and only
-Windows-NT supports server sockets. The \pllib{pce_server}
-provides a good starting point for defining server sockets.  The
-support executable {\tt \idx{xpce-client}} may be used to communicate
-with \product{} server sockets.  See also PceEmacs server mode as defined
-in \pllib{'emacs/server'}.
+On Windows, only TCP/IP sockets are provided.  The \pllib{pce_server}
+provides a good starting point for defining server sockets.  See also
+PceEmacs server mode as defined in \pllib{'emacs/server'}.  Note that
+SWI-Prolog's own socket and HTTP libraries are often a better choice.
 
 #class source_location "source_location(file_name, line_no)"
 Specifies the location in a source file.  Used by \class{method} objects
@@ -1450,10 +1548,10 @@ to register the location they are defined.
 #class source_sink "source_sink()"
 Abstract super-class of \class{file}, \class{resource} and
 \class{text_buffer} for type-checking purposes.  All \class{source_sink}
-objects may be used for storing and retrieving image-data.  Notably
-a \class{resource} can be used for creating images (see
-\secref{resources} and \class{text_buffer} can be used to communicate
-images over network connections (see \secref{httpd}).
+objects may be used for loading image-data.  Notably a \class{resource}
+can be used for creating images (see \secref{resources}) and a
+\class{text_buffer} can be used to hold image data in memory.  Images
+can only be saved to a \class{file}.
 
 #class spatial "spatial(x_from, y_from, x_to, y_to, w_to, h_to)"
 A \class{spatial} defines a geometry \class{relation} between two
@@ -1467,8 +1565,8 @@ the first, to share the same lower edge and be centered horizontally.
 \begin{code}
 new(_, constraint(Gr1, Gr2,
 		  spatial(xref=x+w/2, yref=y+h,
-			  xref=x+w/w, yref=y+h,
-			  w2=w+2, h2=h+2)))
+			  xref=x+w/2, yref=y+h,
+			  w2=w+10, h2=h+10)))
 \end{code}
 
 #class stream "stream()"
@@ -1492,9 +1590,10 @@ user, etc.
 
 #class style "style(icon, font)"
 A \class{style} defines attributes for a text \class{fragment} as
-handled by a \class{editor}/class{text_buffer} or a \class{dict_item} as
+handled by a \class{editor}/\class{text_buffer} or a \class{dict_item} as
 handled by a \class{list_browser}/\class{dict}. It defines the font,
-fore- and background colours as well as underlining, etc. The example
+fore- and background colours as well as underlining (optionally in a
+colour), strike-through, etc.  The example
 defines a browser that displays files using normal and directories
 using bold font.
 
@@ -1518,7 +1617,8 @@ Syntax tables are used by class \class{text_buffer} to describe the
 syntax of the text.  They describe the various syntactical categories
 of characters (word-characters, digit-characters), the syntax for
 quoted text, for comments as well as a definition for the end of a
-sentence and paragraph.  Syntax tables are introduced to support
+sentence and paragraph.  `syntax_table ->keywords' registers the
+keywords of a language.  Syntax tables are introduced to support
 the implementation of \idx{modes} in PceEmacs.  See also the
 emacs_begin_mode/5 directive as defined in \pllib{emacs_extend}.
 
@@ -1597,20 +1697,36 @@ A \class{relation_table} defines a multi-column table data object that
 can have one or more indexed {\em key} fields. They are (infrequently)
 used for storing complex relational data as \product{} objects.
 
+#class terminal_block "terminal_block(terminal)"
+A \class{terminal_block} represents the prompt, command and output of a
+single command in a \class{terminal_image}.  The blocks are created by
+the terminal from the OSC~133 \jargon{semantic prompt} marks that are
+emitted by the program that runs in the terminal, such as Prolog or a
+shell.  They are available through `terminal_image <-blocks' and
+`terminal_image <-block_at'.  Blocks can be selected, copied, folded to
+hide their output and removed.
+
 #class terminal_image "terminal_image(width, height)"
 A \class{graphical} that represents a terminal (console). It is capable
 of providing I/O for Prolog threads or external processes. On Windows
 systems I/O is provided by Windows named pipes opened in
-\jargon{overlapped} mode. On POSIX systems \jargon{pseudo terminals}
-(pty) are used as interface between tasks and the terminal image. The
-\class{terminal_image} input handles a rich set of the ANSI escape
-sequences and various extensions. This class is used to build the
-\jargon{Epilog} Prolog console provided by \program{swipl-win}.
+\jargon{overlapped} mode or a pseudo console. On POSIX systems
+\jargon{pseudo terminals} (pty) are used as interface between tasks and
+the terminal image. The \class{terminal_image} input handles a rich set
+of the ANSI escape sequences and various extensions, including mouse
+reporting, hyperlinks, the window title and the working directory of
+the client.  The terminal supports incremental search (`terminal_image
+<-find'), selecting and copying text, and splits its contents into
+\classs{terminal_block}, one for each command, that can be folded.  This
+class is used to build the \jargon{Epilog} Prolog console provided by
+\program{swipl-win} and \pllib{epilog}.
 
 #class text "text(string, format, font)"
 Graphical representing a string in a specified font.  Class text
-defines various multi-line and wrapping/scrolling options.  It also
-implements methods for editing.  Class \class{editable_text} as
+defines various multi-line and wrapping/scrolling options.  `text
+->style' associates a \class{style}, for example to underline or strike
+through the text.  It also implements methods
+for selecting and editing text.  Class \class{editable_text} as
 defined in \pllib{pce_editable_text} exploits these methods to arrive
 at a flexible editable text object.
 
@@ -1626,8 +1742,10 @@ See class \class{editor} for an overview of the other objects involved
 in editing text.
 
 #class text_cursor "text_cursor(style)"
-Cursor as displayed by an \class{editor}.  Not intended for public
-usage.  The example hides the caret from an editor.
+Cursor (caret) as displayed by an \class{editor}.  Its style is one of
+\const{bar}, \const{block}, \const{underline}, \const{xpce} or
+\const{image} and it may blink.  Not intended for public usage.  The
+example hides the caret from an editor.
 
 \begin{code}
 ...,
@@ -1651,6 +1769,8 @@ can be extracted from the type using `type <-value_set', the
 item will perform \idx{completion}, which is by default bound to
 the space-bar.  If a type is specified, the typed value will be
 converted to the type and an error will be raised if this fails.
+`text_item ->placeholder' defines a hint that is shown while the item
+is empty.
 The following text-item is suitable for entering integers:
 
 \begin{code}
@@ -1665,9 +1785,25 @@ send(T, length, 8),
 A \class{text_margin} can be associated with an \class{editor} using
 `editor ->margin_width' $>$ 0. If the \class{text_buffer} defines
 fragments, and the \class{style} objects define `style <-icon', the
-margin will show an icon near the start of the fragment.  After the
-introduction of multiple fonts, attributes and colour this mechanism
-has become obsolete.
+margin will show an icon near the start of the fragment.  PceEmacs uses
+this to show, e.g., bookmarks and diagnostics.  `text_margin
+->icon_size' defines the size of the icons.
+
+#class theme_colour "theme_colour(name, derived_from, summary)"
+A \class{theme_colour} is a subclass of \class{colour} whose value
+follows the active theme.  It is created from a name that describes its
+role and the colour it is derived from: the name of another colour, a
+system colour, another theme colour, or a colour object.  The RGB value
+is computed when needed by following `theme_colour <-derived_from'.
+\product{} itself uses the \const{ui_}\arg{role} theme colours such as
+\const{ui_window_background} and \const{ui_accent}.  Applications should
+use theme colours for colours that must adapt to a light or dark theme.
+See \secref{themes} and \pllib{pce_theme}.
+\begin{code}
+?- new(_, theme_colour(myapp_highlight, khaki1)),
+   new(T, text(hello)),
+   send(T, colour, myapp_highlight).
+\end{code}
 
 #class tile "tile(object)"
 Tiles are used to realise the `tile-layout' of windows in a
@@ -1677,8 +1813,9 @@ objects.
 
 #class timer "timer(interval, message)"
 Timers are used to initiate messages at regular intervals, schedule
-a single message in the future or delay execution for a specified
-time.  The example realises a \idx{blinking} graphical.  Note that
+a single message or a fixed number of messages in the future or delay
+execution for a specified time.  The example realises a \idx{blinking}
+graphical.  Note that
 prior to destruction of the graphical, the timer must be destroyed
 to avoid it sending messages to a non-existing object.
 
@@ -1686,6 +1823,7 @@ to avoid it sending messages to a non-existing object.
 ...,
 new(T, timer(0.5, message(Gr, inverted,
 			  Gr?inverted?negate))),
+send(T, start),
 ...
 \end{code}
 
@@ -1693,6 +1831,20 @@ new(T, timer(0.5, message(Gr, inverted,
 A \class{tokeniser} returns tokens from the input source according to
 the syntax specified. It is part of the \product{} object parser and its
 specification is not (yet) public.
+
+#class transform "transform(rotate, scale, shear)"
+A \class{transform} is a 2D affine transformation (rotation, scaling,
+shearing and translation).  It is used by `figure <->transform' to
+transform the contents of a \class{figure}.  Events are mapped through
+the inverse transform, so the transformed graphicals remain sensitive
+to the mouse.  Usually the transform is manipulated using `figure
+->translate', `figure ->rotate', `figure ->scale' and `figure ->shear'.
+See the demo \demo{Transform}.
+\begin{code}
+?- new(F, figure),
+   send(F, display, box(100, 50)),
+   send(F, rotate, 30).
+\end{code}
 
 #class tree "tree(root)"
 Trees realise hierarchical layout for \class{graphical} objects. Class
@@ -1790,7 +1942,8 @@ for windows holding text, \class{browser} for windows displaying a list
 of items and finally, \class{picture} for displaying graphics.
 
 Class \class{window} can be used as a graphics window if no scrollbars
-are needed.
+are needed.  `window ->pdf' writes the entire contents of the window
+as a PDF file.
 
 #class window_decorator "window_decorator(window, scrollbars, label)"
 A \class{window_decorator} is a window that displays another window and

@@ -5,14 +5,14 @@
 
 \begin{description}
 \glossitem{Attribute}
-    A \class{attribute} object is used to define additional properties
+    An \class{attribute} object is used to define additional properties
     of an object.  The term \g{attribute} is also used as a synonym
     for \g{slot} and \g{instance-variable} referring to class defined
     properties.
 \glossitem{Class}
     A \g{class} is an object that acts as a description of other
     objects called \g{instances} of the \g{class}.  Besides various
-    house-keeping information, a PCE \g{class} describes the \g
+    house-keeping information, a \product{} \g{class} describes the \g
     {instance-variables} and \g{methods}  of its \g{instances}.
 \glossitem{Class-Variable}
     A \g{class-variable} defines a constant for all instances of the
@@ -39,23 +39,23 @@
 \glossitem{Function}
     A \g{function} is a subclass of class \class{code} which yields
     a value when executed.  The most important functions are local
-    variables (\g{var}), \g{obtainers} and mathetical operations.
+    variables (\g{var}), \g{obtainers} and mathematical operations.
     They may be used as arguments to code objects.  They are executed
     when the code object is executed or when the function needs to be
     converted to a type that does not accept a function.
 \glossitem{Get operation}
     Virtual machine operation to request information from
-    some object.  Started by the Prolog predicate get/[3-13], when
-    an obtainer is executed or from PCE's built-in functionality.
+    some object.  Started by the Prolog predicate get/[3-8], when
+    an obtainer is executed or from \product{}'s built-in functionality.
 \glossitem{GUI}
     Abbreviation for Graphical User Interface.
 \glossitem{Inheritance}
-    The sharing of definition from a super-class.  When a PCE \g{class}
-    is created from a \g{super-class} it is initially a copy of this
+    The sharing of definition from a super-class.  When a \product{}
+    \g{class} is created from a \g{super-class} it is initially a copy of this
     \g{super-class}.  After creation, instance variables and methods may
     be added and/or redefined.
 \glossitem{Instance}
-    Synonym for \g{object}, often use to stress the fact that an object
+    Synonym for \g{object}, often used to stress the fact that an object
     belongs to a particular class.
 \glossitem{Instance-variable}
     Placeholder for the local-state associated with an \g{object}.  An
@@ -70,8 +70,8 @@
 \glossitem{Method}
     A \g{method} maps a \g{selector} and a type vector onto an
     implementation which is either a C-function or a \g{code}
-    object.  PCE defines both get- and send-methods.  If a \g
-    {send-operation} is invoked on an object, PCE will find a method
+    object.  \product{} defines both get- and send-methods.  If a \g
+    {send-operation} is invoked on an object, \product{} will find a method
     associated with the class of the object with a matching \g
     {selector}, check the argument types and invoke the implementation
     of the method.
@@ -81,7 +81,7 @@
     anonymous one is an opaque handle, written
     \const{<pce>(\arg{Address},\arg{Class})}.
 \glossitem{Object}
-    An \g{object} is en entity in PCE's world that is identified by
+    An \g{object} is an entity in \product{}'s world that is identified by
     an \g{object-reference} and has a local state.  An object is an
     \g{instance} of a \g{class}.  The \g{class} defines both the
     constituents of the local state as well as the operations (\g{methods})
@@ -97,9 +97,9 @@
     Refinement of \class{method} that maps a \g{send-operation} onto
     its implementation.  See also \g{Method}
 \glossitem{Send operation}
-    Virtual machine operation which invokes of a \g{send-method} on
-    some object.  Started by the Prolog predicate send/[2-12], when
-    an \g{message} is executed or from PCE's built-in functionality.
+    Virtual machine operation which invokes a \g{send-method} on
+    some object.  Started by the Prolog predicate send/[2-8], when
+    a \g{message} is executed or from \product{}'s built-in functionality.
 \glossitem{Slot}
     Equivalent to \g{instance_variable}.
 \glossitem{Super-class}
@@ -112,5 +112,5 @@
 \glossitem{Var}
     A \g{var} object is a \g{function}.  The commonly used \g{vars}
     objects are: @arg1, ... (general argument forwarding), @receiver
-    (receiver or a message), @event (currently processes event object).
+    (receiver of a message), @event (currently processed event object).
 \end{description}

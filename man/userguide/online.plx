@@ -3,21 +3,31 @@
 In the previous sections we have introduced \product{} using examples.
 The language primitives of \product{} are simple, but \product{} as a
 whole is a massive library of very diverse classes with many methods.
-The current system contains about 160 classes defining over 2700
-methods.
+The current system contains about 190 built-in classes defining over
+3000 methods.
 
 To help you finding your way around in the package as well as in
 libraries and private code loaded in \product{}, an integrated manual is
 provided.  This manual extracts all information, except for a natural
 language description of the class, method or slot from the system and
 thus guarantees exact and consistent information on available classes,
-methods, slots, types, inheritance in the system.
+methods, slots, types, inheritance in the system.  The natural language
+descriptions are taken from the \product{} reference manual.  For
+classes defined in Prolog, the PlDoc comments in the source are used.
 
 The manual consists of a number of search tools using different entry
 points to the material.  A successful query displays the summary
 information for the relevant hyper-cards.  Clicking on the summary
 displays the cards themselves and hyper-links between the cards aid
 to quickly browse the environment of related material.
+
+The manual is started using manpce/0, which opens a window with a menu
+bar from which the tools described below can be started.  Like the
+other development tools, each manual tool is a \jargon{pane} that
+appears as a tab or beside other panes in a window of the development
+environment.  The most commonly used tools may also be started from
+the \menuref{GUI} menu of the Epilog console and the other windows of
+the development environment.
 
 
 \section{Overview}
@@ -46,9 +56,11 @@ including combined search specifications.
 \index{global objects}%
 The \product{} environment provides predefined objects (@pce, @prolog, @arg1, etc.).
 The tool allows the user to find these objects.
-    \manualtool{Prolog interface predicates}{Browsers/Prolog Predicates}
-\index{Prolog interface}%
-This tool documents all the \productpl{} predicates.
+    \manualtool{Errors}{Browsers/Errors}
+\index{errors,browsing}%
+This tool lists the errors and warnings \product{} may raise.  It may
+be used to examine an error and to change its <-kind, i.e., how the
+system reacts if the error occurs.
     \manualtool{Instances}{Tools/Inspector}
 \index{inspecting instances}\index{object,inspecting}%
 This tool is part of the runtime support system.  It allows you to
@@ -60,10 +72,16 @@ It provides a quick overview of the structure of an interface.  It is
 a useful for finding object-references, examining the structure of
 an unknown UI and verifying that your program created the expected
 structure.
+    \manualtool{GUI preferences}{Tools/Class Variables}
+\index{preferences}\index{class variable,editing}%
+This tool allows the user to pick an object from the screen and edit
+the class variables (see \secref{classvar}) that determine its
+appearance.  Changes apply immediately and may be saved to the user's
+{\em Defaults} file.
     \manualtool{The manual itself (help)}{File/Help}
 \index{help,on manual}%
-The manual tools are documented by itself.  Each tool has a `Help' button
-that documents the tool.
+The manual tools are documented by itself.  Most tools have a `Help'
+button that documents the tool.
     \manualtool{\product{} Demo programs}{File/Demo Programs}
 \index{demo programs}%
 
@@ -73,18 +91,10 @@ The sources of the demos may be found in \metafile{<home>/prolog/demo},
 where <home> refers to the \product{} installation directory, which may
 be obtained using
 
-\begin{xpceonly}
 \begin{code}
 1 ?- get(@pce, home, Home).
-Home = '/usr/local/lib/pl-4.0.0/xpce'
+Home = '/usr/local/lib/swipl/xpce'.
 \end{code}
-\end{xpceonly}
-\begin{pwonly}
-\begin{code}
-1 ?- get(@pce, home, Home).
-Home = '/usr/local/quintus/prowindows3.1'
-\end{code}
-\end{pwonly}
 
 Note that the DemoBrowser allows to view the sources of the main file
 of a demo application immediately. Also consider using the
@@ -223,16 +233,17 @@ inheritance hierarchy as well as the classes to which messages are {\em
 delegated} (see \secref{delegation}).  The user can select multiple
 classes only if there is delegation and the tree actually has branches.
 Use class \class{editor} or class view to explore these facilities.
-After the user has selected one or more classes, the {\sf Apply} button
-makes the class-browser search for methods in all classes below the
-selected classes.  If a method is found in multiple classes the
-class-browser will automatically display only the one method that will
-actually be used by this class.
+Clicking a class selects or deselects it, after which the class-browser
+immediately searches for methods in all classes below the selected
+classes.  If a method is found in multiple classes the class-browser
+will automatically display only the one method that will actually be
+used by this class.
 
 The large right window displays a list of matching classes, variables,
-methods and class-variables. If an item is tagged with a ``\idx{(+)}''
-there is additional information that may be obtained by (double-)
-clicking the card to start the ``Card Viewer'' (see \secref{card}).
+methods and class-variables.  The class itself is always shown at the
+top.  If an item is tagged with an open book, the reference manual
+provides a description that may be read by (double-) clicking the card
+to start the ``Card Viewer'' (see \secref{card}).
 
 \subsubsection{The ClassBrowser dialog}
 
@@ -274,17 +285,19 @@ Methods implemented in the host-language.
 \end{itemize}
 
 
-The {\bf Display} menu determines the objects searched for.  {\sf
-Self} refers to the class itself, {\sf Sub Class} refers to the direct
-sub classes of this class. The other fields refer to instance-variables,
-methods with send- and get-access and class-variables.
+The {\bf Display} menu determines the objects searched for.  {\sf Sub
+Class} refers to the direct sub classes of this class. The other fields
+refer to instance-variables, methods with send- and get-access and
+class-variables.
 
 The {\bf Search} and {\bf ... In} controllers limit the displayed cards
-to those that have the specified search string in one of the specified
-fields. While searching, the case of the characters is ignored (i.e.\
-lower- and uppercase versions of the same letter match). Searching in
-the {\sf Name} field is useful to find a particular method if the name
-(or part of it) is known.
+to those that have a match for the specified regular expression in one
+of the specified fields.  The list is updated while typing.  Searching
+is case sensitive.  Searching in the {\sf Name} field is useful to find
+a particular method if the name (or part of it) is known.
+
+Changes to any of the controllers of the dialog are applied
+immediately.
 
 
 \subsubsection{Example queries to the classbrowser}
@@ -294,17 +307,17 @@ with the class browser.
 
 \begin{itemize}
     \tick{What are variables of a bitmap?}
-Select {\sf variable} in the {\bf Display} menu, clear {\bf Search},
+Select {\sf Variable} in the {\bf Display} menu, clear {\bf Search},
 and set {\bf Filter} to {\sf All}. Then type `bitmap' in {\bf Class} and
-hit return.  Note that by double-clicking on class \class{graphical}
+hit return.  Note that by clicking on class \class{graphical}
 in the inheritance display not only the variables of class
 \class{bitmap} itself are shown, but also those of class
 \class{graphical}.
     \tick{How can I position the caret in an editor?} The caret can
 only be changed using send-methods. Either the name or the summary is
 likely to have `caret' as a substring.  Thus, {\bf Display} is set to
-{\sf Send Method}, {\bf Field} to {\sf Name} and {\sf Summary}, search
-`caret'.
+{\sf Send Method}, {\bf ... In} to {\sf Name} and {\sf Summary},
+search `caret'.
 \end{itemize}
 
 
@@ -343,7 +356,7 @@ Y = @mono_normal_13
 The same instance of the reusable font instance is returned on a second
 attempt to create a font from the same parameters.  Examples of classes
 with this capability are: \class{name}, \class{font}, \class{colour},
-\class{image} and \class{modifier}.
+\class{image} and \class{cursor}.
     \getmethod{object}{convert}{<Class-Defined>}{object}
 \index{type,conversion}%
 Defines what can be converted into an instance of this type.  If an instance
@@ -366,26 +379,22 @@ As ->catch_all, but for get-operations.
 The other tools of the manual allow the user to {\em find} cards with
 documentation on the topic(s) the user is looking for.  The information
 provided by the summary-lists often suffices for this purpose.  Whenever
-a card is marked with a ``(+)'' in the summary list it may be opened by
-double-clicking it.  This starts the ``Card Viewer'' tool.
-\Figref{card} is a screendump of this tool showing the `selection' group
-of class `device'.
+a card is marked with an open book in the summary list it may be opened
+by double-clicking it.  This starts the ``Card Viewer'' tool.
+\Figref{card} is a screendump of this tool.
 
-The ``Card Viewer'' displays the formal information and all available
-attributes from the card related to the displayed object (method,
-variable, class, ...). It uses patterns to determine relations to other
-manual material from the text. Each hit of these patterns is
-highlighted. When the user double-clicks on highlighted text the ``Card
-Viewer'' will jump to the related material.
-
-If the user double-clicks a group-title in the ClassBrowser, all cards
-in the group will be displayed in the CardViewer.  Some objects share
-their documentation with another object.  Opening the card for such
-an object will show two titles above the card.  The card from which the
-documentation originates will have an underlined type-indicator.
+The ``Card Viewer'' displays the description of the displayed object
+(method, variable, class, ...) from the reference manual, rendered as
+HTML.  For classes defined in Prolog, the PlDoc comments of the class
+and its members are shown.  References to other manual material are
+hyper-links: clicking a link jumps to the related material.  The arrow
+buttons navigate back and forward through the history of visited cards.
+If a method or class variable is described by the instance variable with
+the same name, the card says so and shows the description of the
+variable.
 
 The {\bf Goto} field allows for switching to a new card.  The syntax for
-this field is similar to manpce/1, tracepce/1 and editpce/1 predicates
+this field is similar to the manpce/1 and tracepce/1 predicates
 description in \secref{debugging}.  It consists of a classname, followed
 by \verb$->$ to indicate a send-method, \verb$<-$ for a get-method and
 \verb$-$ to specify an instance-variable without considering associated
@@ -439,7 +448,7 @@ card summaries of all matching cards.
 
 \subsection{Class hierarchy}		\label{sec:classhierarchy}
 
-\postscriptfig[width=\textwidth]{classhierarchy}{Class Hierachy Tool}
+\postscriptfig[width=\textwidth]{classhierarchy}{Class Hierarchy Tool}
 
 The ``Class Hierachy'' tool shown in \figref{classhierarchy} may be used
 to get an overview of \product{}'s class hierarchy or to find the
@@ -447,6 +456,13 @@ to get an overview of \product{}'s class hierarchy or to find the
 that \product{}'s inheritance hierarchy has a technical foundation
 rather than a conceptual. Super-classes are motivated by the need for
 code-sharing.
+
+Typing a class name or a wildcard pattern in the {\bf Class} field
+expands the tree to show the matching classes and selects them.
+\Figref{classhierarchy} shows the place of the classes \class{browser}
+and \class{list_browser}.  The popup menu on a class opens its
+documentation or the class browser, expands or prunes the tree and,
+for a user-defined class, shows the source.
 
 
 \section{Summary}

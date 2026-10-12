@@ -83,7 +83,7 @@ Except for integers, everything accessible to the user is represented
 as an object.  By implementing classes, instance variables, methods,
 messages, conditions, constants, variables, etc.\ as objects
 everything in \product{} may be accessed through the basic predicates
-new/2, send/[2-12] and get/[3-13] from Prolog.
+new/2, send/[2-8] and get/[3-8] from Prolog.
 
 
 \section{Delegation}		\label{sec:delegation}

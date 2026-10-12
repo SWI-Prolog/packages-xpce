@@ -3,7 +3,7 @@
 \index{thread}%
 \product{}~6 and earlier used a single global lock to prevent access
 from multiple Prolog threads.  \product{} itself by default ran in a
-thread named \const{pce}.  As of version~7, this changed substantially
+thread named \const{pce}.  As of version~7, this changed substantially:
 
 \begin{itemize}
     \item The \href{https://www.libsdl.org}{SDL} library restricts many
@@ -20,11 +20,11 @@ thread named \const{pce}.  As of version~7, this changed substantially
     \item \product{} provides \textit{Epilog}, a \productpl{} class that
     provides a console (terminal) attached to a Prolog \jargon{thread}.
     Epilog is used by \program{swipl-win}, which creates an Epilog
-    console providing the Prolog REPL loop based on a thread while
-    the main thread processes SDL events while the Epilog console is
-    active.   Multiple Epilog consoles may be opened simultaneously and
-    an Epilog console can be split to accomodate multiple REPL loops,
-    each in their own thread.
+    console that runs the Prolog REPL loop in a separate thread, while
+    the main thread processes SDL events.  In this scenario \product{}
+    remains responsive while Prolog executes a query.  Multiple Epilog
+    consoles may be opened simultaneously and an Epilog console can be
+    split to accommodate multiple REPL loops, each in their own thread.
 \end{itemize}
 
 \product{} uses a single lock, preventing multiple threads from
@@ -49,7 +49,7 @@ loop of the main thread.
 \begin{itemize}
   \item while(true)
   \begin{itemize}
-    \item If the are pending changes to graphicals, for each window
+    \item If there are pending changes to graphicals, for each window
     that has modified content do
     \begin{itemize}
       \item Use `graphical->compute` to update sizes and layout.
@@ -65,7 +65,7 @@ loop of the main thread.
 \end{itemize}
 
 The \textit{Process the event} step invokes methods on \product{} that
-may in turn call Prolog.  The processing may create and destroy window
+may in turn call Prolog.  The processing may create and destroy windows
 as well as make arbitrary many changes to the contents of windows. These
 changes only become visible after processing the event completes.
 

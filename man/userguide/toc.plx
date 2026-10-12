@@ -63,7 +63,7 @@ cases the support classes \class{toc_folder} and \class{toc_file},
 representing expandable and leaf-nodes.
 
 Each node is assigned an \jargon{identifier}, a unique reference to the
-node. In the example below we used \class{file} and \class{directory}
+node. In the example above we used \class{file} and \class{directory}
 objects for this purpose. The identifier is the second argument to the
 creation of the node. When omitted, the node is turned into an identifier
 of itself. This distinction is used to hide the existence of graphical
@@ -80,6 +80,10 @@ This method is normally refined to add sub-nodes for \arg{Id} to the current
 node using `toc_window->son'.  If the implementation of \class{toc_window} is
 activated at the end the window will scroll such that as much as possible of
 the subtree below \arg{Id} is visible.
+
+    \sendmethod{toc_window}{collapse_node}{Id:any}
+The user clicked the \verb![-]! sign of an expanded folder.  The default
+implementation hides the sub-nodes.
 
     \sendmethod{toc_window}{open_node}{Id:any}
 Called on double-click on a \class{toc_file} node.  The implementation of
@@ -107,8 +111,11 @@ currently selected.
 Map a node-identifier to a node.  Fails silently if this identifier is
 not in the tree.
     
-    \sendmethod{toc_window}{root}{Root:toc_folder}
+    \sendmethod{toc_window}{root}{Root:toc_folder, Relink:[bool]}
 Assign the hierarchy a (new) root.
+
+    \sendmethod{toc_window}{delete}{Id:any}
+Delete the node representing \arg{Id} and all its sub-nodes.
 
     \sendmethod{toc_window}{son}{Parent:any, Son:toc_node}
 Make a new node below the node representing \arg{Parent}.  If the node
@@ -126,7 +133,7 @@ information with the node.
 
 \begin{description}
     \sendmethod{toc_folder}{initialise}{%
-	   Label:char_array,
+	   Label:char_array{\tt|}graphical,
 	   Id:[any],
 	   CollapsedImg:[image],
 	   ExpandedImg:[image],
@@ -136,10 +143,15 @@ and the two images to the standard opened/closed folder images.  Folders
 assume they can be expanded, \arg{CanExpand} may be set to @off to indicate
 `an empty folder'.
 
-    \sendmethod{toc_file}{indicate}{%
-	   Label:char_array,
+    \sendmethod{toc_file}{initialise}{%
+	   Label:char_array{\tt|}graphical,
 	   Id:[any],
 	   Img:[image]}
 Create a `file'-node from its \arg{Label}, \arg{Id} (defaults to the
-created node object) and \arg{Image} (defaults to a `document' icon).
+created node object) and \arg{Img} (defaults to a `document' icon).
 \end{description}
+
+Drag-and-drop of nodes is enabled using `toc_window->drag_and_drop'.
+The library \pllib{toc_filesystem} refines this library with the
+classes \class{toc_filesystem} and \class{toc_directory} for browsing
+the filesystem.

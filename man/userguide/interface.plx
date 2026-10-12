@@ -1,14 +1,15 @@
 \chapter{Interface predicate definition} \label{sec:interface}
 
 This appendix provides a description of the Prolog predicates
-to communicate with PCE.  Most of these predicates have been
+to communicate with \product{}.  Most of these predicates have been
 introduced informally in the previous sections.
 
 \section{Basic predicates}
 
 This section describes the basic interface predicates.  These
-predicates reside in the library module `pce', which is loaded when
-Prolog is started with PCE loaded on top of it.
+predicates reside in the library module \pllib{pce}, which is loaded
+using \exam{:- use_module(library(pce))} or autoloaded by SWI-Prolog if
+one of its predicates is used.
 
 \begin{description}
     \predicate{new}{2}{?Reference, +TermDescription}
@@ -29,9 +30,14 @@ arguments for the object creation. Each \arg{InitArg} is translated to a
 Atoms are translated into \product{} \class{name} objects.  This is
 a loss-less transformation.
     \item[\var{integer}]
-Prolog integers are translated into \product{} int data-types. The
-range of \product{} int is half that of Prolog (i.e.\ $\pm 2^30$ on
-a 32-bit machine).
+Prolog integers are translated into \product{} int data-types if they
+are in the range $\pm 2^{51}$ (see `pce<-max_integer').  Larger integers
+are translated into floating point numbers.
+    \item[\var{float}]
+Prolog floats (and rational numbers) are translated into floating point
+numbers.  Like integers, these are not objects.  \product{} uses the
+least significant bit of the double as a tag, which implies that some
+precision is lost.
     \item[\term{Class}{+InitArg...}]
 Creates an instance of class \arg{Class} using \arg{InitArg}.
     \item[\term{new}{+TermDescription}]
@@ -89,7 +95,7 @@ invoked.  An atom is translated into an \product{} name object.
 object.  The \arg{Argument}s are processed as the \arg{InitArgs}
 described with new/2.
 
-The predicate send/[2-12] fails with an error message if one of the
+The predicate send/[2-8] fails with an error message if one of the
 arguments cannot be translated or there is a type-error or an
 argument-error.  The method itself may also produce error messages.
 This predicate only succeeds if the requested method was executed
@@ -115,7 +121,7 @@ available for compatibility and style-preference.
 %   \emptydefinition
     \predicate{get}{3}{+Receiver, +Selector, +Argument..., -Result}
 Invoke a get-method on \arg{Receiver}.  \arg{Receiver}, \arg{Selector}
-and \arg{Argument...} are processed as with send/[2-12].  If the method
+and \arg{Argument...} are processed as with send/[2-8].  If the method
 fails, this predicate fails too.  Otherwise the \product{} result of invoking
 the method is unified with \arg{Result}.
 
@@ -163,7 +169,7 @@ freed (see `object ->protect').
 The predicates send_class/3 and get_class/4 invoke methods on a
 super-class of the class \arg{Reference} belongs to.  In most cases methods
 access the {\em immediate} super-class and this is the function of
-send_super/[2-12] and get_super/[3-13].
+send_super/[2-8] and get_super/[3-8].
 
 The *_super calls are macro-expanded to send_class/3 or get_class/4.
 They {\bf must} appear within a \product{} class definition. Though not
@@ -180,17 +186,17 @@ was created in its place.
 
 \begin{code}
 1 ?- new(P, point(100,100)).
-P = <pce>(0x7f8a12c400,point)
-2 ?- free(P).
-3 ?- object(P).			---> fail
-4 ?- P == P.
-true.				% still a valid handle, just not an object
+P = <pce>(0x7f8a12c400,point).
+2 ?- new(P, point(100,100)), free(P), object(P).
+false.
+3 ?- new(P, point(100,100)), free(P).
+P = <pce>(freed).
 \end{code}
 
 This was not so as long as an anonymous reference was the object's address
 written as \exam{@Integer}: after the object was freed and its memory
 reused, object/1 would succeed and denote a different object.  See also
-\secref{prologrefs}, \secref{debugging} and \secref{global}
+\secref{prologrefs}, \secref{debugging} and \secref{global}.
 
     \predicate{object}{2}{+Reference, -TermDescription}
 Unify object description with the argument.  Normally only used for
@@ -243,7 +249,10 @@ Using this stream, the normal Prolog I/O predicates for reading
 from, or writing to the object can be used.
 	
 This predicate works on any object that implements the *as_file methods.
-Currently this is only implemented for class text_buffer. See
+Currently this is implemented for class \class{text_buffer} (reading and
+writing) and \class{char_array} (reading only).  Classes that delegate
+to a \class{text_buffer}, such as \class{view} and \class{editor}, can
+be used as well. See
 `text_buffer <-read_as_file', `text_buffer <-size_as_file', `text_buffer
 ->truncate_as_file' and `text_buffer ->write_as_file'.
 	
@@ -254,7 +263,7 @@ example, to write to a view, one could use:
 ...
 pce_open(View, append, Stream),
 format(Stream, 'Hello World~n', []),
-close(View),
+close(Stream),
 ...
 \end{code}
 
@@ -262,24 +271,26 @@ See also `text_buffer ->format'. Reading from a stream is used by the
 PceEmacs editor to verify the syntax of an entered clause.
 
 \predicate{pce_catch_error}{2}{+ErrorIds, +Goal}
-This predicates allows the application to handle errors occuring while
+This predicate allows the application to handle errors occurring while
 \arg{Goal} is called.  \arg{ErrorIds} is either an atom representing
 the id of \product{} error or a chain of such id's.  If one of the given
-errors occurrs the goal will silently fail and `@pce <-last_error'
+errors occurs the goal will silently fail and `@pce <-last_error'
 holds the id of the trapped error.  Any other error that occurs during
 the execution of \arg{Goal} will be handled by \product{}'s normal error
 handling mechanism.  See \secref{errors}.
 \end{description}
 
-\subsection{Portable declaration of required library predicates}
+\subsection{Declaration of required library predicates}
 \label{sec:require}
 
-Different Prolog implementations to which \product{} has been connected
-provide a different library structure and offers different means for
-accessing library predicates. For this reason, \product{} introduced the
-require/1 directive. This directive is the preferred way to import
-library predicates. Below is a typical declaration of an \productpl{}
-module:
+The require/1 directive declares that a module needs the named library
+predicates without specifying the library that defines them.  It was
+introduced when \product{} was connected to several Prolog systems with
+different library structures.  With SWI-Prolog, library predicates are
+normally autoloaded and modern code often uses use_module/2 or
+autoload/2.  The require/1 directive remains supported and is used by
+many of the \product{} libraries.  Below is a typical declaration of an
+\productpl{} module:
 
 \begin{code}
 :- module(mymodule, [myapp/0]).
@@ -294,33 +305,23 @@ module:
 Defines that this module requires the named predicates.  It is the
 task of the Prolog system to make sure the module can make calls to
 the named predicates and this predicate has the `commonly accepted
-semantics'.  This predicate is built-in for SICStus and SWI-Prolog.
-It is defined in the module library(pce) for ProWindows-3/Quintus.
-This is the reason why library(pce) should always be imported
-explicitely.
+semantics'.  This predicate is built-in in SWI-Prolog.
 
-Note the command Pce/PceInsertRequireDirective in PceEmacs Prolog mode,
-which automatically determines the required require-directive for the
-current module-file.
+Note the command \exam{pce_insert_require_directive} (use \verb$M-x$)
+in PceEmacs Prolog mode, which automatically determines the required
+require-directive for the current module-file.
     \predicate{auto_call}{1}{:Goal}
 Acts like call/1, but dynamically loads the predicate required by {\em
-Goal} if this predicate is not defined. On systems not having
-autoloading, the definition is:
-
-\begin{code}
-auto_call(Goal) :-
-	strip_module(Goal, Module, Predicate),
-	functor(Predicate, Name, Arity),
-	require(Module:[Name/Arity]),
-	Goal.
-\end{code}
+Goal} if this predicate is not defined.  As SWI-Prolog autoloads
+library predicates, this is the same as call/1.  It is provided for
+compatibility.
 \end{description}
 
 
 \section{Additional interface libraries}
 
 \index{autoloading}%
-This section describes Some of the predicates available from the
+This section describes some of the predicates available from the
 \product{}/Prolog library.
 
 \subsection{Library ``pce_util''}
@@ -333,8 +334,8 @@ important.
 
 \begin{description}
     \predicate{send_list}{2,3}{+Receiver, +Selector [, +Argument]}
-Invoke send-behaviour as send/[2-12].  Each of the arguments is
-either as accepted by send/[2-12] or a list of such arguments.
+Invoke send-behaviour as send/[2-8].  Each of the arguments is
+either as accepted by send/[2-8] or a list of such arguments.
 The definition of send_list/2 is below.
 
 \begin{code}
@@ -357,14 +358,14 @@ is now valid code:
 	...,
 	send_list(Box,
 		  [ colour(red),
-		    fill(colour(greed))
+		    fill(colour(green))
 		  ]),
 \end{code}
 
-    \predicate{get_object}{[3-13]}{+Receiver, +Selector, +Argument..., -Result}
-Equivalent to get/[3-13], but instead of unifying a variable with a
+    \predicate{get_object}{[3-8]}{+Receiver, +Selector, +Argument..., -Result}
+Equivalent to get/[3-8], but instead of unifying a variable with a
 reference the variable is unified with the term-description.  The
-arguments are unified as in get/[3-13].  Normally only used from the 
+arguments are unified as in get/[3-8].  Normally only used from the 
 Prolog top level for debugging purposes.
 
     \predicate{chain_list}{2}{?Chain, ?List}
@@ -434,13 +435,14 @@ Find send- (\verb!->!), get- (\verb!<-!) method or variable
 console.
 
 Syntax note:  (\verb!->!) is a standard Prolog operator with
-$priority > 1000$.  Therefore many Prolog systems require additional
+$priority > 1000$.  Therefore, standard Prolog requires additional
 brackets:
 \begin{code}
 1 ?- tracepce((graphical ->selected)).
 \end{code}
-In SWI-Prolog this is not necessary.  To be able to trace get-methods
-with this predicate (\verb!<-!) must be declared as an infix operator.
+SWI-Prolog accepts the term without the additional brackets.  In
+SWI-Prolog (\verb!<-!) is a predefined infix operator, so get-methods
+can be specified the same way.
 
     \predicate{notracepce}{1}{+Class {\tt \string<-|->|-} Selector}
 Disables trace-point set with tracepce/1.
@@ -465,6 +467,9 @@ Prints the values of all instance variables of \arg{Reference}:
         condition             @nil/constant
         status                inactive
         cursor                @default/constant
+        drag_scroll           @nil/constant
+        drag_scroll_timer     @nil/constant
+        drag_scroll_event     @nil/constant
         offset                <pce>(0x7f8a12c5d0,point)
 \end{code}
 
@@ -477,11 +482,12 @@ A graphical tool for inspecting instance variables is described in
 \begin{description}
     \predicate{manpce}{0}{}
 Start the \product{} online manual tools.  This opens a small GUI console
-at the top-left of the screen, providing access to the manual, demo programs
-and tools described in this manual.  See \chapref{online}.
+providing access to the manual, demo programs and tools described in
+this manual.  In the SWI-Prolog console window these tools are also
+available from the \textsf{XPCE} menu.  See \chapref{online}.
 
     \predicate{manpce}{1}{+Spec}
-As manpce/0, but immediately opens the the manual from \arg{Spec}.
+As manpce/0, but immediately opens the manual from \arg{Spec}.
 \arg{Spec} is either a class-name, opening the ClassBrowser, or a term
 \mbox{Class {\tt \string<-|->|-} Selector} (see tracepce/1) to open the
 manual-card of the specified behaviour.  Examples:

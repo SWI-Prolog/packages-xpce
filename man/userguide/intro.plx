@@ -28,14 +28,15 @@ The interface between \product{} and its hosting language is small, which
 makes \product{} especially a good GUI candidate for special-purpose
 languages.
 
-The main target language for \product{} is {\em Prolog} and this
-document concentrates on \productpl{} rather then \product{}/Lisp.
+The target language for \product{} is {\em Prolog}. \product{} is
+bundled with SWI-Prolog and this document describes \productpl{}.
 \productpl{} comes with a graphical programming environment that allows
 for quick browsing of the source-code, provides debugging tools and
 allows for the graphical construction of {\em dialog boxes} (graphical
 windows with {\em controllers}). \product{}'s built-in editor is
 modelled after the standard (GNU-)Emacs editor and can be programmed in
-\productpl{}.
+\productpl{}.  The SWI-Prolog console \jargon{Epilog}, that is used by
+\program{swipl-win}, is written in \product{} as well.
 
 
 
@@ -43,11 +44,9 @@ modelled after the standard (GNU-)Emacs editor and can be programmed in
 
 This document describes the basics of \product{} and its relation to Prolog.
 Besides the written version, this document is also available as an HTML
-document from the URL below.  The second URL may be used to download
-the entire WWW tree for installation on a local host.
+document from the URL below.
 \begin{quote}\small
-\url{https://www.swi-prolog.org/packages/xpce/UserGuide/} \\
-\url{ftp://ftp.swi.psy.uva.nl/xpce/HTML/UserGuide.tgz}
+\url{https://www.swi-prolog.org/packages/xpce/UserGuide/}
 \end{quote}
 
 \noindent
@@ -55,16 +54,18 @@ This document provides the background material needed to understand
 the other documentation:
 
 \begin{itemize}
-    \tick{The \product{} Reference Manual} \ifpw{}{\cite{XPCE:reference}}
+    \tick{The \product{} Reference Manual}
 The reference manual is available by means of the Prolog predicate
-\ifpw{user_help/0}{manpce/0}. The reference manual provides detailed
-descriptions of all classes, methods, etc.\ which may be accessed from
-various viewpoints. See also \chapref{online}.
-    \tick{PceDraw: An example of using \product{}} \ifpw{}{\cite{XPCE:draw}}
-This document contains the annotated sources of the drawing tool PceDraw.
-It illustrates the (graphical) functionality of \product{} and is useful as
-a source of examples.
-    \tick{{\productpl{}} Course Notes} \ifpw{}{\cite{XPCE:course}}
+manpce/0. The reference manual provides detailed descriptions of all
+classes, methods, etc.\ which may be accessed from various viewpoints.
+The sources of the reference manual are markdown files that are
+rendered as HTML by the online manual tools. See also \chapref{online}.
+    \tick{PceDraw: An example of using \product{}}
+The sources of the drawing tool PceDraw (\pllib{pcedraw}, located in
+the directory \file{draw} of the \product{} Prolog library) illustrate
+the (graphical) functionality of \product{} and are useful as a source
+of examples.
+    \tick{{\productpl{}} Course Notes} \cite{XPCE:course}
 Course-notes, examples and exercises for programming \productpl{}.  The
 course-notes have a large overlap in contents with this user guide, but
 the material is more concise.  If you are familiar with object-oriented
@@ -77,37 +78,33 @@ be a quick alternative to this user guide.
 
 \index{home,web}\index{WWW,addresses}%
 Various other information can be found on or through the \product{}
-WEB-home:
+WEB-home and the \product{} wiki:
 
 \begin{quote}\small
-\ifpw{\url{https://www.swi-prolog.org/packages/xpce/ProWindows.html}}{%
-      \url{https://www.swi-prolog.org/packages/xpce/}}
-\end{quote}
-
-\noindent
-Utility programs, recent examples, documentation, etc.\ can be found
-in the primary \product{} anonymous ftp archive:
-
-\begin{quote}\small
-\url{ftp://ftp.swi.psy.uva.nl/xpce/}
+\url{https://www.swi-prolog.org/packages/xpce/} \\
+\url{https://github.com/SWI-Prolog/packages-xpce/wiki}
 \end{quote}
 
 \index{bug,reporting}%
 \noindent
-There is a mailing list for exchanging information and problems between
-programmers as well as for us to announce new releases and developments.
-The address is \email{xpce@swi.psy.uva.nl}. Please send mail to
-\email{xpce-request@swi.psy.uva.nl} to subscribe or unsubscribe to this
-list.  This E-mail address can also be used to communicate with the
-authors.  The address \email{xpce-bugs@swi.psy.uva.nl} should be used
-for reporting bugs.
+Questions and problems can be discussed with other programmers on the
+SWI-Prolog Discourse forum, which is also used to announce new releases
+and developments.  Bugs should be reported using the issue tracker of
+the \product{} GitHub repository.
+
+\begin{quote}\small
+\url{https://swi-prolog.discourse.group/} \\
+\url{https://github.com/SWI-Prolog/packages-xpce/issues}
+\end{quote}
 
 
 \section{Language interfaces}
 
 The interface between \product{} and the application (host) language is
 very small. This feature makes it easy to connect \product{} to a new
-language. \product{} fits best with dynamically typed or strongly
+language, although SWI-Prolog is currently the only maintained host
+language.  The C and C++ embedding API of older versions has been
+removed. \product{} fits best with dynamically typed or strongly
 statically typed languages with type-conversion facilities that can be
 programmed. \product{} itself is dynamically typed. Cooperating with
 languages with the named properties avoid the need for explicitly
@@ -130,7 +127,7 @@ is actively maintained for Linux, MacOS and Windows.
 
 \section{Look-and-feel}
 
-\index{look-and-feel}\index{Motif}\index{OpenWindows}\index{MS-Windows}%
+\index{look-and-feel}\index{MS-Windows}%
 \product{} is not implemented on top of a standard UI library such as
 GTK, Qt, or Win32. Instead, it is built on top of its own base layer to
 create and manipulate windows, draw primitives such as lines, circles,
@@ -157,7 +154,11 @@ among which Java.
 The visual feedback (look) and to some extend the reactions to user
 actions (feel) of the \product{} controllers is determined by
 class variables, whose values may be changed in the user's
-{\em Defaults} file. See \secref{classvar}.
+{\em Defaults} file. See \secref{classvar}.  The colours are
+defined by a \jargon{theme} that, by default, follows the light or
+dark appearance and the accent colour of the desktop.  The GUI
+preferences can be edited interactively using
+\menuref{Settings/Edit GUI preferences} of the development tools.
 
 \begin{xpceonly}
 \section{A brief history of (X)PCE}
@@ -214,6 +215,13 @@ of the system was handed to the widely supported libraries:
 was extended to provide the ``app'' Prolog console (named
 \textit{Epilog}).  \product{}~7 provides more flexible support for
 Prolog's multi-threading.
+
+\product{}~8 and~9 continued the modernisation.  The C and C++
+embedding API and PostScript generation were removed and the reference
+manual was converted to markdown.  Colours follow themes that can be
+switched at runtime, the dialog items got a flat look and can be
+operated from the keyboard, and the development tools became panes
+that can be combined in the windows of a single IDE.
 \end{xpceonly}
 
 
@@ -245,8 +253,9 @@ object-oriented programming to the user. \Chapref{techniques},
 the commonly used \productpl{} libraries.
 
 \Chapref{debugging}, ``Development and debugging tools'' introduces
-the \product{} debugger.  The current debugger is powerful, but not very
-intuitive and requires a nice-looking front-end.
+the tools for finding problems in \product{} applications: checking
+the consistency of the object base, tracing methods and examining the
+structure of a running user interface.
 
 Of the appendices, \appref{summary} is probably the most
 useful, providing a short description of each class and its relation
@@ -269,12 +278,12 @@ Engineering Research Centre). Gert Florijn has contributed in the
 initial discussions on user-defined classes. Frans Heeman has been the
 first user.
 
-The interface to SICStus Prolog has been implemented in cooperation with
-Stefan Andersson and Mats Carlsson from SICS.
+The (no longer maintained) interface to SICStus Prolog was implemented
+in cooperation with Stefan Andersson and Mats Carlsson from SICS.
 
-The interface to Quintus Prolog was initiated by Paul-Holmes Higgins.  The
-project was realised by James Little, Mike Vines and Simon Heywood
-from AIIL.
+The (no longer maintained) interface to Quintus Prolog was initiated by
+Paul-Holmes Higgins.  The project was realised by James Little, Mike
+Vines and Simon Heywood from AIIL.
 
 Luca Passani has bothered us with many questions, but was so kind to
 organise this material and make it available to other \product{} programmers

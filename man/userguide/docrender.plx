@@ -41,7 +41,7 @@ This is a data object containing information on the
 \jargon{stretchability} of boxes.  Rubber object are used to distribute
 space horizontally as well as to determine the location of line-breaks.
 A space in a \class{parbox} is realised using a \class{hbox} whose
-natrual width is the width of a space in the current \class{font} that
+natural width is the width of a space in the current \class{font} that
 can shrink a little and expand a bit easier.
 \end{itemlist}
 
@@ -111,7 +111,7 @@ of \class{doc_mode}, a data-object holding style-information.
     \item [<Atomic>]
 Atomic data is added as text to the output.  If `doc_mode<-space_mode'
 equals \const{preserve}, spaces are preserved.  Otherwise space is
-canonicalised, smashing multiple consecutive banks into a single (rubber)
+canonicalised, smashing multiple consecutive blanks into a single (rubber)
 space.
 
     \item [\bsl{}Action]
@@ -119,10 +119,10 @@ Execute an \arg{Action}.  Actions are like \TeX{} commands, which is
 why we use the backslash.  The built-in actions and the definition of
 new actions is discussed in \secref{docactions}.
 
-    \item [@Object]
-\product{} objects are simply appended to the \class{pbox}.  This can
-be used to append self-created objects or use one of the predefined
-layout objects defined in \secref{docobjects}.
+    \item [<Object>]
+\product{} object references are simply appended to the \class{pbox}.
+This can be used to append self-created objects or use one of the
+predefined layout objects defined in \secref{docobjects}.
 \end{itemlist}
 
 Before handed to the above, emit/3 calls the multifile predicate
@@ -165,13 +165,14 @@ Calls emit/3 using \arg{Content} and \arg{Mode}.  If mode is omitted,
 a default mode object is created.
 
     \sendmethod{pbox}{event}{Event:event}
-Handles clicking a button or footnote and showing \jargon{balloons} from
-buttons after trying to pass the event to one of the embedded
-graphicals.
+After trying to pass the event to one of the embedded graphicals, this
+handles clicking a button or footnote, selecting text by dragging and
+reporting the balloon text of the button below the pointer as status
+message (see \secref{report}).
 
     \getmethod{pbox}{anchor}{Name}{tuple(Box, Index)}
 Return the \arg{Box} and index thereof in the `parbox<-content' vector
-that starts the named anchor (see \secref{docactions}.
+that starts the named anchor (see \secref{docactions}).
 
     \sendmethod{doc_mode}{initialise}{}
 Creates a default document-rendering mode.  This mode has the following
@@ -211,7 +212,9 @@ necessary to have a font that can be manipulated. Therefore,
 regardless of the fonts existence. At any time the user can request the
 best matching font using `vfont<-font'. The mapping between virtual font
 attributes and physical fonts can be programmed by adding clauses to the
-multifile predicate vfont:font_map/7. This class is defined in
+multifile predicate vfont:font_map/7.  Without a mapping, `vfont<-font'
+creates a font from the family, slant and weight, using a size relative
+to the size of the \const{normal} font.  This class is defined in
 \pllib{doc/vfont} where you find further programming details. 
 
 
@@ -239,7 +242,9 @@ Tells emit/3 to \const{preserve} white-space or render it
 \const{canonical}.  Default is \class{canonical}.
 
     \termitem{pre}{Text}
-Add verbatim text.
+Add verbatim text.  The text is placed in a \class{code_block} that
+shows an icon to copy the text to the clipboard if the pointer hovers
+over it.
 
     \termitem{par}{}
 Start a new paragraph. This is the action-sequence \const{parskip},
@@ -301,19 +306,18 @@ Get the <-frame of the \class{pbox} and send it the given title using
 `frame->label'.
 
     \termitem{body}{Options}
-Apply options to the window as a whole.  Defines options are
-\term{bgcolour}{Colour}, \term{background}{Image} and
-\term{text}{Colour}.
+Apply options to the window as a whole.  Defined options are
+\term{bgcolour}{Colour} and \term{text}{Colour}.
 
     \termitem{button}{Message, Content, Balloon}
 Add an active area (hyper-link) to the document. When depressed,
-\arg{Message} is executed.  When hoovering, \arg{Balloon} is reported
+\arg{Message} is executed.  When hovering, \arg{Balloon} is reported
 as status (see \secref{report}).  \arg{Content} is emitted inside a
 group after setting the default colour to `doc_mode<-link_colour' and
 underlining to @on.
 
     \termitem{anchor}{Label, Content}
-Label some content.  This has no visual implications, but the the anchor
+Label some content.  This has no visual implications, but the anchor
 can be located using `pbox<-anchor'.
 
     \termitem{parbox}{Content, Options}
@@ -335,7 +339,7 @@ Define the vertical alignment of the box (\const{top}, \const{center},
 	\termitem{auto_crop}{Bool}
 If @on, tell the \class{pbox} its <-area is determined by the
 content rather than the specified width.  Text may be formatted
-left-to-write without wrapping by defining a wide parbox and using
+left-to-right without wrapping by defining a wide parbox and using
 this option.
     \end{description}
 
@@ -460,7 +464,7 @@ Here is the HTML code loaded and the visual result.
 <h1>SWI-Prolog SGML-DOM</h1>
 
 <p>
-SWI-Prolog 4.0 provides a library for loading XML, SGML and
+SWI-Prolog provides a library for loading XML, SGML and
 HTML files and convert them to a complex Prolog term.  This
 term has the format
 
@@ -472,9 +476,9 @@ element(Name,
 </pre>
 
 <p>
-Where <var/ListOfNameValue/ reflects the attribute-list of the
-element and <var/ListOfContent/ is mixed list of atoms representing
-<em/CDATA/ and <b>element/3</b> terms representing nested elements.
+Where <var>ListOfNameValue</var> reflects the attribute-list of the
+element and <var>ListOfContent</var> is mixed list of atoms representing
+<em>CDATA</em> and <b>element/3</b> terms representing nested elements.
 </body>
 </html>
 \end{code}
@@ -482,10 +486,10 @@ element and <var/ListOfContent/ is mixed list of atoms representing
 \postscriptfig{dochtml}{Rendering HTML code}
 
 In general you do not want to render plain HTML using \productpl{} as it
-is far less flexible than real browsers dealing with errornous HTML, the
-implementation of HTML is incomplete and it supports Java nor
-Javascript.
+is far less flexible than real browsers dealing with erroneous HTML, the
+implementation of HTML is incomplete and it supports neither CSS nor
+JavaScript.
 
-It has proved to be worthwile using the extensibility of SGML and this
+It has proved to be worthwhile using the extensibility of SGML and this
 layout to render domain-specific documents, often using HTML elements
 for the basic layout.

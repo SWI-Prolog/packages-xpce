@@ -3,7 +3,10 @@
 \index{axis}\index{plot}\index{diagram}\index{chart}\index{barchart}%
 This section describes three libraries residing in
 \metafile{<pcehome>/prolog/lib/plot} to deal with plotting graphs and
-barcharts.
+barcharts.  The demo \exam{charts_demo/0} from \metafile{demo(charts)},
+also available from the demo browser of the online manual (see
+\predref{manpce}{0}), is a gallery showing most of the features
+described in this section.
 
 \subsection{Painting axis}
 
@@ -19,14 +22,15 @@ We start with a small example from the library itself, creating the
 picture below.
 
 \begin{code}
-?- [library('plot/axis')].
-% library('plot/axis') compiled into plot_axis 0.03 sec, 27,012 bytes
+?- use_module(library(plot/axis)).
+?- use_module(library(autowin)).
 
-?- send(new(P, picture), open),
+?- new(P, auto_sized_picture),
 	   send(P, display,
 		plot_axis(x, 0, 100, @default, 400, point(40, 320))),
 	   send(P, display,
-		plot_axis(y, 0, 500, @default, 300, point(40, 320))).
+		plot_axis(y, 0, 500, @default, 300, point(40, 320))),
+	   send(P, open).
 \end{code}
 
 \postscriptfig{axis}{A picture showing two axis}
@@ -39,9 +43,9 @@ really needed.
 \begin{description}
     \sendmethod{plot_axis}{initialise}{%
 	type={x,y},
-        low=int{\tt|}real,
-	high=int{\tt|}real,
-        step=[int{\tt|}real],
+	low=num,
+	high=num,
+	step=[num],
 	length=[int],
 	origin=[point]}
 Create a new axis.  \arg{type} defines whether it is an X- or Y-axis.
@@ -60,13 +64,28 @@ provide full flexibility.
 Define the printf()-format for rendering the values printed along the
 axis.
 
-    \getmethod{plot_axis}{location}{int{\tt|}real}{int}
+    \getmethod{plot_axis}{location}{num}{int}
 Determine the coordinate in the device's coordinate system representing
 the given value.  See also `plotter<-translate'.
 
-    \getmethod{plot_axis}{value_from_coordinate}{int}{int{\tt|}real}
+    \getmethod{plot_axis}{value_from_coordinate}{int}{num}
 The inverse of <-location, returning the value along the axis from
 a pixel coordinate.
+
+    \sendmethod{plot_axis}{scale}{\{linear,log\}}
+Use a linear (default) or logarithmic scale.  For a logarithmic scale
+the low end must be $> 0$ and <-step is the factor between two
+rule-marks.
+
+    \sendmethod{plot_axis}{lines}{\{none,normal,all\}}
+Determines whether lines are drawn across the plot at each step
+(\const{normal}, default), also at each small step (\const{all}) or not
+at all (\const{none}).
+
+    \getmethod{plot_axis}{label_for_value}{num}{graphical}
+Compute the graphical displayed next to a rule-mark.  The default uses
+<-format.  Subclasses may redefine this to print, for example, names of
+months.
 \end{description}
 
 Besides the principal methods below, the following methods are
@@ -126,14 +145,13 @@ Append a graph.  Multiple graphs can be displayed on the same plotter.
     \sendmethod{plotter}{clear}{}
 Remove all graphs.  The X- and Y-axis are not removed.
 
-    \getmethod{plotter}{translate}{X:int{\tt|}real,
-				   Y:int{\tt|}real}{point}
+    \getmethod{plotter}{translate}{X:num, Y:num}{point}
 Translate a coordinate in the value-space to physical coordinates.
 
-    \getmethod{plotter}{value_from_x}{int}{int{\tt|}real}
+    \getmethod{plotter}{value_from_x}{int}{num}
 Translate an X-coordinate to a value.
 
-    \getmethod{plotter}{value_from_y}{int}{int{\tt|}real}
+    \getmethod{plotter}{value_from_y}{int}{num}
 Translate an Y-coordinate to a value.
 \end{description}
 
@@ -153,10 +171,16 @@ for details) and using \const{points_only}, no lines is painted,
 just the marks.  Using the \arg{mark} argument the user may specify
 marks to be drawn at each control-point.
 
-    \sendmethod{plot_graph}{append}{x=int{\tt|}real, y=int{\tt|}real}
+    \sendmethod{plot_graph}{append}{x=num, y=num}
 Append a control-point using the coordinate-system of the axis of the
 plotter.
 \end{description}
+
+Individual values can be annotated using a \class{plot_mark}, a
+\class{device} that is created from an $X$ and $Y$ value and an optional
+graphical that is centred at the corresponding point.  It is displayed
+on the \class{plotter} using ->display and keeps its position if the
+axes change.
 
 \subsection{Drawing barcharts using ``plot/barchart''}
 
@@ -164,9 +188,9 @@ plotter.
 The \pllib{plot/barchart} library draws simple bar-charts.  It is based
 on the \class{plotter} and \class{plot_axis} classes, adding simple
 bars, grouped bars and stacked bars.  Below is an example from
-\pllib{plot/demo} showing all active \product{}, classes, where active
+\pllib{plot/demo} showing all active \product{} classes, where active
 is defined that more than 250 instances are created.  The code, except
-for the calculation parts is show below.
+for the calculation parts is shown below.
 
 \postscriptfig{plotclasses}{Classes of \product{} with $> 250$ instances
 			    created}
@@ -194,13 +218,16 @@ barchart(HV) :-
 	low=real,
 	high=real,
 	scale_length=[0..],
-	nbars=[0..]}
+	nbars=[0..],
+	bar_width=[0..],
+	bar_gap=[0..]}
 Initialise a \class{bar_chart}, a subclass of \class{plotter} for
 displaying bar-charts.  The \arg{orientation} indicates whether the
 bars are vertical or horizontal.  The \arg{low} and \arg{high} arguments
 are the scale arguments for the value-axis, while \arg{scale_length}
 denotes the length of the axis.  The \arg{nbars} argument determines
-the length of the axis on which the bars are footed.
+the length of the axis on which the bars are footed.  Finally, the
+width of the bars and the distance between them may be specified.
 
     \sendmethod{bar_chart}{append}{bar{\tt|}bar_stack}
 Append a single \class{bar}, \class{bar_stack} or \class{bar_group}
@@ -216,9 +243,12 @@ again.
     \sendmethod{bar_chart}{clear}{}
 Removes all bars from the chart.
 
-    \bothmethod{bar_chart}{value}{name}{real}
+    \bothmethod{bar_chart}{value}{name}{num}
 Modifies or requests the value of the named bar.  Fails if no bar
 with this name is on the chart.
+
+    \sendmethod{bar_chart}{sort}{}
+Sort the bars by their value.
 
     \sendmethod{bar_chart}{event}{event}
 Processes a single-click outside the bars to clear the selection.
@@ -242,17 +272,17 @@ related values for the same object.
     \sendmethod{bar}{initialise}{%
 	name=name,
 	value=real,
-	colour=[colour],
+	colour=[colour]*,
 	orientation=[\{horizontal,vertical\}]}
 Create a \class{bar} from its \arg{name} and \arg{value}.  The bar
 itself is a subclass of \class{box} and \arg{colour} is used to
 fill the interior.  The \arg{orientation} needs only be specified
 if the bar is not attached to a \class{bar_chart}.
 
-    \sendmethod{bar}{value}{real}
-Set the value of th bar.  This updates the bar-size automatically.
+    \sendmethod{bar}{value}{num}
+Set the value of the bar.  This updates the bar-size automatically.
 
-    \sendmethod{bar}{range}{low=real, high=real}
+    \sendmethod{bar}{range}{low=num*, high=num*}
 If the bar is editable (see also ->message and ->drag_message), these
 are the lowest and highest values that can be set by the user.
 
@@ -289,9 +319,9 @@ and a stacked bar.
 Associate the given graphicals with given bar.
 
     \getmethod{bar_button_group}{bar}{}{bar{\tt|}bar_stack}
-Return the bar or stack this group is connected too.  This behaviour
-may be used to make to make the buttons less dependent on the bar
-they are attached too.
+Return the bar or stack this group is connected to.  This behaviour
+may be used to make the buttons less dependent on the bar they are
+attached to.
 \end{description}
 
 \postscriptfig{boot}{Stacked bars with associated buttons}

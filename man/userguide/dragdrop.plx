@@ -12,9 +12,9 @@ most commonly found example.
 
 For the drag-and-drop interface to work, the programmer must connect
 a \class{drag_and_drop_gesture} to the object to be dragged.%
-    \footnote{Attach a \class{drag_and_drop_dict_item_gesture} to a
-	      \class{list_browser} to enable dragging the items in the
-	      dictionary}.
+    \footnote{Attach a \class{drag_and_drop_dict_item_gesture} from
+	      the library \pllib{dragdict} to a \class{list_browser} to
+	      enable dragging the items in the dictionary}.
 A {\em Drop-zone}  defines the method ->drop and (not strictly
 obligatory) ->preview_drop.  ->drop is called to actually perform the
 associated operation, while ->preview_drop may be used to indicate
@@ -30,8 +30,14 @@ what will happen if the object is dropped now.
 Initialises a new \class{drag_and_drop_gesture}.  {\em Button} is
 the name of the pointer-button the gesture should be connected to
 (left, middle or right).  {\em Modifier} is a \class{modifier}
-description (see class \class{modifier}). {\em Warp} is for compatibility
-with older releases of this library.
+description (see class \class{modifier}).  While dragging, the
+pointer shows the \const{move} cursor (see the class-variable
+\const{cursor} of \class{drag_and_drop_gesture}).  If this
+class-variable is @default, a cursor is created from the image of the
+dragged graphical.  In that case {\em Warp} (default @on) determines
+whether the pointer is placed in the centre of this cursor.  Dragging
+starts after the pointer has moved a few pixels with the button
+depressed.
 {\em GetSource} is a function used to fetch the object dragged from the
 graphical representing it.  Suppose the graphical to which the gesture
 is attached represents a database record.  In this case it is much more
@@ -70,4 +76,21 @@ If a position argument is available, the \class{drag_and_drop_gesture}
 will be activated on each {\tt drag} event.  Otherwise it is only
 activated if the pointer enters the area of the drop-zone.
 \end{description}
+
+\subsection{Dropping files from other applications}
+
+\index{drag-and-drop,files}%
+The interface above handles drag-and-drop between objects of the same
+\product{} process.  Files and text dragged from other applications,
+such as the file manager of the desktop, are delivered as events.  A
+drop sequence starts with a \const{drop_begin} event, followed by
+\const{drop_position} events while the user moves the pointer over the
+window, a \const{drop_file} or \const{drop_text} event for each dropped
+item and finally a \const{drop_complete} event.  The dropped file or
+text is available as the attribute \const{path} or \const{text} of the
+event.  The library \pllib{pce_drop_target} provides
+\predref{drop_target_event}{4} to handle this sequence from an ->event
+method.  It shows a hint while the user drags over the target and calls
+a predicate with the list of dropped files on completion.  See also the
+demo \metafile{demo(dragdrop_file)}.
 

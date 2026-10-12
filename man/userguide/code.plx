@@ -20,7 +20,7 @@ selected on the device.  The implementation is:
 
 \begin{code}
 ...,
-send(Dev?graphicals, for_all, message(@arg1, free)).
+send(Dev?selection, for_all, message(@arg1, free)).
 ...
 \end{code}
 
@@ -127,9 +127,9 @@ objects locally:
 ?- send(@m, execute),
    send(@m, forward, world),
    send(@m, execute).
-@default
-world
-@default
+Hello default
+Hello world
+Hello default
 \end{code}
 
 The objects @receiver and @event are functions referring to the receiver
@@ -137,7 +137,8 @@ of the currently executing method and the current user-event.  Var
 objects are rarely created explicitly by application programmers.
     \tick{arithmetic functions (+, -, *, /)}
 \index{arithmetic}%
-These functions define {\em integer} arithmetic and are commonly used
+These functions define arithmetic on integers and floating point
+numbers and are commonly used
 to deal with graphical computations in code objects.
     \tick{create(Class, InitArg, ...)}
 This function evaluates to a new instance of {\em Class} from the given
@@ -169,10 +170,9 @@ A naive approach and common beginners mistake is to write:
 This example will yield a warning:
 
 \begin{code}
-[PCE error: get: No implementation for:
-			@default/constant <-x
-        in: get(@default/constant, x)]
-PCE:  4 fail: get(@default/constant, x) ?
+[PCE warning: @default/constant: No implementation for: <-x
+	...
+]
 \end{code}
 
 The reason for this is that the {\em interface} will translate
@@ -213,7 +213,7 @@ below, collecting all boxes on the device in a new \class{chain}.
 
 \begin{pcecode}
 	...
-	get(Dev?graphicals, find_all.
+	get(Dev?graphicals, find_all,
 	    message(@arg1, instance_of, box),
 	    Boxes),
 	...

@@ -9,18 +9,23 @@ the library shows a little window with the message.  Moving the pointer
 out of the area of the graphical or pressing a button causes the
 feedback window to disappear.
 
-This tenchnique is commonly used in modern interfaces to provide
+This technique is commonly used in modern interfaces to provide
 feedback on the functions behind icons.  See also \secref{toolbar}.
 
 In addition to registering the global event-handler, the library
-defines ->help_message to the classes \class{visual}, \class{graphical}
-and \class{menu}.
+defines ->help_message and <-help_message on the classes \class{visual}
+and \class{dict_item}.  The classes \class{menu} and
+\class{list_browser} redefine <-help_message to return the message
+associated with the \class{menu_item} or \class{dict_item} below the
+pointer.  If a graphical has no help message, the message of the
+graphical it is contained in is used.
 
 \begin{description}
     \sendmethod{visual}{help_message}{\{tag,summary\}, string*}
 Register \arg{string} as \const{tag} (balloon) or extensive help
-message (\const{summary}) for the receiving object.  At the moment
-\const{summary} is not used.
+message (\const{summary}) for the receiving object.  The
+\const{summary} message is displayed if the user presses the
+\const{help} function key.  Using @nil deletes the message.
 
     \getmethod{visual}{help_message}{\{tag,summary\}, event}{string}
 This message is defined to return the help-message registered using
@@ -32,7 +37,7 @@ Here is a typical usage for this library.
 
 \begin{pcecode}
 :- use_module(library(help_message)).
-resource(print, image, image('16x16/print.xpm')).
+resource(print, image, image('tool/print.svg')).
 
 	...
 	send(X, append, new(B, button(print))),

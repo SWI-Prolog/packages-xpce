@@ -129,7 +129,7 @@ rely on the <-call_back properties of @prolog.
 {\bf Warning\hspace{10pt}} During normal operation, event processing
 guards the objects created that are not assigned to any other object and
 destroys all such objects after the event has completely been processed
-(see \secref{memory}. Using the host message queue mechanism, the Prolog
+(see \secref{memory}). Using the host message queue mechanism, the Prolog
 programmer becomes responsible for such objects. For example, the
 message object returned should be discarded using `object ->done' after
 processing.
@@ -148,14 +148,14 @@ Process events and return on any of the following conditions
     \begin{itemlist}
 	\item [event has been processed]
 	Either a normal event, a timer or an input stream has been
-	processed.  The method fails in this case.
+	processed.  The method succeeds in this case.
         \item [timeout]
-	The timeout (see `display_manager ->dispatch') has expired.
-	The method fails in this case.
-	\item [Input on the console]
-	There is input from the Prolog window.  The message succeeds
-	in this case.
+	No event arrived within a quarter of a second.  The method
+	fails in this case.
     \end{itemlist}
+
+Events can only be dispatched by the thread that runs the \product{}
+event loop (see pce_thread/1 and \secref{thread}).
 
 For example, the following processes events in call-back style until
 the fact quit/0 is in the Prolog database:

@@ -1,26 +1,27 @@
 \chapter{Memory management}		\label{sec:memory}
 
-This chapter describes the memory- and object-management aspects of PCE.
+This chapter describes the memory- and object-management aspects of
+\product{}.
 
 
 \section{Lifetime of an object}
 
 \index{garbage collection}\index{object,removing}
-Object lifetime management is a difficult issue in PCE/Prolog as PCE
-cannot be aware of all references to PCE objects stored in Prolog.
-Another complicating factor is that non-incremental garbage
+Object lifetime management is a difficult issue in \productpl{} as
+objects may be referenced from other \product{} objects as well as from
+Prolog.  Another complicating factor is that non-incremental garbage
 collection as performed by most Lisp systems is undesirable because
 they harm the interactive response of the system.  For these reasons
-PCE performs {\em incremental} garbage collection.  It distinguishes
+\product{} performs {\em incremental} garbage collection.  It distinguishes
 a number of prototypical `life-cycles' for objects.  Heuristics tell
 the system which of these is applicable and when the object may be
 deleted. 
 
-PCE distinguishes between {\em global-}, {\em top level-}, {\em
+\product{} distinguishes between {\em global-}, {\em top level-}, {\em
 support-}, {\em argument-} and {\em answer-} objects.  {\em Global}
-objects are created and exist for the entire PCE session: @prolog,
+objects are created and exist for the entire \product{} session: @prolog,
 class objects, etc.  {\em Top-level} objects are the principal objects
-of the application.  They should exist even if no other PCE object
+of the application.  They should exist even if no other \product{} object
 refers to them.  An example of a top level object is a frame or
 hash_table representing a database in the application.  {\em Support}
 objects only complete the definition of other objects.  If this
@@ -33,42 +34,43 @@ Finally, {\em answer} objects are the result of some computation.  For
 example `area <-size' returns a size object.  This object may be
 deleted when the code that requested the value is done with it.
 
-PCE maintains the following information on objects to support
-garbage collection.  This information may be requested using the PCE
+\product{} maintains the following information on objects to support
+garbage collection.  This information may be requested using the \product{}
 inspector (see \secref{inspector}).
 
 \begin{description}
     \tick{Protect Flag}
 This flag may be set using `object ->protect'.  When set, the object
 can not be freed by any means.  This flag is set for most global and
-reusable objects: @prolog, @pce, @display, names, classes, etc.
+reusable objects: @prolog, @pce, @display_manager, names, classes,
+etc.
     \tick{Lock Flag}
 This flag indicates that the object may not be removed by the garbage
 collector.  Locked objects can only be freed by sending an explicit
-`object ->free' message' or using the predicate free/1.  It is used to
+`object ->free' message or using the predicate free/1.  It is used to
 avoid that `top level' objects such as frames are deleted by the
 garbage collector.  It is also used to indicate that Prolog wants to
-be responsible for destruction of the object rather than PCE's garbage
+be responsible for destruction of the object rather than \product{}'s garbage
 collector.  The lock flag is automatically set on
-any object that has a named reference.  If Prolog wants to store
-integer object references in the Prolog database locking is often
-necessary to protect the object for the PCE garbage collector.  See
-also \secref{pceprolog}.
+any object that has a named reference.  Locking is not needed to keep
+an object alive while Prolog holds a reference to it, also not if this
+reference is stored in the Prolog database (see \secref{prologrefs}).
+See also \secref{pceprolog}.
     \tick{Answer Flag}
 This flag indicates that the object has been created as an answer of
 some computation or as a result of the Prolog predicate new/2.  The
 {\em answer} status is cleared if the object is used to fill a slot
 of another object%
-    \footnote{PCE assumes the object has become a {\em support} object.
+    \footnote{\product{} assumes the object has become a {\em support} object.
 	      This is generally not correct for code objects.  Class
 	      \class{code} therefore has `class <-un_answer: @off', which
 	      implies that objects that fill a slot of a code object will
-	      not loose their `answer' status.}
+	      not lose their `answer' status.}
 or `object ->done' is invoked on the object.
     \tick{Reference Count}
-PCE maintains the number of other objects referring to this object.
+\product{} maintains the number of other objects referring to this object.
 When the reference count drops to zero and none of the protect, lock
-or answer flags are set PCE assumes the object is garbage and removes
+or answer flags are set \product{} assumes the object is garbage and removes
 the object from the object base.  A reference held by Prolog counts:
 see \secref{prologrefs}.
 \end{description}
@@ -106,7 +108,7 @@ object_reference/2 and object_from_reference/2 for the name of a named
 object.  An anonymous object has no identity besides its handle: keep the
 handle, compare it with ==/2 and index on it.
 
-XPCE identifies an anonymous object internally by its address, which
+\product{} identifies an anonymous object internally by its address, which
 \verb$object<-object_reference$ reports, but that number is not a
 reference and cannot be turned back into an object.  It was one until
 handles replaced it, written \exam{@\arg{Integer}}, and it was the reason
@@ -161,9 +163,9 @@ meant nothing; it now produces a syntax error.
 \section{Practical considerations}
 
 \index{object,management}%
-The principal predicates new/2, send/[2-12] and get/[3-13] will destroy
+The principal predicates new/2, send/[2-8] and get/[3-8] will destroy
 all argument- and answer- objects created during their execution except
-for the object created by new/2 and the object returned by get/[3-13].
+for the object created by new/2 and the object returned by get/[3-8].
 
 An object created by new/2 with an anonymous object reference needs no
 attention: Prolog holds a reference on it, so it survives as long as it is
@@ -187,9 +189,9 @@ longer needed.
 Currently an object consists of an object-header and an array of
 instance variables.  The object-header includes various flags, a
 reference count and a pointer to the class.  The size of an object
-header is 12 bytes.  Each instance variable consumes an additional
-4 bytes. For example a point object has `x' and `y' instance
-variables and thus consumes $12 + 2 * 4 = 20$ bytes.
+header is 24 bytes on a 64-bit machine.  Each instance variable
+consumes an additional 8 bytes.  For example a point object has `x' and
+`y' instance variables and thus consumes $24 + 2 * 8 = 40$ bytes.
 
 The method `class <-instance_size' returns the size of an instance of
 this class in bytes.  Note that the costs of supporting objects is not
@@ -197,8 +199,8 @@ considered in this value.  For example a box object has instance size:
 
 \begin{code}
 1 ?- get(class(box), instance_size, S).
-S = 72
+S = 184
 \end{code}
 
-But a box has an <-area instance variable consuming an additional 28
+But a box has an <-area instance variable consuming an additional 56
 bytes.

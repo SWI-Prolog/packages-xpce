@@ -20,8 +20,8 @@ if the source-code that declares it has been changed.
 Various alternatives to creating global objects have been tried. We will
 present some of the straight-forward approaches below and describe the
 (dis)advantages. \Secref{global} describes the pce_global/2 directive to
-solve this problem. We will use a particular fill-pattern (image) as an
-example.
+solve this problem. We will use an image that is used as the label of
+several buttons as an example.
 
 \subsection{Using directives}
 
@@ -29,10 +29,10 @@ Using a directive to create a reusable global object appears to be
 a logical way of dealing with them.  This leads to the following code:
 
 \begin{code}
-:- new(@stones_image, image(stones)).
+:- new(@stones_image, image('stones.png')).
 
 	...,
-	send(Box, fill, @stones_image),
+	send(Button, label, @stones_image),
 	...
 \end{code}
 
@@ -51,13 +51,13 @@ look like:
 	...,
 	(   object(@stones_image)
 	->  true
-	;   new(@stones_image, image(stones))
+	;   new(@stones_image, image('stones.png'))
 	),
-	send(Box, fill, @stones_image),
+	send(Button, label, @stones_image),
 	...
 \end{code}
 
-This approach is bad programming style. If @stones_bitmap is required at
+This approach is bad programming style. If @stones_image is required at
 various places in the source files this construct needs to be repeated
 at various places. 
 
@@ -71,10 +71,10 @@ installs an exception handler dealing with a specific global reference.
 The example becomes:
 
 \begin{code}
-:- pce_global(@stones_image, new(image(stones))).
+:- pce_global(@stones_image, new(image('stones.png'))).
 
 	...,
-	send(Box, fill, @stones_image),
+	send(Button, label, @stones_image),
 	...
 \end{code}
 

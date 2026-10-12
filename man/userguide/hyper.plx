@@ -97,16 +97,12 @@ edit(B) :->
 				    message(?(D, hypered, box),
 					    fill,
 					    @arg1)))),
-	(   colour(Colour),
-	    send(M, append,
-		 menu_item(colour(Colour),
-			   @default,
-			   pixmap(@nil,
-				  width := 32,
-				  height := 16))),
-	    fail
-	;   true
-	),
+	forall(colour(Colour),
+	       ( new(I, image(@nil, 32, 16)),
+		 send(I, fill, colour(Colour)),
+		 send(M, append,
+		      menu_item(colour(Colour), @default, I))
+	       )),
 	send(D, append, button(done, message(D, destroy))),
 	new(_, partof_hyper(B, D, dialog, box)),
 	get(B, display_position, PosB),

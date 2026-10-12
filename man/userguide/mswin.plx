@@ -6,17 +6,20 @@ to the non-Windows versions, making applications source-code compatible
 between the two platforms.
 
 \product{} does not build on top of the hosting window-systems GUI library.
-Instead, the primitive windowing and graphics facilities of the host are
-used to implement `\product{}'s Virtual Window System'. All of \product{}'s
-graphical functionality is build on top of this `Virtual Window System'.
-This approach guarantees full portability of applications between the
-platforms.
+Instead, it uses SDL for windows and events, Cairo for graphics and
+Pango for text to implement `\product{}'s Virtual Window System'. All
+of \product{}'s graphical functionality is build on top of this
+`Virtual Window System'.  This approach guarantees full portability of
+applications between the platforms.  The SDL video driver on Windows is
+named \const{windows} (see \appref{sdl-driver}).
 
 The look-and-feel of \product{} may be tailored using the user's
-{\em Defaults} file. See \secref{classvar}.
+{\em Defaults} file. See \secref{classvar}.  The system colours
+(\const{sys_*}) follow the Windows light or dark mode and the accent
+colour.
 
 
-\section{Currently unsupported features in the Win32 version}
+\section{Currently unsupported features in the Windows version}
 
 \begin{itemlist}
     \item [Class socket]
@@ -37,23 +40,27 @@ Provides standard TCP/IP communication, both server- and client-side.
 Not (yet) supported.
     \item [Cut/Paste]		\index{cut-and-paste}%
 Supported for exchanging text.
+    \item [Drag-and-drop]	\index{drag-and-drop}%
+Files and text dropped from other applications are supported (see
+\pllib{pce_drop_target}).
 \end{itemlist}
 
 
 \section{Accessing Windows Graphics Resources}
 
-\product{} on Win32 defines the same cursor, colour and font-names as the
-Unix/X11 version to guarantee portability. It is desirable to have
-access to all the native Windows graphical resources. This allows the
-application to maintain better look-and-feel compatibility to other
-Win32 applications. Therefore the classes colour, cursor and font
-provide access to related Window resources.
+\product{} on Windows defines the same cursor, colour and font-names as
+the other versions to guarantee portability.  Cursors are mapped to the
+native system cursors by SDL and fonts are selected by Pango from the
+fonts installed on the system.  It is desirable to have access to all
+the native Windows colours. This allows the application to maintain
+better look-and-feel compatibility to other Windows applications.
+Therefore class colour provides access to the Windows system colours.
 
-\strong{It is NOT advised to use these objects in your application code
-directly as this will stop the application to run on the Unix/X11
-version of \product{}. We advice using these objects in the \product{}
-{\em Defaults} file only, or use conditional code
-using `pce <-window_system'.}
+\strong{It is NOT advised to use these colours in your application code
+directly as this will stop the application to run on the other
+versions of \product{}. We advice using these colours in the
+\product{} {\em Defaults} file only, or use conditional code using
+the Prolog flag \prologflag{windows}.}
 
 
 \section{Accessing Windows Colours}
@@ -120,8 +127,10 @@ corresponding Windows colours as described in \secref{syscolours}.
 
 \section{Unicode text on Windows}
 
-\product{} represents characters using the C type \const{wchar_t}. On
-most platforms that is an unsigned 32-bit integer.  On Windows however
-this is a 16 bit unsigned integer.  Windows uses UTF-16 encoding to
-represent Unicode code points above 0xffff.   Support for UTF-16 in
-\product{} is currently inconsistent.
+\product{} represents characters internally as 32-bit integers on all
+platforms.  On most platforms this is the C type \const{wchar_t}.  On
+Windows however \const{wchar_t} is a 16 bit unsigned integer and
+Windows uses UTF-16 encoding to represent Unicode code points above
+0xffff.  \product{} converts between UTF-16 and its internal
+representation when exchanging text with the operating system.  As a
+result, code points above 0xffff are supported on Windows.

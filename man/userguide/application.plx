@@ -26,7 +26,7 @@ multiple frame objects in an application allows for finding frames as
 well as defining modal relations between frames. See `frame->modal'.
 
 The application to which a frame belongs may be changed at any time.
-Using the @nil argument, to frame is detached from any application.
+Using the @nil argument, the frame is detached from any application.
 
 This method invokes `application ->delete' to the application currently
 holding the frame (if any) and `application ->append' to the application
@@ -48,7 +48,8 @@ normally used for prompting.  The related method is:
 \begin{description}
     \sendmethod{frame}{transient_for}{frame}
 Make the receiver a transient window for the argument.  This notion is
-handed to the X11 window manager, but the support varies.  Therefore
+handed to the window system by creating the window as a child of the
+main window, but the support varies between platforms.  Therefore
 \product{} ensures that:
     \begin{itemlist}
 	\item [The transient window stays on top]
@@ -56,9 +57,9 @@ handed to the X11 window manager, but the support varies.  Therefore
 	raised too, ensuring the transient window does not get hidden
 	behind the main window.
 	\item [Synchronise status change and destruction]
-	Status change (see `frame ->status: \{unmapped,hidden,iconic,open\}')
-	of the main window are forwarded to the transient windows. If
-	the main window is destroyed, so is the transient window.
+	Status changes (see `frame ->status') of the main window are
+	forwarded to the transient windows.  If the main window is
+	destroyed, so is the transient window.
     \end{itemlist}
 \end{description}
 
@@ -97,7 +98,7 @@ location of @event to position itself.  The code fragment for that is:
 	...,
 	(   send(@event, instance_of, event)
 	->  get(@event, position, @display, EventPos)
-	;   EventPos = @default)
+	;   EventPos = @default
 	),
 	send(D, open_centered, EventPos).
 \end{code}

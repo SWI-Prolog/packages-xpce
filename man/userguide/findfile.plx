@@ -6,10 +6,12 @@ representing a modal dialog window for entering a filename. This class
 defines the method `finder <-file':
 
 \begin{description}
-    \getmethod{finder}{file}{Exists:[bool], Ext:[name|chain],
-			     Dir:[directory], Def:[file]}{name}
-Ask the user for a file.  If \arg{Exists} is @on, only existing files
-can be returned.  \arg{Ext} is either an atom denoting a single
+    \getmethod{finder}{file}{Exists:[bool|\{open,save\}],
+			     Ext:[name|chain|tuple],
+			     Dir:[directory], Def:[name]}{name}
+Ask the user for a file.  If \arg{Exists} is @on or \const{open}, only
+existing files can be returned.  The value \const{save} (or @off)
+prompts for a file to write.  \arg{Ext} is either an atom denoting a single
 extension or a chain of allowed extensions.  Extensions can be
 specified with or without the leading dot.  I.e.\ both \const{pl}
 and \const{'.pl'} are valid specifications of files ending in
@@ -31,12 +33,27 @@ for an existing Prolog file.
 \end{code}
 \end{description}
 
-\index{file,get name in Windows}%
-The Windows version of \product{} implements the method
-`display<-win_file_name', using the Win32 API standard functions
-GetOpenFileName() or GetSaveFileName() to obtain a file-name for saving
-or loading.  If this method is defined, `finder<-file' uses it, showing
-the users familiar dialog.
+\index{file,OS file dialog}%
+The class \class{finder} always uses the portable \product{} dialog
+defined by the class \class{find_file_dialog} (library
+\pllib{find_file_dialog}).  Applications that prefer the native file
+dialog of the operating system can use `frame<-open_file' and
+`frame<-save_file'.  These methods are realised using SDL3 and block
+until the user has selected a file or cancelled the dialog (in which
+case they fail).  The filters are a \class{chain} of \class{tuple}
+objects holding a label and an extension or chain of extensions.  For
+example:
+
+\begin{code}
+	...,
+	get(Frame, open_file,
+	    filters := chain(tuple('Prolog files', chain(pl, prolog))),
+	    File),
+	...,
+\end{code}
+
+`frame<-open_file' accepts \const{allow_many := @on}, in which case it
+returns a \class{chain} of file names.
 
 Names for the extensions (as `Prolog file' rather than '*.pl') can be
 defined by extending the multifile predicate pce_finder:file_type/2.  See

@@ -11,18 +11,26 @@ to dialog windows and the locations of the most important methods.
 
 \postscriptfig[width=4in]{dialoghierarchy}{Dialog Inheritance Hierarchy}
 
-Dialogs can be created both by using the new/2 and send/[2-12]
-operations as well as by using the Dialog Editor which is described in
-\appref{dialogeditor}. This section describes the first mechanism.
-Reading this chapter will help you understanding the dialog editor.
+Dialogs are created using the new/2 and send/[2-8] operations as
+described in this chapter.  Dialog items have a flat look that follows
+the active theme (see \secref{themes}) and dialogs can be operated
+completely from the keyboard: {\sc tab} and {\sc shift-tab} move the
+keyboard focus, {\sc space} or {\sc return} press the focussed button,
+otherwise {\sc return} activates the default button, {\sc escape}
+activates a button named {\tt cancel} and typing the underlined letter
+of a label while holding {\sc alt} activates the item.  The demo
+{\tt dialog_gallery} shows the available dialog items and how they are
+operated from the keyboard.  It is started from {\sf File/Demo
+programs} in the online manual (see \secref{manpce}) or using
+\mbox{\tt ?- use_module(demo(dialog_gallery)), dialog_gallery.}
 
 
 \section{An example}
 
 Before diving into the complexities we will illustrate normal usage
 through an example.  The following Prolog predicate creates a dialog
-for entering information on an employee. The result, running on
-Windows-NT, is shown in \figref{employee}.
+for entering information on an employee. The result is shown in
+\figref{employee}.
 
 \begin{pcecode}
 ask_employee :-
@@ -76,12 +84,14 @@ classes.  See the file Overview in the library directory.
 \begin{tabularlp}{\class{dialog_group}}
 \hline
 \class{button}		& Simple \idx{push-button}.  Executes <-message
-			  when pressed. \\
+			  when pressed.  `button ->danger' marks a button
+			  that starts a destructive action. \\
 \hline
 \class{text_item}	& A \idx{text-entry field}.  Editable or
 			  non-editable, built-in type conversion (for example
 			  to enter a numerical value), completion using
-			  the space-bar if a value-set is provided. \\
+			  the space-bar if a value-set is provided, in which
+			  case it is shown as a \idx{combo-box}. \\
 \hline
 \class{int_item}	& Like a \class{text_item}, but providing properly
 			  sized field, buttons for one-up/down, type- and
@@ -91,8 +101,16 @@ classes.  See the file Overview in the library directory.
 			  both integers and floating point values. \\
 \hline
 \class{menu}		& Implements various styles of menus with different
-			  visual feedback.  Realises \idx{radio-button},
-			  \idx{tick-box}, \idx{combo-box} and much more. \\
+			  visual feedback.  `menu ->kind' selects the
+			  presentation: \idx{radio-button}s or
+			  \idx{tick-box}es ({\tt marked}), a segmented
+			  control ({\tt choice}), a drop-down list
+			  ({\tt cycle}) or a {\tt popup}.
+			  `menu ->multiple_selection' allows selecting
+			  multiple items. \\
+\hline
+\class{bool_item}	& A switch to edit a boolean value (@on or
+			  @off). \\
 \hline
 \class{menu_bar}	& Row of pulldown (\class{popup}) menus.
 			  Normally displayed in a small dialog above
@@ -144,7 +162,7 @@ application code.
     \sendmethod{dialog_item}{above}{dialog_item}%
     \sendmethod*{dialog_item}{below}{dialog_item}%
     \sendmethod*{dialog_item}{left}{dialog_item}%
-    \sendmethod*{dialog_item}{rigth}{dialog_item}%
+    \sendmethod*{dialog_item}{right}{dialog_item}%
 These relations built a two-dimensional grid of dialog-items and
 determine the relative positioning of the dialog items.  It suffices
 to relate each dialog item to one other item.
@@ -175,7 +193,7 @@ adjacent items with the same alignment will be flushed left, centered
 or flushed right if the alignment is one of {\tt left}, {\tt center}
 or {\tt right}.  The alignment value is normally specified as a class-variable
 and used to determine the layout of rows of \class{button} objects.
-    \sendmethod{dialog_item}{hor_stretch}{}{0..100}
+    \getmethod{graphical}{hor_stretch}{}{0..100}
 After completing the initial layout, possibly remaining horizontal space
 is distributed proportionally over items that return a non-zero value for
 this attribute.  By default, class \class{text_item} yields 100 for this
@@ -235,9 +253,9 @@ sometimes specifying the last argument.
 
 Two problems are currently not taken care of very well.  Aligning
 multiple objects with a single third object can only be achieved
-using a sub-dialog in the form of a device and often requires some
-additional messages.  The dialog of \figref{layoutdemo1} is created using the
-following code:
+using a sub-dialog in the form of a \class{dialog_group} and often
+requires some additional messages.  The dialog of \figref{layoutdemo1}
+is created using the following code:
 
 \begin{pcecode}
 layoutdemo1 :-
@@ -260,24 +278,25 @@ layoutdemo1 :-
 
 \postscriptfig{layoutdemo1}{Aligning multiple items}
 
-In line~3, a \class{device} is added to the dialog to contain the
-stack of buttons.  This device is sent an explicit ->layout_dialog
+In line~3, a \class{dialog_group} is added to the dialog to contain the
+stack of buttons.  This group is sent an explicit ->layout_dialog
 to position the buttons.  Next, the list_browser is placed to the
 right of this stack and the text_item on the next row.
 
-If you try this layout, the first column will hold the device and the
+If you try this layout, the first column will hold the group and the
 text_item and the list_browser will be placed right of this column and
 thus right of the text_item.  Using `dialog_item ->alignment: left'
-enforces the list_browser to flush left towards the device.  Now we
+enforces the list_browser to flush left towards the group.  Now we
 enforce the layout and adjust the bottom and right sides of the
-list_browser to the device and text_item.
+list_browser to the group and text_item.
 
 \index{dialog,resizing}%
 Dialog windows do not reposition their contents if the window is resized
 in the current implementation.  If the window is enlarged, the items stay
 in the top-left corner.  If the window is made smaller, part of the items
 may become invisible.  Resizing can be implemented by the user by
-trapping the `window ->resize_message'.
+trapping the `window ->resize_message', for example to invoke
+`dialog ->layout' with the new size.
 
 
 \section{Modal dialogs: prompting for answers}	\label{sec:modal}

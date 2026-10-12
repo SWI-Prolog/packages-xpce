@@ -266,8 +266,10 @@ to the kinds of pane and their shares, which is what an arrangement is.
 
 All of the below are class variables, set in the \file{Defaults} file as
 described in \chapref{classvar}. The file \file{Defaults.user} that
-ships with \product{} carries all of them as commented examples;
-\menu{Settings/GUI preferences}{} opens your own copy of it.
+ships with \product{} carries all of them as commented examples.
+\menu{Settings/Edit GUI preferences}{} opens a tool to edit the class
+variables of the pane in view and saves the changes to your own
+\file{Defaults} file.
 
 \begin{description}
     \classvarmethod{prolog_ide}{tool_placement}{\{as_arranged,frame,tab,split\}}
@@ -321,11 +323,11 @@ Room made to type a new tab label in, if the tab strip has it. Default is
 
     \classvarmethod{tile}{separator_colour}{colour*}
 Colour of the lines drawn in the gaps that can be dragged. Default is
-\const{@nil}, which draws them in the foreground colour.  This also
-applies to the panes of a frame.
+the theme colour \const{ui_tile_separator}; \const{@nil} draws them in
+the foreground colour.  This also applies to the panes of a frame.
     \classvarmethod{tile}{gap_colour}{colour}
-Colour between and around the panes. Default is
-\const{ui_dialog_background}.
+Colour between and around the panes. Default is the theme colour
+\const{ui_tile_gap}.
     \classvarmethod{tile}{separator_pen}{0..}
 Thickness of these lines. Default is \const{1}; \const{0} draws no line.
     \classvarmethod{tab_frame}{tile_border_root}{int}
