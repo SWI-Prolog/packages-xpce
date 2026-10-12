@@ -1,16 +1,16 @@
 #!/usr/bin/env perl
 
 sub printTeX
-{ s/`([@\w]+)\s*<->([a-z]\w*)/\\index\{\l\1,\\both\{\2\}\}`\\classboth\{\1\}\{\2\}/g;
-  s/`([@\w]+)\s*<-([a-z]\w*)/\\index\{\l\1,\\get\{\2\}\}`\\classget\{\1\}\{\2\}/g;
-  s/`([@\w]+)\s*->([a-z]\w*)/\\index\{\l\1,\\send\{\2\}\}`\\classsend\{\1\}\{\2\}/g;
-  s/<->([a-z]\w*)/\\both\{\1\}/g;
-  s/<-([a-z]\w*)/\\get\{\1\}/g;
-  s/->([a-z]\w*)/\\send\{\1\}/g;
+{ s/`([@\w]+)\s*<->([a-z_]\w*)/\\index\{\l\1,\\both\{\2\}\}`\\classboth\{\1\}\{\2\}/g;
+  s/`([@\w]+)\s*<-([a-z_]\w*)/\\index\{\l\1,\\get\{\2\}\}`\\classget\{\1\}\{\2\}/g;
+  s/`([@\w]+)\s*->([a-z_]\w*)/\\index\{\l\1,\\send\{\2\}\}`\\classsend\{\1\}\{\2\}/g;
+  s/<->([a-z_]\w*)/\\both\{\1\}/g;
+  s/<-([a-z_]\w*)/\\get\{\1\}/g;
+  s/->([a-z_]\w*)/\\send\{\1\}/g;
   s/(^|\s|\()([a-z]\w+)\/((\d+|\[\d+(-|,)\d+\]))/\1\\index\{\2\/\3\}\\predref\{\2\}\{\3\}/g;
   s/(\s+|^)([a-z]\w+)\/\/((\d+|\[\d+(-|,)\d+\]))/\1\\index\{\2\/\/\3\}\\dcgref\{\2\}\{\3\}/g;
   s/(\w\.\w)\.(\s+[a-z])/\1.\\\2/g;
-  s/(^|[^'"\$])<(\w[-~a-z]*\w)>/\1\\bnfmeta\{\2\}/g;
+  s/(^|[^'"\$])<(\w|\w[-~a-zA-Z]*\w)>/\1\\bnfmeta\{\2\}/g;
   s/\\class\{([<\\=>]*)\}/\\verb!\1!/g;
   s/==>/\$\\longrightarrow\$/g;
   s/^((\\index\{[^\}]+\})+) *$/\1%/;
@@ -124,9 +124,20 @@ expandSpecials
 }
 
 
+# Read all input once.  Calling <ARGV> after reaching the end restarts
+# reading, from standard input if there are no more files.  That made
+# us wait for input if the document ends with a code block.
+
+@lines = <>;
+
+sub nextline
+{ return defined($_ = shift(@lines));
+}
+
+
 sub printCode
 { print;
-  while (<ARGV> )
+  while ( &nextline )
   { &expandTabs;
     print;
     if ( /\\end\{(code|verbatim)\}/ )
@@ -139,7 +150,7 @@ sub printCode
 sub printPceCode
 { $line = 0;
   print;
-  while (<ARGV> )
+  while ( &nextline )
   { $line++;
     &expandTabs;
     if ( /\\end\{pcecode\}/ )
@@ -153,13 +164,13 @@ sub printPceCode
 
 
 sub skiptonext
-{ while (<ARGV>)
+{ while ( &nextline )
   { if ( ! /^\s*$/ )
     { return;
     }
     last;
   }
-  while (<ARGV>)
+  while ( &nextline )
   { if ( ! /^\s*$/ )
     { return;
     }
@@ -168,7 +179,7 @@ sub skiptonext
 
 #	MAIN PROGRAM
 
-while (<>)
+while ( &nextline )
 { while ( /\\begin\{pcecode\}/ )
   { &printPceCode;
     print "\n\\noindent\n";

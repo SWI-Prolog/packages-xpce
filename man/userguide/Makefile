@@ -11,6 +11,7 @@ LOG=$(DOC).log
 PDF=$(DOC).pdf
 RERUN="Rerun to get cross-references right"
 CLHIER=figs/pceclasshierarchy.pdf
+PCECMAKE=../../CMakeLists.txt
 
 COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
 	interface.tex graphics.tex pceprolog.tex memory.tex \
@@ -22,9 +23,9 @@ COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
 	resource.tex images.tex summary.tex body.tex driver.tex \
 	mswin.tex balloon.tex threads.tex status.tex \
 	libs.tex findfile.tex toc.tex tabular.tex libdia.tex mlingual.tex \
-	httpd.tex httpd-ex.tex docrender.tex libplot.tex
+	docrender.tex libplot.tex printing.tex
 
-XPCETEX=	xpceusg.tex $(COMMON)
+XPCETEX=	xpceusg.tex version.tex $(COMMON)
 
 all:	$(PDF)
 pdf:	$(PDF)
@@ -53,6 +54,31 @@ html:	$(XPCETEX) $(CLHIER)
 	latex2html xpceusg
 
 tex:	$(XPCETEX)
+
+# version.tex defines \productversion from PCE_VERSION in CMakeLists.txt
+# and \productdate and \productyear from the current date.  The file is
+# only rewritten if its content changes.
+
+version.tex: FORCE
+	@v=`sed -n 's/^set(PCE_VERSION *\([^ )]*\).*/\1/p' $(PCECMAKE)`; \
+	m=`LANG=POSIX date '+%B'`; \
+	y=`date '+%Y'`; \
+	printf '\\newcommand{\\productversion}{%s}\n\\newcommand{\\productdate}{%s}\n\\newcommand{\\productyear}{%s}\n' \
+	  "$$v" "$$m $$y" "$$y" > $@.tmp; \
+	if cmp -s $@.tmp $@; then rm $@.tmp; else mv $@.tmp $@; fi
+
+FORCE:
+
+# Recreate the screenshots in figs from the example code.  Use e.g.
+# `make screenshots FIGS="dialog employee"` to make specific figures.
+# See screenshots/screenshots.pl.
+
+SWIPL=swipl
+
+screenshots:
+	screenshots/shoot.sh $(SWIPL) screenshots/screenshots.pl $(FIGS)
+
+.PHONY: screenshots FORCE
 
 bib:	xpceusg.aux
 	(TEXINPUTS=$(PCETEX):$$TEXINPUTS; \
@@ -88,7 +114,7 @@ clean::
 		*~ figs/*~ \
 		figs/pceclasshierarchy.pdf \
 		figs/class \
-		$(LOGO) summary.tmp
+		$(LOGO) summary.tmp version.tex
 
 
 distclean: clean

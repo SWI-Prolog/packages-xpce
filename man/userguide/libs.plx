@@ -41,10 +41,6 @@ Discusses support for multi-lingual applications.
 This library allows for drapping objects within one \product{}
 application.
 
-    \secoverview{httpd}{Playing WEB (HTTP) server}
-Class \class{httpd} is a subclass of \class{socket} that deals with
-the HTTP protocol.  It allows \product{} to act as a web-server.
-
     \secoverview{docrender}{Document rendering}
 Primitives for rendering mixed text/graphics, handling fonts, alignment,
 tables and other common text-layout primitives.
@@ -60,5 +56,4 @@ tables and other common text-layout primitives.
 \libinput{libplot}
 \libinput{mlingual.tex}
 \libinput{dragdrop.tex}
-\libinput{httpd}
 \libinput{docrender}

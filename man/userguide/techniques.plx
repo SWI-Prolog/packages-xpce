@@ -35,7 +35,7 @@ Discusses a technique to relate objects.
     \secoverview{ugraphics}{User Defined Graphicals}
 Discusses the definition of new graphical primitives.
     \secoverview{printing}{Printing}
-Discusses printing from \product{} applications.
+Discusses printing and exporting graphics as PDF.
 \end{itemize}
 
 \newcommand{\techinput}[1]{\cleardoublepage\input{#1}}

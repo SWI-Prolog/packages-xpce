@@ -22,18 +22,17 @@
 \newcommand{\product}{{\sc xpce}}
 \newcommand{\plainproduct}{XPCE}
 \newcommand{\productpl}{{\sc xpce/p}rolog}
-\newcommand{\productversion}{7.0.0}
 \newcommand{\quintus}{Quintus}
 \newenvironment{xpceonly}{}{}
 \excludecomment{pwonly}
-\newcommand{\productdate}{November 2025}
+\input{version}				% \productversion, \productdate, \productyear
 
 \renewcommand{\runningtitle}{\product{} \productversion}
 \def\booktitle{Programming in XPCE/Prolog}
 \author{\href{mailto:jan@swi-prolog.org}{Jan Wielemaker} \\
 	Anjo Anjewierden\textsuperscript{\dag} \\
-	SWI, University of Amsterdam
-        SWI-Prolog Solutions b.v.}
+	SWI, University of Amsterdam \\
+	SWI-Prolog Solutions b.v.}
 
 \sloppy
 %\psdraft
@@ -55,14 +54,14 @@
 \begin{abstract}
 \productpl{} is a hybrid environment integrating logic programming and
 object-oriented programming for Graphical User Interfaces. Applications
-in \productpl{} are portable across the supported X11 and Win32
-(Windows NT/2000/XP) platforms.
+in \productpl{} are portable across the supported platforms: Linux and
+other Unix systems (X11 and Wayland), MacOS and Windows.
 
-{\it Last updated November, 2025 for \product{} version
+{\it Last updated \productdate{} for \product{} version
  \productversion}
 
-Copyright \copyright\ 1992-2025 University of Amsterdam, SWI-Prolog
-Solutions b.v.
+Copyright \copyright\ 1992-\productyear{} University of Amsterdam,
+SWI-Prolog Solutions b.v.
 \end{abstract}
 
 \hr
@@ -121,20 +120,23 @@ platforms.\\[10pt]
 
 \vfil\noindent
 This document applies to XPCE/Prolog \productversion{} distributed
-as integrated package to SWI-Prolog.
+as integrated package to SWI-Prolog.  Online, the \product{} classes
+are documented by the class browser and reference manual that are
+started using manpce/0 (see \chapref{online}).
 
 \vfil\noindent
 
-XPCE~7 is a major release. \textbf{This manual still reflects mostly
-version 6.6.} \Secref{font} is updated and several new sections have
-been added. See \appref{sdl-driver} (SDL backend), \appref{mswin}
-(Windows notes), \secref{thread} (multi-threading) and
-\appref{xpce-status} (status and future). The main changes for version~7
-are below.
+Much of this manual was written for \product{} versions~5 and~6.
+It has been revised for the current version, but some parts may still
+reflect older versions.  \Appref{sdl-driver} (SDL backend),
+\appref{mswin} (Windows notes), \secref{thread} (multi-threading) and
+\appref{xpce-status} (status and future) are new.  The main changes
+since version~6 are below.
 
 \begin{itemize}
     \item While version~6 has two \jargon{backends}, one for X11 and
-    one for Windows, version~7 is based on portable libraries.   Notably
+    one for Windows, version~7 and later are based on portable
+    libraries.  Notably
     \begin{itemize}
         \item \href{https://www.libsdl.org}{SDL3} is used for window
 	management and accessing devices.
@@ -145,7 +147,7 @@ are below.
 	internationalization.
     \end{itemize}
     With this change of backend, \product{} now supports X11,
-    \href{https://wayland.freedesktop.org/}{Wayland}, MacSOS
+    \href{https://wayland.freedesktop.org/}{Wayland}, MacOS
     \href{https://en.wikipedia.org/wiki/Cocoa_(API)}{Cocoa} and
     Windows.  Notably the support for Wayland and Cocoa rather
     than X11 makes \product{} future proof and provides a better
@@ -160,12 +162,28 @@ are below.
     over all platforms. Pango is used for font management. Colours use
     the 32-bit RGBA model (Red/Green/Blue/Alpha).  All images are RGBA
     images.  Loading images is done by the SDL_image library, supporting
-    many more formats.
+    many more formats, including SVG.  Graphics are exported as PDF;
+    PostScript support has been removed.
+
+    \item \product{} supports \jargon{themes}.  Colours used by the
+    user interface are \jargon{semantic} colours that follow the
+    selected (light or dark) theme and, where possible, the colours of
+    the desktop.  Dialog items have a flat, themed look and can be
+    operated using the keyboard.
+
+    \item Coordinates and sizes are no longer restricted to integers.
+    The type \const{num} accepts both integers and floats.
+
+    \item The development tools are integrated in a single window that
+    holds the tools as tabs and panes.
 
     \item \product{}~7 relaxes multi-threaded access.  When \product{}
     calls out to Prolog its global lock is released, to be re-acquired
     when Prolog has finished and control returns to \product{}.  This
     model is similar to the Python \jargon{GIL}.
+
+    \item The C and C++ interfaces for embedding \product{} in other
+    languages than Prolog have been removed.
 \end{itemize}
 
 \vfil\noindent
@@ -176,14 +194,11 @@ BSD-2 for more details.
 
 \vfil\vfil
 \noindent
-Titlepage created using \product{} 4.8.10 on Windows-NT 4.0
+Last updated \productdate{} for \product{} version \productversion
 \vfil
 \noindent
-Last updated February 2025 for \product{} version \productversion
-\vfil
-\noindent
-Copyright \copyright\ 1992-2025 University of Amsterdam and SWI-Prolog
-Solutions b.v.
+Copyright \copyright\ 1992-\productyear{} University of Amsterdam and
+SWI-Prolog Solutions b.v.
 \end{titlepage}
 \end{xpceonly}
 

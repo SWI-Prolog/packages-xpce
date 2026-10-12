@@ -203,12 +203,45 @@ substitute_string(_, _, I, I).
 
 init_args(ClassName, Descr) :-
     get(@pce, convert, ClassName, class, Class),
-    get(Class, send_method, initialise, SM),
-    get(SM, man_summary, Summary),
-    new(R, regex('.*:\\s +\\(.*\\)\t.*')),
-    send(R, match, Summary),
+    class_arg_names(Class, Names),
     !,
-    get(R, register_value, Summary, 1, name, D0),
+    atomic_list_concat(Names, ', ', D0),
     substitute('|', '$|$', D0, Descr).
 init_args(_, '').
 
+%   class_arg_names(+Class, -Names)
+%
+%   Names is a list of the argument names used to describe instances
+%   of Class.  This is the class <-term_names if defined.  Otherwise
+%   we use the argument names of ->initialise.
+
+class_arg_names(Class, Names) :-
+    get(Class, term_names, TermNames),
+    TermNames \== @nil,
+    !,
+    vector_list(TermNames, Names).
+class_arg_names(Class, Names) :-
+    get(Class, send_method, initialise, SM),
+    get(SM, types, Types),
+    vector_list(Types, TypeList),
+    maplist(type_arg_name, TypeList, Names).
+
+type_arg_name(Type, Name) :-
+    (   get(Type, argument_name, Name0),
+        Name0 \== @nil
+    ->  true
+    ;   get(Type, name, Name0)
+    ),
+    (   get(Type, vector, @on),
+        \+ sub_atom(Name0, _, _, 0, '...')
+    ->  atom_concat(Name0, ' ...', Name)
+    ;   Name = Name0
+    ).
+
+vector_list(Vector, List) :-
+    get(Vector, size, Size),
+    findall(E,
+            ( between(1, Size, I),
+              get(Vector, element, I, E)
+            ),
+            List).
