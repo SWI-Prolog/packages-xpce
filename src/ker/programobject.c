@@ -175,7 +175,7 @@ static char *T_debug[] =
 /* Instance Variables */
 
 static vardecl var_programObject[] =
-{ IV(NAME_dflags, "int", IV_BOTH,
+{ IV(NAME_dflags, "alien:uintptr_t", IV_NONE,
      NAME_debugging, "Debugging-flags of the program_object")
 };
 
@@ -230,6 +230,9 @@ ClassDecl(programObject_decls,
 status
 makeClassProgramObject(Class class)
 { declareClass(class, &programObject_decls);
+					/* do not save <-dflags; loading */
+					/* uses ->initialise_new_slot */
+  setLoadStoreFunctionClass(class, NULL, storeSlotsObject);
 
   succeed;
 }

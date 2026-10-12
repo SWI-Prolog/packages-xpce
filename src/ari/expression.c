@@ -179,9 +179,16 @@ evaluateExpression(Any e, NumericValue v)
       e = e2;
   }
 
-  if ( isInteger(e) )			/* int */
-  { v->value.i = valInt(e);
-    v->type    = V_INTEGER;
+  if ( isNum(e) )			/* int or float */
+  { double f = valNum(e);
+
+    if ( f == (double)(intptr_t)f )
+    { v->value.i = (intptr_t)f;
+      v->type    = V_INTEGER;
+    } else
+    { v->value.f = f;
+      v->type    = V_DOUBLE;
+    }
     succeed;
   }
   if ( instanceOfObject(e, ClassNumber) ) /* number */

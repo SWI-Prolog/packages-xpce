@@ -362,12 +362,13 @@ node(TC, From:any, Node:toc_node) :<-
 
 node_image(TC, From:any, Gr:graphical) :<-
     "Get node image from graphical, node or ID"::
-    (   send(From, instance_of, graphical)
-    ->  Gr = From
-    ;   send(From, instance_of, toc_node)
+    (   send(From, instance_of, toc_node)
     ->  get(From, image, Gr)
-    ;   get(TC?nodes, member, From, Node),
-        get(Node, image, Gr)
+    ;   get(TC?nodes, member, From, Node)  % before graphical: graphicals
+    ->  get(Node, image, Gr)               % may be node identifiers
+    ;   send(From, instance_of, graphical),
+        get(From, device, TC)
+    ->  Gr = From
     ).
 
 :- pce_end_class(toc_tree).

@@ -1783,7 +1783,7 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
 
       if ( GetInteger(a, &r) )		/* pass atoms, ints and floats */
 	return cToPceInteger(r);	/* as xpce objects anyhow */
-      if ( GetFloat(t, &f) )
+      if ( GetFloat(a, &f) )
 	return cToPceReal(f);
 
       h = makeTermHandle(a);		/* real terms */
@@ -1863,7 +1863,11 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
 #endif
 
     if ( GetFloat(t, &f) )		/* floating point number */
+    { if ( new )			/* not an object: new(X, 3.5) */
+	goto type_error;
+
       return cToPceReal(f);
+    }
 
     if ( PL_get_nil(t) )
     { PceName classname = type2vectorClassName(type);
@@ -2728,8 +2732,44 @@ int r;
 }
 #endif
 
+/* XPCE may call Prolog while a Prolog exception is pending.  For example,
+ * converting a term to an object raises an exception if it holds an
+ * unknown @Ref, after which XPCE reports the conversion error, which may
+ * call Prolog.  Prolog may not be called with a pending exception, so we
+ * put it aside while calling Prolog.  If the call did not raise a new
+ * exception, the pending one is restored.
+ */
+
+static term_t
+save_pending_exception(void)
+{
+#ifdef SWI
+  term_t ex;
+
+  if ( (ex=PL_exception(0)) )
+  { term_t saved = PL_new_term_ref();
+
+    if ( saved && PL_put_term(saved, ex) )
+    { PL_clear_exception();
+      return saved;
+    }
+  }
+#endif
+
+  return 0;
+}
+
+static void
+restore_pending_exception(term_t saved)
+{
+#ifdef SWI
+  if ( saved && !PL_exception(0) )
+    PL_raise_exception(saved);
+#endif
+}
+
 static int
-PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
+do_PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
 { Fid fid;
   Module m;
   PceCValue value;
@@ -2805,8 +2845,18 @@ PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
 }
 
 
+static int
+PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
+{ term_t saved = save_pending_exception();
+  int rc = do_PrologSend(prolog, sel, argc, argv);
+
+  restore_pending_exception(saved);
+  return rc;
+}
+
+
 static PceObject
-PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
+do_PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
 { Fid fid;
   Module m;
   atom_t name;
@@ -2884,6 +2934,16 @@ PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
 out:
   CloseForeign(fid);
   return obj;
+}
+
+
+static PceObject
+PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
+{ term_t saved = save_pending_exception();
+  PceObject rc = do_PrologGet(prolog, sel, argc, argv);
+
+  restore_pending_exception(saved);
+  return rc;
 }
 
 
@@ -3009,7 +3069,7 @@ XPCE. Who says me what happens to it?  - - - - - - - - - - - - - - - -
 - - - - - - - - - - - - - - - - - - - - - */
 
 static int
-PrologCall(PceGoal goal)
+do_PrologCall(PceGoal goal)
 { prolog_call_data *pcd;
 
   if ( !pce_initialised )
@@ -3086,6 +3146,16 @@ PrologCall(PceGoal goal)
   }
 
   return PCE_FAIL;
+}
+
+
+static int
+PrologCall(PceGoal goal)
+{ term_t saved = save_pending_exception();
+  int rc = do_PrologCall(goal);
+
+  restore_pending_exception(saved);
+  return rc;
 }
 
 

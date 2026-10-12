@@ -352,6 +352,34 @@ ws_rounded_popups(Any fr)
 }
 
 
+/* Limit the size of a window to the area of its display.  A frame can
+ * ask for any size, e.g., `view ->size` takes characters, but too large
+ * windows exceed the texture size of the renderer and may crash the
+ * graphics driver.  W and H are in SDL window coordinates, as is the
+ * <-area of a display.
+ */
+
+static bool
+constrain_to_display(DisplayObj d, int *w, int *h)
+{ bool changed = false;
+
+  if ( d && notNil(d) && notDefault(d) )
+  { Area da = d->area;
+
+    if ( valInt(da->w) > 0 && *w > valInt(da->w) )
+    { *w = valInt(da->w);
+      changed = true;
+    }
+    if ( valInt(da->h) > 0 && *h > valInt(da->h) )
+    { *h = valInt(da->h);
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
+
 /**
  * Create the specified frame.
  *
@@ -412,6 +440,14 @@ ws_create_frame(FrameObj fr)
     x = x/scale; y = y/scale; w = w/scale; h = h/scale;
 #endif
 
+    if ( constrain_to_display(fr->display, &w, &h) )
+    { float s = 1.0;			/* not all backends report the */
+#if O_HDPX				/* resulting size */
+      s = scale;
+#endif
+      assign(fr->area, w, toInt((int)(w*s)));
+      assign(fr->area, h, toInt((int)(h*s)));
+    }
     DEBUG(NAME_sdl, Cprintf("Create %s as transient for %p at %d %d %dx%d\n",
 			    pp(fr), parent, x, y, w, h));
 
@@ -1569,6 +1605,7 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
       float scale = ws_pixel_density_display(fr);
       iw = iw/scale; ih = ih/scale;
 #endif
+      constrain_to_display(notDefault(dsp) ? dsp : fr->display, &iw, &ih);
       DEBUG(NAME_set,
 	    Cprintf("SDL_SetWindowSize(%s, %d, %d)\n",
 		    pp(fr), iw, ih));

@@ -93,9 +93,45 @@ vis_icon(V, Icon:image) :<-
 
 vis_icon_label(V, Label:name) :<-
     (   object(V, Term)
-    ->  term_to_atom(Term, Label)
+    ->  with_output_to(atom(Label), write_icon_label(Term))
     ;   Label = V->>class_name
     ).
+
+%   write_icon_label(+Term)
+%
+%   Write the description of a visual.  Arguments that are anonymous
+%   objects are written as <class>, as their reference is long and
+%   differs between runs.
+
+write_icon_label(Term) :-
+    compound(Term),
+    \+ is_list(Term),
+    sub_term(Ref, Term),
+    blob(Ref, pce),
+    !,
+    compound_name_arguments(Term, Name, Args),
+    format('~q(', [Name]),
+    write_icon_args(Args),
+    format(')').
+write_icon_label(Term) :-
+    format('~q', [Term]).
+
+write_icon_args([]).
+write_icon_args([H|T]) :-
+    write_icon_arg(H),
+    (   T == []
+    ->  true
+    ;   format(','),
+        write_icon_args(T)
+    ).
+
+write_icon_arg(Arg) :-
+    blob(Arg, pce),
+    !,
+    get(Arg, class_name, Class),
+    format('<~w>', [Class]).
+write_icon_arg(Arg) :-
+    write_icon_label(Arg).
 
 vis_expandable(V) :->
     \+ (ContainsMethod = class(graphical)->>get_method(contains),

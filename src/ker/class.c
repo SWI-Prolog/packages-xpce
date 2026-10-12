@@ -2111,7 +2111,8 @@ appendManSummary(TextBuffer tb, Any obj, CharArray summary)
 { static Name book = NULL;
 
   CAppendTextBuffer(tb, "\t");
-  if ( send(obj, NAME_hasHelp, EAV) )
+  if ( hasSendMethodObject(obj, NAME_hasHelp) &&	/* manual is loaded */
+       send(obj, NAME_hasHelp, EAV) )
   { if ( !book )
       book = UTF8ToName("\xF0\x9F\x93\x96");	/* U+1F4D6 OPEN BOOK */
     appendTextBuffer(tb, (CharArray)book, ONE);

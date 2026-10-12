@@ -941,6 +941,8 @@ pce_type_description(*(T)) -->
     pce_type_description(T), "*".
 pce_type_description(...(T)) -->
     pce_type_description(T), " ...".
+pce_type_description(..(Low, High)) -->
+    pce_type_description(Low), "..", pce_type_description(High).
 
 word_list((A,B)) -->
     !,

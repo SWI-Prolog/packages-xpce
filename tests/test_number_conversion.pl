@@ -68,7 +68,9 @@ test_number_conversion :-
                 real_slot,
                 overflow,
                 text_to_number,
-                shortest
+                shortest,
+                expression,
+                new_number
               ]).
 
 %!  num_close(+A, +B) is semidet.
@@ -252,3 +254,31 @@ test(printed, Texts == ['0.6', '3.14159', '-2.5', '3', '1e-20']) :-
             [0.6, 3.14159, -2.5, 3, 1.0e-20], Texts).
 
 :- end_tests(shortest).
+
+:- begin_tests(expression).
+
+%   Arithmetic objects evaluate num arguments as floats, rather than
+%   truncating them to integers.
+
+test(float_args, L == [5.5, 5, 2.5, 3.5, 3]) :-
+    maplist([E,V]>>get(E, value, V),
+            ['+'(3,2.5), '*'(2.5,2), '-'(3,0.5), '/'(7,2), '+'(1.5,1.5)],
+            L).
+
+:- end_tests(expression).
+
+:- begin_tests(new_number).
+
+%   new/2 must create an object; a number is not an object.
+
+test(float, error(type_error(pce(object), 3.5))) :-
+    new(_, 3.5).
+test(integer, error(type_error(pce(object), 3))) :-
+    new(_, 3).
+test(prolog_float, X == 2.5) :-
+    new(C, chain),
+    send(C, append, prolog(2.5)),
+    get(C, head, X),
+    free(C).
+
+:- end_tests(new_number).

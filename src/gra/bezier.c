@@ -637,11 +637,11 @@ static classvardecl rc_bezier[] =
 
 /* Class Declaration */
 
-static Name bezier_termnames[] = { NAME_width, NAME_height };
+static Name bezier_termnames[] = { NAME_start, NAME_end, NAME_control1, NAME_control2 };
 
 ClassDecl(bezier_decls,
           var_bezier, send_bezier, get_bezier, rc_bezier,
-          2, bezier_termnames);
+          4, bezier_termnames);
 
 
 /* Point-in-shape test for events.  Bezier's default bounding box is
