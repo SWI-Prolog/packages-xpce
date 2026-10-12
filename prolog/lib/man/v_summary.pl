@@ -75,7 +75,7 @@ initialise(S, Att:name, Size:size) :->
     send(S, send_super, initialise, @default, Size),
     send(S, slot, displayed_attribute, Att),
     send(S, font, ListFont),
-    send(S, tab_stops, vector(20, 300)),
+    send(S, tab_stops, vector(20, 300, 325)),  % kind, name, book, summary
     send_list(S, [hor_stretch, hor_shrink], 100),
     send_list(S, [ver_stretch, ver_shrink], 1000),
     send(S, style, header, style(font := HeaderFont)),

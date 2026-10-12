@@ -439,12 +439,8 @@ getManSummaryVariable(Variable v)
   appendTextBuffer(tb, (CharArray)v->name, ONE);
   CAppendTextBuffer(tb, ": ");
   appendTextBuffer(tb, (CharArray)v->type->fullname, ONE);
-  if ( notNil(v->summary) )
-  { CAppendTextBuffer(tb, "\t");
-    appendTextBuffer(tb, (CharArray)v->summary, ONE);
-  }
-  if ( send(v, NAME_hasHelp, EAV) )
-    CAppendTextBuffer(tb, " (+)");
+  appendManSummary(tb, v,
+		   notNil(v->summary) ? (CharArray)v->summary : NULL);
 
   str = getContentsTextBuffer(tb, ZERO, DEFAULT);
   doneObject(tb);

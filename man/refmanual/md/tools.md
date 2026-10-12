@@ -758,9 +758,9 @@ The next field provides the name of the card.  When there is enough
 space, a third field is added that provides a 40 character summary
 string of the contents of the card.
 
-When the summary field is tagged with _(+)_, the description field is
-not empty.  A double click will show the description field in the card
-viewer.
+If the reference manual documents the object, an open book
+(📖) is shown just before the summary.  A double click will
+show the documentation in the card viewer.
 
 **User interface**:
 

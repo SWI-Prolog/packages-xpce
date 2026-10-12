@@ -94,6 +94,7 @@ sandbox_tracer_config :-
 :- use_module(library(trace/status), []).
 :- use_module(library(pce_xref), []).
 :- use_module(library(pce_manual), []).
+:- use_module(library(pldoc/man_index), [manual_object/5]).
 :- use_module(library(pce_html_manual), []).  % defines swi_man_xpce
 :- use_module(library(swi/pce_profile), []).
 :- use_module(library(trace/exceptions), []).
@@ -1633,6 +1634,26 @@ test(all_in_the_display_shows_everything,
     matches(Tool, Restored),
     get(Display, selection, Chain),
     chain_list(Chain, Selection).
+
+%       The summary of an entry has a column with a book before the
+%       summary if the manual documents it.  This needs the index of
+%       the generated manual.
+
+test(a_documented_entry_has_a_book, [condition(has_manual_index),
+                                     Book == "\x1F4D6\"]) :-
+    get(@pce, convert, tile, class, Class),
+    summary_columns(Class, [_Kind, _Name, Book, _Summary]).
+test(an_undocumented_entry_has_none, Book == "") :-
+    new(Class, class(test_undocumented_class)),
+    summary_columns(Class, [_Kind, _Name, Book|_]).
+
+has_manual_index :-
+    catch(manual_object(xpce(tile, ivar, hor_stretch), _, _, _, _), _, fail).
+
+summary_columns(Obj, Columns) :-
+    get(Obj, man_summary, Summary),
+    get(Summary, value, String),
+    split_string(String, "\t", "", Columns).
 
 %   click_item(+Menu, +Value, +Time)
 %

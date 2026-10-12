@@ -43,6 +43,7 @@ COMMON(Class)	getConvertClass(Class class_class, Any obj);
 COMMON(status)	initClass(Class class);
 COMMON(status)	instanceVariableClass(Class class, Variable var);
 COMMON(void)	fixSendFunctionClass(Class class, Name selector);
+COMMON(void)	appendManSummary(TextBuffer tb, Any obj, CharArray summary);
 COMMON(void)	fixGetFunctionClass(Class class, Name selector);
 COMMON(status)	sendMethodClass(Class class, SendMethod m);
 COMMON(status)	getMethodClass(Class class, GetMethod m);

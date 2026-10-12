@@ -2101,6 +2101,28 @@ append_class_header(Class cl, TextBuffer tb)
 }
 
 
+/* Append the last columns of a <-man_summary: a book if the manual
+ * documents obj (->has_help) and the summary.  See also man_book/2
+ * in library(man/util).
+ */
+
+void
+appendManSummary(TextBuffer tb, Any obj, CharArray summary)
+{ static Name book = NULL;
+
+  CAppendTextBuffer(tb, "\t");
+  if ( send(obj, NAME_hasHelp, EAV) )
+  { if ( !book )
+      book = UTF8ToName("\xF0\x9F\x93\x96");	/* U+1F4D6 OPEN BOOK */
+    appendTextBuffer(tb, (CharArray)book, ONE);
+  }
+  if ( summary )
+  { CAppendTextBuffer(tb, "\t");
+    appendTextBuffer(tb, summary, ONE);
+  }
+}
+
+
 static StringObj
 getManHeaderClass(Class cl)
 { TextBuffer tb;
@@ -2133,12 +2155,8 @@ getManSummaryClass(Class cl)
   CAppendTextBuffer(tb, "C\t");
   append_class_header(cl, tb);
 
-  if ( notNil(cl->summary) )
-  { CAppendTextBuffer(tb, "\t");
-    appendTextBuffer(tb, (CharArray)cl->summary, ONE);
-  }
-  if ( send(cl, NAME_hasHelp, EAV) )
-    CAppendTextBuffer(tb, " (+)");
+  appendManSummary(tb, cl,
+		   notNil(cl->summary) ? (CharArray)cl->summary : NULL);
 
   str = getContentsTextBuffer(tb, ZERO, DEFAULT);
   doneObject(tb);

@@ -377,12 +377,8 @@ getManSummaryMethod(Method m)
     appendTextBuffer(tb, (CharArray)gm->return_type->fullname, ONE);
   }
 
-  if ( (s = getSummaryMethod(m)) )
-  { CAppendTextBuffer(tb, "\t");
-    appendTextBuffer(tb, (CharArray)s, ONE);
-  }
-  if ( send(m, NAME_hasHelp, EAV) )
-    CAppendTextBuffer(tb, " (+)");
+  s = getSummaryMethod(m);
+  appendManSummary(tb, m, s ? (CharArray)s : NULL);
 
   str = getContentsTextBuffer(tb, ZERO, DEFAULT);
   doneObject(tb);

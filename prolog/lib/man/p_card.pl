@@ -340,11 +340,8 @@ has_source(_C) :->
 
 man_summary(C, S) :<-
     "General summary string"::
-    new(S, string('%s\t%s\t%s', C?man_id, C?name, C?summary)),
-    (   send(C, has_help)
-    ->  send(S, append, ' (+)')
-    ;   true
-    ).
+    man_book(C, Book),
+    new(S, string('%s\t%s\t%s\t%s', C?man_id, C?name, Book, C?summary)).
 
 man_name(C, S) :<-
     "General name string"::

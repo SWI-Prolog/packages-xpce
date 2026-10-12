@@ -46,6 +46,7 @@
         , man_classification/2
         , super_or_delegate_class/2     % +Class, -SuperOrDelegate
         , class_of_type/2               % +Type, -Class
+        , man_book/2                    % +Obj, -Book
         ]).
 
 :- use_module(library(pce)).
@@ -70,6 +71,18 @@
 :- pce_global(@man_nl_regex,            new(regex(string('\n')))).
 :- pce_global(@man_indent_message,
               new(message(@arg1, replace, @arg2, @man_indent))).
+
+%!  man_book(+Obj, -Book) is det.
+%
+%   Book is an open book if the manual documents Obj and '' otherwise.
+%   It is the column before the summary in a <-man_summary.  See also
+%   appendManSummary() in C.
+
+man_book(Obj, Book) :-
+    (   send(Obj, has_help)
+    ->  Book = '\x1F4D6\'
+    ;   Book = ''
+    ).
 
 man_header(Object, Header) :<-
     get(Object, man_name, Header).

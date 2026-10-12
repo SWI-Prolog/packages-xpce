@@ -637,12 +637,8 @@ getManSummaryClassVariable(ClassVariable cv)
   CAppendTextBuffer(tb, ": ");
   appendTextBuffer(tb, (CharArray)getCapitaliseName(cv->type->fullname), ONE);
 
-  if ( (tmp = getSummaryClassVariable(cv)) )
-  { CAppendTextBuffer(tb, "\t");
-    appendTextBuffer(tb, (CharArray)tmp, ONE);
-  }
-  if ( send(cv, NAME_hasHelp, EAV) )
-    CAppendTextBuffer(tb, " (+)");
+  tmp = getSummaryClassVariable(cv);
+  appendManSummary(tb, cv, tmp ? (CharArray)tmp : NULL);
 
   str = getContentsTextBuffer(tb, ZERO, DEFAULT);
   doneObject(tb);

@@ -39,6 +39,7 @@
 :- use_module(library(pce)).
 :- use_module(util).
 :- consult(classmap).
+:- autoload(library(pce_html_manual), [man_documented/1]).
 :- require([ absolute_file_name/3
            , append/3
            , between/3
@@ -385,8 +386,9 @@ initialise(G, Name:name, Summary:[string]*) :->
     ;   S = Summary
     ),
     class_name(@Name, ClassName),
+    man_book(G, Book),
     send(G, slot, man_summary,
-         string('O\t@%s/%s\t%s', Name, ClassName, S)),
+         string('O\t@%s/%s\t%s\t%s', Name, ClassName, Book, S)),
     send(@man_globals, append, Name, G).
 
 lookup(_, Name:name, G) :<-
@@ -490,13 +492,8 @@ man_card(Obj, Create:[bool], Card) :<-
 
 
 has_help(Obj) :->
-    "Test if object is documented"::
-    (   get(Obj, man_card, Card),
-        (   get(Card, description, Description), Description \== @nil
-        ;   get(Card, related, see_also, _)
-        )
-    ;   get(Obj, man_inherited_attribute, description, _)
-    ).
+    "Test if the reference manual documents the object"::
+    man_documented(Obj).
 
 
 man_create_card(Obj, Card) :<-
@@ -827,13 +824,10 @@ name(E, Name:name) :<-
 man_summary(E, Summary:string) :<-
     "Summary string"::
     get(E, slot, format, Format),
-    new(Summary, string('!\t%s\t%s\t%s',
-                        E?id, E?kind, Format)),
-    send(Summary, translate, '\n', ' '),
-    (   send(E, has_help)
-    ->  send(Summary, append, ' (+)')
-    ;   true
-    ).
+    man_book(E, Book),
+    new(Summary, string('!\t%s\t%s\t%s\t%s',
+                        E?id, Book, E?kind, Format)),
+    send(Summary, translate, '\n', ' ').
 
 man_card_class(_E, Class:class) :<-
     "Manual card type"::

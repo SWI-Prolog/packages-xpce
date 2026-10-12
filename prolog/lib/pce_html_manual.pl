@@ -33,7 +33,8 @@
 */
 
 :- module(pce_html_manual,
-          [ man_html_object/1            % +xpce-object
+          [ man_html_object/1,           % +xpce-object
+            man_documented/1             % +xpce-object
           ]).
 :- use_module(library(pce)).
 :- use_module(library(doc/load)).
@@ -69,6 +70,36 @@ man_html_object(Obj) :-
     open_doc_browser(URL).
 man_html_object(Obj) :-
     print_message(warning, pce_html_manual(no_help(Obj))).
+
+%!  man_documented(+Object) is semidet.
+%
+%   True if the reference manual has an entry for Object: a class, a
+%   method, variable or class variable, a global object, an error or
+%   an example.
+
+man_documented(Obj) :-
+    object_spec(Obj, Spec),
+    spec_documented(Spec),
+    !.
+
+spec_documented(Class) :-
+    atom(Class),
+    !,
+    safe_id(Class, Safe),
+    atom_concat('sec:class-', Safe, SecId),
+    manual_object(section(_, _, SecId, _), _, _, _, _).
+spec_documented(object(Ref)) :-
+    !,
+    global_section_file(Ref, _).
+spec_documented(error(Id)) :-
+    !,
+    error_section_file(Id, _).
+spec_documented(example(Name)) :-
+    !,
+    example_section_file(Name, _).
+spec_documented(Spec) :-
+    spec_to_xpce_term(Spec, xpce(Class, Kind, Name)),
+    resolve_member_kind(Class, Kind, Name, _, _).
 
 object_url(Obj, URL) :-
     object_spec(Obj, Spec),
