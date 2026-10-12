@@ -83,6 +83,9 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   assign(lb,   cancel_message,	      NIL);
   assign(lb,   multiple_selection,    OFF);
   assign(lb,   selection,             NIL);
+  lb->selection_depth = 0;
+  lb->selection_dirty = false;
+  lb->selection_before = NIL;
   assign(lb,   start,		      ZERO);
   assign(lb,   search_string,         NIL);
   assign(lb,   search_origin,         ZERO);
@@ -1092,8 +1095,89 @@ eventListBrowser(ListBrowser lb, EventObj ev)
 		*         EDIT FUNCTIONS	*
 		********************************/
 
+/* ->selection_changed is sent once after an operation that changed the
+ * selection, however it was changed: by the mouse, the keyboard, or a
+ * method.  Operations nest (e.g., ->change_selection: set deselects and
+ * selects), so we count the depth and send only when the outermost one
+ * completes and the selection differs from what it was when it started.
+ * It is sent to the browser if we are part of one, so that subclasses
+ * of both classes can redefine it.
+ */
+
+static int
+selectionSize(Any sel)
+{ if ( isNil(sel) )
+    return 0;
+  if ( instanceOfObject(sel, ClassChain) )
+    return valInt(((Chain)sel)->size);
+  return 1;
+}
+
+static bool
+selectionMember(Any sel, Any di)
+{ if ( instanceOfObject(sel, ClassChain) )
+    return memberChain(sel, di);
+  return sel == di;
+}
+
+static bool
+sameSelection(Any s1, Any s2)
+{ if ( selectionSize(s1) != selectionSize(s2) )
+    return false;
+
+  if ( instanceOfObject(s1, ClassChain) )
+  { Cell cell;
+
+    for_cell(cell, (Chain)s1)
+    { if ( !selectionMember(s2, cell->value) )
+	return false;
+    }
+    return true;
+  }
+
+  return isNil(s1) || selectionMember(s2, s1);
+}
+
+static void
+beginSelectionChange(ListBrowser lb)
+{ if ( lb->selection_depth++ == 0 )
+  { Any sel = lb->selection;
+
+    if ( instanceOfObject(sel, ClassChain) )
+    { sel = getCopyChain(sel);
+      addCodeReference(sel);
+    }
+    lb->selection_before = sel;
+  }
+}
+
+static void
+endSelectionChange(ListBrowser lb)
+{ if ( --lb->selection_depth == 0 )
+  { Any before = lb->selection_before;
+    bool changed = ( lb->selection_dirty &&
+		     !sameSelection(before, lb->selection) );
+
+    lb->selection_before = NIL;
+    lb->selection_dirty = false;
+    if ( instanceOfObject(before, ClassChain) )
+    { delCodeReference(before);
+      freeableObj(before);
+    }
+
+    if ( changed && !isFreeingObj(lb) )
+      send(lbReceiver(lb), NAME_selectionChanged, EAV);
+  }
+}
+
 static status
-changeSelectionListBrowser(ListBrowser lb, Name action, DictItem di)
+selectionChangedListBrowser(ListBrowser lb)
+{ succeed;
+}
+
+
+static status
+changeSelectionListBrowser_(ListBrowser lb, Name action, DictItem di)
 { cancelSearchListBrowser(lb);
 
   if ( action == NAME_cancel )
@@ -1175,6 +1259,18 @@ changeSelectionListBrowser(ListBrowser lb, Name action, DictItem di)
 }
 
 
+static status
+changeSelectionListBrowser(ListBrowser lb, Name action, DictItem di)
+{ status rc;
+
+  beginSelectionChange(lb);
+  rc = changeSelectionListBrowser_(lb, action, di);
+  endSelectionChange(lb);
+
+  return rc;
+}
+
+
 status
 forwardListBrowser(ListBrowser lb, Name action)
 { if ( notNil(lb->selection) )
@@ -1216,13 +1312,18 @@ selectedListBrowser(ListBrowser lb, DictItem di)
 
 static status
 deselectListBrowser(ListBrowser lb, DictItem di)
-{ if ( instanceOfObject(lb->selection, ClassChain) )
+{ beginSelectionChange(lb);
+  if ( instanceOfObject(lb->selection, ClassChain) )
   { if ( deleteChain(lb->selection, di) )
-      ChangeItemListBrowser(lb, di);
+    { ChangeItemListBrowser(lb, di);
+      lb->selection_dirty = true;
+    }
   } else if ( notNil(lb->selection) && (DictItem) lb->selection == di )
   { assign(lb, selection, NIL);
     ChangeItemListBrowser(lb, di);
+    lb->selection_dirty = true;
   }
+  endSelectionChange(lb);
 
   succeed;
 }
@@ -1233,6 +1334,7 @@ selectListBrowser(ListBrowser lb, DictItem di)
 { if ( selectedListBrowser(lb, di) )
     succeed;
 
+  beginSelectionChange(lb);
   if ( lb->multiple_selection == ON )
   { appendChain(lb->selection, di);
     ChangeItemListBrowser(lb, di);
@@ -1242,6 +1344,8 @@ selectListBrowser(ListBrowser lb, DictItem di)
     assign(lb, selection, di);
     ChangeItemListBrowser(lb, di);
   }
+  lb->selection_dirty = true;
+  endSelectionChange(lb);
 
   succeed;
 }
@@ -1249,13 +1353,15 @@ selectListBrowser(ListBrowser lb, DictItem di)
 
 static status
 clearSelectionListBrowser(ListBrowser lb)
-{ if ( instanceOfObject(lb->selection, ClassChain) )
+{ beginSelectionChange(lb);
+  if ( instanceOfObject(lb->selection, ClassChain) )
   { Chain ch = (Chain) lb->selection;
 
     while( notNil(ch->head) )
       deselectListBrowser(lb, ch->head->value);
   } else if ( notNil(lb->selection) )
     deselectListBrowser(lb, lb->selection);
+  endSelectionChange(lb);
 
   succeed;
 }
@@ -1263,7 +1369,8 @@ clearSelectionListBrowser(ListBrowser lb)
 
 status
 selectionListBrowser(ListBrowser lb, Any obj)
-{ clearSelectionListBrowser(lb);
+{ beginSelectionChange(lb);
+  clearSelectionListBrowser(lb);
 
   if ( instanceOfObject(obj, ClassChain) )
   { Chain ch = obj;
@@ -1273,6 +1380,7 @@ selectionListBrowser(ListBrowser lb, Any obj)
       sendv(lb, NAME_select, 1, (Any *)&cell->value);
   } else if ( notNil(obj) )
     selectListBrowser(lb, obj);
+  endSelectionChange(lb);
 
   succeed;
 }
@@ -1581,7 +1689,8 @@ selectionStyleListBrowser(ListBrowser lb, Style style)
 static status
 multipleSelectionListBrowser(ListBrowser lb, BoolObj val)
 { if ( lb->multiple_selection != val )
-  { if ( val == ON )
+  { beginSelectionChange(lb);
+    if ( val == ON )
     { if ( isNil(lb->selection) )
 	assign(lb, selection, newObject(ClassChain, EAV));
       else
@@ -1603,6 +1712,7 @@ multipleSelectionListBrowser(ListBrowser lb, BoolObj val)
       }
     }
     assign(lb, multiple_selection, val);
+    endSelectionChange(lb);
   }
 
   succeed;
@@ -1645,10 +1755,17 @@ ClearListBrowser(ListBrowser lb)
     lb->start_cell = NIL;
     assign(lb, start, ZERO);
 
+    beginSelectionChange(lb);
     if ( instanceOfObject(lb->selection, ClassChain) )
-      clearChain(lb->selection);
-    else
-      assign(lb, selection, NIL);
+    { if ( !emptyChain(lb->selection) )
+      { clearChain(lb->selection);
+	lb->selection_dirty = true;
+      }
+    } else if ( notNil(lb->selection) )
+    { assign(lb, selection, NIL);
+      lb->selection_dirty = true;
+    }
+    endSelectionChange(lb);
 
     current_dict = NULL;			/* clears cache */
     InsertTextImage(lb->text_image, ZERO, toInt(size * -BROWSER_LINE_WIDTH));
@@ -1816,7 +1933,13 @@ static vardecl var_listBrowser[] =
   IV(NAME_selectionOrigin, "int*", IV_NONE,
      NAME_keyboard, "Origin for ->change_selection: extend"),
   IV(NAME_startCell, "alien:Cell", IV_NONE,
-     NAME_cache, "Cell reference to top-row of display")
+     NAME_cache, "Cell reference to top-row of display"),
+  IV(NAME_selectionDepth, "alien:int", IV_NONE,
+     NAME_selection, "Nesting of selection changes"),
+  IV(NAME_selectionDirty, "alien:int", IV_NONE,
+     NAME_selection, "Selection changed in this nesting"),
+  IV(NAME_selectionBefore, "alien:Any", IV_NONE,
+     NAME_selection, "Selection when the nesting started")
 };
 
 /* Send Methods */
@@ -1906,6 +2029,8 @@ static senddecl send_listBrowser[] =
      NAME_search, "Repeat with same string"),
   SM(NAME_changeSelection, 2, T_changeSelection, changeSelectionListBrowser,
      NAME_selection, "Hook in selection management"),
+  SM(NAME_selectionChanged, 0, NULL, selectionChangedListBrowser,
+     NAME_selection, "Called after the selection changed (hook)"),
   SM(NAME_deselect, 1, "member:dict_item", deselectListBrowser,
      NAME_selection, "Unselect (remove from selection) item"),
   SM(NAME_select, 1, "member:dict_item", selectListBrowser,

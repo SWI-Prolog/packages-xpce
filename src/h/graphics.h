@@ -701,6 +701,9 @@ NewClass(list_browser)
   Int		selection_origin;	/* Origin of select-range */
 					/* Start private data */
   Cell		start_cell;		/* Cell corresponding to <-start */
+  int		selection_depth;	/* Nesting of selection changes */
+  int		selection_dirty;	/* Selection changed in this nesting */
+  Any		selection_before;	/* Selection when the nesting started */
 End;
 
 

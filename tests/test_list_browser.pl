@@ -46,7 +46,8 @@ Run with:
 :- use_module(library(plunit)).
 
 test_list_browser :-
-    run_tests([ list_browser_scroll
+    run_tests([ list_browser_scroll,
+                list_browser_selection_changed
               ]).
 
 %   list(+Items, -ListBrowser)
@@ -101,3 +102,107 @@ test(scrolling_back_is_free, Start == 10) :-
     done(LB).
 
 :- end_tests(list_browser_scroll).
+
+
+		 /*******************************
+		 *      SELECTION CHANGED	*
+		 *******************************/
+
+%   ->selection_changed is sent once after each operation that changed
+%   the selection.  We log the selection at that moment.
+
+:- dynamic changed/1.
+
+:- pce_begin_class(logging_list_browser, list_browser).
+
+selection_changed(LB) :->
+    selection_keys(LB, Keys),
+    assertz(changed(Keys)).
+
+:- pce_end_class(logging_list_browser).
+
+:- pce_begin_class(logging_browser, browser).
+
+selection_changed(B) :->
+    selection_keys(B?list_browser, Keys),
+    assertz(changed(browser(Keys))).
+
+:- pce_end_class(logging_browser).
+
+selection_keys(LB, Keys) :-
+    (   get(LB, selection, Sel)
+    ->  (   send(Sel, instance_of, chain)
+        ->  chain_list(Sel, Items),
+            maplist([DI,K]>>get(DI, key, K), Items, Keys)
+        ;   get(Sel, key, Key),
+            Keys = [Key]
+        )
+    ;   Keys = []
+    ).
+
+%   logged(+LB, :Goal, -Calls)
+%
+%   Calls is the list of selections logged while running Goal on LB.
+
+logged(LB, Goal, Calls) :-
+    retractall(changed(_)),
+    call(Goal, LB),
+    findall(C, retract(changed(C)), Calls).
+
+lb(LB) :-
+    new(LB, logging_list_browser),
+    forall(between(1, 5, I), send(LB, append, I)).
+
+item(LB, Key, DI) :-
+    get(LB, member, Key, DI).
+
+select(Key, LB) :-
+    item(LB, Key, DI),
+    send(LB, selection, DI).
+change(How, Key, LB) :-
+    item(LB, Key, DI),
+    send(LB, change_selection, How, DI).
+
+:- begin_tests(list_browser_selection_changed).
+
+test(set_selection, Calls == [[2]]) :-
+    lb(LB),
+    logged(LB, select(2), Calls).
+test(replace_selection, Calls == [[3]]) :-
+    lb(LB),
+    select(2, LB),
+    logged(LB, change(set, 3), Calls).
+test(same_selection, Calls == []) :-
+    lb(LB),
+    select(2, LB),
+    logged(LB, change(set, 2), Calls).
+test(clear_selection, Calls == [[]]) :-
+    lb(LB),
+    select(2, LB),
+    logged(LB, [L]>>send(L, change_selection, clear), Calls).
+test(clear_empty_selection, Calls == []) :-
+    lb(LB),
+    logged(LB, [L]>>send(L, change_selection, clear), Calls).
+test(extend_selection, Calls == [[2,3,4]]) :-
+    lb(LB),
+    send(LB, multiple_selection, @on),
+    change(set, 2, LB),
+    logged(LB, change(extend, 4), Calls).
+test(next_line, Calls == [[2],[3]]) :-
+    lb(LB),
+    logged(LB, [L]>>(send(L, next_line), send(L, next_line)), Calls).
+test(delete_selected, Calls == [[]]) :-
+    lb(LB),
+    select(2, LB),
+    logged(LB, [L]>>send(L, delete, 2), Calls).
+test(clear_browser, Calls == [[]]) :-
+    lb(LB),
+    select(2, LB),
+    logged(LB, [L]>>send(L, clear), Calls).
+test(browser, Calls == [browser([2])]) :-
+    new(B, logging_browser),
+    forall(between(1, 5, I), send(B, append, I)),
+    get(B, list_browser, LB),
+    logged(LB, select(2), Calls).
+
+:- end_tests(list_browser_selection_changed).
