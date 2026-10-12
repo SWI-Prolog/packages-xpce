@@ -1851,20 +1851,18 @@ select_path(F, Obj:visual) :->
 show_path(F) :->
     "Show the containment path, the current object in bold"::
     get(F, member, top_dialog, Top),
-    get(Top, member, path, G),
-    get(F, object, Current),
-    get(F, path, Chain),
-    \+ send(Chain, empty),               % keep "No object selected"
-    !,
-    chain_list(Chain, Path),
-    get(Top?area, width, TopWidth),
-    get(Top, border, size(BW, _)),
-    Avail is TopWidth - 2*BW,
-    show_path(Path, [], F, G, Current, Avail),
+    (   get(Top, member, path, G),
+        get(F, object, Current),
+        get(F, path, Chain),
+        \+ send(Chain, empty)            % keep "No object selected"
+    ->  chain_list(Chain, Path),
+        get(Top?area, width, TopWidth),
+        get(Top, border, size(BW, _)),
+        Avail is TopWidth - 2*BW,
+        show_path(Path, [], F, G, Current, Avail)
+    ;   true
+    ),
     send(Top, layout, Top?visible?size).   % flush the button right
-show_path(F) :->
-    get(F, member, top_dialog, Top),
-    send(Top, layout, Top?visible?size).
 
 show_path(Path, Hidden, F, G, Current, Avail) :-
     get(G?graphicals, copy, Old),
