@@ -23,8 +23,8 @@ in hexadecimal notation, \verb$'#RRGGBB'$ or \verb$'#RRGGBBAA'$.  A
 colour can also be created from its components, e.g.,
 \exam{colour(@default, 255, 0, 0, 128)}.  There are no colour maps:
 all colours can be used at the same time.  Colours cannot be created
-from images; use a \class{gradient} to fill an area with more than one
-colour.  This topic is handled in the section on images for historical
+from images.  Use a \class{gradient} to fill an area with more than one
+colour, or an \class{image} to fill it with a repeated pattern.  This topic is handled in the section on images for historical
 reasons.
 
 

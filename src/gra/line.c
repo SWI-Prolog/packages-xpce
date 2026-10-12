@@ -180,6 +180,12 @@ computeLine(Line ln)
       h += ey;
     }
 
+    int cap = capExtentGraphical((Graphical)ln);
+    x -= cap;
+    y -= cap;
+    w += 2*cap;
+    h += 2*cap;
+
     if ( ln->selected == ON )	/* should be solved elsewhere */
     { x -= 3;
       y -= 3;

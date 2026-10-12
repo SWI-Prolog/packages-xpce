@@ -39,7 +39,7 @@
 
 static status	drawArrow(double x1, double y1, double x2, double y2,
 			  double x3, double y3,
-			  Any fill, double pen, Name texture, Name style);
+			  Any fill, double pen, Any texture, Name style);
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Arrows are defined in terms of the point at the tip the length of the arrow
@@ -207,7 +207,7 @@ RedrawAreaArrow(Arrow a, Area area)
 
 static status
 drawArrow(double x1, double y1, double x2, double y2, double x3, double y3,
-	  Any fill, double pen, Name texture, Name style)
+	  Any fill, double pen, Any texture, Name style)
 { fpoint pts[3];
 
   /* TBD: Cairo can paint the line and fill from the same path */

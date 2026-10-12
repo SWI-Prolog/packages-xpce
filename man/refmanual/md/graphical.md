@@ -271,9 +271,11 @@ for creating customised graphical objects:
     @see device->selection
     @see graphical-inverted
 
-- graphical<-texture: texture_name
+- graphical<-texture: texture_name|stroke_style
     Stipple pattern used for drawing lines.  Applicable to all graphicals
-    that have line elements in them.  Values:
+    that have line elements in them.  A stroke_style object also
+    determines the caps, joins and paint of lines and allows for
+    arbitrary dash patterns.  The names are:
 
     	| none       | Straight line                                         |
     	| dotted     | Pattern: 1 on 2 off ...                               |
@@ -779,7 +781,7 @@ for creating customised graphical objects:
     @see graphical->set
     @see device->geometry
 
-- graphical->graphics_state: pen=[0..], texture=[texture_name], colour=[colour], background=[colour]
+- graphical->graphics_state: pen=[0..], texture=[texture_name|stroke_style], colour=[colour], background=[colour]
     Modify the graphics state.  Only the specified values will be
     modified.  This method will normally be called using the
     named-argument conventions of XPCE:
@@ -1191,8 +1193,9 @@ for creating customised graphical objects:
     @see graphical->expose
     @see graphical->hide
 
-- graphical->texture: texture_name
-    Stipple pattern of drawing pen.
+- graphical->texture: texture_name|stroke_style
+    Stipple pattern of drawing pen or, using a stroke_style, how lines
+    are drawn.
 
 - graphical->toggle_selected
     If <-selected equals @on, invoke ->selected: @off and visa-versa.

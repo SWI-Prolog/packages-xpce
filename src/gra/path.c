@@ -288,7 +288,7 @@ computeBoundingBoxPath(Path p)
 
     if ( path_drawable(p) &&
 	 r_path_extents(points, path_radius(p), p->closed == ON,
-			pen, &x1, &y1, &x2, &y2) )
+			pen, p->texture, &x1, &y1, &x2, &y2) )
     { if ( x1 < minx ) minx = x1;
       if ( y1 < miny ) miny = y1;
       if ( x2 > maxx ) maxx = x2;

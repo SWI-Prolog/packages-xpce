@@ -88,7 +88,7 @@ void r_clear(int x, int y, int w, int h);
 void r_complement(int x, int y, int w, int h);
 double r_thickness(double pen);
 int r_transformed(int val);
-void r_dash(Name name);
+void r_dash(Any texture);
 void r_fillpattern(Any fill, Name which);
 void r_fix_colours(Any fg, Any bg, ColourContext ctx);
 void r_unfix_colours(ColourContext ctx);
@@ -132,7 +132,8 @@ void r_polygon(FPoint pts, int n, int close);
 void r_bezier(fpoint start, fpoint end, fpoint control1, fpoint control2);
 void r_path(Chain points, double ox, double oy, double radius, bool closed,
 	    Any fill, Name fill_rule);
-bool r_path_extents(Chain points, double radius, bool closed, double pen,
+bool r_path_extents(Chain points, double radius, bool closed,
+		    double pen, Any texture,
 		    double *x1, double *y1, double *x2, double *y2);
 bool r_path_hit(Chain points, double radius, bool closed, Name fill_rule,
 		bool area, double tolerance, double x, double y);

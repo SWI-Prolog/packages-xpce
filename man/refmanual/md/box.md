@@ -9,13 +9,23 @@ Boxes may have rounded corners (see ->radius); their line may have some
 
 ## Instance variables {#class-box-instvars}
 
-- box<-fill: colour|{foreground,background}*
+- box<-fill: colour|gradient|image|{foreground,background}*
     If a colour object is specified, the box is filled using a solid
-    colour.  If the initial value @nil is used the box is transparent.
-    The reserved names foreground and background use the current
-    foreground and background colours from the context.
+    colour.  A gradient fills it with a colour transition.  An image is
+    repeated to fill the box, starting at the origin of the window or,
+    if <-fill_offset is not @nil, at that offset from the box.  If the
+    initial value @nil is used the box is transparent.  The reserved
+    names foreground and background use the current foreground and
+    background colours from the context.
 
     **Defaults**: @nil (transparent)
+
+- box<-fill_offset: point*
+    If not @nil, the image used as <-fill starts at this offset from
+    the top-left corner of the box, so that the pattern moves with the
+    box.  If @nil, the pattern is aligned to the window.
+
+    **Defaults**: @nil
 
 - box<-radius: int
     The radius of the circle-fragments used to round the corners.  When

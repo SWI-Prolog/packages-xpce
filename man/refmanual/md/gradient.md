@@ -5,10 +5,23 @@ used as the `fill_pattern` of any graphical that accepts a `colour`
 fill.  The renderer draws the shape's outline as usual and fills it by
 sampling the gradient across the shape's area.
 
-Gradients live in the coordinate system of the graphical they fill —
-the same one the shape's own drawing commands use.  Passing a
-gradient to a scrolled or transformed device therefore just works;
-the pattern scrolls and scales with the shape.
+The points and radii of a gradient are interpreted according to
+<-units:
+
+- `user` (default) — they are coordinates of the device on which the
+  shape is displayed, the coordinate system the shape itself uses.
+  The pattern scrolls and transforms with the device, but it does not
+  move with the shape: a shape that is moved shows another part of the
+  gradient.
+
+- `bounding_box` — they are fractions of the box around the shape
+  being filled: (0,0) is its top-left and (1,1) its bottom-right
+  corner.  The pattern moves and scales with the shape, and a single
+  gradient fills shapes of any size and position in the same way.  As
+  in SVG, a radial gradient becomes elliptical if the box is not
+  square.  A shape without area, e.g., a horizontal line, uses `user`
+  units.  A canvas sets its ->source before the path exists and thus
+  always uses `user` units.
 
 Two kinds are supported:
 
@@ -29,18 +42,19 @@ interpolation.
 Example: a top-to-bottom yellow-to-red fill on a 100×60 box.
 
 	new(P, picture), send(P, open),
-	new(Chain, chain),
-	send(Chain, append, new(_, tuple(0.0, colour(yellow)))),
-	send(Chain, append, new(_, tuple(1.0, colour(red)))),
-	new(G, gradient(linear, point(0,0), point(0,60),
-	                @default, @default, Chain)),
+	new(G, gradient(linear, point(0,0), point(0,1),
+	                units := bounding_box)),
+	send(G, add_stop, 0, colour(yellow)),
+	send(G, add_stop, 1, colour(red)),
 	send(P, display, new(B, box(100, 60)), point(20, 20)),
 	send(B, pen, 0),
 	send(B, fill, G).
 
 Because a gradient is a data object rather than a graphical, it may
-be attached to as many shapes as desired.  Two shapes sharing a
-gradient will each sample the pattern in their own coordinate space.
+be attached to as many shapes as desired.  Shapes sharing a gradient
+with `user` units sample one pattern that covers the device; with
+`bounding_box` units each shape gets the whole gradient.  Changing a
+gradient does not redraw the shapes that use it.
 
 @see graphical<->fill_pattern
 @see colour
@@ -72,6 +86,20 @@ gradient will each sample the pattern in their own coordinate space.
     Radius of the end-circle for a radial gradient.  `@nil` (the
     default for a linear gradient) is treated as zero at draw time.
 
+- gradient<-extend: {none,pad,repeat,reflect}
+    What is painted beyond the first and last stop: nothing (`none`),
+    the colour of the nearest stop (`pad`), the gradient repeated
+    (`repeat`), or repeated and mirrored every other time (`reflect`).
+
+    **Defaults**: pad
+
+- gradient<-units: {user,bounding_box}
+    Whether <-p0, <-p1, <-r0 and <-r1 are device coordinates or
+    fractions of the box around the shape being filled.  See the class
+    description.
+
+    **Defaults**: user
+
 - gradient<-stops: chain
     Chain of `tuple(fraction, colour)` — the colour stops.  Fractions
     are numbers in 0..1 (values outside are silently clamped by the
@@ -82,7 +110,7 @@ gradient will each sample the pattern in their own coordinate space.
 
 ## Send methods {#class-gradient-send}
 
-- gradient->initialise: kind={linear,radial}, p0=point, p1=point, r0=[num]*, r1=[num]*, stops=[chain]
+- gradient->initialise: kind={linear,radial}, p0=point, p1=point, r0=[num]*, r1=[num]*, stops=[chain], extend=[{none,pad,repeat,reflect}], units=[{user,bounding_box}]
     Create the gradient.  `r0` and `r1` are only meaningful when
     `kind` is `radial`; pass `@default` for a linear gradient and
     they are stored as `@nil`.  If `stops` is `@default` an empty

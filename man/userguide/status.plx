@@ -52,8 +52,8 @@ development tools.  Some major changes compared to \product{}~6 are:
     functionality.
 
     \item The `->fill' method used to fill graphicals accepts a solid
-    colour or a \class{gradient}.  Filling with repeated patterns is no
-    longer supported.
+    colour, a \class{gradient} or an \class{image}, which is repeated
+    to fill the area.
 
     \item Where \product{}~6 provided access to multiple X11 displays,
     each of which could be divided into one or more monitors,

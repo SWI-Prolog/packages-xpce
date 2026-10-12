@@ -2025,10 +2025,11 @@ fillOffsetGraphical(Graphical gr, Point pattern)
 
 
 static status			/* must be renamed to dash */
-textureGraphical(Graphical gr, Name texture)
+textureGraphical(Graphical gr, Any texture)
 { if (gr->texture != texture)
   { CHANGING_GRAPHICAL(gr, assign(gr, texture, texture);
 			   changedEntireImageGraphical(gr));
+    requestComputeGraphical(gr, DEFAULT); /* caps and joins change area */
   }
 
   succeed;
@@ -3242,7 +3243,7 @@ restoreGraphicsStateGraphical(Graphical gr)
 
 static status
 graphicsStateGraphical(Graphical gr,
-		       Int pen, Name texture,
+		       Int pen, Any texture,
 		       Colour colour, Colour background)
 { if ( notDefault(pen) )
     r_thickness(valInt(pen));
@@ -3476,7 +3477,7 @@ static char *T_handles[] =
 static char *T_draw[] =
 	{ "offset=[point]", "area=[area]" };
 static char *T_graphicsState[] =
-	{ "pen=[0..]", "texture=[texture_name]", "colour=[colour]",
+	{ "pen=[0..]", "texture=[" TYPE_TEXTURE "]", "colour=[colour]",
 	  "background=[colour]" };
 static char *T_drawPoly[] =
 	{ "points=chain|vector", "closed=[bool]", "fill=" TYPE_FILL_ARG };
@@ -3523,7 +3524,7 @@ static vardecl var_graphical[] =
      NAME_visibility, "If @on, graphical is visible"),
   SV(NAME_pen, "num", IV_GET|IV_STORE, penGraphical,
      NAME_appearance, "Thickness of drawing pen"),
-  SV(NAME_texture, "texture_name", IV_GET|IV_STORE, textureGraphical,
+  SV(NAME_texture, TYPE_TEXTURE, IV_GET|IV_STORE, textureGraphical,
      NAME_appearance, "Stipple pattern of drawing pen"),
   SV(NAME_colour, "[colour]", IV_GET|IV_STORE, colourGraphical,
      NAME_appearance, "Colour of drawing pen"),

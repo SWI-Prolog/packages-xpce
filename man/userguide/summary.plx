@@ -809,7 +809,9 @@ background of a \class{figure}.  A linear gradient runs from point
 \arg{p0} to \arg{p1}; a radial gradient from a circle around \arg{p0}
 with radius \arg{r0} to a circle around \arg{p1} with radius
 \arg{r1}.  The points use the coordinate system of the device on which
-the graphical is displayed.  The colours are given as a \class{chain}
+the graphical is displayed or, if \arg{units} is \const{bounding_box},
+are fractions of the box around the shape, so the gradient moves and
+scales with it.  The colours are given as a \class{chain}
 of \exam{tuple(Fraction, Colour)} stops, where \arg{Fraction} is
 between 0 and 1.
 \begin{code}
@@ -1590,6 +1592,12 @@ Class \class{stream} is the super-class of \class{socket} and
 \class{process}, defining the stream-communication.  It handles
 both synchronous and asynchronous input from the socket or
 process.  It is not possible to created instances of this class.
+
+#class stroke_style "stroke_style(cap, join, dash, paint)"
+A \class{stroke_style} describes how lines are drawn: the shape of
+their ends and corners, an arbitrary dash pattern and a \class{colour}
+or \class{gradient} to paint them with.  It is used as the texture of
+a graphical (`graphical ->texture').
 
 #class string "string(value)"
 A \class{string} represents a string of characters that may be modified.

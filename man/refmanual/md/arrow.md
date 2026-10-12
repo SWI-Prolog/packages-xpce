@@ -30,7 +30,7 @@ See also `joint ->arrows` and `joint <-default_arrow`.
 
 ## Instance variables {#class-arrow-instvars}
 
-- arrow<-fill: colour|{foreground,background}*
+- arrow<-fill: colour|gradient|image|{foreground,background}*
     If not equal to @nil, the triangle is filled with this colour.
 
     **Defaults**: @nil

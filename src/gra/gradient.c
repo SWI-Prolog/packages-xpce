@@ -45,12 +45,19 @@
  *          the end-circle center and r1 its radius.
  *
  * `stops' is a chain of `tuple(fraction, colour)' pairs, `fraction'
- * in 0..1.
+ * in 0..1.  `extend' determines what is painted outside the range of
+ * the stops: nothing (none), the colour of the nearest stop (pad), or
+ * the gradient repeated (repeat) or mirrored (reflect).
+ *
+ * If `units' is `bounding_box', the points and radii are fractions of
+ * the box around the shape being filled, so (0,0) is its top-left and
+ * (1,1) its bottom-right corner.  The gradient then moves and scales
+ * with the shape and can be shared by shapes of different sizes.
  */
 
 static status
 initialiseGradient(Gradient g, Name kind, Point p0, Point p1,
-		   Num r0, Num r1, Chain stops)
+		   Num r0, Num r1, Chain stops, Name extend, Name units)
 { if ( kind != NAME_linear && kind != NAME_radial )
     return errorPce(g, NAME_unexpectedType, kind);
 
@@ -60,6 +67,8 @@ initialiseGradient(Gradient g, Name kind, Point p0, Point p1,
   assign(g, r0,    isDefault(r0) ? (Num)NIL : r0);
   assign(g, r1,    isDefault(r1) ? (Num)NIL : r1);
   assign(g, stops, isDefault(stops) ? newObject(ClassChain, EAV) : stops);
+  assign(g, extend, isDefault(extend) ? NAME_pad : extend);
+  assign(g, units,  isDefault(units) ? NAME_user : units);
 
   succeed;
 }
@@ -80,6 +89,17 @@ addStopGradient(Gradient g, Num frac, Colour c)
 }
 
 
+static status
+initialiseNewSlotGradient(Gradient g, Variable var)
+{ if ( var->name == NAME_extend )
+    assign(g, extend, NAME_pad);
+  else if ( var->name == NAME_units )
+    assign(g, units, NAME_user);
+
+  succeed;
+}
+
+
 		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/
@@ -88,7 +108,9 @@ static char *T_initialise[] =
 	{ "kind={linear,radial}",
 	  "p0=point", "p1=point",
 	  "r0=[num]*", "r1=[num]*",
-	  "stops=[chain]"
+	  "stops=[chain]",
+	  "extend=[{none,pad,repeat,reflect}]",
+	  "units=[{user,bounding_box}]"
 	};
 static char *T_addStop[] =
 	{ "fraction=num", "colour=colour" };
@@ -105,12 +127,18 @@ static vardecl var_gradient[] =
   IV(NAME_r1, "num*", IV_GET,
      NAME_dimension, "Radial end-circle radius (@nil for linear)"),
   SV(NAME_stops, "chain", IV_GET|IV_STORE, stopsGradient,
-     NAME_appearance, "Chain of tuple(fraction, colour) stops")
+     NAME_appearance, "Chain of tuple(fraction, colour) stops"),
+  IV(NAME_extend, "{none,pad,repeat,reflect}", IV_BOTH,
+     NAME_appearance, "What to paint beyond the first and last stop"),
+  IV(NAME_units, "{user,bounding_box}", IV_BOTH,
+     NAME_dimension, "Coordinates are those of the drawing or 0..1 over the shape")
 };
 
 static senddecl send_gradient[] =
-{ SM(NAME_initialise, 6, T_initialise, initialiseGradient,
+{ SM(NAME_initialise, 8, T_initialise, initialiseGradient,
      DEFAULT, "Create linear/radial gradient with two points and stops"),
+  SM(NAME_initialiseNewSlot, 1, "variable", initialiseNewSlotGradient,
+     NAME_compatibility, "Initialise <-extend and <-units"),
   SM(NAME_addStop, 2, T_addStop, addStopGradient,
      NAME_appearance, "Append a (fraction, colour) stop")
 };

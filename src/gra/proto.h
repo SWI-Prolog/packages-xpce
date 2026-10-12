@@ -231,6 +231,11 @@ COMMON(status)	clipGraphical(Graphical gr, Area a);
 COMMON(status)	unclipGraphical(Graphical gr);
 COMMON(status)	makeClassGraphical(Class class);
 
+/* gra/strokestyle.c */
+COMMON(status)	dashStrokeStyle(StrokeStyle s, Any dash);
+COMMON(int)	capExtentGraphical(Graphical gr);
+COMMON(status)	makeClassStrokeStyle(Class class);
+
 /* gra/pathseg.c */
 COMMON(status)	makeClassCurvePoint(Class class);
 COMMON(status)	makeClassArcPoint(Class class);

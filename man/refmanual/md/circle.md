@@ -9,7 +9,7 @@ interior may be filled with a colour using ->fill.
 
 ## Instance variables {#class-circle-instvars}
 
-- circle<-fill: colour|{foreground,background}*
+- circle<-fill: colour|gradient|image|{foreground,background}*
     When a colour is defined, the interior of the circle is filled with
     this colour.  The circle is transparent if <-fill equals @nil.
 

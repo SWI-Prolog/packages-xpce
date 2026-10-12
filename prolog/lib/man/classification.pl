@@ -208,6 +208,7 @@ scope('C.source_sink', advanced).
 scope('C.spatial', basic).
 scope('C.stream', basic).
 scope('C.string', basic).
+scope('C.stroke_style', basic).
 scope('C.style', basic).
 scope('C.syntax_table', basic).
 scope('C.tab', basic).
@@ -2572,6 +2573,7 @@ scope('M.string.S.truncate', advanced).
 scope('M.string.S.untabify', obscure).
 scope('M.string.S.upcase', advanced).
 scope('M.string.S.value', advanced).
+scope('M.stroke_style.S.initialise', basic).
 scope('M.style.G.bold', obscure).
 scope('M.style.G.grey', obscure).
 scope('M.style.G.hidden', advanced).
@@ -4503,12 +4505,14 @@ scope('V.get_method.return_type', advanced_programming).
 scope('V.get_method.source', advanced).
 scope('V.get_method.summary', advanced).
 scope('V.get_method.types', advanced).
+scope('V.gradient.extend', advanced).
 scope('V.gradient.kind', advanced).
 scope('V.gradient.p0', advanced).
 scope('V.gradient.p1', advanced).
 scope('V.gradient.r0', advanced).
 scope('V.gradient.r1', advanced).
 scope('V.gradient.stops', advanced).
+scope('V.gradient.units', basic).
 scope('V.graphical.active', advanced_programming).
 scope('V.graphical.area', internal).
 scope('V.graphical.colour', obscure).
@@ -5485,6 +5489,12 @@ scope('V.stream.wrfd', internal).
 scope('V.stream.ws_ref', internal).
 scope('V.string.header', internal).
 scope('V.string.text', internal).
+scope('V.stroke_style.cap', basic).
+scope('V.stroke_style.dash', basic).
+scope('V.stroke_style.dash_offset', advanced).
+scope('V.stroke_style.join', basic).
+scope('V.stroke_style.miter_limit', advanced).
+scope('V.stroke_style.paint', basic).
 scope('V.style.attributes', internal).
 scope('V.style.background', advanced).
 scope('V.style.colour', advanced).

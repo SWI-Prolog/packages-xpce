@@ -35,7 +35,7 @@ to relate two lines with an arc (like in and/or trees).
     	The arc and two start lines from <-start and <-end to <-position
     	are displayed.
 
-- arc<-fill: colour|{foreground,background}*
+- arc<-fill: colour|gradient|image|{foreground,background}*
     Colour used to fill the arc.  When @nil, the arc is not filled.  The
     behaviour of this method is dependent of the value of ->close:
 

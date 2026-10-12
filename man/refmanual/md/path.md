@@ -53,9 +53,9 @@ Paths can be used for numerous purposes:
 
     **Defaults**: @off
 
-- path<-fill: colour|gradient|{foreground,background}*
-    Colour or gradient used to fill the interior of the path.  Which
-    parts are interior is determined by <-fill_rule.
+- path<-fill: colour|gradient|image|{foreground,background}*
+    Colour, gradient or (repeated) image used to fill the interior of
+    the path.  Which parts are interior is determined by <-fill_rule.
 
     **Defaults**: @nil (not filled)
 

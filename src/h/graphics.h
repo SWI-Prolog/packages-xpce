@@ -39,9 +39,10 @@
 		 *        REUSABLE TYPES        *
 		 *******************************/
 
-#define TYPE_FILL     "colour|gradient|{foreground,background}*"
-#define TYPE_FILL_ARG "[colour|gradient|{foreground,background}]*"
-#define TYPE_FILL_3D  "[colour|gradient|{foreground,background}|elevation]*"
+#define TYPE_TEXTURE  "texture_name|stroke_style"
+#define TYPE_FILL     "colour|gradient|image|{foreground,background}*"
+#define TYPE_FILL_ARG "[colour|gradient|image|{foreground,background}]*"
+#define TYPE_FILL_3D  "[colour|gradient|image|{foreground,background}|elevation]*"
 
 		 /*******************************
 		 *     STRETCHABLE OBJECTS	*
@@ -73,7 +74,7 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   Area		area;			/* area (bounding box) */ \
   BoolObj	displayed;		/* is graphical object displayed? */ \
   Num		pen;			/* pen thickness for this object */ \
-  Name		texture;		/* dash pattern for lines */ \
+  Any		texture;		/* texture_name or stroke_style */ \
   Any		colour;			/* colour of the graphical */ \
   Num		opacity;		/* 0.0..1.0; 1.0 = opaque */ \
   Chain		handles;		/* handles connected to graphical */ \
@@ -832,6 +833,18 @@ NewClass(gradient)
   Num		r0;			/* Num*, radial start-circle radius */
   Num		r1;			/* Num*, radial end-circle radius */
   Chain		stops;			/* Chain of tuple(fraction, colour) */
+  Name		extend;			/* none, pad, repeat, reflect */
+  Name		units;			/* user or bounding_box */
+End;
+
+
+NewClass(stroke_style)
+  Name		cap;			/* butt, round, square */
+  Name		join;			/* miter, round, bevel */
+  Num		miter_limit;		/* Bevel longer miters */
+  Any		dash;			/* texture_name, vector or NIL */
+  Num		dash_offset;		/* Start offset into the dashes */
+  Any		paint;			/* colour, gradient or NIL */
 End;
 
 

@@ -37,7 +37,7 @@ typedef struct graphics_state *GraphicsState;
 struct graphics_state
 { int		level;
   double	thickness;
-  Name		texture;
+  Any		texture;			/* texture_name or stroke_style */
   Any		foreground;
   Any		background;
   GraphicsState savedstate;		/* previous state */
@@ -52,7 +52,7 @@ g_save(void)
 
   gs->level	 = (statelist ? statelist->level+1 : 1);
   gs->thickness  = context.pen;
-  gs->texture    = context.dash;
+  gs->texture    = context.texture;
   gs->foreground = context.colour;
   gs->background = context.background;
 

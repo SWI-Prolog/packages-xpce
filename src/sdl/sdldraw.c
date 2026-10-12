@@ -74,7 +74,11 @@ typedef struct
   Any		default_colour;
   Any		default_background;
   Any		fill;		/* Default for fill operations */
-  Name		dash;			/* Dash pattern */
+  int		fill_origin_x;		/* Origin of image fill patterns */
+  int		fill_origin_y;
+  Name		dash;			/* Named dash pattern in cr (cache) */
+  Any		texture;		/* texture_name or stroke_style */
+  Any		stroke_paint;		/* Paint from stroke_style or NIL */
   double	pen;			/* Drawing thickness */
 } sdl_draw_context;
 
@@ -117,6 +121,8 @@ static void
 reset_context(void)
 { memset(&context, 0, sizeof(context));
   context.dash = NAME_none;		/* a new cairo_t has no dash */
+  context.texture = NAME_none;
+  context.stroke_paint = NIL;
 }
 
 static void
@@ -257,7 +263,13 @@ r_pop_group_with_alpha(double alpha)
  */
 void
 r_filloffset(Point offset, int x0, int y0, fill_state *state)
-{
+{ state->x = context.fill_origin_x;
+  state->y = context.fill_origin_y;
+
+  if ( notNil(offset) )
+  { context.fill_origin_x = x0 + valInt(offset->x);
+    context.fill_origin_y = y0 + valInt(offset->y);
+  }
 }
 
 /**
@@ -267,7 +279,8 @@ r_filloffset(Point offset, int x0, int y0, fill_state *state)
  */
 void
 r_fillrestore(fill_state *state)
-{
+{ context.fill_origin_x = state->x;
+  context.fill_origin_y = state->y;
 }
 
 /**
@@ -561,6 +574,25 @@ pce_cairo_set_source_color(cairo_t *cr, Colour pce)
  * the source on `cr'.  cairo_set_source() takes a reference to the
  * pattern, so we destroy our local one afterwards.
  */
+/* Map the pattern's 0..1 space onto the extents of the current path,
+ * which must be built before the source is set.  The pattern matrix
+ * maps user space to pattern space.  Without a path (or an empty one)
+ * the pattern stays in user space.
+ */
+static void
+gradient_to_bounding_box(cairo_t *cr, cairo_pattern_t *pat)
+{ double x1, y1, x2, y2;
+
+  cairo_path_extents(cr, &x1, &y1, &x2, &y2);
+  if ( x2 > x1 && y2 > y1 )
+  { cairo_matrix_t m;
+
+    cairo_matrix_init(&m, 1.0/(x2-x1), 0.0, 0.0, 1.0/(y2-y1),
+		      -x1/(x2-x1), -y1/(y2-y1));
+    cairo_pattern_set_matrix(pat, &m);
+  }
+}
+
 static void
 pce_cairo_set_source_gradient(cairo_t *cr, Gradient g)
 { cairo_pattern_t *pat;
@@ -572,6 +604,11 @@ pce_cairo_set_source_gradient(cairo_t *cr, Gradient g)
   double y0 = Y(valNum(g->p0->y));
   double x1 = X(valNum(g->p1->x));
   double y1 = Y(valNum(g->p1->y));
+
+  if ( g->units == NAME_boundingBox )	/* not shifted: fractions */
+  { x0 -= context.offset_x; y0 -= context.offset_y;
+    x1 -= context.offset_x; y1 -= context.offset_y;
+  }
 
   if ( g->kind == NAME_radial )
   { double r0 = notNil(g->r0) ? valNum(g->r0) : 0.0;
@@ -598,6 +635,13 @@ pce_cairo_set_source_gradient(cairo_t *cr, Gradient g)
     }
   }
 
+  cairo_pattern_set_extend(pat,
+			   g->extend == NAME_none    ? CAIRO_EXTEND_NONE :
+			   g->extend == NAME_repeat  ? CAIRO_EXTEND_REPEAT :
+			   g->extend == NAME_reflect ? CAIRO_EXTEND_REFLECT :
+						       CAIRO_EXTEND_PAD);
+  if ( g->units == NAME_boundingBox )
+    gradient_to_bounding_box(cr, pat);
   cairo_set_source(cr, pat);
   cairo_pattern_destroy(pat);
 }
@@ -607,12 +651,70 @@ pce_cairo_set_source_gradient(cairo_t *cr, Gradient g)
  * pce_cairo_set_source_gradient.  Non-matching values fall through to
  * the colour path (which will error/default).
  */
+static cairo_surface_t *recolor_bw_surface(cairo_surface_t* input,
+					   Colour foreground,
+					   Colour background,
+					   bool dbg);
+
+/* Tile the image, starting at the fill origin (see r_filloffset()).  A
+ * bitmap is drawn in the current colours, as r_image() does.
+ */
+static void
+pce_cairo_set_source_image(cairo_t *cr, Image image)
+{ cairo_surface_t *surface = pceImage2CairoSurface(image);
+  cairo_surface_t *copy = NULL;
+
+  if ( !surface )
+  { cairo_set_source_rgba(cr, 0, 0, 0, 0);
+    return;
+  }
+  if ( image->kind == NAME_bitmap &&
+       ( context.colour != BLACK_COLOUR ||
+	 context.background != WHITE_COLOUR ) &&
+       (copy = recolor_bw_surface(surface, context.colour,
+				  context.background, false)) )
+    surface = copy;
+
+  cairo_pattern_t *pat = cairo_pattern_create_for_surface(surface);
+  cairo_matrix_t m;
+
+  cairo_pattern_set_extend(pat, CAIRO_EXTEND_REPEAT);
+  cairo_matrix_init_translate(&m, -X(context.fill_origin_x),
+				  -Y(context.fill_origin_y));
+  cairo_pattern_set_matrix(pat, &m);
+  cairo_set_source(cr, pat);
+  cairo_pattern_destroy(pat);		/* the context holds a reference */
+  if ( copy )
+    cairo_surface_destroy(copy);	/* and the pattern to the surface */
+}
+
+static bool
+is_paint(Any fill)
+{ return ( instanceOfObject(fill, ClassColour) ||
+	   instanceOfObject(fill, ClassGradient) ||
+	   instanceOfObject(fill, ClassImage) );
+}
+
 static void
 pce_cairo_set_source_fill(cairo_t *cr, Any fill)
 { if ( instanceOfObject(fill, ClassGradient) )
     pce_cairo_set_source_gradient(cr, (Gradient)fill);
+  else if ( instanceOfObject(fill, ClassImage) )
+    pce_cairo_set_source_image(cr, (Image)fill);
   else
     pce_cairo_set_source_color(cr, (Colour)fill);
+}
+
+/* The source for drawing lines: the paint of the stroke_style if there
+ * is one, unless the colours are fixed (e.g., for an inactive graphical).
+ */
+static void
+pce_cairo_set_stroke_source(cairo_t *cr)
+{ if ( context.stroke_paint && notNil(context.stroke_paint) &&
+       !context.fixed_colours )
+    pce_cairo_set_source_fill(cr, context.stroke_paint);
+  else
+    pce_cairo_set_source_color(cr, context.colour);
 }
 
 static PangoLayout *
@@ -687,20 +789,89 @@ static struct dashpattern
   { 0,		     NULL,					  0},
 };
 
-void
-r_dash(Name name)
-{ if ( name != context.dash )
-  { struct dashpattern *dp = dash_patterns;
+static struct dashpattern *
+named_dash(Name name)
+{ for(struct dashpattern *dp = dash_patterns; dp->dash != 0; dp++)
+  { if ( dp->dash == name )
+      return dp;
+  }
 
-    for( ; dp->dash != 0; dp++ )
-    { if ( dp->dash == name )
-      { cairo_set_dash(CR, dp->dash_list, dp->dash_list_length, 0);
+  errorPce(name, NAME_badTexture);
+  return NULL;
+}
 
-	context.dash = name;
-	return;
-      }
+static cairo_line_cap_t
+stroke_cap(StrokeStyle s)
+{ return ( s->cap == NAME_round  ? CAIRO_LINE_CAP_ROUND :
+	   s->cap == NAME_square ? CAIRO_LINE_CAP_SQUARE :
+				   CAIRO_LINE_CAP_BUTT );
+}
+
+static cairo_line_join_t
+stroke_join(StrokeStyle s)
+{ return ( s->join == NAME_round ? CAIRO_LINE_JOIN_ROUND :
+	   s->join == NAME_bevel ? CAIRO_LINE_JOIN_BEVEL :
+				   CAIRO_LINE_JOIN_MITER );
+}
+
+/* Set the Cairo stroke state, except for the line width, from a
+ * texture_name or stroke_style.  Returns the paint of the style.
+ */
+
+static Any
+cairo_set_texture(cairo_t *cr, Any texture)
+{ if ( instanceOfObject(texture, ClassStrokeStyle) )
+  { StrokeStyle s = texture;
+    double offset = valNum(s->dash_offset);
+
+    cairo_set_line_cap(cr, stroke_cap(s));
+    cairo_set_line_join(cr, stroke_join(s));
+    cairo_set_miter_limit(cr, valNum(s->miter_limit));
+
+    if ( instanceOfObject(s->dash, ClassVector) )
+    { Vector v = s->dash;
+      int n = valInt(v->size);
+      double *dashes = alloca(sizeof(double)*(n > 0 ? n : 1));
+
+      for(int i=0; i<n; i++)
+	dashes[i] = valNum(v->elements[i]);
+      cairo_set_dash(cr, dashes, n, offset);
+    } else
+    { struct dashpattern *dp = NULL;
+
+      if ( notNil(s->dash) && !(dp = named_dash(s->dash)) )
+	dp = NULL;
+      if ( dp )
+	cairo_set_dash(cr, dp->dash_list, dp->dash_list_length, offset);
+      else
+	cairo_set_dash(cr, NULL, 0, 0.0);
     }
-    errorPce(name, NAME_badTexture);
+
+    return s->paint;
+  } else
+  { struct dashpattern *dp = named_dash(texture);
+
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+    cairo_set_miter_limit(cr, 10.0);
+    if ( dp )
+      cairo_set_dash(cr, dp->dash_list, dp->dash_list_length, 0);
+
+    return NIL;
+  }
+}
+
+/**
+ * Set how lines are drawn from a texture_name or stroke_style.
+ */
+void
+r_dash(Any texture)
+{ context.texture = texture;
+
+  if ( texture != context.dash )	/* the cache is for names only */
+  { context.stroke_paint = cairo_set_texture(CR, texture);
+    context.dash = (instanceOfObject(texture, ClassStrokeStyle)
+			? NIL : texture);
   }
 }
 
@@ -937,7 +1108,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
       cairo_fill(CR);
   }
   if ( context.pen )
-  { pce_cairo_set_source_color(CR, context.colour);
+  { pce_cairo_set_stroke_source(CR);
     cairo_stroke(CR);
   }
   cairo_restore(CR);
@@ -982,7 +1153,7 @@ r_smooth_box(double x, double y, double w, double h, double r, Any fill)
   }
   if ( context.pen )
   { cairo_set_line_width(CR, context.pen);
-    pce_cairo_set_source_color(CR, context.colour);
+    pce_cairo_set_stroke_source(CR);
     cairo_stroke(CR);
   }
   cairo_new_path(CR);
@@ -1038,7 +1209,7 @@ r_rounded_frame(double x, double y, double w, double h, double r,
       cairo_rectangle(CR, x+lw, y+lw, w-2*lw, h-2*lw);
     }
     cairo_set_line_width(CR, context.pen);
-    pce_cairo_set_source_color(CR, context.colour);
+    pce_cairo_set_stroke_source(CR);
     cairo_stroke(CR);
   }
   cairo_new_path(CR);
@@ -1429,12 +1600,14 @@ r_3d_box(double x, double y, double w, double h,
 	cairo_reset_clip(CR);
 
 	// Fill base
-	if ( r_set_fill_fgbg(NAME_current, NAME_background) )
 	{ double ix = x+shadow, iy = y+shadow, iw = w-2*shadow, ih = h-2*shadow;
 	  double ir = radius * ((w+h)-2*shadow)/(w+h);
 
 	  my_cairo_rounded_rectangle(CR, ix, iy, iw, ih, ir, true);
-	  cairo_fill(CR);
+	  if ( r_set_fill_fgbg(NAME_current, NAME_background) )
+	    cairo_fill(CR);
+	  else
+	    cairo_new_path(CR);
 	}
       } else
       { pce_cairo_set_source_color(CR, top_left_color);
@@ -1701,7 +1874,7 @@ r_arc(double x, double y, double w, double h,
   }
   if ( context.pen )
   { cairo_set_line_width(CR, context.pen);
-    pce_cairo_set_source_color(CR, context.colour);
+    pce_cairo_set_stroke_source(CR);
     cairo_stroke(CR);
   }
 }
@@ -1751,7 +1924,7 @@ r_line(double x1, double y1, double x2, double y2)
 			   x1, y1, x2, y2));
 
   cairo_new_path(CR);
-  pce_cairo_set_source_color(CR, context.colour);
+  pce_cairo_set_stroke_source(CR);
   cairo_set_line_width(CR, context.pen);
   cairo_move_to(CR, x1, y1);
   cairo_line_to(CR, x2, y2);
@@ -1837,7 +2010,7 @@ r_polygon(FPoint pts, int n, int close)
     if ( close )
       cairo_close_path(CR);
 
-    pce_cairo_set_source_color(CR, context.colour);
+    pce_cairo_set_stroke_source(CR);
     cairo_set_line_width(CR, context.pen);
     cairo_stroke(CR);
   }
@@ -1864,7 +2037,7 @@ r_bezier(fpoint start, fpoint control1, fpoint control2, fpoint end)
     cairo_move_to(CR, start.x, start.y);
     cairo_curve_to(CR, control1.x, control1.y, control2.x, control2.y, end.x, end.y);
 
-    pce_cairo_set_source_color(CR, context.colour);
+    pce_cairo_set_stroke_source(CR);
     cairo_set_line_width(CR, context.pen);
     cairo_stroke(CR);
   }
@@ -2219,7 +2392,7 @@ r_path(Chain points, double ox, double oy, double radius, bool closed,
   }
 
   if ( context.pen )
-  { pce_cairo_set_source_color(CR, context.colour);
+  { pce_cairo_set_stroke_source(CR);
     cairo_set_line_width(CR, context.pen);
     cairo_stroke(CR);
   } else
@@ -2275,14 +2448,15 @@ union_extents(double *ext, double x1, double y1, double x2, double y2)
 
 
 /**
- * Compute the area covered by drawing the path with the given pen,
- * including what a fill covers.  The coordinates are those of the
+ * Compute the area covered by drawing the path with the given pen and
+ * texture, including what a fill covers.  The coordinates are those of the
  * points.
  *
  * @return false if the path covers nothing.
  */
 bool
-r_path_extents(Chain points, double radius, bool closed, double pen,
+r_path_extents(Chain points, double radius, bool closed,
+	       double pen, Any texture,
 	       double *x1, double *y1, double *x2, double *y2)
 { cairo_t *cr = path_geometry_context(points, radius, closed);
   double ext[4] = {0.0, 0.0, -1.0, -1.0};
@@ -2292,7 +2466,9 @@ r_path_extents(Chain points, double radius, bool closed, double pen,
   union_extents(ext, ex1, ey1, ex2, ey2);
   if ( pen > 0.0 )
   { cairo_set_line_width(cr, pen);
+    cairo_set_texture(cr, texture);	/* caps and joins */
     cairo_stroke_extents(cr, &ex1, &ey1, &ex2, &ey2);
+    cairo_set_texture(cr, NAME_none);
     union_extents(ext, ex1, ey1, ex2, ey2);
   }
   cairo_new_path(cr);
@@ -2602,8 +2778,7 @@ r_set_fill_fgbg(Any fill, Name which)
 { r_fillpattern(fill, which);
   DEBUG(NAME_draw,
 	Cprintf("fill with %s->%s\n", pp(fill), pp(context.fill)));
-  if ( instanceOfObject(context.fill, ClassColour) ||
-       instanceOfObject(context.fill, ClassGradient) )
+  if ( is_paint(context.fill) )
   { pce_cairo_set_source_fill(CR, context.fill);
     return true;
   } else if ( isNil(context.fill) )
@@ -2618,21 +2793,23 @@ static void
 r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
 { NormaliseArea(x, y, w, h);
   if ( w > 0 && h > 0 )
-  { if ( r_set_fill_fgbg(fill, which) )
-    { Translate(x, y);
-      bool transparent = isNil(context.fill);
+  { Translate(x, y);
+    cairo_new_path(CR);
+    cairo_rectangle(CR, x, y, w, h);	/* before the source: see */
+    if ( r_set_fill_fgbg(fill, which) )	/* gradient_to_bounding_box() */
+    { bool transparent = isNil(context.fill);
       cairo_operator_t saved_op;
 
       if ( transparent )
       { saved_op = cairo_get_operator(CR);
 	cairo_set_operator(CR, CAIRO_OPERATOR_SOURCE);
       }
-      cairo_rectangle(CR, x, y, w, h);
       cairo_fill(CR);
       if ( transparent )
 	cairo_set_operator(CR, saved_op);
     } else
-    { Cprintf("stub: r_fill(%s)\n", pp(context.fill));
+    { cairo_new_path(CR);
+      Cprintf("stub: r_fill(%s)\n", pp(context.fill));
     }
   }
 }
@@ -2678,7 +2855,6 @@ r_fill_polygon(FPoint pts, int n)
 { if ( n <= 0 ) return;
 
   cairo_new_path(CR);
-  pce_cairo_set_source_fill(CR, context.fill);
   double x = pts[0].x;
   double y = pts[0].y;
   Translate(x, y);
@@ -2690,6 +2866,7 @@ r_fill_polygon(FPoint pts, int n)
     cairo_line_to(CR, x, y);
   }
   cairo_close_path(CR);
+  pce_cairo_set_source_fill(CR, context.fill);
   cairo_fill(CR);
 }
 

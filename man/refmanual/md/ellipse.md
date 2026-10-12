@@ -11,7 +11,7 @@ top-left corner.  Use ->center to define the center.
 
 ## Instance variables {#class-ellipse-instvars}
 
-- ellipse<-fill: colour|{foreground,background}*
+- ellipse<-fill: colour|gradient|image|{foreground,background}*
     When not @nil, the interior is filled with the specified colour.
 
     **Defaults**: @nil

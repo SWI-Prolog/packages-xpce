@@ -365,6 +365,9 @@ static struct class_definition classdefs[] =
   { NAME_pixmap, NAME_image, makeClassPixmap,
     &ClassPixmap, "Coloured image" },
 
+  { NAME_strokeStyle, NAME_object, makeClassStrokeStyle,
+    &ClassStrokeStyle, "How lines are drawn" },
+
   { NAME_point, NAME_object, makeClassPoint,
     &ClassPoint, "Position in a two-dimensional space" },
 
