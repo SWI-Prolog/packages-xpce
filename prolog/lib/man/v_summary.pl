@@ -54,15 +54,6 @@ variable(displayed_attribute, name, get,
                 *            CREATE             *
                 ********************************/
 
-:- pce_autoload(drag_and_drop_dict_item_gesture, library(dragdict)).
-:- pce_global(@man_drag_and_drop_objects,
-              make_man_drag_and_drop_objects).
-
-make_man_drag_and_drop_objects(G) :-
-    new(G, drag_and_drop_dict_item_gesture),
-    send(G, get_source, @arg1?object).
-
-
 initialise(S, Att:name, Size:size) :->
     "Create from displayed attribute and size"::
     DI = @arg1,
@@ -85,7 +76,6 @@ initialise(S, Att:name, Size:size) :->
          message(Ask, request_selection, Obj, @off)),
     send(S, open_message,
          message(Ask, request_selection, Obj, @on)),
-    send(S?list_browser, recogniser, @man_drag_and_drop_objects),
 
     send(S, popup, new(P, popup(view, @nil))),
     send_list(P, append,

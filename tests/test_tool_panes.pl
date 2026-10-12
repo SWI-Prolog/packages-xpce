@@ -1677,6 +1677,18 @@ card_note(Obj, Note) :-
     ;   Note = own
     ).
 
+%       The entries of a summary browser cannot be dragged: nothing
+%       accepts them.  A mouse-down used to show the drag cursor.
+
+test(summary_entries_cannot_be_dragged, Recognisers == []) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    get(Tool, man_summary_browser_member, Browser),
+    (   get(Browser?list_browser, all_recognisers, @off, Chain)
+    ->  chain_list(Chain, Recognisers)
+    ;   Recognisers = []
+    ).
+
 has_manual_index :-
     catch(manual_object(xpce(tile, ivar, hor_stretch), _, _, _, _), _, fail).
 
