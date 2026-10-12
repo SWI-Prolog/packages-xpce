@@ -156,18 +156,33 @@ set(XPCE_CLASS_INDEX     ${XPCE_BUILD_LIBRARY}/CLASSINDEX.pl)
 set(SWIPL_COMMAND_DEPENDS plugin_pl2xpce)
 set(SWIPL_QLF_BASE        ${XPCE_BUILD_LIBRARY})
 
+# The indexes must be rebuilt when a source changes.  These are the
+# files prolog/lib/MKINDEX.pl scans.  A target in DEPENDS only orders
+# the build, so list the files themselves.
+set(XPCE_INDEX_SOURCES)
+foreach(d prolog/lib prolog/lib/swi)
+  string(REGEX REPLACE "/" "_" filevar ${d})
+  foreach(f ${XPCE_DATA_${filevar}})
+    if(f MATCHES "[.]pl$")
+      list(APPEND XPCE_INDEX_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${d}/${f})
+    endif()
+  endforeach()
+endforeach()
+list(APPEND XPCE_INDEX_SOURCES
+     ${CMAKE_CURRENT_SOURCE_DIR}/prolog/lib/trace/browse.pl)
+
 add_swipl_target(
     xpce-predicate-index
     OUTPUT  ${XPCE_PREDICATE_INDEX}
     COMMAND "make_library_index('${XPCE_BUILD_LIBRARY}')"
-    DEPENDS library_index
+    DEPENDS library_index ${XPCE_INDEX_SOURCES}
     QUIET
     COMMENT "-- Building xpce predicate index")
 add_swipl_target(
     xpce-class-index
     OUTPUT  ${XPCE_CLASS_INDEX}
     COMMAND "pce_make_library_index('${XPCE_BUILD_LIBRARY}')"
-    DEPENDS xpce-predicate-index
+    DEPENDS xpce-predicate-index ${XPCE_INDEX_SOURCES}
     COMMENT "-- Building xpce class index")
 
 set(SWIPL_COMMAND_DEPENDS ${SWIPL_COMMAND_DEPENDS}
