@@ -46,6 +46,7 @@ test_libs(cairo_render         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(path_segments        OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(markup_text          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(canvas               OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(graphics_demos       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(frame_position       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(slider               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_cursor          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -124,6 +125,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:path_segments
                      xpce:markup_text
                      xpce:canvas
+                     xpce:graphics_demos
                      xpce:frame_position
                      xpce:slider
                      xpce:text_cursor

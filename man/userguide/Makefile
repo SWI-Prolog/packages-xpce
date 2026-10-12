@@ -14,7 +14,7 @@ CLHIER=figs/pceclasshierarchy.pdf
 PCECMAKE=../../CMakeLists.txt
 
 COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
-	interface.tex graphics.tex pceprolog.tex memory.tex \
+	interface.tex graphics.tex drawing.tex pceprolog.tex memory.tex \
 	glossary.tex techniques.tex report.tex font.tex hyper.tex \
 	udc.tex dragdrop.tex dragdropdemo.tex control.tex whoiswho.tex \
 	panes.tex \

@@ -20,6 +20,7 @@
 \include{online}
 \include{dialog}
 \include{graphics}
+\include{drawing}
 \include{pceprolog}
 \include{udc}
 \include{threads}

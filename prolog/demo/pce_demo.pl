@@ -204,6 +204,26 @@ demo('Opacity',
      demo(opacity),
      opacity_demo).
 
+demo('Path gallery',
+     'Curves, arcs, sub-paths and SVG path data of class path',
+     demo(paths),
+     paths_demo).
+
+demo('Paint gallery',
+     'Gradients, image fills, transparency and line styles',
+     demo(paint),
+     paint_demo).
+
+demo('Text gallery',
+     'Pango markup text, clip paths, blend modes and opacity',
+     demo(compose),
+     compose_demo).
+
+demo('Canvas',
+     'Drawing curves using Cairo-style operations on a canvas',
+     demo(canvas_demo),
+     canvas_demo).
+
 demo('Chart gallery',
      'Curves, axes and bar charts from library(plot)',
      demo(charts),

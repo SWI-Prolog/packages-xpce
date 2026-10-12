@@ -59,8 +59,8 @@ needs to be repainted. This area is guaranteed to overlap with the
 It is not allowed for this method to paint outside the <-area of the
 receiver. There is no clipping (see ->clip) to prevent this.
 If there is no cheap way to prevent this, bracket the graphical
-operations in ->clip and ->unclip, but be aware that setting and undoing
-the clip-region is an expensive operation. Note that is is {\bf not}
+operations in ->clip and ->unclip.  Clipping regions nest: a ->clip
+inside another one clips to the intersection of both. Note that is is {\bf not}
 necessary to limit the applied paint only inside the given argument {\em
 Area}. The graphical infra-structure automatically clips all graphical
 operation to this area. In general, {\em Area} should only be considered
@@ -85,7 +85,7 @@ online manual.
 ->draw			& Paint other graphical \\
 \hline
 ->clip			& Clip to area or <-area of graphical \\
-->unclip		& Undo last ->clip \\
+->unclip		& Restore the clip before the last ->clip \\
 \hline
 ->save_graphics_state	& Save current pen and colours \\
 ->restore_graphics_state& Restore saved values \\
@@ -96,6 +96,8 @@ online manual.
 ->draw_fill		& Fill rectangle with colour or gradient \\
 ->draw_image		& Paint (part of) image \\
 ->draw_line		& Draw a line segment \\
+->draw_markup		& Draw Pango markup \\
+->draw_path		& Draw a \class{path} object \\
 ->draw_poly		& Draw a polygon \\
 ->draw_text		& Draw string in font \\
 \hline
