@@ -361,6 +361,26 @@ NewClass(line)
   ABSTRACT_LINE
 End;
 
+NewClass(curve_point)			/* path segment: Bezier curve */
+  ABSTRACT_POINT
+  Point	     control1;			/* (first) control point */
+  Point	     control2;			/* second control point or NIL */
+End;
+
+NewClass(arc_point)			/* path segment: SVG elliptical arc */
+  ABSTRACT_POINT
+  Num	     rx;			/* radii of the ellipse */
+  Num	     ry;
+  Num	     rotation;			/* rotation of the x-axis (degrees) */
+  BoolObj    large;			/* take the large arc */
+  BoolObj    sweep;			/* draw in positive-angle direction */
+End;
+
+NewClass(move_point)			/* path segment: start a sub-path */
+  ABSTRACT_POINT
+  BoolObj    closed;			/* close this sub-path (NIL: as path) */
+End;
+
 NewClass(path)
   ABSTRACT_JOINT
   Point	     offset;			/* offset of the points */
@@ -372,6 +392,7 @@ NewClass(path)
   Image	     mark;			/* Mark used for points */
   BoolObj    closed;			/* Line from end back to start */
   Chain	     interpolation;		/* interpolated points */
+  Name	     fill_rule;			/* winding or even_odd */
 End;
 
 

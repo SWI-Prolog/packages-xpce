@@ -92,6 +92,10 @@ used to create a \idx{pie-chart} segment.
    send(A, close, pie_slice).
 \end{code}
 
+#class arc_point "arc_point(x, y, rx, ry, rotation, large, sweep)"
+A \class{point} of a \class{path} that is reached by an elliptical
+arc, as the `A' command of an SVG path.
+
 #class area "area(x, y, width, height)"
 Combination of {\em X}, {\em Y}, {\em Width} and {\em Height} used by
 \class{graphical} to store the bounding box of the graphical. Also used
@@ -483,6 +487,10 @@ of cursors is rarely used.
 send(Box, cursor, pointer),
 ...
 \end{code}
+
+#class curve_point "curve_point(x, y, control1, control2)"
+A \class{point} of a \class{path} that is reached by a quadratic or
+cubic Bezier curve.
 
 #class date "date(second, minute, hour, day, month, year)"
 A \class{date} objects represents a point in time. The underlying
@@ -1169,6 +1177,10 @@ the graphical is moved to the location of the outline.  Should be used
 for complicated objects with many constraints or connections as a direct
 move_gesture would be too slow.
 
+#class move_point "move_point(x, y, closed)"
+A \class{point} of a \class{path} that is reached without drawing,
+starting a new sub-path.
+
 #class name "name(value)"
 A \class{name} is a unique textual constant, similar to an \idx{atom}
 in Prolog.  Whenever an atom is handed to \product{}, the interface will
@@ -1239,7 +1251,11 @@ A \class{path} is a \idx{multi-segment line}.  It comes in two flavours:
 {\tt smooth} as an \idx{interpolated} line through a number of
 `control-points'. Its line attributes can be defined and the interior
 can be filled. Paths are used both to define new graphicals, for example
-a \idx{triangle}, or to defines \idx{curves}.
+a \idx{triangle}, or to defines \idx{curves}.  A {\tt poly} path may
+also contain a \class{curve_point}, \class{arc_point} or
+\class{move_point}, making it a Bezier curve, elliptical arc or new
+sub-path to that point.  This allows for the same shapes as SVG paths,
+including shapes with holes (see `path ->fill_rule').
 
 \begin{code}
 draw_sine :-

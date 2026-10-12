@@ -116,6 +116,7 @@ COMMON(Number)	CtoNumber(long i);
 COMMON(status)	makeClassNumber(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/adt/point.c */
+COMMON(status)	initialisePoint(Point p, Int x, Int y);
 COMMON(status)	equalPoint(Point p1, Point p2);
 COMMON(status)	copyPoint(Point p1, Point p2);
 COMMON(status)	setPoint(Point pt, Int x, Int y);

@@ -36,12 +36,15 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <math.h>
+#include <ctype.h>
+#include <stdarg.h>
 
 static void	smooth_path(Path p);
 static void	curve_fit(float *x, float *y, int ii,
 			  float *u, float *v, int jj, int intervals);
 static void	points_to_path(Path p, float *x, float *y, int n);
 static status   computeBoundingBoxPath(Path);
+static status	insidePath(Path p, Int xc, Int yc);
 
 static status
 initialisePath(Path p, Name kind, Int radius_or_interval, Chain points)
@@ -66,6 +69,7 @@ initialisePath(Path p, Name kind, Int radius_or_interval, Chain points)
   assign(p, interpolation, NIL);
   assign(p, fill,  NIL);
   assign(p, closed,	   OFF);
+  assign(p, fill_rule,	   NAME_winding);
 
   if ( notDefault(points) )
     send(p, NAME_points, points, EAV);
@@ -73,28 +77,49 @@ initialisePath(Path p, Name kind, Int radius_or_interval, Chain points)
   succeed;
 }
 
+/* The points we draw: the interpolated ones for a smooth path.  The
+ * radius only applies to `poly' paths.
+ */
+
+static Chain
+path_chain(Path p)
+{ return p->kind == NAME_smooth ? p->interpolation : p->points;
+}
+
+static double
+path_radius(Path p)
+{ return p->kind == NAME_smooth ? 0.0 : valNum(p->radius);
+}
+
+static bool
+path_drawable(Path p)
+{ Chain ch = path_chain(p);
+
+  return notNil(ch) && valInt(ch->size) >= 2;
+}
+
 		 /*******************************
 		 *	      ARROWS		*
 		 *******************************/
 
-status
-adjustFirstArrowPath(Path p)
-{ if ( notNil(p->first_arrow) )
-  { Chain points = (p->kind == NAME_smooth ? p->interpolation : p->points);
+static status
+adjustArrowPath(Path p, Graphical arrow, bool first)
+{ double tx, ty, rx, ry;
 
-    if ( valInt(getSizeChain(points)) >= 2 )
-    { Any av[4];
-      Point tip = getHeadChain(points);
-      Point ref = getNth1Chain(points, TWO);
+  if ( notNil(arrow) && path_drawable(p) &&
+       r_path_end(path_chain(p), path_radius(p), p->closed == ON, first,
+		  &tx, &ty, &rx, &ry) )
+  { double ox = valNum(p->offset->x);
+    double oy = valNum(p->offset->y);
+    Any av[4];
 
-      av[0] = add(tip->x, p->offset->x);
-      av[1] = add(tip->y, p->offset->y);
-      av[2] = add(ref->x, p->offset->x);
-      av[3] = add(ref->y, p->offset->y);
+    av[0] = toNum(tx+ox);
+    av[1] = toNum(ty+oy);
+    av[2] = toNum(rx+ox);
+    av[3] = toNum(ry+oy);
 
-      if ( qadSendv(p->first_arrow, NAME_points, 4, av) )
-	return ComputeGraphical(p->first_arrow);
-    }
+    if ( qadSendv(arrow, NAME_points, 4, av) )
+      return ComputeGraphical(arrow);
   }
 
   fail;
@@ -102,27 +127,14 @@ adjustFirstArrowPath(Path p)
 
 
 status
+adjustFirstArrowPath(Path p)
+{ return adjustArrowPath(p, p->first_arrow, true);
+}
+
+
+status
 adjustSecondArrowPath(Path p)
-{ if ( notNil(p->second_arrow) )
-  { Chain points = (p->kind == NAME_smooth ? p->interpolation : p->points);
-    int size;
-
-    if ( (size=valInt(getSizeChain(points))) >= 2 )
-    { Any av[4];
-      Point tip = getTailChain(points);
-      Point ref = getNth1Chain(points, toInt(size-1));
-
-      av[0] = add(tip->x, p->offset->x);
-      av[1] = add(tip->y, p->offset->y);
-      av[2] = add(ref->x, p->offset->x);
-      av[3] = add(ref->y, p->offset->y);
-
-      if ( qadSendv(p->second_arrow, NAME_points, 4, av) )
-	return ComputeGraphical(p->second_arrow);
-    }
-  }
-
-  fail;
+{ return adjustArrowPath(p, p->second_arrow, false);
 }
 
 
@@ -134,23 +146,17 @@ static status
 RedrawAreaPath(Path p, Area a)
 { if ( valInt(getSizeChain(p->points)) >= 2 )
   { int x, y, w, h;
-    int ox, oy;
-    Chain points;
+    double ox, oy;
 
     initialiseDeviceGraphical(p, &x, &y, &w, &h);
-    ox = x - valInt(p->area->x) + valInt(p->offset->x);
-    oy = y - valInt(p->area->y) + valInt(p->offset->y);
+    ox = x - valNum(p->area->x) + valNum(p->offset->x);
+    oy = y - valNum(p->area->y) + valNum(p->offset->y);
 
     r_thickness(valNum(p->pen));
     r_dash(p->texture);
-    if ( p->kind == NAME_smooth )
-    { points = p->interpolation;
-      r_path(points, ox, oy, 0, FALSE, p->fill);
-    } else
-    { points = p->points;
-      r_path(points, ox, oy,
-	     valInt(p->radius), p->closed == ON, p->fill);
-    }
+    if ( path_drawable(p) )
+      r_path(path_chain(p), ox, oy, path_radius(p), p->closed == ON,
+	     p->fill, p->fill_rule);
 
     if ( notNil(p->mark) )
     { Cell cell;
@@ -164,8 +170,8 @@ RedrawAreaPath(Path p, Area a)
       { Point pt = cell->value;
 
 	r_image(i, 0, 0,
-		valInt(pt->x) - iw2 + ox,
-		valInt(pt->y) - ih2 + oy,
+		(int)rint(valNum(pt->x) + ox) - iw2,
+		(int)rint(valNum(pt->y) + oy) - ih2,
 		iw, ih);
       }
     }
@@ -225,16 +231,25 @@ computePath(Path p)
 }
 
 
+/* The area is the box around the points, extended for the marks,
+ * selection handles and pen as it always was, joined with what Cairo
+ * says the drawing covers.  The latter is needed for curves and arcs,
+ * which leave the box of their points, and for mitered corners.
+ */
+
 static status
 computeBoundingBoxPath(Path p)
 { Cell cell;
-  Chain points = (p->kind == NAME_smooth ? p->interpolation : p->points);
-  int minx = 1000000, miny = 1000000, maxx = -1000000, maxy = -10000000;
+  Chain points = path_chain(p);
+  double minx = HUGE_VAL, miny = HUGE_VAL, maxx = -HUGE_VAL, maxy = -HUGE_VAL;
+
+  if ( isNil(points) )
+    points = p->points;
 
   for_cell(cell, points)
   { Point p = cell->value;
-    int px = valInt(p->x);
-    int py = valInt(p->y);
+    double px = valNum(p->x);
+    double py = valNum(p->y);
 
     if ( px < minx ) minx = px;
     if ( px > maxx ) maxx = px;
@@ -261,16 +276,32 @@ computeBoundingBoxPath(Path p)
   }
 
   if ( maxx >= minx && maxy >= miny )
-  { int pens = valInt(p->pen) / 2;
-    int pena = (valInt(p->pen) % 2 == 0 ? pens : pens + 1);
+  { double pen  = valNum(p->pen);
+    double pens = floor(pen/2.0);
+    double pena = pen - pens;
+    double x1, y1, x2, y2;
 
     minx -= pens; maxx += pena;
     miny -= pens; maxy += pena;
 
-    assign(p->area, x, toInt(minx + valInt(p->offset->x)));
-    assign(p->area, y, toInt(miny + valInt(p->offset->y)));
-    assign(p->area, w, toInt(maxx - minx));
-    assign(p->area, h, toInt(maxy - miny));
+    if ( path_drawable(p) &&
+	 r_path_extents(points, path_radius(p), p->closed == ON,
+			pen, &x1, &y1, &x2, &y2) )
+    { if ( x1 < minx ) minx = x1;
+      if ( y1 < miny ) miny = y1;
+      if ( x2 > maxx ) maxx = x2;
+      if ( y2 > maxy ) maxy = y2;
+    }
+
+    minx = floor(minx + valNum(p->offset->x));
+    miny = floor(miny + valNum(p->offset->y));
+    maxx = ceil(maxx + valNum(p->offset->x));
+    maxy = ceil(maxy + valNum(p->offset->y));
+
+    assign(p->area, x, toNum(minx));
+    assign(p->area, y, toNum(miny));
+    assign(p->area, w, toNum(maxx - minx));
+    assign(p->area, h, toNum(maxy - miny));
   } else
     clearArea(p->area);
 
@@ -608,6 +639,18 @@ radiusPath(Path p, Int r)
 
 
 static status
+fillRulePath(Path p, Name rule)
+{ if ( p->fill_rule != rule )
+  { CHANGING_GRAPHICAL(p,
+	assign(p, fill_rule, rule);
+	changedEntireImageGraphical(p));
+  }
+
+  succeed;
+}
+
+
+static status
 kindPath(Path p, Name kind)
 { if ( p->kind == kind )
     succeed;
@@ -634,17 +677,94 @@ getRadiusOrIntervalPath(Path p)
 }
 
 
+		 /*******************************
+		 *	   TRANSFORMATION	*
+		 *******************************/
+
+static void
+transformPathCoord(Point pt, double sx, double tx, double sy, double ty)
+{ assign(pt, x, toNum(valNum(pt->x)*sx + tx));
+  assign(pt, y, toNum(valNum(pt->y)*sy + ty));
+}
+
+
+/* Scale the ellipse of an arc by sx,sy.  If the scaling is not uniform
+ * the image of a rotated ellipse is an ellipse with other axes and
+ * rotation, which we find from the singular value decomposition of
+ * diag(sx,sy)*R(rotation)*diag(rx,ry).  Mirroring reverses the sweep.
+ */
+
+static void
+transformArcPoint(ArcPoint ap, double sx, double sy)
+{ double rx = valNum(ap->rx);
+  double ry = valNum(ap->ry);
+
+  if ( sx == sy && sx > 0.0 )
+  { rx *= sx;
+    ry *= sx;
+  } else
+  { double phi = valNum(ap->rotation)*M_PI/180.0;
+    double a =  sx*cos(phi)*rx, b = -sx*sin(phi)*ry;
+    double c =  sy*sin(phi)*rx, d =  sy*cos(phi)*ry;
+    double E = (a+d)/2.0, F = (a-d)/2.0;
+    double G = (c+b)/2.0, H = (c-b)/2.0;
+    double Q = hypot(E, H), R = hypot(F, G);
+
+    rx = Q+R;
+    ry = fabs(Q-R);
+    phi = (atan2(H, E) + atan2(G, F))/2.0;
+    assign(ap, rotation, toNum(phi*180.0/M_PI));
+    if ( sx*sy < 0.0 )
+      assign(ap, sweep, ap->sweep == ON ? OFF : ON);
+  }
+
+  assign(ap, rx, toNum(rx));
+  assign(ap, ry, toNum(ry));
+}
+
+
+/* Map all coordinates of the points to x' = sx*x+tx, y' = sy*y+ty.
+ * This includes the control points of curves and the ellipses of arcs.
+ */
+
+static void
+transformPathPoints(Chain points, double sx, double tx, double sy, double ty)
+{ Cell cell;
+
+  for_cell(cell, points)
+  { Point pt = cell->value;
+
+    transformPathCoord(pt, sx, tx, sy, ty);
+    if ( instanceOfObject(pt, ClassCurvePoint) )
+    { CurvePoint cp = (CurvePoint)pt;
+
+      transformPathCoord(cp->control1, sx, tx, sy, ty);
+      if ( notNil(cp->control2) )
+	transformPathCoord(cp->control2, sx, tx, sy, ty);
+    } else if ( instanceOfObject(pt, ClassArcPoint) &&
+		(sx != 1.0 || sy != 1.0) )
+    { transformArcPoint((ArcPoint)pt, sx, sy);
+    }
+  }
+}
+
+
+static void
+translatePath(Path p, double dx, double dy)
+{ transformPathPoints(p->points, 1.0, dx, 1.0, dy);
+  if ( notNil(p->interpolation) )
+    transformPathPoints(p->interpolation, 1.0, dx, 1.0, dy);
+}
+
+
 static status
 geometryPath(Path p, Int x, Int y, Int w, Int h)
-{ int ox, ax, offx, ooffx;
-  int oy, ay, offy, ooffy;
+{ double ox, oy;
   Int ow, oh;
-  float xf, yf;
-  Cell cell;
 
   ComputeGraphical(p);
-  ox = valInt(p->area->x);
-  oy = valInt(p->area->y);
+  ox = valNum(p->area->x);
+  oy = valNum(p->area->y);
   ow = p->area->w;
   oh = p->area->h;
 
@@ -653,35 +773,23 @@ geometryPath(Path p, Int x, Int y, Int w, Int h)
 	{ setArea(p->area, x, y, ow, oh);
 	} else
 	{ setArea(p->area, x, y, w, h);
-	  ax = valInt(p->area->x);
-	  ay = valInt(p->area->y);
-	  ooffx = valInt(p->offset->x);
-	  ooffy = valInt(p->offset->y);
-	  offx = ooffx + ax - ox;
-	  offy = ooffy + ay - oy;
-	  xf = (float) valInt(p->area->w) / (float) valInt(ow);
-	  yf = (float) valInt(p->area->h) / (float) valInt(oh);
+	  double ax = valNum(p->area->x);
+	  double ay = valNum(p->area->y);
+	  double ooffx = valNum(p->offset->x);
+	  double ooffy = valNum(p->offset->y);
+	  double offx = ooffx + ax - ox;
+	  double offy = ooffy + ay - oy;
+	  double xf = valNum(p->area->w) / valNum(ow);
+	  double yf = valNum(p->area->h) / valNum(oh);
 
-	  assign(p->offset, x, toInt(offx));
-	  assign(p->offset, y, toInt(offy));
+	  assign(p->offset, x, toNum(offx));
+	  assign(p->offset, y, toNum(offy));
 
-	  for_cell(cell, p->points)
-	  { Point pt = cell->value;
-	    int nx = ax + rfloat((float) (valInt(pt->x)-ox+ooffx) * xf) - offx;
-	    int ny = ay + rfloat((float) (valInt(pt->y)-oy+ooffy) * yf) - offy;
-
-	    assign(pt, x, toInt(nx));
-	    assign(pt, y, toInt(ny));
-	  }
-
-	  if ( p->kind == NAME_smooth && notNil(p->interpolation) )
-	  { if ( xf == 1.0 && yf == 1.0 )
-	    { Int dx = toInt(ax - ox - (offx - ooffx));
-	      Int dy = toInt(ay - oy - (offy - ooffy));
-
-	      for_cell(cell, p->interpolation)
-		offsetPoint(cell->value, dx, dy);
-	    } else
+	  if ( xf != 1.0 || yf != 1.0 )	/* only the offset moves otherwise */
+	  { transformPathPoints(p->points,
+				xf, ax - (ox-ooffx)*xf - offx,
+				yf, ay - (oy-ooffy)*yf - offy);
+	    if ( p->kind == NAME_smooth && notNil(p->interpolation) )
 	      smooth_path(p);
 	  }
 	});
@@ -701,16 +809,9 @@ relativeMovePath(Path p,  Point diff, Name method)
 			 assign(p->area, y, add(p->area->y, dy));
 
 			 if ( method == NAME_points )
-			 { Cell cell;
-
-			   for_cell(cell, p->points)
-			     offsetPoint(cell->value, dx, dy);
-			   if ( notNil(p->interpolation) )
-			     for_cell(cell, p->interpolation)
-			       offsetPoint(cell->value, dx, dy);
-			 } else
-			 { offsetPoint(p->offset, dx, dy);
-			 }
+			   translatePath(p, valNum(dx), valNum(dy));
+			 else
+			   offsetPoint(p->offset, dx, dy);
 		       });
   }
 
@@ -720,30 +821,24 @@ relativeMovePath(Path p,  Point diff, Name method)
 
 static status
 referencePath(Path p, Point r)
-{ Int rx, ry, dx, dy;
-  Area a = p->area;
+{ Area a = p->area;
+  double rx, ry;
 
   if ( isDefault(r) )
-  { rx = a->x;
-    ry = a->y;
+  { rx = valNum(a->x);
+    ry = valNum(a->y);
   } else
-  { rx = r->x;
-    ry = r->y;
+  { rx = valNum(r->x);
+    ry = valNum(r->y);
   }
 
-  dx = sub(p->offset->x, rx);
-  dy = sub(p->offset->y, ry);
+  double dx = valNum(p->offset->x) - rx;
+  double dy = valNum(p->offset->y) - ry;
 
-  if ( dx || dy )
-  { Cell cell;
-
-    offsetPoint(p->offset, neg(dx), neg(dy));
-
-    for_cell(cell, p->points)
-      offsetPoint(cell->value, dx, dy);
-    if ( notNil(p->interpolation) )
-      for_cell(cell, p->interpolation)
-	offsetPoint(cell->value, dx, dy);
+  if ( dx != 0.0 || dy != 0.0 )
+  { assign(p->offset, x, toNum(rx));
+    assign(p->offset, y, toNum(ry));
+    translatePath(p, dx, dy);
   }
 
   succeed;
@@ -755,22 +850,16 @@ resizePath(Path p, Num xfactor, Num yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(p->area->x);
   int oy = valInt(p->area->y);
-  int offx = valInt(p->offset->x);
-  int offy = valInt(p->offset->y);
-  Cell cell;
+  double offx = valNum(p->offset->x);
+  double offy = valNum(p->offset->y);
 
   init_resize_graphical(p, xfactor, yfactor, origin, &xf, &yf, &ox, &oy);
   if ( xf == 1.0 && yf == 1.0 )
     succeed;
 
-  for_cell(cell, p->points)
-  { Point pt = cell->value;
-    int nx = ox + rfloat((float) (valInt(pt->x)+offx-ox) * xf) - offx;
-    int ny = oy + rfloat((float) (valInt(pt->y)+offy-oy) * yf) - offy;
-
-    assign(pt, x, toInt(nx));
-    assign(pt, y, toInt(ny));
-  }
+  transformPathPoints(p->points,
+		      xf, ox + (offx-ox)*xf - offx,
+		      yf, oy + (offy-oy)*yf - offy);
 
   return requestComputeGraphical(p, DEFAULT);
 }
@@ -868,14 +957,9 @@ getSegmentPath(Path p, Point pos, Int accept)
 }
 
 
-static int minDistancePolyline(Chain points, int tx, int ty,
-			       bool close_last_to_first);
-static status insidePath(Path p, Int xc, Int yc);
-
 static Int
 getDistancePath(Path p, Any to)
 { ComputeGraphical(p);
-
 
   if ( instanceOfObject(to, ClassEvent) && notNil(p->device) )
   { to = getPositionEvent((EventObj) to, (Graphical) p->device);
@@ -884,24 +968,369 @@ getDistancePath(Path p, Any to)
 
   if ( instanceOfObject(to, ClassPoint) )
   { Point pt = to;
-    Chain ch = (p->kind == NAME_smooth ? p->interpolation : p->points);
+    Chain ch = path_chain(p);
 
-    if ( ch->size == ZERO )		/* no points */
+    if ( isNil(ch) || ch->size == ZERO )	/* no points */
       fail;
     if ( ch->size == ONE )		/* one point? */
       answer(getDistancePoint(to, getHeadChain(ch)));
 
-    answer(toInt(minDistancePolyline(ch, valInt(pt->x), valInt(pt->y),
-				     FALSE)));
+    double d = r_path_distance(ch, path_radius(p), p->closed == ON,
+			       valNum(pt->x), valNum(pt->y));
+    answer(toInt((intptr_t)rint(d)));
   } else
     return getDistanceArea(p->area, ((Graphical)to)->area);
 }
 
 
+		 /*******************************
+		 *	   SVG PATH DATA	*
+		 *******************************/
+
+/* Read and write the `d' attribute of an SVG <path> element (SVG 1.1,
+ * section 8.3).  All commands are supported.  Relative commands and
+ * the shorthands H, V, S and T are converted to absolute points, so
+ * <-svg_data does not reproduce the input literally.
+ */
+
+typedef struct svg_parser
+{ const char *s;			/* current position */
+  const char *error;			/* error message */
+} svg_parser;
+
+static void
+svg_skip_sep(svg_parser *p)
+{ while( *p->s == ' ' || *p->s == '\t' || *p->s == '\n' ||
+	 *p->s == '\r' || *p->s == '\f' || *p->s == ',' )
+    p->s++;
+}
+
+static bool
+svg_number_ahead(svg_parser *p)
+{ svg_skip_sep(p);
+  int c = *p->s;
+
+  return (c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.';
+}
+
+static bool
+svg_number(svg_parser *p, double *v)
+{ char *e;
+
+  svg_skip_sep(p);
+  *v = strtod(p->s, &e);
+  if ( e == p->s )
+  { p->error = "number expected";
+    return false;
+  }
+  p->s = e;
+  return true;
+}
+
+static bool
+svg_flag(svg_parser *p, bool *v)	/* flags may be written as "01" */
+{ svg_skip_sep(p);
+  if ( *p->s == '0' || *p->s == '1' )
+  { *v = (*p->s == '1');
+    p->s++;
+    return true;
+  }
+  p->error = "flag (0 or 1) expected";
+  return false;
+}
+
+static bool
+svg_numbers(svg_parser *p, int n, double *v)
+{ for(int i=0; i<n; i++)
+  { if ( !svg_number(p, &v[i]) )
+      return false;
+  }
+  return true;
+}
+
+static Point
+svg_point(double x, double y)
+{ return newObject(ClassPoint, toNum(x), toNum(y), EAV);
+}
+
+static status
+svgDataPath(Path p, CharArray data)
+{ const char *text = charArrayToUTF8(data);
+  svg_parser parser = { .s = text };
+  svg_parser *ps = &parser;
+  Chain points = newObject(ClassChain, EAV);
+  double cx = 0.0, cy = 0.0;		/* current point */
+  double sx = 0.0, sy = 0.0;		/* start of the sub-path */
+  double lcx = 0.0, lcy = 0.0;		/* last control point */
+  int cmd = 0, last = 0;
+  bool first_closed = false;
+  bool in_subpath = false;		/* drawing after a moveto */
+  MovePoint subpath = NULL;		/* move_point of this sub-path */
+  int subpaths = 0;
+
+  for(;;)
+  { svg_skip_sep(ps);
+    if ( !*ps->s )
+      break;
+
+    if ( isalpha((unsigned char)*ps->s) )
+    { cmd = *ps->s++;
+    } else if ( !cmd )
+    { ps->error = "command expected";
+      goto error;
+    } else if ( cmd == 'M' || cmd == 'm' )
+    { cmd = (cmd == 'M' ? 'L' : 'l');	/* implicit lineto after moveto */
+    } else if ( cmd == 'Z' || cmd == 'z' )
+    { ps->error = "command expected";
+      goto error;
+    }
+
+    bool rel = islower(cmd);
+    double bx = rel ? cx : 0.0;
+    double by = rel ? cy : 0.0;
+    double v[7];
+    int ucmd = toupper(cmd);
+
+    if ( ucmd != 'M' && ucmd != 'Z' && !in_subpath )
+    { if ( subpaths == 0 )
+      { ps->error = "path must start with a moveto";
+	goto error;
+      }
+      subpath = newObject(ClassMovePoint, toNum(cx), toNum(cy), EAV);
+      appendChain(points, subpath);	/* drawing on after a closepath */
+      subpaths++;
+      in_subpath = true;
+    }
+
+    switch(ucmd)
+    { case 'M':
+	if ( !svg_numbers(ps, 2, v) )
+	  goto error;
+	cx = sx = v[0]+bx;
+	cy = sy = v[1]+by;
+	if ( subpaths++ == 0 )
+	{ appendChain(points, svg_point(cx, cy));
+	} else
+	{ subpath = newObject(ClassMovePoint, toNum(cx), toNum(cy), EAV);
+	  appendChain(points, subpath);
+	}
+	in_subpath = true;
+	break;
+      case 'L':
+	if ( !svg_numbers(ps, 2, v) )
+	  goto error;
+	cx = v[0]+bx;
+	cy = v[1]+by;
+	appendChain(points, svg_point(cx, cy));
+	break;
+      case 'H':
+	if ( !svg_numbers(ps, 1, v) )
+	  goto error;
+	cx = v[0]+bx;
+	appendChain(points, svg_point(cx, cy));
+	break;
+      case 'V':
+	if ( !svg_numbers(ps, 1, v) )
+	  goto error;
+	cy = v[0]+by;
+	appendChain(points, svg_point(cx, cy));
+	break;
+      case 'C':
+      case 'S':
+      { double c1x, c1y;
+
+	if ( ucmd == 'C' )
+	{ if ( !svg_numbers(ps, 6, v) )
+	    goto error;
+	  c1x = v[0]+bx; c1y = v[1]+by;
+	  memmove(v, v+2, 4*sizeof(double));
+	} else
+	{ if ( !svg_numbers(ps, 4, v) )
+	    goto error;
+	  if ( last == 'C' || last == 'S' )	/* reflect last control */
+	  { c1x = 2*cx-lcx; c1y = 2*cy-lcy;
+	  } else
+	  { c1x = cx; c1y = cy;
+	  }
+	}
+	lcx = v[0]+bx; lcy = v[1]+by;
+	cx = v[2]+bx;  cy = v[3]+by;
+	appendChain(points,
+		    newObject(ClassCurvePoint, toNum(cx), toNum(cy),
+			      svg_point(c1x, c1y), svg_point(lcx, lcy), EAV));
+	break;
+      }
+      case 'Q':
+      case 'T':
+	if ( ucmd == 'Q' )
+	{ if ( !svg_numbers(ps, 4, v) )
+	    goto error;
+	  lcx = v[0]+bx; lcy = v[1]+by;
+	  cx = v[2]+bx;  cy = v[3]+by;
+	} else
+	{ if ( !svg_numbers(ps, 2, v) )
+	    goto error;
+	  if ( last == 'Q' || last == 'T' )
+	  { lcx = 2*cx-lcx; lcy = 2*cy-lcy;
+	  } else
+	  { lcx = cx; lcy = cy;
+	  }
+	  cx = v[0]+bx; cy = v[1]+by;
+	}
+	appendChain(points,
+		    newObject(ClassCurvePoint, toNum(cx), toNum(cy),
+			      svg_point(lcx, lcy), NIL, EAV));
+	break;
+      case 'A':
+      { bool large, sweep;
+
+	if ( !svg_numbers(ps, 3, v) ||
+	     !svg_flag(ps, &large) || !svg_flag(ps, &sweep) ||
+	     !svg_numbers(ps, 2, v+3) )
+	  goto error;
+	cx = v[3]+bx;
+	cy = v[4]+by;
+	appendChain(points,
+		    newObject(ClassArcPoint, toNum(cx), toNum(cy),
+			      toNum(v[0]), toNum(v[1]), toNum(v[2]),
+			      large ? ON : OFF, sweep ? ON : OFF, EAV));
+	break;
+      }
+      case 'Z':
+	if ( subpath )
+	  assign(subpath, closed, ON);
+	else
+	  first_closed = true;
+	cx = sx; cy = sy;
+	in_subpath = false;
+	break;
+      default:
+	ps->error = "unknown command";
+	goto error;
+    }
+
+    last = ucmd;
+    if ( ucmd == 'Z' && svg_number_ahead(ps) )
+    { ps->error = "command expected";
+      goto error;
+    }
+  }
+
+  if ( subpaths == 0 )
+  { ps->error = "path must start with a moveto";
+    goto error;
+  }
+
+  /* The path's <-closed is that of the first sub-path.  Only the move
+   * points that differ from it keep an explicit <-closed.
+   */
+  Cell cell;
+  for_cell(cell, points)
+  { if ( instanceOfObject(cell->value, ClassMovePoint) )
+    { MovePoint mp = cell->value;
+      bool closed = (mp->closed == ON);
+
+      assign(mp, closed, closed == first_closed ? (BoolObj)NIL
+					      : (closed ? ON : OFF));
+    }
+  }
+
+  assign(p, kind, NAME_poly);
+  assign(p, closed, first_closed ? ON : OFF);
+  return pointsPath(p, points);
+
+error:
+  { char msg[100];
+
+    snprintf(msg, sizeof(msg), "%s at offset %d", ps->error,
+	     (int)(ps->s - text));
+    return errorPce(p, NAME_syntaxError, CtoName(msg));
+  }
+}
 
 
+typedef struct svg_buffer
+{ char  *data;
+  size_t size;
+  size_t allocated;
+} svg_buffer;
 
+static void
+svg_printf(svg_buffer *b, const char *fmt, ...)
+{ va_list args;
 
+  for(;;)
+  { size_t left = b->allocated - b->size;
+    int n;
+
+    va_start(args, fmt);
+    n = vsnprintf(b->data+b->size, left, fmt, args);
+    va_end(args);
+
+    if ( n >= 0 && (size_t)n < left )
+    { b->size += n;
+      return;
+    }
+    b->allocated = b->allocated*2 + n + 1;
+    b->data = pceRealloc(b->data, b->allocated);
+  }
+}
+
+static void
+svg_xy(svg_buffer *b, Point pt)
+{ svg_printf(b, " %.15g %.15g", valNum(pt->x), valNum(pt->y));
+}
+
+static StringObj
+getSvgDataPath(Path p)
+{ svg_buffer b = { .data = pceMalloc(256), .allocated = 256 };
+  bool closed = false;
+  bool first = true;
+  Cell cell;
+
+  b.data[0] = EOS;
+  for_cell(cell, p->points)
+  { Point pt = cell->value;
+
+    if ( first || instanceOfObject(pt, ClassMovePoint) )
+    { if ( !first )
+	svg_printf(&b, "%sM", closed ? " Z " : " ");
+      else
+	svg_printf(&b, "M");
+      closed = (p->closed == ON);
+      if ( instanceOfObject(pt, ClassMovePoint) &&
+	   notNil(((MovePoint)pt)->closed) )
+	closed = (((MovePoint)pt)->closed == ON);
+      svg_xy(&b, pt);
+      first = false;
+    } else if ( instanceOfObject(pt, ClassCurvePoint) )
+    { CurvePoint cp = (CurvePoint)pt;
+
+      svg_printf(&b, isNil(cp->control2) ? " Q" : " C");
+      svg_xy(&b, cp->control1);
+      if ( notNil(cp->control2) )
+	svg_xy(&b, cp->control2);
+      svg_xy(&b, pt);
+    } else if ( instanceOfObject(pt, ClassArcPoint) )
+    { ArcPoint ap = (ArcPoint)pt;
+
+      svg_printf(&b, " A %.15g %.15g %.15g %d %d",
+		 valNum(ap->rx), valNum(ap->ry), valNum(ap->rotation),
+		 ap->large == ON, ap->sweep == ON);
+      svg_xy(&b, pt);
+    } else
+    { svg_printf(&b, " L");
+      svg_xy(&b, pt);
+    }
+  }
+  if ( closed )
+    svg_printf(&b, " Z");
+
+  StringObj s = CtoString(b.data);
+  pceFree(b.data);
+
+  answer(s);
+}
 
 
 		 /*******************************
@@ -912,6 +1341,8 @@ static status
 initialiseNewSlotPath(Path p, Variable var)
 { if ( var->name == NAME_offset )
     assign(p, offset, newObject(ClassPoint, EAV));
+  else if ( var->name == NAME_fillRule )
+    assign(p, fill_rule, NAME_winding);
   else
     initialiseNewSlotGraphical((Graphical) p, var);
 
@@ -967,7 +1398,9 @@ static vardecl var_path[] =
   SV(NAME_closed, "bool", IV_GET|IV_STORE, closedPath,
      NAME_appearance, "Draw line from last to first point"),
   IV(NAME_interpolation, "chain*", IV_GET,
-     NAME_interpolation, "Derived interpolated points")
+     NAME_interpolation, "Derived interpolated points"),
+  SV(NAME_fillRule, "{winding,even_odd}", IV_GET|IV_STORE, fillRulePath,
+     NAME_appearance, "Which parts of a self-intersecting path are inside")
 };
 
 /* Send Methods */
@@ -988,7 +1421,7 @@ static senddecl send_path[] =
   SM(NAME_reference, 1, "reference=[point]", referencePath,
      NAME_area, "Move <-offset while retaining points"),
   SM(NAME_initialiseNewSlot, 1, "variable", initialiseNewSlotPath,
-     NAME_compatibility, "Initialise <-offset"),
+     NAME_compatibility, "Initialise <-offset and <-fill_rule"),
   SM(NAME_append, 1, "point", appendPath,
      NAME_points, "Append a point"),
   SM(NAME_clear, 0, NULL, clearPath,
@@ -1000,7 +1433,9 @@ static senddecl send_path[] =
   SM(NAME_setPoint, 3, T_setPoint, setPointPath,
      NAME_points, "Move (member) point to (X, Y)"),
   SM(NAME_inside, 2, T_inside, insidePath,
-     NAME_event, "Test whether (X,Y) lies inside the polygon")
+     NAME_event, "Test whether (X,Y) lies inside the polygon"),
+  SM(NAME_svgData, 1, "char_array", svgDataPath,
+     NAME_points, "Set the points from SVG path data (`d' attribute)")
 };
 
 /* Get Methods */
@@ -1017,7 +1452,9 @@ static getdecl get_path[] =
   GM(NAME_end, 0, "point", NULL, getEndPath,
      NAME_tip, "End-point of path"),
   GM(NAME_start, 0, "point", NULL, getStartPath,
-     NAME_tip, "Start-point of path")
+     NAME_tip, "Start-point of path"),
+  GM(NAME_svgData, 0, "string", NULL, getSvgDataPath,
+     NAME_points, "The points as SVG path data (`d' attribute)")
 };
 
 /* Resources */
@@ -1041,129 +1478,41 @@ ClassDecl(path_decls,
 		 *	HIT-TEST FOR EVENTS	*
 		 *******************************/
 
-/* Minimum distance from (tx, ty) to the polyline whose vertices are
- * the points of chain `points'.  All coordinates are in RAW vertex
- * space (offset already subtracted).  If `close_last_to_first' is
- * true, the closing edge from the last vertex back to the first is
- * also considered.
- *
- * Used by both getDistancePath (open) and inEventAreaPath (with the
- * closing edge for closed paths).
- */
-static int
-minDistancePolyline(Chain points, int tx, int ty, bool close_last_to_first)
-{ Cell cell;
-  Point first = NULL, prev = NULL;
-  int bestd = INT_MAX;
-
-  for_cell(cell, points)
-  { Point cur = cell->value;
-
-    if ( prev )
-    { int d = distanceLineToPoint(valInt(prev->x), valInt(prev->y),
-				  valInt(cur->x),  valInt(cur->y),
-				  tx, ty, FALSE);
-      if ( d < bestd ) bestd = d;
-    } else
-      first = cur;
-    prev = cur;
-  }
-  if ( close_last_to_first && first && prev && prev != first )
-  { int d = distanceLineToPoint(valInt(prev->x),  valInt(prev->y),
-				valInt(first->x), valInt(first->y),
-				tx, ty, FALSE);
-    if ( d < bestd ) bestd = d;
-  }
-  return bestd;
-}
-
-
-/* Ray-casting inside test.  Query point (tx, ty) is in RAW vertex
- * space (offset already subtracted).  Uses the standard even-odd
- * rule and closes the polygon between the last and first vertex.
- */
-static bool
-pointInPolyPath(Chain points, int tx, int ty)
-{ Cell cell;
-  Point first = NULL, prev = NULL;
-  bool inside = false;
-
-  for_cell(cell, points)
-  { Point cur = cell->value;
-
-    if ( prev )
-    { int cx = valInt(cur->x),  cy = valInt(cur->y);
-      int qx = valInt(prev->x), qy = valInt(prev->y);
-
-      if ( (cy > ty) != (qy > ty) )
-      { double xi = qx + (double)(ty - qy) * (cx - qx) / (double)(cy - qy);
-	if ( (double)tx < xi )
-	  inside = !inside;
-      }
-    } else
-      first = cur;
-    prev = cur;
-  }
-  if ( first && prev && prev != first )
-  { int fx = valInt(first->x), fy = valInt(first->y);
-    int qx = valInt(prev->x),  qy = valInt(prev->y);
-
-    if ( (fy > ty) != (qy > ty) )
-    { double xi = qx + (double)(ty - qy) * (fx - qx) / (double)(fy - qy);
-      if ( (double)tx < xi )
-	inside = !inside;
-    }
-  }
-  return inside;
-}
-
-
 /* Public send method: test whether (X, Y) — expressed in the path's
- * device coordinate system — is inside the polygon defined by the
- * path's vertices.  Uses the even-odd ray-casting rule
- * (pointInPolyPath) with an implicit last→first closing edge; the
- * path's `<-closed' flag is not consulted, so an "open" polygon can
- * still be treated as a closed region for hit-testing purposes.
- * Fails silently if there are fewer than three vertices.
+ * device coordinate system — is inside the area the path encloses,
+ * using its <-fill_rule.  The path's `<-closed' flag is not consulted,
+ * so an "open" polygon can still be treated as a closed region for
+ * hit-testing purposes.  Fails silently if there are fewer than two
+ * points.  Two points only enclose an area if one is a curve or arc.
  */
 static status
 insidePath(Path p, Int xc, Int yc)
-{ Chain points = (p->kind == NAME_smooth ? p->interpolation : p->points);
-  int tx, ty;
-
-  if ( isNil(points) || valInt(getSizeChain(points)) < 3 )
+{ if ( !path_drawable(p) )
     fail;
 
-  tx = valInt(xc) - valInt(p->offset->x);
-  ty = valInt(yc) - valInt(p->offset->y);
-
-  return pointInPolyPath(points, tx, ty);
+  return r_path_hit(path_chain(p), path_radius(p), p->closed == ON, p->fill_rule,
+		    true, 0.0,
+		    valNum(xc) - valNum(p->offset->x),
+		    valNum(yc) - valNum(p->offset->y));
 }
 
 
 static status
 inEventAreaPath(Path p, Int xc, Int yc)
 { static int evtol = -1;
-  Chain points;
 
   if ( evtol < 0 )
   { Int v = getClassVariableValueObject(p, NAME_eventTolerance);
     evtol = (v ? valInt(v) : 5);
   }
 
-  points = (p->kind == NAME_smooth ? p->interpolation : p->points);
-  if ( isNil(points) || valInt(getSizeChain(points)) < 2 )
+  if ( !path_drawable(p) )
     fail;
 
-  int tx = valInt(xc) - valInt(p->offset->x);
-  int ty = valInt(yc) - valInt(p->offset->y);
-
-  if ( p->closed == ON && pointInPolyPath(points, tx, ty) )
-    succeed;
-  if ( minDistancePolyline(points, tx, ty, p->closed == ON) < evtol )
-    succeed;
-
-  fail;
+  return r_path_hit(path_chain(p), path_radius(p), p->closed == ON,
+		    p->fill_rule, p->closed == ON, (double)evtol,
+		    valNum(xc) - valNum(p->offset->x),
+		    valNum(yc) - valNum(p->offset->y));
 }
 
 

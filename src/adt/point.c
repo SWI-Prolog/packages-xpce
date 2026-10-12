@@ -36,7 +36,7 @@
 #include <h/graphics.h>
 #include <math.h>
 
-static status
+status
 initialisePoint(Point p, Int x, Int y)
 { if ( isDefault(x) ) x = ZERO;
   if ( isDefault(y) ) y = ZERO;

@@ -368,6 +368,15 @@ static struct class_definition classdefs[] =
   { NAME_point, NAME_object, makeClassPoint,
     &ClassPoint, "Position in a two-dimensional space" },
 
+  { NAME_curvePoint, NAME_point, makeClassCurvePoint,
+    &ClassCurvePoint, "Path point reached by a Bezier curve" },
+
+  { NAME_arcPoint, NAME_point, makeClassArcPoint,
+    &ClassArcPoint, "Path point reached by an elliptical arc" },
+
+  { NAME_movePoint, NAME_point, makeClassMovePoint,
+    &ClassMovePoint, "Path point that starts a sub-path" },
+
   { NAME_popup, NAME_menu, makeClassPopup,
     &ClassPopup, "Popup menu" },
 

@@ -12,6 +12,24 @@ interior of the path may be filled with a colour using
 ->fill.  Class path is a subclass of class joint and
 therefore may have ->arrows attached.
 
+How the path gets to a point is determined by the class of the point.
+A plain point is reached by a straight line.  The following subclasses
+of class point describe other segments, using the same vocabulary as
+Cairo and SVG paths:
+
+	| curve_point | A quadratic or cubic Bezier curve   |
+	| arc_point   | An elliptical arc (as SVG `A`)      |
+	| move_point  | No line: start a new sub-path       |
+
+For example, a closed shape that is a half circle on top of a
+rectangle:
+
+	new(P, path),
+	send_list(P, append, [ point(0,40), arc_point(80,40, 40),
+	                       point(80,100), point(0,100) ]),
+	send(P, closed, @on),
+	send(P, fill, colour(skyblue)).
+
 Paths can be used for numerous purposes:
 
 - Creating polygons
@@ -29,15 +47,29 @@ Paths can be used for numerous purposes:
 ## Instance variables {#class-path-instvars}
 
 - path<-closed: bool
-    If @on, the first and last points are connected.
+    If @on, the first and last points are connected.  If the path has
+    sub-paths (see class move_point), each of them is closed, unless
+    `move_point<-closed` says otherwise.
 
     **Defaults**: @off
 
-- path<-fill: colour|{foreground,background}*
-    Colour used to fill the interior of the path.  To determine the
-    interior, the _Even-Odd-Rule_ is used.
+- path<-fill: colour|gradient|{foreground,background}*
+    Colour or gradient used to fill the interior of the path.  Which
+    parts are interior is determined by <-fill_rule.
 
     **Defaults**: @nil (not filled)
+
+- path<-fill_rule: {winding,even_odd}
+    Determines which parts of a path that intersects itself, or that
+    has sub-paths, are inside.  Using `winding`, a point is inside if
+    the path goes around it more often in one direction than in the
+    other.  Using `even_odd`, a point is inside if a ray from it
+    crosses the path an odd number of times.  The difference shows for
+    a sub-path inside another one, drawn the same way round: with
+    `even_odd` it is a hole.  The rule is also used by ->inside and for
+    selecting a filled path with the mouse.
+
+    **Defaults**: winding
 
 - path<-interpolation: chain*
     When kind is `smooth`, this is a chain of interpolated points. The
@@ -75,7 +107,11 @@ Paths can be used for numerous purposes:
     ->reference and ->relative_move.
 
 - path<-points: chain
-    Chain of points the line-segments goes through (control-points).
+    Chain of points the line-segments goes through.  The class of each
+    point determines how the path gets there from the previous point:
+    a straight line for a plain point, or a curve, arc or jump for a
+    curve_point, arc_point or move_point.  These are ignored for
+    `smooth` paths.
     The send-method validates and possibly converts all members of
     the argument chain to be instances of class point and raises the
     error `unexpected_type` on failure.  On successs, it replaces
@@ -83,7 +119,10 @@ Paths can be used for numerous purposes:
     thus becomes a part of the path object.  See also ->initialise.
 
 - path<-radius: int
-    Rounding radius for the corners of `poly` lines.  Not yet implemented.
+    Rounding radius for the corners of `poly` lines.  Only corners
+    between two straight segments are rounded.  If the segments are too
+    short, the radius is reduced such that each corner uses at most half
+    of a segment.
 
     **Defaults**: 0 (non-rounded corners).
 
@@ -126,17 +165,26 @@ Paths can be used for numerous purposes:
 
 - path->inside: x=int, y=int
     Succeed if the point (X, Y) — in the path's <-device coordinate
-    system — lies inside the polygon formed by the path's vertices.
-    Uses the standard even-odd (ray-casting) rule with an implicit
-    closing edge from the last vertex back to the first, so `<-closed`
-    is not consulted: an open polygon can still be probed as a closed
+    system — lies inside the area the path encloses, as determined by
+    <-fill_rule.  Each sub-path is implicitly closed, so `<-closed` is
+    not consulted: an open polygon can still be probed as a closed
     region for hit-testing purposes.  For smooth paths the test is
     performed against the interpolated poly-line.  Fails silently
-    when the path has fewer than three vertices.
+    when the path has fewer than two points.
 
     Companion to `path->in_event_area`, which combines this test with a
     near-outline distance test to make edge hits work on closed paths
     as well as open ones.
+
+- path->svg_data: char_array
+    Replace the points of the path by the path described by SVG path
+    data, the `d` attribute of an SVG `<path>` element.  All commands
+    (`M`, `L`, `H`, `V`, `C`, `S`, `Q`, `T`, `A` and `Z`, absolute
+    and relative) are supported.  Sets <-kind to `poly` and <-closed
+    to whether the first sub-path is closed.  Fails with a syntax error
+    if the data is not valid.
+
+	send(P, svg_data, "M10 80 Q 52.5 10, 95 80 T 180 80").
 
 - path->relative_move: diff=point, how=[{offset,points}]
     Move the graphical relative to its current position using the X- and
@@ -190,6 +238,11 @@ Paths can be used for numerous purposes:
     				         ?(@receiver, segment, @event)))).
 
     See also <-point.
+
+- path<-svg_data: -> string
+    The points of the path as SVG path data.  Relative commands and
+    shorthands are written as their absolute equivalent, so the result
+    is not necessarily the string given to ->svg_data.
 
 - path<-start: -> point
     First point of the path (equivalent to Path?points?head).  See

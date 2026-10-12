@@ -130,7 +130,16 @@ void r_strikethrough(FontObj font, double x, double base, double w,
 		     Any strike, Name texture);
 void r_polygon(FPoint pts, int n, int close);
 void r_bezier(fpoint start, fpoint end, fpoint control1, fpoint control2);
-void r_path(Chain points, int ox, int oy, int radius, int closed, Image fill);
+void r_path(Chain points, double ox, double oy, double radius, bool closed,
+	    Any fill, Name fill_rule);
+bool r_path_extents(Chain points, double radius, bool closed, double pen,
+		    double *x1, double *y1, double *x2, double *y2);
+bool r_path_hit(Chain points, double radius, bool closed, Name fill_rule,
+		bool area, double tolerance, double x, double y);
+double r_path_distance(Chain points, double radius, bool closed,
+		       double x, double y);
+bool r_path_end(Chain points, double radius, bool closed, bool first,
+		double *tx, double *ty, double *rx, double *ry);
 void r_image(Image image, int sx, int sy, int x, int y, int w, int h);
 void r_fill(double x, double y, double w, double h, Any pattern);
 void r_fill_polygon(FPoint pts, int n);

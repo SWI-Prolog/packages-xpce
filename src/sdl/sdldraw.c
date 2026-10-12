@@ -1870,50 +1870,605 @@ r_bezier(fpoint start, fpoint control1, fpoint control2, fpoint end)
   }
 }
 
+		 /*******************************
+		 *	       PATHS		*
+		 *******************************/
+
+/* A path is a chain of points.  The class of each point says how the
+ * path gets there from the previous one (see gra/pathseg.c).  The
+ * points are first turned into an array of nodes so that rounding a
+ * corner can look at both neighbours.
+ */
+
+typedef enum
+{ PN_MOVE,				/* start a sub-path */
+  PN_LINE,				/* straight line */
+  PN_CURVE,				/* Bezier curve (curve_point) */
+  PN_ARC				/* elliptical arc (arc_point) */
+} path_node_kind;
+
+typedef struct path_node
+{ path_node_kind kind;
+  double	 x, y;
+  Point		 point;			/* the point it comes from */
+  bool		 closed;		/* PN_MOVE: close the sub-path */
+} path_node;
+
+typedef struct path_corner
+{ double	 t1x, t1y;		/* where the arc starts */
+  double	 t2x, t2y;		/* where the arc ends */
+  double	 cx, cy, r;		/* the circle */
+  double	 a1, a2;		/* start and end angle */
+  bool		 negative;		/* draw with cairo_arc_negative() */
+} path_corner;
+
+static int
+path_nodes(Chain points, bool closed, double dx, double dy, path_node *nodes)
+{ int n = 0;
+  Cell cell;
+
+  for_cell(cell, points)
+  { Point pt = cell->value;
+    path_node *nd = &nodes[n];
+
+    nd->x = valNum(pt->x) + dx;
+    nd->y = valNum(pt->y) + dy;
+    nd->point = pt;
+    nd->closed = closed;
+
+    if ( n == 0 || instanceOfObject(pt, ClassMovePoint) )
+    { nd->kind = PN_MOVE;
+      if ( instanceOfObject(pt, ClassMovePoint) )
+      { MovePoint mp = (MovePoint)pt;
+
+	if ( notNil(mp->closed) )
+	  nd->closed = (mp->closed == ON);
+      }
+    } else if ( instanceOfObject(pt, ClassCurvePoint) )
+      nd->kind = PN_CURVE;
+    else if ( instanceOfObject(pt, ClassArcPoint) )
+      nd->kind = PN_ARC;
+    else
+      nd->kind = PN_LINE;
+
+    n++;
+  }
+
+  return n;
+}
+
+
+/* Round the corner at P between the straight edges from A and to B
+ * with a circle of the given radius.  The radius is reduced if the
+ * edges are too short, such that each corner uses at most half of an
+ * edge.  Fails if there is no corner (the edges are in line).
+ */
+
+static bool
+path_round_corner(double ax, double ay, double px, double py,
+		  double bx, double by, double radius, path_corner *c)
+{ double ux = ax-px, uy = ay-py;
+  double vx = bx-px, vy = by-py;
+  double lu = hypot(ux, uy);
+  double lv = hypot(vx, vy);
+
+  if ( lu < 1e-9 || lv < 1e-9 )
+    return false;
+  ux /= lu; uy /= lu;
+  vx /= lv; vy /= lv;
+
+  double cosa = ux*vx + uy*vy;
+  if ( cosa > 1.0 ) cosa = 1.0;
+  if ( cosa < -1.0 ) cosa = -1.0;
+  double theta = acos(cosa);		/* angle between the edges */
+  if ( theta < 1e-6 || M_PI-theta < 1e-6 )
+    return false;
+
+  double t = tan(theta/2.0);
+  double d = radius/t;			/* distance from P to the tangents */
+  double r = radius;
+  double dmax = (lu < lv ? lu : lv)/2.0;
+
+  if ( d > dmax )
+  { d = dmax;
+    r = d*t;
+  }
+
+  double bisx = ux+vx, bisy = uy+vy;
+  double lb = hypot(bisx, bisy);
+  double dc = r/sin(theta/2.0);		/* distance from P to the centre */
+
+  c->t1x = px + ux*d; c->t1y = py + uy*d;
+  c->t2x = px + vx*d; c->t2y = py + vy*d;
+  c->cx  = px + bisx/lb*dc;
+  c->cy  = py + bisy/lb*dc;
+  c->r   = r;
+  c->a1  = atan2(c->t1y-c->cy, c->t1x-c->cx);
+  c->a2  = atan2(c->t2y-c->cy, c->t2x-c->cx);
+
+  double delta = c->a2 - c->a1;
+  while ( delta > M_PI )   delta -= 2.0*M_PI;
+  while ( delta <= -M_PI ) delta += 2.0*M_PI;
+  c->negative = (delta < 0);
+
+  return true;
+}
+
+
+static void
+path_emit_corner(cairo_t *cr, const path_corner *c)
+{ cairo_line_to(cr, c->t1x, c->t1y);
+  if ( c->negative )
+    cairo_arc_negative(cr, c->cx, c->cy, c->r, c->a1, c->a2);
+  else
+    cairo_arc(cr, c->cx, c->cy, c->r, c->a1, c->a2);
+}
+
+
+/* Elliptical arc from the current point (x1,y1) to (x2,y2), using the
+ * SVG endpoint parameterization (SVG 1.1, appendix F.6.5).
+ */
+
+static void
+path_emit_arc(cairo_t *cr, double x1, double y1, ArcPoint a,
+	      double x2, double y2)
+{ double rx = fabs(valNum(a->rx));
+  double ry = fabs(valNum(a->ry));
+  bool large = (a->large == ON);
+  bool sweep = (a->sweep == ON);
+
+  if ( x1 == x2 && y1 == y2 )
+    return;
+  if ( rx == 0.0 || ry == 0.0 )
+  { cairo_line_to(cr, x2, y2);
+    return;
+  }
+
+  double phi = valNum(a->rotation)*M_PI/180.0;
+  double cp = cos(phi), sp = sin(phi);
+  double hx = (x1-x2)/2.0, hy = (y1-y2)/2.0;
+  double x1p =  cp*hx + sp*hy;
+  double y1p = -sp*hx + cp*hy;
+
+  double lambda = (x1p*x1p)/(rx*rx) + (y1p*y1p)/(ry*ry);
+  if ( lambda > 1.0 )			/* radii too small: scale up */
+  { double s = sqrt(lambda);
+    rx *= s;
+    ry *= s;
+  }
+
+  double num = rx*rx*ry*ry - rx*rx*y1p*y1p - ry*ry*x1p*x1p;
+  double den = rx*rx*y1p*y1p + ry*ry*x1p*x1p;
+  double coef = (num > 0.0 && den > 0.0) ? sqrt(num/den) : 0.0;
+  if ( large == sweep )
+    coef = -coef;
+
+  double cxp =  coef*rx*y1p/ry;
+  double cyp = -coef*ry*x1p/rx;
+  double cx = cp*cxp - sp*cyp + (x1+x2)/2.0;
+  double cy = sp*cxp + cp*cyp + (y1+y2)/2.0;
+
+  double t1 = atan2((y1p-cyp)/ry, (x1p-cxp)/rx);
+  double dt = atan2((-y1p-cyp)/ry, (-x1p-cxp)/rx) - t1;
+  if ( sweep && dt < 0.0 )
+    dt += 2.0*M_PI;
+  else if ( !sweep && dt > 0.0 )
+    dt -= 2.0*M_PI;
+
+  cairo_save(cr);
+  cairo_translate(cr, cx, cy);
+  cairo_rotate(cr, phi);
+  cairo_scale(cr, rx, ry);
+  if ( sweep )
+    cairo_arc(cr, 0.0, 0.0, 1.0, t1, t1+dt);
+  else
+    cairo_arc_negative(cr, 0.0, 0.0, 1.0, t1, t1+dt);
+  cairo_restore(cr);
+}
+
+
+/* Is the node at index i of the sub-path [s,e) a corner we must round?
+ * That is, does it have a straight edge in and a straight edge out?
+ * For the first node of a closed sub-path, the edge in is the closing
+ * edge.
+ */
+
+static bool
+path_is_corner(const path_node *nodes, int s, int e, int i)
+{ bool closed = nodes[s].closed;
+
+  if ( i == s )
+    return closed && e-s > 2 && nodes[s+1].kind == PN_LINE;
+  if ( nodes[i].kind != PN_LINE )
+    return false;
+  if ( i+1 < e )
+    return nodes[i+1].kind == PN_LINE;
+  return closed && e-s > 2;
+}
+
+
+static void
+path_emit_subpath(cairo_t *cr, const path_node *nodes, int s, int e,
+		  double radius)
+{ bool closed = nodes[s].closed;
+  path_corner first;
+  bool round_first = ( radius > 0.0 &&
+		       path_is_corner(nodes, s, e, s) &&
+		       path_round_corner(nodes[e-1].x, nodes[e-1].y,
+					 nodes[s].x, nodes[s].y,
+					 nodes[s+1].x, nodes[s+1].y,
+					 radius, &first) );
+
+  if ( round_first )
+    cairo_move_to(cr, first.t2x, first.t2y);
+  else
+    cairo_move_to(cr, nodes[s].x, nodes[s].y);
+
+  for(int i=s+1; i<e; i++)
+  { const path_node *nd = &nodes[i];
+    const path_node *pv = &nodes[i-1];
+
+    switch(nd->kind)
+    { case PN_LINE:
+      { path_corner c;
+	const path_node *nx = (i+1 < e ? &nodes[i+1] : &nodes[s]);
+
+	if ( radius > 0.0 && path_is_corner(nodes, s, e, i) &&
+	     path_round_corner(pv->x, pv->y, nd->x, nd->y, nx->x, nx->y,
+			       radius, &c) )
+	  path_emit_corner(cr, &c);
+	else
+	  cairo_line_to(cr, nd->x, nd->y);
+	break;
+      }
+      case PN_CURVE:
+      { CurvePoint cp = (CurvePoint)nd->point;
+	double dx = nd->x - valNum(cp->x);	/* the offset */
+	double dy = nd->y - valNum(cp->y);
+	double c1x = valNum(cp->control1->x)+dx;
+	double c1y = valNum(cp->control1->y)+dy;
+
+	if ( isNil(cp->control2) )	/* quadratic: raise to cubic */
+	{ cairo_curve_to(cr,
+			 pv->x + 2.0/3.0*(c1x-pv->x),
+			 pv->y + 2.0/3.0*(c1y-pv->y),
+			 nd->x + 2.0/3.0*(c1x-nd->x),
+			 nd->y + 2.0/3.0*(c1y-nd->y),
+			 nd->x, nd->y);
+	} else
+	{ cairo_curve_to(cr, c1x, c1y,
+			 valNum(cp->control2->x)+dx,
+			 valNum(cp->control2->y)+dy,
+			 nd->x, nd->y);
+	}
+	break;
+      }
+      case PN_ARC:
+	path_emit_arc(cr, pv->x, pv->y, (ArcPoint)nd->point, nd->x, nd->y);
+	break;
+      case PN_MOVE:
+	assert(0);
+    }
+  }
+
+  if ( closed )
+  { if ( round_first )
+      path_emit_corner(cr, &first);
+    cairo_close_path(cr);
+  }
+}
+
+
+/* Add the path described by `points' to `cr', shifted by dx,dy.
+ */
+
+static void
+path_emit(cairo_t *cr, Chain points, double dx, double dy,
+	  double radius, bool closed)
+{ int size = valInt(points->size);
+
+  if ( size == 0 )
+    return;
+
+  path_node *nodes = alloca(sizeof(path_node)*size);
+  int n = path_nodes(points, closed, dx, dy, nodes);
+
+  for(int s=0; s<n; )
+  { int e = s+1;
+
+    while(e < n && nodes[e].kind != PN_MOVE)
+      e++;
+    path_emit_subpath(cr, nodes, s, e, radius);
+    s = e;
+  }
+}
+
+
+static void
+path_set_fill_rule(cairo_t *cr, Name fill_rule)
+{ cairo_set_fill_rule(cr, fill_rule == NAME_evenOdd
+			    ? CAIRO_FILL_RULE_EVEN_ODD
+			    : CAIRO_FILL_RULE_WINDING);
+}
+
+
 /**
  * Draw a path defined by a chain of points.
  *
- * @param points The chain of points defining the path.
+ * @param points The chain of points defining the path.  The class
+ *	  of each point determines the segment to it.
  * @param ox The x-offset for the path.
  * @param oy The y-offset for the path.
  * @param radius The corner radius for rounded corners.
- * @param closed Boolean indicating whether the path is closed.
- * @param fill The fill pattern or image.
+ * @param closed Boolean indicating whether the (sub-)paths are closed.
+ * @param fill The fill pattern or @nil.
+ * @param fill_rule `winding' or `even_odd'
  */
 void
-r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
-{ if ( radius )
-    Cprintf("stub: r_path(): radius ignored\n");
-
-  cairo_new_path(CR);
-  Cell cell;
-  bool first = true;
-  for_cell(cell, points)
-  { Point p = cell->value;
-    double x = valNum(p->x)+ox;
-    double y = valNum(p->y)+oy;
-    Translate(x,y);
-    if ( first )
-    { cairo_move_to(CR, x, y);
-      first = false;
-    } else
-    { cairo_line_to(CR, x, y);
-    }
-  }
-  if ( closed )
-    cairo_close_path(CR);
+r_path(Chain points, double ox, double oy, double radius, bool closed,
+       Any fill, Name fill_rule)
+{ cairo_new_path(CR);
+  path_emit(CR, points, X(ox), Y(oy), radius, closed);
 
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
     pce_cairo_set_source_fill(CR, context.fill);
+    path_set_fill_rule(CR, fill_rule);
     cairo_fill_preserve(CR);
+    cairo_set_fill_rule(CR, CAIRO_FILL_RULE_WINDING);
   }
 
   if ( context.pen )
   { pce_cairo_set_source_color(CR, context.colour);
     cairo_set_line_width(CR, context.pen);
     cairo_stroke(CR);
+  } else
+  { cairo_new_path(CR);
   }
+}
+
+
+/* A context for computing path geometry.  It is never drawn on and
+ * has an identity transformation.
+ */
+
+static cairo_t *
+scratch_context(void)
+{ static cairo_t *cr;
+
+  if ( !cr )
+  { cairo_surface_t *surf =
+      cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 64, 64);
+
+    cr = cairo_create(surf);
+    cairo_surface_destroy(surf);	/* the context holds a reference */
+  }
+
+  return cr;
+}
+
+
+static cairo_t *
+path_geometry_context(Chain points, double radius, bool closed)
+{ cairo_t *cr = scratch_context();
+
+  cairo_new_path(cr);
+  path_emit(cr, points, 0.0, 0.0, radius, closed);
+
+  return cr;
+}
+
+
+static void
+union_extents(double *ext, double x1, double y1, double x2, double y2)
+{ if ( x2 > x1 || y2 > y1 )
+  { if ( ext[2] < ext[0] )		/* empty */
+    { ext[0] = x1; ext[1] = y1; ext[2] = x2; ext[3] = y2;
+    } else
+    { if ( x1 < ext[0] ) ext[0] = x1;
+      if ( y1 < ext[1] ) ext[1] = y1;
+      if ( x2 > ext[2] ) ext[2] = x2;
+      if ( y2 > ext[3] ) ext[3] = y2;
+    }
+  }
+}
+
+
+/**
+ * Compute the area covered by drawing the path with the given pen,
+ * including what a fill covers.  The coordinates are those of the
+ * points.
+ *
+ * @return false if the path covers nothing.
+ */
+bool
+r_path_extents(Chain points, double radius, bool closed, double pen,
+	       double *x1, double *y1, double *x2, double *y2)
+{ cairo_t *cr = path_geometry_context(points, radius, closed);
+  double ext[4] = {0.0, 0.0, -1.0, -1.0};
+  double ex1, ey1, ex2, ey2;
+
+  cairo_fill_extents(cr, &ex1, &ey1, &ex2, &ey2);
+  union_extents(ext, ex1, ey1, ex2, ey2);
+  if ( pen > 0.0 )
+  { cairo_set_line_width(cr, pen);
+    cairo_stroke_extents(cr, &ex1, &ey1, &ex2, &ey2);
+    union_extents(ext, ex1, ey1, ex2, ey2);
+  }
+  cairo_new_path(cr);
+
+  if ( ext[2] < ext[0] )
+    return false;
+
+  *x1 = ext[0]; *y1 = ext[1];
+  *x2 = ext[2]; *y2 = ext[3];
+  return true;
+}
+
+
+/**
+ * Test whether (x,y) hits the path.  It hits if it is inside the
+ * filled area and `area' is true, or if it is within `tolerance' of
+ * the line.
+ */
+bool
+r_path_hit(Chain points, double radius, bool closed, Name fill_rule,
+	   bool area, double tolerance, double x, double y)
+{ cairo_t *cr = path_geometry_context(points, radius, closed);
+  bool rc = false;
+
+  if ( area )
+  { path_set_fill_rule(cr, fill_rule);
+    rc = cairo_in_fill(cr, x, y);
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+  }
+  if ( !rc && tolerance > 0.0 )
+  { cairo_set_line_width(cr, tolerance*2.0);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+    rc = cairo_in_stroke(cr, x, y);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+  }
+  cairo_new_path(cr);
+
+  return rc;
+}
+
+
+static double
+distance_segment_point(double x1, double y1, double x2, double y2,
+		       double px, double py)
+{ double dx = x2-x1, dy = y2-y1;
+  double l2 = dx*dx + dy*dy;
+  double t = 0.0;
+
+  if ( l2 > 0.0 )
+  { t = ((px-x1)*dx + (py-y1)*dy)/l2;
+    if ( t < 0.0 ) t = 0.0;
+    if ( t > 1.0 ) t = 1.0;
+  }
+
+  return hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+
+
+/**
+ * Distance from (x,y) to the line of the path.
+ *
+ * @return the distance or -1 if the path is empty.
+ */
+double
+r_path_distance(Chain points, double radius, bool closed,
+		double x, double y)
+{ cairo_t *cr = path_geometry_context(points, radius, closed);
+  cairo_path_t *path = cairo_copy_path_flat(cr);
+  double best = -1.0;
+  double cx = 0.0, cy = 0.0, sx = 0.0, sy = 0.0;
+
+  for(int i=0; i < path->num_data; i += path->data[i].header.length)
+  { cairo_path_data_t *d = &path->data[i];
+    double nx, ny;
+
+    switch(d->header.type)
+    { case CAIRO_PATH_MOVE_TO:
+	sx = cx = d[1].point.x;
+	sy = cy = d[1].point.y;
+	nx = cx; ny = cy;		/* a lonely point has a distance */
+	break;
+      case CAIRO_PATH_LINE_TO:
+	nx = d[1].point.x;
+	ny = d[1].point.y;
+	break;
+      case CAIRO_PATH_CLOSE_PATH:
+	nx = sx; ny = sy;
+	break;
+      default:				/* no curves in a flat path */
+	continue;
+    }
+
+    double dist = distance_segment_point(cx, cy, nx, ny, x, y);
+    if ( best < 0.0 || dist < best )
+      best = dist;
+    cx = nx; cy = ny;
+  }
+
+  cairo_path_destroy(path);
+  cairo_new_path(cr);
+
+  return best;
+}
+
+
+/**
+ * Find the tip and reference point for an arrow at the start (first
+ * is true) or end of the path.  The reference point is the nearest
+ * point on the flattened path that differs from the tip, so that the
+ * arrow follows the tangent of a curve.
+ */
+bool
+r_path_end(Chain points, double radius, bool closed, bool first,
+	   double *tx, double *ty, double *rx, double *ry)
+{ cairo_t *cr = path_geometry_context(points, radius, closed);
+  cairo_path_t *path = cairo_copy_path_flat(cr);
+  int npts = 0;
+  double px[2], py[2];			/* first two or last two */
+  bool rc = false;
+
+  bool after_close = false;
+
+  for(int i=0; i < path->num_data; i += path->data[i].header.length)
+  { cairo_path_data_t *d = &path->data[i];
+
+    switch(d->header.type)
+    { case CAIRO_PATH_CLOSE_PATH:
+	after_close = true;
+	continue;
+      case CAIRO_PATH_MOVE_TO:
+	if ( after_close )		/* cairo moves back to the start */
+	{ after_close = false;
+	  continue;
+	}
+	if ( first && npts == 2 )
+	  goto out;
+	npts = 0;			/* new sub-path */
+	break;
+      case CAIRO_PATH_LINE_TO:
+	after_close = false;
+	break;
+      default:				/* no curves in a flat path */
+	continue;
+    }
+
+    double x = d[1].point.x, y = d[1].point.y;
+
+    if ( npts > 0 && x == px[npts-1] && y == py[npts-1] )
+      continue;				/* no progress */
+    if ( npts == 2 )
+    { if ( first )
+	break;
+      px[0] = px[1]; py[0] = py[1];
+      npts = 1;
+    }
+    px[npts] = x; py[npts] = y; npts++;
+  }
+
+out:
+  if ( npts == 2 )
+  { if ( first )
+    { *tx = px[0]; *ty = py[0];
+      *rx = px[1]; *ry = py[1];
+    } else
+    { *tx = px[1]; *ty = py[1];
+      *rx = px[0]; *ry = py[0];
+    }
+    rc = true;
+  }
+
+  cairo_path_destroy(path);
+  cairo_new_path(cr);
+
+  return rc;
 }
 
 static cairo_surface_t *
@@ -2352,17 +2907,7 @@ ws_font_context(void)
    * they are as good as the ones a display would have given, and drawing
    * on an image works headless (see d_image()).
    */
-  static cairo_t *no_display_cairo;
-
-  if ( !no_display_cairo )
-  { cairo_surface_t *surf =
-      cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 64, 64);
-
-    no_display_cairo = cairo_create(surf);
-    cairo_surface_destroy(surf);	/* the context holds a reference */
-  }
-
-  return no_display_cairo;
+  return scratch_context();
 }
 
 static void

@@ -231,6 +231,11 @@ COMMON(status)	clipGraphical(Graphical gr, Area a);
 COMMON(status)	unclipGraphical(Graphical gr);
 COMMON(status)	makeClassGraphical(Class class);
 
+/* gra/pathseg.c */
+COMMON(status)	makeClassCurvePoint(Class class);
+COMMON(status)	makeClassArcPoint(Class class);
+COMMON(status)	makeClassMovePoint(Class class);
+
 /* /swi40/jan/src/pl/packages/xpce/src/gra/gradient.c */
 COMMON(status)	makeClassGradient(Class class);
 

@@ -1223,9 +1223,12 @@ NewClass(plus)
   ABSTRACT_BINARY_EXPRESSION
 End;
 
-NewClass(point)
-  Int		x;			/* the x- and y-coordinates */
+#define ABSTRACT_POINT \
+  Int		x;			/* the x- and y-coordinates */ \
   Int		y;
+
+NewClass(point)
+  ABSTRACT_POINT
 End;
 
 #define ABSTRACT_HOST \

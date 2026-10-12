@@ -70,6 +70,7 @@ scope('C.\\==', basic).
 scope('C.and', basic).
 scope('C.application', basic).
 scope('C.arc', basic).
+scope('C.arc_point', basic).
 scope('C.area', basic).
 scope('C.arrow', basic).
 scope('C.assign', basic).
@@ -102,6 +103,7 @@ scope('C.constant', basic).
 scope('C.constraint', basic).
 scope('C.create', basic).
 scope('C.cursor', basic).
+scope('C.curve_point', basic).
 scope('C.date', basic).
 scope('C.device', basic).
 scope('C.dialog', basic).
@@ -161,6 +163,7 @@ scope('C.message', basic).
 scope('C.method', basic).
 scope('C.modifier', basic).
 scope('C.move_gesture', basic).
+scope('C.move_point', basic).
 scope('C.move_outline_gesture', basic).
 scope('C.name', basic).
 scope('C.node', basic).
@@ -291,6 +294,7 @@ scope('M.arc.S.resize', advanced).
 scope('M.arc.S.size', advanced).
 scope('M.arc.S.size_angle', basic).
 scope('M.arc.S.start_angle', basic).
+scope('M.arc_point.S.initialise', basic).
 scope('M.area.G.bottom_side', advanced).
 scope('M.area.G.center', advanced).
 scope('M.area.G.corner', advanced).
@@ -694,6 +698,7 @@ scope('M.cursor.S._xclose', internal).
 scope('M.cursor.S._xopen', internal).
 scope('M.cursor.S.initialise', basic).
 scope('M.cursor.S.unlink', advanced_programming).
+scope('M.curve_point.S.initialise', basic).
 scope('M.date.G.compare', advanced).
 scope('M.date.G.convert', advanced).
 scope('M.date.G.day', obscure).
@@ -1991,6 +1996,7 @@ scope('M.move_outline_gesture.S.drag', basic_programming).
 scope('M.move_outline_gesture.S.initialise', basic).
 scope('M.move_outline_gesture.S.initiate', basic_programming).
 scope('M.move_outline_gesture.S.terminate', basic_programming).
+scope('M.move_point.S.initialise', basic).
 scope('M.name.G._bench', internal).
 scope('M.name.G._buckets', internal).
 scope('M.name.G.bucket_value', internal).
@@ -2195,6 +2201,7 @@ scope('M.path.G.point', advanced).
 scope('M.path.G.radius_or_interval', internal).
 scope('M.path.G.segment', advanced).
 scope('M.path.G.start', advanced).
+scope('M.path.G.svg_data', basic).
 scope('M.path.S._redraw_area', internal).
 scope('M.path.S.append', basic).
 scope('M.path.S.clear', basic).
@@ -2202,6 +2209,7 @@ scope('M.path.S.closed', basic).
 scope('M.path.S.compute', advanced_programming).
 scope('M.path.S.delete', basic).
 scope('M.path.S.fill', advanced).
+scope('M.path.S.fill_rule', advanced).
 scope('M.path.S.geometry', advanced_programming).
 scope('M.path.S.initialise', basic).
 scope('M.path.S.initialise_new_slot', internal).
@@ -2216,6 +2224,7 @@ scope('M.path.S.reference', advanced).
 scope('M.path.S.relative_move', advanced).
 scope('M.path.S.resize', advanced).
 scope('M.path.S.set_point', advanced).
+scope('M.path.S.svg_data', basic).
 scope('M.pce.G.answer_stack_size', internal).
 scope('M.pce.G.convert', advanced).
 scope('M.pce.G.core_usage', internal).
@@ -3673,6 +3682,11 @@ scope('V.arc.size', obscure).
 scope('V.arc.size_angle', basic).
 scope('V.arc.start_angle', basic).
 scope('V.arc.texture', advanced).
+scope('V.arc_point.large', advanced).
+scope('V.arc_point.rotation', advanced).
+scope('V.arc_point.rx', basic).
+scope('V.arc_point.ry', basic).
+scope('V.arc_point.sweep', advanced).
 scope('V.area.height', advanced).
 scope('V.area.width', advanced).
 scope('V.area.x', advanced).
@@ -4064,6 +4078,8 @@ scope('V.cursor.hot_spot', obscure).
 scope('V.cursor.image', obscure).
 scope('V.cursor.name', obscure).
 scope('V.cursor.ws_ref', advanced).
+scope('V.curve_point.control1', basic).
+scope('V.curve_point.control2', basic).
 scope('V.date.date', internal).
 scope('V.device.active', advanced).
 scope('V.device.area', advanced).
@@ -4990,6 +5006,7 @@ scope('V.move_outline_gesture.modifier', advanced).
 scope('V.move_outline_gesture.offset', internal).
 scope('V.move_outline_gesture.outline', advanced_programming).
 scope('V.move_outline_gesture.status', advanced).
+scope('V.move_point.closed', advanced).
 scope('V.name.header', internal).
 scope('V.name.text', internal).
 scope('V.node.collapsed', advanced).
@@ -5059,6 +5076,7 @@ scope('V.path.cursor', advanced).
 scope('V.path.device', advanced).
 scope('V.path.displayed', advanced).
 scope('V.path.fill', advanced).
+scope('V.path.fill_rule', advanced).
 scope('V.path.first_arrow', advanced).
 scope('V.path.handles', advanced).
 scope('V.path.interpolation', advanced).
