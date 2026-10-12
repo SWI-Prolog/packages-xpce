@@ -209,4 +209,23 @@ test(control_page_up, L == [four/d, three/c, one/a]) :-
     cycle(D, TS, page_up, 0x1, 3, L),
     send(D, destroy).
 
+%   Clicking a list_browser in a dialog gives it the keyboard focus,
+%   so the arrow keys move its selection.
+
+test(click_list_browser, Name == lb) :-
+    new(D, dialog),
+    send(D, append, text_item(t)),
+    send(D, append, new(LB, list_browser)),
+    send(LB, name, lb),
+    forall(between(1, 5, I), send(LB, append, I)),
+    send(D, open),
+    send(D, keyboard_focus, D?t_member),
+    get(LB, area, A),
+    get(A, x, X0), get(A, y, Y0),
+    X is X0+10, Y is Y0+10,
+    new(Ev, event(ms_left_down, D, X, Y, 0, 1000)),
+    ignore(send(D, post_event, Ev)),
+    focus(D, Name),
+    send(D, destroy).
+
 :- end_tests(keyboard_focus).

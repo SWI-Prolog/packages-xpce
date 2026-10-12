@@ -1077,6 +1077,9 @@ eventListBrowser(ListBrowser lb, EventObj ev)
   if ( isAEvent(ev, NAME_button) )
   { DictItem di = getDictItemListBrowser(lb, ev);
 
+    if ( isDownEvent(ev) && getKeyboardFocusGraphical((Graphical)lb) != ON )
+      send(lb, NAME_keyboardFocus, ON, EAV);
+
     if ( di && notNil(lb->popup) && isPopupEvent(ev) )
     { send(popupGesture(), NAME_context, di, EAV);
 
