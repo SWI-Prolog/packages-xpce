@@ -83,6 +83,7 @@ well_known_global(arg5).        well_known_global(arg6).
 well_known_global(arg7).        well_known_global(arg8).
 well_known_global(arg9).        well_known_global(arg10).
 well_known_global(classes).
+well_known_global(cursor_names).
 well_known_global(default).     well_known_global(display).
 well_known_global(display_manager).
 well_known_global(error_database).

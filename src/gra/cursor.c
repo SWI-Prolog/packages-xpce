@@ -40,12 +40,23 @@ static status XcloseCursor(CursorObj, DisplayObj);
 static status
 initialiseCursor(CursorObj c, Name name, Image image, Point hot)
 { assign(c, name, name);
+  assign(c, summary, NIL);
 
   if ( isDefault(image) )
-  { if ( !ws_cursor_font_index(name) )
+  { Name kind;
+
+    if ( !ws_cursor_font_index(name) )
       return errorPce(NAME_noNamedCursor, name);
+    const char *summary;
+
+    if ( !(kind = ws_cursor_kind(name)) )
+      kind = NAME_x11;			/* unknown: an old X11 name */
+    assign(c, kind, kind);
+    if ( (summary = ws_cursor_summary(name)) )
+      assign(c, summary, CtoString(summary));
   } else
-  { if ( isDefault(hot) )
+  { assign(c, kind, NAME_image);
+    if ( isDefault(hot) )
     { hot = newObject(ClassPoint, EAV);
       if ( notNil(image->hot_spot) )
 	copyPoint(hot, image->hot_spot);
@@ -128,6 +139,10 @@ static vardecl var_cursor[] =
      NAME_appearance, "User-defined image"),
   IV(NAME_hotSpot, "point*", IV_GET,
      NAME_appearance, "User-defined hot spot"),
+  IV(NAME_kind, "{standard,x11,image}", IV_GET,
+     NAME_name, "Where the cursor comes from"),
+  IV(NAME_summary, "char_array*", IV_BOTH,
+     NAME_manual, "Description of the cursor"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_storage, "Window System Reference")
 };

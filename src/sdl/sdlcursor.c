@@ -40,10 +40,13 @@
 
 static Sheet	cursorNames = NIL;
 
-static struct standardCursor
-{ char *name;				/* X name of the cursor */
-  int	id;				/* X font id of the cursor */
-} standard_cursors[] =
+typedef struct standardCursor
+{ char *name;				/* Name of the cursor */
+  int	id;				/* SDL_SystemCursor */
+  char *summary;			/* Description (SDL cursors only) */
+} standard_cursor;
+
+static standard_cursor x11_cursors[] =
 {					/* Map old (X11) cursor names to SDL */
   { "arrow",               SDL_SYSTEM_CURSOR_DEFAULT },
   { "mouse",               SDL_SYSTEM_CURSOR_DEFAULT },
@@ -68,28 +71,38 @@ static struct standardCursor
   { "bottom_left_corner",  SDL_SYSTEM_CURSOR_SW_RESIZE },
   { "top_left_corner",     SDL_SYSTEM_CURSOR_NW_RESIZE },
   { "top_right_corner",    SDL_SYSTEM_CURSOR_NE_RESIZE },
-					/* Native SDL names */
-  { "default",	   SDL_SYSTEM_CURSOR_DEFAULT },
-  { "text",	   SDL_SYSTEM_CURSOR_TEXT },
-  { "wait",	   SDL_SYSTEM_CURSOR_WAIT },
-  { "crosshair",   SDL_SYSTEM_CURSOR_CROSSHAIR },
-  { "progress",	   SDL_SYSTEM_CURSOR_PROGRESS },
-  { "nwse_resize", SDL_SYSTEM_CURSOR_NWSE_RESIZE },
-  { "nesw_resize", SDL_SYSTEM_CURSOR_NESW_RESIZE },
-  { "ew_resize",   SDL_SYSTEM_CURSOR_EW_RESIZE },
-  { "ns_resize",   SDL_SYSTEM_CURSOR_NS_RESIZE },
-  { "move",	   SDL_SYSTEM_CURSOR_MOVE },
-  { "not_allowed", SDL_SYSTEM_CURSOR_NOT_ALLOWED },
-  { "pointer",	   SDL_SYSTEM_CURSOR_POINTER },
-  { "nw_resize",   SDL_SYSTEM_CURSOR_NW_RESIZE },
-  { "n_resize",	   SDL_SYSTEM_CURSOR_N_RESIZE },
-  { "ne_resize",   SDL_SYSTEM_CURSOR_NE_RESIZE },
-  { "e_resize",	   SDL_SYSTEM_CURSOR_E_RESIZE },
-  { "se_resize",   SDL_SYSTEM_CURSOR_SE_RESIZE },
-  { "s_resize",	   SDL_SYSTEM_CURSOR_S_RESIZE },
-  { "sw_resize",   SDL_SYSTEM_CURSOR_SW_RESIZE },
-  { "w_resize",	   SDL_SYSTEM_CURSOR_W_RESIZE },
-  { NULL,	   0 }
+  { NULL,		   0 }
+};
+
+static standard_cursor sdl_cursors[] =
+{					/* Native SDL names, in menu order */
+  { "default",	   SDL_SYSTEM_CURSOR_DEFAULT,	  "Normal pointer" },
+  { "pointer",	   SDL_SYSTEM_CURSOR_POINTER,
+    "Pointing hand, e.g., for a link" },
+  { "text",	   SDL_SYSTEM_CURSOR_TEXT,	  "Text insertion (I-beam)" },
+  { "crosshair",   SDL_SYSTEM_CURSOR_CROSSHAIR,
+    "Crosshair for precise selection" },
+  { "move",	   SDL_SYSTEM_CURSOR_MOVE,	  "Move something" },
+  { "wait",	   SDL_SYSTEM_CURSOR_WAIT,	  "Busy" },
+  { "progress",	   SDL_SYSTEM_CURSOR_PROGRESS,	  "Busy in the background" },
+  { "not_allowed", SDL_SYSTEM_CURSOR_NOT_ALLOWED, "Operation not allowed" },
+  { "ew_resize",   SDL_SYSTEM_CURSOR_EW_RESIZE,	  "Resize horizontally" },
+  { "ns_resize",   SDL_SYSTEM_CURSOR_NS_RESIZE,	  "Resize vertically" },
+  { "nwse_resize", SDL_SYSTEM_CURSOR_NWSE_RESIZE, "Resize diagonally (\\)" },
+  { "nesw_resize", SDL_SYSTEM_CURSOR_NESW_RESIZE, "Resize diagonally (/)" },
+  { "n_resize",	   SDL_SYSTEM_CURSOR_N_RESIZE,	  "Resize at the top" },
+  { "e_resize",	   SDL_SYSTEM_CURSOR_E_RESIZE,	  "Resize at the right" },
+  { "s_resize",	   SDL_SYSTEM_CURSOR_S_RESIZE,	  "Resize at the bottom" },
+  { "w_resize",	   SDL_SYSTEM_CURSOR_W_RESIZE,	  "Resize at the left" },
+  { "ne_resize",   SDL_SYSTEM_CURSOR_NE_RESIZE,
+    "Resize at the top-right corner" },
+  { "nw_resize",   SDL_SYSTEM_CURSOR_NW_RESIZE,
+    "Resize at the top-left corner" },
+  { "se_resize",   SDL_SYSTEM_CURSOR_SE_RESIZE,
+    "Resize at the bottom-right corner" },
+  { "sw_resize",   SDL_SYSTEM_CURSOR_SW_RESIZE,
+    "Resize at the bottom-left corner" },
+  { NULL,	   0,				  NULL }
 };
 
 /* display ->busy_cursor names one cursor for all the frames at once.  SDL
@@ -159,12 +172,71 @@ ws_set_busy_cursor(CursorObj c)
  */
 void
 ws_init_cursor_font(void)
-{ struct standardCursor *sc;
+{ standard_cursor *sc;
 
   cursorNames = globalObject(NAME_cursorNames, ClassSheet, EAV);
 
-  for(sc = standard_cursors; sc->name; sc++)
+  for(sc = sdl_cursors; sc->name; sc++)
     valueSheet(cursorNames, (Any) CtoName(sc->name), toInt(sc->id));
+  for(sc = x11_cursors; sc->name; sc++)
+    valueSheet(cursorNames, (Any) CtoName(sc->name), toInt(sc->id));
+}
+
+/**
+ * Tell where a predefined cursor comes from.
+ *
+ * @param name Name of a predefined cursor.
+ * @return `standard` for a native SDL cursor, `x11` for a name kept
+ * for compatibility with the X11 cursor font, or FAIL if `name` is not
+ * a predefined cursor.
+ */
+
+static standard_cursor *
+find_cursor(standard_cursor *table, const char *s)
+{ for(standard_cursor *sc = table; sc->name; sc++)
+  { if ( streq(sc->name, s) )
+      return sc;
+  }
+
+  return NULL;
+}
+
+/**
+ * Describe a predefined cursor.
+ *
+ * @param name Name of a predefined cursor.
+ * @return The description of the cursor.  For an old X11 name this is
+ * the description of the standard cursor it maps to.  NULL if `name`
+ * is not a predefined cursor.
+ */
+
+const char *
+ws_cursor_summary(Name name)
+{ const char *s = strName(name);
+  standard_cursor *sc;
+
+  if ( (sc = find_cursor(sdl_cursors, s)) )
+    return sc->summary;
+  if ( (sc = find_cursor(x11_cursors, s)) )
+  { for(standard_cursor *n = sdl_cursors; n->name; n++)
+    { if ( n->id == sc->id )
+	return n->summary;
+    }
+  }
+
+  return NULL;
+}
+
+Name
+ws_cursor_kind(Name name)
+{ const char *s = strName(name);
+
+  if ( find_cursor(x11_cursors, s) )
+    return NAME_x11;
+  if ( find_cursor(sdl_cursors, s) )
+    return NAME_standard;
+
+  fail;
 }
 
 /**

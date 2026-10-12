@@ -1,7 +1,10 @@
 # class cursor {#class-cursor}
 
-Class cursor provides access to the available X-cursors and allows the
-user to define new cursors from two image objects.
+Class cursor provides access to the cursors of the system and allows
+the user to define new cursors from an image.  The predefined cursors
+are the standard (SDL system) cursors and the names that are kept for
+compatibility with the X11 cursor font, which map to a standard cursor.
+@cursor_names lists them; `cursor <-kind` tells which is which.
 
 Cursors are assigned at the level of graphicals.  Given some position of
 the pointer, the displayed cursor is determined to be first graphical
@@ -18,19 +21,14 @@ automatically shared.  If the <-name of the cursor is @nil, the
 cursor will not be shared and may be ->free'ed just like any other
 object.
 
-The type conversion conventions will automatically transform an X-cursor
-name to a cursor object.
-
-**Bugs**:
-
-The mapping between X-cursor names and the X-font id from the cursor
-font is copied in the PCE sources.  Changes to the X definition are
-therefore not automatically included in PCE.
+The type conversion conventions will automatically transform the name
+of a predefined cursor to a cursor object.
 
 @see graphical->focus_cursor
 @see window->focus_cursor
 @see graphical-cursor
-@see display-cursors
+@see @cursor_names
+@see @cursors
 
 
 ## Instance variables {#class-cursor-instvars}
@@ -42,6 +40,17 @@ therefore not automatically included in PCE.
 - cursor<-image: image*
     If the cursor is user-defined, this image of `image <-kind: image`
     defines the cursor.
+
+- cursor<-kind: {standard,x11,image}
+    Where the cursor comes from: `standard` for a cursor of the
+    system, `x11` for a name kept for compatibility with the X11 cursor
+    font (it maps to a standard cursor) and `image` for a cursor
+    defined from an image.
+
+- cursor<-summary: char_array*
+    Description of the cursor.  Set for the standard cursors.  An old
+    X11 name has the description of the standard cursor it maps to.
+    It may be set for a cursor defined from an image.
 
 - cursor<-name: name*
     Name of the cursor.  All cursors (predefined or user-defined) are stored

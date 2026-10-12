@@ -35,8 +35,7 @@
 :- module(pce_cursor_item, []).
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
-:- use_module(library(apply)).
-:- use_module(library(lists)).
+:- autoload(library(pce_util), [member_chain/2]).
 
 /** <module> Dialog item to select a cursor
 
@@ -50,42 +49,32 @@ names that are aliases of these are shown under the native name.  A
 cursor defined from an image is shown as an extra menu entry.
 */
 
-%!  cursor_name(?Name, ?Summary) is nondet.
+%!  standard_cursor(-Name) is nondet.
 %
-%   The native names of the system cursors, in the order of the menu.
+%   Name is a standard cursor (see `cursor <-kind`).  They are
+%   enumerated in the order of @cursor_names, which is the menu order.
 
-cursor_name(default,     'Normal pointer').
-cursor_name(pointer,     'Pointing hand, e.g., for a link').
-cursor_name(text,        'Text insertion (I-beam)').
-cursor_name(crosshair,   'Crosshair for precise selection').
-cursor_name(move,        'Move something').
-cursor_name(wait,        'Busy').
-cursor_name(progress,    'Busy in the background').
-cursor_name(not_allowed, 'Operation not allowed').
-cursor_name(ew_resize,   'Resize horizontally').
-cursor_name(ns_resize,   'Resize vertically').
-cursor_name(nwse_resize, 'Resize diagonally (\\)').
-cursor_name(nesw_resize, 'Resize diagonally (/)').
-cursor_name(n_resize,    'Resize at the top').
-cursor_name(e_resize,    'Resize at the right').
-cursor_name(s_resize,    'Resize at the bottom').
-cursor_name(w_resize,    'Resize at the left').
-cursor_name(ne_resize,   'Resize at the top-right corner').
-cursor_name(nw_resize,   'Resize at the top-left corner').
-cursor_name(se_resize,   'Resize at the bottom-right corner').
-cursor_name(sw_resize,   'Resize at the bottom-left corner').
+standard_cursor(Name) :-
+    get(@cursor_names, attribute_names, Names),
+    member_chain(Name, Names),
+    get(@pce, convert, Name, cursor, Cursor),
+    get(Cursor, kind, standard).
 
-%!  canonical_cursor_name(+Name, -Native) is semidet.
+%!  canonical_cursor_name(+Cursor, -Native) is semidet.
 %
-%   Native is the native name of the system cursor Name, which may be
-%   an old alias.
+%   Native is the name of the standard cursor that Cursor shows.  For
+%   an old (X11) name, this is the standard cursor it maps to.  Fails
+%   for a cursor defined from an image and for unknown names.
 
-canonical_cursor_name(Name, Name) :-
-    cursor_name(Name, _),
-    !.
-canonical_cursor_name(Name, Native) :-
+canonical_cursor_name(Cursor, Native) :-
+    get(Cursor, kind, Kind),
+    get(Cursor, name, Name),
+    canonical_cursor_name(Kind, Name, Native).
+
+canonical_cursor_name(standard, Name, Name).
+canonical_cursor_name(x11, Name, Native) :-
     get(@cursor_names, value, Name, Id),
-    cursor_name(Native, _),
+    standard_cursor(Native),
     get(@cursor_names, value, Native, Id),
     !.
 
@@ -102,10 +91,14 @@ initialise(CI, Name:[name], Selection:[cursor], Msg:[code]*) :->
     send(CI, append,
          new(M, menu(cursor_name, cycle, message(CI, user_selection, @arg1)))),
     send(M, show_label, @off),
-    forall(cursor_name(CN, Summary),
-           ( send(M, append, menu_item(CN, @default, CN)),
-             get(M, member, CN, MI),
-             send(MI, help_message, tag, Summary)
+    forall(standard_cursor(CN),
+           ( send(M, append, new(MI, menu_item(CN, @default, CN))),
+             get(@pce, convert, CN, cursor, Cursor),
+             get(Cursor, summary, Summary),
+             (   Summary == @nil
+             ->  true
+             ;   send(MI, help_message, tag, Summary)
+             )
            )),
     send(CI, append, new(Try, cursor_preview), right),
     send(Try, help_message, tag, 'Point here to see the cursor'),
@@ -116,13 +109,9 @@ selection(CI, Cursor:cursor) :->
     "Set the cursor"::
     send(CI, slot, selection, Cursor),
     get(CI, member, cursor_name, Menu),
-    (   get(Cursor, image, Image), Image \== @nil
-    ->  image_entry(Menu, Cursor, Value)
-    ;   get(Cursor, name, Name),
-        (   canonical_cursor_name(Name, Value)
-        ->  true
-        ;   image_entry(Menu, Cursor, Value)
-        )
+    (   canonical_cursor_name(Cursor, Value)
+    ->  true
+    ;   image_entry(Menu, Cursor, Value)
     ),
     send(Menu, selection, Value),
     get(CI, member, cursor_preview, Try),

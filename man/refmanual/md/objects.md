@@ -162,16 +162,26 @@ The predefined colour names are in `@colour_names`.
 
 ## @cursor_names {#object-cursor_names}
 
-Map X-cursor names on X-cursor id's
+Map the names of the predefined cursors to system cursors
 
 The global and predefined sheet @cursor_names maps the names of the
-X-cursors onto the entry-id in the X-cursor font.  Thus,
+predefined cursors onto the identifier of the system (SDL) cursor.  It
+holds the standard cursor names first, in an order suitable for a
+menu, followed by the names that are kept for compatibility with the
+X11 cursor font, each of which maps to the identifier of a standard
+cursor.  `cursor <-kind` tells the two apart and `cursor <-summary`
+describes the cursor.  Thus,
 
 	get(@cursor_names, attribute_names, Chain)
 
-returns a list of all available cursor names.
+returns a chain of all predefined cursor names, and
 
-@see display-cursors
+	get(@pce, convert, Name, cursor, Cursor),
+	get(Cursor, kind, standard)
+
+tests that Name is a standard cursor.
+
+@see @cursors
 @see class cursor
 
 ## @cursors {#object-cursors}
