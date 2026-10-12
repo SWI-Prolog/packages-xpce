@@ -5,7 +5,7 @@ in an explorer-like style.  This library is programmed by refining its base-clas
 \class{toc_window}.  We will introduce this library using an example exploring the
 filesystem.  A screendump of this application is in \figref{libtoc}.
 
-\postscriptfig[width=0.9\linewidth]{libtoc}{Exploring the filesystem}
+\postscriptfig{libtoc}{Exploring the filesystem}
 
 \begin{pcecode}
 :- pce_autoload(toc_window, library(pce_toc)).

@@ -165,4 +165,4 @@ load(Frame) :-
 
 The result is shown in \figref{reportdemo}.
 
-\postscriptfig[width=4in]{reportdemo}{The `reporter' demo}
+\postscriptfig{reportdemo}{The `reporter' demo}

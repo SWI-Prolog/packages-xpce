@@ -57,7 +57,7 @@ queries below to appreciate this. The result is shown in
 10 ?- send(@bz, arrows, both).
 \end{code}
 
-\postscriptfig[width=4in]{graphics}{Example graphics}
+\postscriptfig{graphics}{Example graphics}
 
 \product{} avoids unnecessary repaint operations and expensive computations
 involved in updating the screen.  The screen is only updated {\em

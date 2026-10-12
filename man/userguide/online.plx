@@ -214,7 +214,7 @@ the tool.
 
 \subsection{Class browser}		\label{sec:classbrowser}
 
-\postscriptfig[width=\textwidth]{classbrowser}{The Class Browser}
+\postscriptfig{classbrowser}{The Class Browser}
 
 The ``Class Browser'' is the central tool of the online manual. It
 provides an overview of the functionality of a class and options to
@@ -374,7 +374,7 @@ As ->catch_all, but for get-operations.
 
 \subsection{Reading cards}		\label{sec:card}
 
-\postscriptfig[width=\textwidth]{card}{The Card Viewer}
+\postscriptfig{card}{The Card Viewer}
 
 The other tools of the manual allow the user to {\em find} cards with
 documentation on the topic(s) the user is looking for.  The information
@@ -444,11 +444,11 @@ The \class{browser} window on the left contains all words occurring
 anywhere in the manual.  The window on the right is used to display the
 card summaries of all matching cards.
 
-\postscriptfig[width=\textwidth]{searchtool}{Manual search tool}
+\postscriptfig{searchtool}{Manual search tool}
 
 \subsection{Class hierarchy}		\label{sec:classhierarchy}
 
-\postscriptfig[width=\textwidth]{classhierarchy}{Class Hierarchy Tool}
+\postscriptfig{classhierarchy}{Class Hierarchy Tool}
 
 The ``Class Hierachy'' tool shown in \figref{classhierarchy} may be used
 to get an overview of \product{}'s class hierarchy or to find the

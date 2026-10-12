@@ -192,7 +192,7 @@ bars, grouped bars and stacked bars.  Below is an example from
 is defined that more than 250 instances are created.  The code, except
 for the calculation parts is shown below.
 
-\postscriptfig{plotclasses}{Classes of \product{} with $> 250$ instances
+\postscriptfig[width=\linewidth]{plotclasses}{Classes of \product{} with $> 250$ instances
 			    created}
 
 \begin{pcecode}

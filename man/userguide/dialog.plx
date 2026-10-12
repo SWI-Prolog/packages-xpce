@@ -346,7 +346,7 @@ related, as well as alternatives for keeping control in Prolog.
 The following example  allows the user to select text in an editor
 and change its appearance. The application is shown in \figref{wysiwyg}.
 
-\postscriptfig[width=\textwidth]{wysiwyg}{Very simple WYSIWYG editor}
+\postscriptfig{wysiwyg}{Very simple WYSIWYG editor}
 
 \hr
 \input{wysiwyg.tex}
@@ -447,4 +447,4 @@ attributedemo :-
 	send(E, recogniser, C).
 \end{pcecode}
 
-\postscriptfig[width=4in]{editgraphical}{Attribute editor for graphical objects}
+\postscriptfig{editgraphical}{Attribute editor for graphical objects}

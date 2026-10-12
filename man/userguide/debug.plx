@@ -112,7 +112,7 @@ hierarchy} from the Epilog console or the other windows of the
 development environment.  \Figref{vishierarchy} shows this tool
 examining the structure of the ``PceDraw'' demo program.
 
-\postscriptfig[width=\textwidth]{vishierarchy}{Visual Hierarchy Tool showing ``PceDraw''}
+\postscriptfig{vishierarchy}{Visual Hierarchy Tool showing ``PceDraw''}
 
 This tool is very useful to examine the structure of existing
 applications (for example the various demo programs).  It may also
@@ -140,7 +140,7 @@ the Prolog window.  The inspector is started from the
 hierarchy tool.  An object can be added by typing its reference or by
 selecting it on the screen using the hand button of the tool bar.
 
-\postscriptfig[width=\textwidth]{inspector}{Inspector Tool}
+\postscriptfig{inspector}{Inspector Tool}
 \index{object,inspecting}\index{inspector}
 
 Each inspected object is shown as a card.  The title of the card shows
