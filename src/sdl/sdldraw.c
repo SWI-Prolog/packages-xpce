@@ -2047,7 +2047,8 @@ r_set_fill_fgbg(Any fill, Name which)
 { r_fillpattern(fill, which);
   DEBUG(NAME_draw,
 	Cprintf("fill with %s->%s\n", pp(fill), pp(context.fill)));
-  if ( instanceOfObject(context.fill, ClassColour) )
+  if ( instanceOfObject(context.fill, ClassColour) ||
+       instanceOfObject(context.fill, ClassGradient) )
   { pce_cairo_set_source_fill(CR, context.fill);
     return true;
   } else if ( isNil(context.fill) )

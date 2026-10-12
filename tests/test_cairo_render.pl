@@ -75,6 +75,24 @@ uniform_gradient(Colour, G) :-
     send(G, add_stop, 0, Colour),
     send(G, add_stop, 1, Colour).
 
+%   A graphical that fills its area using ->draw_fill.
+
+:- pce_begin_class(tcr_filler, graphical,
+                   "Fill the area using ->draw_fill").
+
+variable(fill, any, both, "Fill passed to ->draw_fill").
+
+initialise(G, Fill:any) :->
+    send_super(G, initialise, 0, 0, 20, 20),
+    send(G, slot, fill, Fill).
+
+'_redraw_area'(G, _A:area) :->
+    get(G, area, area(X, Y, W, H)),
+    get(G, fill, Fill),
+    send(G, draw_fill, X, Y, W, H, Fill).
+
+:- pce_end_class(tcr_filler).
+
 filled_box(Fill, B) :-
     new(B, box(20,20)),
     send(B, pen, 0),
@@ -86,5 +104,20 @@ test(gradient_stops_are_exact, RGBA == 0xffff0000) :-
     uniform_gradient(colour(red), G),
     filled_box(G, B),
     pixel_after_drawing(B, 20, 10, 10, RGBA).
+
+test(draw_fill_colour, RGBA == 0xffff0000) :-
+    new(G, tcr_filler(colour(red))),
+    pixel_after_drawing(G, 20, 10, 10, RGBA).
+test(draw_fill_gradient, RGBA == 0xffff0000) :-
+    uniform_gradient(colour(red), Gradient),
+    new(G, tcr_filler(Gradient)),
+    pixel_after_drawing(G, 20, 10, 10, RGBA).
+test(figure_gradient_background, RGBA == 0xffff0000) :-
+    uniform_gradient(colour(red), Gradient),
+    new(F, figure),
+    send(F, background, Gradient),
+    send(F, display, new(B, box(20, 20))),
+    send(B, pen, 0),
+    pixel_after_drawing(F, 20, 10, 10, RGBA).
 
 :- end_tests(cairo_render).

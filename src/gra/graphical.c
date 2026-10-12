@@ -3370,7 +3370,7 @@ drawFillGraphical(Graphical gr,
 
   if ( isNil(fill) )
     r_clear(ax, ay, aw, ah);
-  else if ( isDefault(fill) )
+  else
     r_fill(ax, ay, aw, ah, fill);
 
   succeed;
