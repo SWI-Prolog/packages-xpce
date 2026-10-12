@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,15 +36,13 @@
 :- module(man_class,
         [
         ]).
-
 :- use_module(library(pce)).
-:- use_module(util).
+:- use_module(util, [man_classification/2, apropos_class/6]).
 :- use_module(v_inherit).
+:- use_module(library(lists), [delete/3]).
+:- use_module(library(pce_util), [send_list/3, get_chain/3]).
+
 :- pce_autoload(filter_item, library(pce_filter_item)).
-:- require([ forall/2
-           , get_chain/3
-           , send_list/3
-           ]).
 
 :- pce_begin_class(man_class_browser(label), man_frame,
                    "Online manual for a class").
@@ -98,17 +97,7 @@ fill_dialog(D) :-
                    message(CB, apply))),
     forall(man_classification(T, L),
            send(FM, append, menu_item(T, @default, L))),
-    send(FM, append,
-         menu_item(all,
-                   if(@arg2 == @on,
-                      and(message(FM, attribute, saved_selection,
-                                  FM?selection),
-                          message(FM, selection, FM?members),
-                          FmMsg),
-                      and(message(FM, selection,
-                                  ?(FM, attribute, saved_selection)),
-                          message(FM, selected, all, @off),
-                          FmMsg)))),
+    append_all_item(FM, FmMsg),
     send(FM, message, FmMsg),
     send(FM, columns, 4),
     send(FM, selection, @manual?user_scope),
@@ -119,7 +108,8 @@ fill_dialog(D) :-
                                         'Search'))),
     send(D, append, new(SM, menu(field, toggle))),
     send(SM, label, '... In:'),
-    send(DM, message, message(CB, apply)),
+    new(DmMsg, message(CB, apply)),
+    send(DM, message, DmMsg),
     send(SM, message, message(CB, apply)),
 
     send(KI, advance, none),
@@ -127,12 +117,12 @@ fill_dialog(D) :-
 
     send(DM, layout, horizontal),
     send(DM, columns, 3),
-    send_list(DM, append, [ self, sub_class
-                          , variable, class_var
-                          , send_method, get_method
+    send_list(DM, append, [ variable, sub_class,
+                            send_method, class_var,
+                            get_method
                           ]),
-    send(DM, selection,
-         chain(self, variable, send_method, get_method)),
+    append_all_item(DM, DmMsg),
+    send(DM, selection, chain(variable, send_method, get_method)),
 
     send(SM, layout, horizontal),
     send(SM, columns, 2),
@@ -141,6 +131,25 @@ fill_dialog(D) :-
                               ]),
     send(SM, selection, chain(name, summary)).
 
+
+%   append_all_item(+Menu, +Message)
+%
+%   Append an item `all` to the toggle Menu.  Selecting it selects all
+%   items; deselecting it restores the selection from before.  Both
+%   run Message.
+
+append_all_item(Menu, Msg) :-
+    send(Menu, append,
+         menu_item(all,
+                   if(@arg2 == @on,
+                      and(message(Menu, attribute, saved_selection,
+                                  Menu?selection),
+                          message(Menu, selection, Menu?members),
+                          Msg),
+                      and(message(Menu, selection,
+                                  ?(Menu, attribute, saved_selection)),
+                          message(Menu, selected, all, @off),
+                          Msg)))).
 
 expand_classname(Prefix, Classes) :-
     new(Classes, chain),
@@ -260,7 +269,8 @@ apply(CB) :->
     get(CB, dialog_member, Dialog),
     get(CB, tool_focus, Class),
     get(CB, man_summary_browser_member, Browser),
-    get_chain(Dialog?display_member, selection, Types),
+    get_chain(Dialog?display_member, selection, Selected),
+    delete(Selected, all, Types),
     get_chain(Dialog?field_member, selection, Fields),
     get(CB, search_filter, Filter),
     (   Filter == @nil
@@ -273,7 +283,9 @@ apply(CB) :->
     send(CB, report, progress, 'Searching ...'),
     apropos_class(Class, Scope, Types, Fields, Keyword, Matches),
     send(CB, report, done),
-    send(Browser, members, Matches).
+    send(Matches, delete_all, Class),   % always first, whatever the filter
+    send(Matches, prepend, Class),
+    send(Browser, members, Matches, Class).
 
 %   The search field calls this as the user types.
 

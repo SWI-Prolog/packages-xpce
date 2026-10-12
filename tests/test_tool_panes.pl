@@ -1574,7 +1574,7 @@ test(all_in_the_filter_shows_everything,
     send(Tool, tool_focus, class(tile)),
     get(Tool, dialog_member, Dialog),
     get(Dialog, member, display, Display),
-    send(Display, selection, chain(self, class_var, get_method)),
+    send(Display, selection, chain(class_var, get_method)),
     send(Tool, apply),
     matches(Tool, Basic),
     get(Dialog, member, filter, Filter),
@@ -1582,6 +1582,57 @@ test(all_in_the_filter_shows_everything,
     matches(Tool, All),
     click_item(Filter, all, 105000),
     matches(Tool, Restored).
+
+%       The class itself is always the first entry, also if the filter
+%       does not classify it (source_sink is not `basic`), the search
+%       does not match it, or its sub classes, which are in the same
+%       group, sort before it.
+
+test(the_class_is_always_first, [First-Again == C-C]) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    get(@pce, convert, source_sink, class, C),
+    \+ send(@manual, in_scope, C),
+    send(Tool, tool_focus, C),
+    get(Tool, dialog_member, Dialog),
+    get(Dialog, member, display, Display),
+    send(Display, selection, chain(sub_class, send_method)),
+    send(Tool, apply),
+    first_match(Tool, First),
+    get(Dialog, member, search, Search),
+    forall(member(Ch, [0'z, 0'z, 0'z]), send(Search, typed, Ch)),
+    first_match(Tool, Again).
+
+%   first_match(+Tool, -Object)
+%
+%   Object is the first entry of the browser of Tool below the header
+%   of its group.
+
+first_match(Tool, First) :-
+    get(Tool, man_summary_browser_member, Browser),
+    get(Browser?members, find, @arg1?style \== header, Item),
+    get(Item, object, First).
+
+%       "All" in the display menu selects all items, like "All" in the
+%       filter menu.  A second click restores the selection.
+
+test(all_in_the_display_shows_everything,
+     [ true(All > Some), Restored-Selection == Some-[class_var, get_method]
+     ]) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    send(Tool, tool_focus, class(tile)),
+    get(Tool, dialog_member, Dialog),
+    get(Dialog, member, display, Display),
+    send(Display, selection, chain(class_var, get_method)),
+    send(Tool, apply),
+    matches(Tool, Some),
+    click_item(Display, all, 200000),
+    matches(Tool, All),
+    click_item(Display, all, 205000),
+    matches(Tool, Restored),
+    get(Display, selection, Chain),
+    chain_list(Chain, Selection).
 
 %   click_item(+Menu, +Value, +Time)
 %

@@ -168,13 +168,17 @@ append_group(S, Index:int, Group:name, Members:chain) :->
          message(S, append_card, @arg1)).
 
 
-members(S, Matches:chain) :->
-    "Display chain of cards"::
+members(S, Matches:chain, First:[object]) :->
+    "Display chain of cards, First (a member) on top"::
     send(S, clear),
     (   send(Matches, empty)
     ->  send(S, report, warning, 'No match')
     ;   send(S, report, progress, 'Grouping ...'),
         group_objects(Matches, Groups),
+        (   First == @default
+        ->  true
+        ;   put_first(Groups, First)
+        ),
         send(S, report, done),
         new(Index, number(1)),
         send(Groups, for_all,
@@ -186,6 +190,23 @@ members(S, Matches:chain) :->
         ->  send(S, selected, Manual?selection)
         ;   true
         )
+    ).
+
+
+%   put_first(+Groups, +Card)
+%
+%   Move the group that holds Card to the front and Card to the front
+%   of this group.
+
+put_first(Groups, Card) :-
+    get(Groups, members, Attributes),
+    (   get(Attributes, find, message(@arg1?value, member, Card), Group)
+    ->  get(Group, value, Cards),
+        send(Cards, delete, Card),
+        send(Cards, prepend, Card),
+        send(Attributes, delete, Group),
+        send(Attributes, prepend, Group)
+    ;   true
     ).
 
 

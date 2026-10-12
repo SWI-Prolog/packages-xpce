@@ -39,6 +39,7 @@
 
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
+:- use_module(library(pce_util)).
 
 /** <module> Cursor demo
 
