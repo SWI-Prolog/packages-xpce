@@ -315,6 +315,23 @@ extendPrefixOrNextListBrowser(ListBrowser lb)
 }
 
 
+/* The text image covers the list, so its cursor is the one shown.
+ * Keep our own as well: it is shown while we have the focus.
+ */
+
+static status
+cursorListBrowser(ListBrowser lb, CursorObj cursor)
+{ PceWindow sw;
+
+  send(lb->text_image, NAME_cursor, cursor, EAV);
+  assign(lb, cursor, cursor);
+  if ( (sw = getWindowGraphical((Graphical)lb)) )
+    updateCursorWindow(sw);
+
+  succeed;
+}
+
+
 static status
 WantsKeyboardFocusListBrowser(ListBrowser lb)
 { if ( notNil(lb->dict) &&
@@ -2032,6 +2049,8 @@ static senddecl send_listBrowser[] =
      NAME_search, "Repeat with same string"),
   SM(NAME_changeSelection, 2, T_changeSelection, changeSelectionListBrowser,
      NAME_selection, "Hook in selection management"),
+  SM(NAME_cursor, 1, "cursor*", cursorListBrowser,
+     NAME_cursor, "Cursor shown over the list"),
   SM(NAME_selectionChanged, 0, NULL, selectionChangedListBrowser,
      NAME_selection, "Called after the selection changed (hook)"),
   SM(NAME_deselect, 1, "member:dict_item", deselectListBrowser,

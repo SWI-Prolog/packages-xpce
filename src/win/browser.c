@@ -131,7 +131,7 @@ clearBrowser(Browser b)
 
 static status
 cursorBrowser(Browser b, CursorObj cursor)
-{ return send(b->list_browser->text_image, NAME_cursor, cursor, EAV);
+{ return send(b->list_browser, NAME_cursor, cursor, EAV);
 }
 
 

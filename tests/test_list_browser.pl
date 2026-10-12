@@ -47,7 +47,8 @@ Run with:
 
 test_list_browser :-
     run_tests([ list_browser_scroll,
-                list_browser_selection_changed
+                list_browser_selection_changed,
+                list_browser_cursor
               ]).
 
 %   list(+Items, -ListBrowser)
@@ -206,3 +207,43 @@ test(browser, Calls == [browser([2])]) :-
     logged(LB, select(2), Calls).
 
 :- end_tests(list_browser_selection_changed).
+
+
+		 /*******************************
+		 *	      CURSOR		*
+		 *******************************/
+
+%   pointer_cursor(+Window, +Graphical, -Name)
+%
+%   Name is the cursor displayed with the pointer over Graphical.
+
+pointer_cursor(W, Gr, Name) :-
+    get(Gr, area, A),
+    get(A, x, X0), get(A, y, Y0),
+    X is X0+20, Y is Y0+20,
+    ignore(send(W, post_event, event(loc_move, W, X, Y, 0, 1000))),
+    get(W, displayed_cursor, C),
+    get(C, name, Name).
+
+:- begin_tests(list_browser_cursor).
+
+%   ->cursor is shown over the list, not only while we have the focus.
+
+test(list_browser, Name == text) :-
+    new(D, dialog),
+    send(D, append, new(LB, list_browser)),
+    forall(between(1, 5, I), send(LB, append, I)),
+    send(D, open),
+    send(LB, cursor, text),
+    pointer_cursor(D, LB, Name),
+    send(D, destroy).
+test(browser, Name == text) :-
+    new(B, browser),
+    forall(between(1, 5, I), send(B, append, I)),
+    send(B, open),
+    send(B, cursor, text),
+    get(B, list_browser, LB),
+    pointer_cursor(B, LB, Name),
+    send(B, destroy).
+
+:- end_tests(list_browser_cursor).
