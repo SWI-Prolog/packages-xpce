@@ -2199,8 +2199,8 @@ r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill)
  * @param y The y-coordinate of the pixel.
  * @param val The color value to set.
  */
-bool
-r_pixel(int x, int y, Any val)
+static uint32_t *
+target_pixel(int x, int y)
 { int width  = cairo_image_surface_get_width(context.target);
   int height = cairo_image_surface_get_height(context.target);
   int stride = cairo_image_surface_get_stride(context.target);
@@ -2208,9 +2208,18 @@ r_pixel(int x, int y, Any val)
 
   assert(cairo_image_surface_get_format(context.target) == CAIRO_FORMAT_ARGB32);
 
-  if ( x >= 0 && x <= width && y >= 0 && y <= height )
-  { uint32_t *p = (uint32_t*)(data + y * stride + x * 4);
-    uint32_t rgba;
+  if ( x >= 0 && x < width && y >= 0 && y < height )
+    return (uint32_t*)(data + y * stride + x * 4);
+
+  return NULL;
+}
+
+bool
+r_pixel(int x, int y, Any val)
+{ uint32_t *p = target_pixel(x, y);
+
+  if ( p )
+  { uint32_t rgba;
 
     if ( instanceOfObject(val, ClassColour) )
     { Colour c = val;
@@ -2250,16 +2259,10 @@ d_modify(void)
  */
 COLORRGBA
 r_get_pixel(int x, int y)
-{ int width  = cairo_image_surface_get_width(context.target);
-  int height = cairo_image_surface_get_height(context.target);
-  int stride = cairo_image_surface_get_stride(context.target);
-  unsigned char *data = cairo_image_surface_get_data(context.target);
+{ unsigned char *p = (unsigned char *)target_pixel(x, y);
 
-  assert(cairo_image_surface_get_format(context.target) == CAIRO_FORMAT_ARGB32);
-
-  if ( x >= 0 && x <= width && y >= 0 && y <= height )
-  { unsigned char *p = data + y * stride + x * 4;
-    uint8_t b = p[0];
+  if ( p )
+  { uint8_t b = p[0];
     uint8_t g = p[1];
     uint8_t r = p[2];
     uint8_t a = p[3];
