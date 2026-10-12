@@ -18,6 +18,10 @@ A button may be assigned a key-sequence to activate it.  See
 A button may be assigned a popup menu using ->popup.  Existence of a
 popup menu is indicated using a small triangle.
 
+A button that starts a destructive action, e.g., deleting a file or
+closing a window that ends the application, should be a `danger`
+button.  See ->danger.
+
 **Bugs**:
 
 It is not possible to use an arbitrary bitmap as a button.  Class label
@@ -26,11 +30,29 @@ provides a (conceptually inferior) way to create `active` images.
 @see class click_gesture
 
 
+## Class variables {#class-button-classvars}
+
+- button.danger_colour: colour = ui_danger
+    Border and label of a ->danger button.  If the button is also the
+    <-default_button, this is the fill of the button.
+
+- button.danger_foreground: colour = ui_danger_foreground
+    Label of a ->danger button that is the <-default_button.
+
+
 ## Instance variables {#class-button-instvars}
 
 - button<-accelerator: [name]*
     Activate when ->key: name is received.  See `dialog ->typed` for an
     explanation on handling accelerators in dialog windows.
+
+- button<-danger: bool
+    If @on (default @off), the button starts a destructive action.
+    It is painted using `button.danger_colour`.  A danger button can
+    also be the <-default_button, which makes it filled with this
+    colour.  Typically though, a dialog that asks to confirm a
+    destructive action makes `cancel` the default button, so RETURN
+    does not destroy anything.
 
 - button<-default_button: [bool]
     Button is default button for its <-device.  This implies two

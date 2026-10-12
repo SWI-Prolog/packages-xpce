@@ -634,7 +634,7 @@ close(F) :->
     ;   get(F, tabs, TW),
         get(TW?tabs, size, Count),
         (   Count > 1,
-            \+ send(F, confirm, 'Close %d tabs?', Count)
+            \+ send(F, confirm_danger, close_tabs, 'Close %d tabs?', Count)
         ->  true
         ;   get(F, can_close, @on)
         ->  ignore(send(F, record_arrangement)),
@@ -674,11 +674,24 @@ keep_alive(F, Reply:bool) :<-
 
 confirm(F, Format:char_array, Args:any...) :->
     "Ask the user a yes/no question, centred on me"::
-    new(D, dialog('Confirm action')),
     String =.. [string, Format | Args],
+    confirm_dialog(F, ok, @off, String).
+
+confirm_danger(F, Action:name, Format:char_array, Args:any...) :->
+    "Confirm a destructive action; Cancel is the default"::
+    String =.. [string, Format | Args],
+    confirm_dialog(F, Action, @on, String).
+
+confirm_dialog(F, Action, Danger, String) :-
+    new(D, dialog('Confirm action')),
     send(D, append, label(message, String)),
-    send(D, append, button(ok, message(D, return, ok))),
-    send(D, append, button(cancel, message(D, return, cancel))),
+    send(D, append, new(Do, button(Action, message(D, return, ok)))),
+    send(D, append, new(Cancel, button(cancel, message(D, return, cancel)))),
+    (   Danger == @on
+    ->  send(Do, danger, @on),
+        send(Cancel, default_button, @on)
+    ;   true
+    ),
     send(D, modal, transient),
     get(D, confirm_centered, F, Rval),
     send(D, destroy),
@@ -2164,7 +2177,7 @@ close_tab(Tab) :->
         Frame \== @nil
     ->  (   closing_ends_application(Frame, Tab),
             get(Tab, label, Label),
-            \+ send(Frame, confirm,
+            \+ send(Frame, confirm_danger, close_tab,
                     'Closing tab "%s" ends the application.\nClose it anyway?',
                     Label)
         ->  true

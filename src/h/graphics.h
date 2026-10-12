@@ -402,6 +402,7 @@ NewClass(button)
   Int	     shadow;			/* shadow around button */
   Image	     popup_image;		/* Image to indicate popup */
   BoolObj    default_button;		/* Button is the default button */
+  BoolObj    danger;			/* Button starts a destructive action */
   BoolObj    show_focus_border;		/* Show wide border around focus */
 End;
 

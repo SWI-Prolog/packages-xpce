@@ -44,10 +44,12 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- use_module(library(pane_frame)).
 
 test_button :-
     run_tests([ button_popup,
-                button_keyboard
+                button_keyboard,
+                button_danger
               ]).
 
 %   popup_buttons(-Dialog, -Split, -Menu, -Log)
@@ -461,3 +463,57 @@ click_menu_bar(D, Shown) :-
     post(D, ms_left_up, X, Y, 0, 5100),
     get(MB, member, file, P),
     get(P, displayed, Shown).
+
+
+                 /*******************************
+                 *            DANGER            *
+                 *******************************/
+
+%   answer_confirm(+Key, -Answer)
+%
+%   Ask pane_frame ->confirm_danger and type Key in the dialog it shows.
+%   Answer is `closed` if the user confirmed and `kept` otherwise.
+
+answer_confirm(Key, Answer) :-
+    new(F, pane_frame),
+    new(T, timer(0.1, message(@prolog, type_in_confirm, Key))),
+    send(T, start, once),
+    (   send(F, confirm_danger, close_tab, 'Close "%s"?', foo)
+    ->  Answer = closed
+    ;   Answer = kept
+    ),
+    free(T),
+    send(F, destroy).
+
+type_in_confirm(Key) :-
+    get(@display?frames, find, @arg1?label == 'Confirm action', Fr),
+    get(Fr, member, dialog, D),
+    key(D, Key).
+
+:- begin_tests(button_danger).
+
+test(default_off, Danger == @off) :-
+    new(B, button(delete)),
+    get(B, danger, Danger),
+    free(B).
+test(danger, Danger == @on) :-
+    new(B, button(delete)),
+    send(B, danger, @on),
+    get(B, danger, Danger),
+    free(B).
+test(colours, [Fill-Label == ui_danger-ui_danger_foreground]) :-
+    new(B, button(delete)),
+    get(B, danger_colour, C1),
+    get(C1, name, Fill),
+    get(B, danger_foreground, C2),
+    get(C2, name, Label),
+    free(B).
+test(theme_defaults, [Fill-Label == firebrick-white]) :-
+    get(@theme_colour_defaults, member, ui_danger, Fill),
+    get(@theme_colour_defaults, member, ui_danger_foreground, Label).
+test(confirm_return_keeps, Answer == kept) :-
+    answer_confirm('RET', Answer).
+test(confirm_escape_keeps, Answer == kept) :-
+    answer_confirm('ESC', Answer).
+
+:- end_tests(button_danger).

@@ -1139,6 +1139,10 @@ static const struct builtin_theme_colour
     "Placeholder text of an empty text field" },
   { "ui_accelerator",		    "grey30",
     "Underline of the accelerator key of a label" },
+  { "ui_danger",			    "firebrick",
+    "Border and label of a button that starts a destructive action" },
+  { "ui_danger_foreground",	    "white",
+    "Label of a danger button that is the default button" },
   /* ANSI terminal colours */
   { "ansi_black",		    "black",	"Terminal colour 0 (black)" },
   { "ansi_red",			    "red3",	"Terminal colour 1 (red)" },

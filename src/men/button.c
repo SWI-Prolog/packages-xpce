@@ -42,6 +42,7 @@ initialiseButton(Button b, Name name, Message msg, Name acc)
 { createDialogItem(b, name);
 
   assign(b, default_button, OFF);
+  assign(b, danger, OFF);
   assign(b, show_focus_border, ON);
 
   assign(b, message, msg);
@@ -164,6 +165,10 @@ buttons having images.
  * inactive one faded.  The keyboard focus is shown by a wider border
  * in the accent colour or, on the default button, a white ring inside
  * the border.  Both stay inside the area of the button.
+ *
+ * A danger button (->danger) starts a destructive action.  It uses
+ * <-danger_colour for its border and label or, if it is the default
+ * button, as fill with a label in <-danger_foreground.
  */
 
 static bool
@@ -173,15 +178,36 @@ is_pressed(Button b)
 
 
 static bool
-accent_face(Button b, int defb)
+accent_face(Button b, bool defb)
 { return defb && b->active == ON && !is_pressed(b);
+}
+
+
+static bool
+danger_face(Button b)
+{ return b->danger == ON && b->active == ON;
+}
+
+
+/* Colour of the label, or NULL to use the default */
+
+static Any
+label_colour(Button b, bool defb)
+{ if ( accent_face(b, defb) )
+    return getClassVariableValueObject(b, b->danger == ON
+					    ? NAME_dangerForeground
+					    : NAME_selectedForeground);
+  if ( danger_face(b) )
+    return getClassVariableValueObject(b, NAME_dangerColour);
+
+  return NULL;
 }
 
 
 static void
 draw_generic_button_face(Button b,
 			 int x, int y, int w, int h,
-			 int up, int defb, int focus)
+			 bool up, bool defb, bool focus)
 { int r = valInt(b->radius);
   int pen = valInt(b->pen);
   bool accent = accent_face(b, defb);
@@ -191,7 +217,8 @@ draw_generic_button_face(Button b,
   if ( is_pressed(b) )
     fill = getClassVariableValueObject(b, NAME_pressedColour);
   else if ( accent )
-    fill = getClassVariableValueObject(b, NAME_accentColour);
+    fill = getClassVariableValueObject(b, b->danger == ON ? NAME_dangerColour
+							   : NAME_accentColour);
   else
     fill = getClassVariableValueObject(b, NAME_faceColour);
   if ( accent )
@@ -199,7 +226,9 @@ draw_generic_button_face(Button b,
   else if ( focus )
   { border = getClassVariableValueObject(b, NAME_accentColour);
     pen++;
-  } else
+  } else if ( danger_face(b) )
+    border = getClassVariableValueObject(b, NAME_dangerColour);
+  else
     border = getClassVariableValueObject(b, NAME_borderColour);
 
   if ( b->active == OFF )
@@ -214,7 +243,7 @@ draw_generic_button_face(Button b,
   if ( focus && accent )		/* ring inside the accent face */
   { int m = pen+1;
 
-    r_colour(getClassVariableValueObject(b, NAME_selectedForeground));
+    r_colour(label_colour(b, defb));
     r_thickness(1);
     r_smooth_box(x+m, y+m, w-2*m, h-2*m, max(0, r-m), NIL);
   }
@@ -298,7 +327,7 @@ on_popup_marker(Button b, EventObj ev)
 status
 RedrawAreaButton(Button b, Area a)
 { int x, y, w, h;
-  int defb;
+  bool defb;
   int rm = 0;				/* right-margin */
   PceWindow sw;
   bool kbf;				/* Button has keyboard focus */
@@ -323,8 +352,9 @@ RedrawAreaButton(Button b, Area a)
   draw_generic_button_face(b, x, y, w, h, up, defb, kbf && focus);
 
   Any old = NULL;
-  if ( accent_face(b, defb) )
-    old = r_colour(getClassVariableValueObject(b, NAME_selectedForeground));
+  Any lc = label_colour(b, defb);
+  if ( lc )
+    old = r_colour(lc);
 
   if ( notNil(b->popup) && !instanceOfObject(b->label, ClassImage) )
     rm = draw_button_popup_indicator(b, x, y, w, h, up);
@@ -629,6 +659,12 @@ labelButton(Button b, Any label)
 
 
 static status
+dangerButton(Button b, BoolObj val)
+{ return assignGraphical(b, NAME_danger, val);
+}
+
+
+static status
 showFocusBorderButton(Button b, BoolObj show)
 { return assignGraphical(b, NAME_showFocusBorder, show);
 }
@@ -671,6 +707,8 @@ static vardecl var_button[] =
      NAME_appearance, "Indication that button has a popup menu"),
   SV(NAME_defaultButton, "[bool]", IV_GET|IV_STORE, defaultButtonButton,
      NAME_accelerator, "Button is default button for its <-device"),
+  SV(NAME_danger, "bool", IV_GET|IV_STORE, dangerButton,
+     NAME_appearance, "Button starts a destructive action"),
   SV(NAME_showFocusBorder, "bool", IV_GET|IV_STORE, showFocusBorderButton,
      NAME_appearance, "Show wide border around focus/default button")
 };
@@ -750,6 +788,10 @@ static classvardecl rc_button[] =
      "Outline of the button"),
   RC(NAME_accentColour, "colour", "ui_accent",
      "Fill of the default button and colour of the focus ring"),
+  RC(NAME_dangerColour, "colour", "ui_danger",
+     "Border and label of a danger button; fill if it is the default"),
+  RC(NAME_dangerForeground, "colour", "ui_danger_foreground",
+     "Label of a danger button that is the default button"),
   RC(NAME_shadow, "int", "0",
      "Shadow shown around the box"),
   RC(NAME_size, "size", UXWIN("size(50,20)", "size(80,24)"),

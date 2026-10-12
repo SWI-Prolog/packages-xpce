@@ -86,6 +86,8 @@ sample(ui_button_background,    choice,         'Segmented choice').
 sample(ui_button_foreground,    button,         'Label of a button').
 sample(ui_button_pressed,       pressed_button, 'A button while pressed').
 sample(ui_cursor,               cursor,         'Text cursor').
+sample(ui_danger,               danger,         'Buttons that start a destructive action').
+sample(ui_danger_foreground,    danger,         'Label of the default danger button').
 sample(ui_cursor_inactive,      inactive_cursor,
        'Text cursor of a window without the keyboard focus').
 sample(ui_dialog_background,    dialog,         'A dialog window').
@@ -154,6 +156,13 @@ xref_colour(xref_not_called, xref_not_called, 'Predicate that is not called').
 build(button, B) :-
     new(B, button(button, @nil)),
     send(B, label, 'Button').
+build(danger, D) :-
+    new(D, dialog_group(danger, group)),
+    send(D, append, new(B1, button(delete, @nil))),
+    send(B1, danger, @on),
+    send(D, append, new(B2, button(delete_all, @nil)), right),
+    send(B2, danger, @on),
+    send(B2, slot, default_button, @on).
 build(pressed_button, B) :-
     new(B, button(pressed, @nil)),
     send(B, status, preview).
