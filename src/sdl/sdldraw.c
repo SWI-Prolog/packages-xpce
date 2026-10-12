@@ -1575,7 +1575,10 @@ r_3d_box(double x, double y, double w, double h,
 
       Translate(x, y);
       if ( radius > 0 )			/* with rounded corners */
-      {	pce_cairo_set_source_color(CR, top_left_color);
+      {	/* save/restore rather than reset the clip, which would also
+	   lift the clip of the window and of enclosing graphicals */
+	cairo_save(CR);
+	pce_cairo_set_source_color(CR, top_left_color);
 	cairo_new_path(CR);
 	cairo_move_to(CR, x, y);
 	cairo_line_to(CR, x+w, y);
@@ -1585,8 +1588,9 @@ r_3d_box(double x, double y, double w, double h,
 
 	my_cairo_rounded_rectangle(CR, x, y, w, h, radius, false);
 	cairo_fill(CR);
-	cairo_reset_clip(CR);
+	cairo_restore(CR);
 
+	cairo_save(CR);
 	pce_cairo_set_source_color(CR, bottom_right_color);
 	cairo_new_path(CR);
 	cairo_move_to(CR, x+w, y);
@@ -1597,7 +1601,7 @@ r_3d_box(double x, double y, double w, double h,
 
 	my_cairo_rounded_rectangle(CR, x, y, w, h, radius, false);
 	cairo_fill(CR);
-	cairo_reset_clip(CR);
+	cairo_restore(CR);
 
 	// Fill base
 	{ double ix = x+shadow, iy = y+shadow, iw = w-2*shadow, ih = h-2*shadow;

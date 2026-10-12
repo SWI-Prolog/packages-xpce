@@ -138,6 +138,22 @@ rgb(RGBA, R, G, B) :-
     G is (RGBA >> 8) /\ 0xff,
     B is RGBA /\ 0xff.
 
+%   A graphical that clips to its top-left 10x10 pixels and draws a
+%   rounded box with an elevation over its whole area.
+
+:- pce_begin_class(tcr_clipped_3d, graphical,
+                   "Draw a 3D box in a clipped area").
+
+initialise(G) :->
+    send_super(G, initialise, 0, 0, 40, 40).
+
+'_redraw_area'(G, _A:area) :->
+    send(G, clip, area(0, 0, 10, 10)),
+    send(G, draw_box, 0, 0, 40, 40, 8, elevation(@nil, 3, red)),
+    send(G, unclip).
+
+:- pce_end_class(tcr_clipped_3d).
+
 filled_box(Fill, B) :-
     new(B, box(20,20)),
     send(B, pen, 0),
@@ -203,6 +219,9 @@ test(gradient_repeat, true(R > B)) :-        % 31 is 1 into a repeat
 test(gradient_reflect, true(R > B)) :-       % 39 is 1 from the next start
     extended_gradient_pixel(reflect, 39, RGBA),
     rgb(RGBA, R, _, B).
+test(rounded_3d_box_keeps_the_clip, RGBA == 0xffffffff) :-
+    new(G, tcr_clipped_3d),
+    pixel_after_drawing(G, 40, 30, 30, RGBA).
 test(draw_poly_strokes_over_fill, Inner-Outline == 0xffff0000-0xff000000) :-
     new(G, tcr_poly),
     pixel_after_drawing(G, 20, 10, 10, Inner),
