@@ -119,7 +119,9 @@ adjustArrowPath(Path p, Graphical arrow, bool first)
     av[3] = toNum(ry+oy);
 
     if ( qadSendv(arrow, NAME_points, 4, av) )
+    { assign(arrow, displayed, ON);	/* else RedrawArea() skips it */
       return ComputeGraphical(arrow);
+    }
   }
 
   fail;

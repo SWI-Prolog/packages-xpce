@@ -153,6 +153,11 @@ test(arrow_follows_tangent, [Tip == 40-0, RX == 40, true(RY > 0)]) :-
     get(A, tip, T), xy(T, Tip),
     get(A, reference, R), xy(R, RX0-RY),
     RX is round(RX0).
+test(arrow_is_drawn, true(RGBA \== White)) :-   % a pixel of the arrow's wing
+    white(White),
+    new_path([point(0,10), point(40,10)], P),
+    send(P, arrows, second),
+    pixel(P, 50, 31, 7, RGBA).
 test(resize_moves_control_points, [End == 80-10, Control == 40-(-10)]) :-
     hump(P),
     send(P, resize, 2, 1, point(0,0)),
