@@ -1528,6 +1528,25 @@ test(a_window_of_a_tool_asks_the_tool_to_show_something) :-
     send(Window, select_node, Class),
     send(Window, open_node, Class).
 
+%       The error browser kept the selected error in a slot `current`,
+%       which hid `tabbed_window <-current`, the window of its tab.  The
+%       input focus was then passed to the error.
+
+test(the_error_browser_passes_the_focus_to_its_window, Class == window) :-
+    no_frames,
+    open_manual_tool(errors, Tool),
+    get(Tool, member, browser, Browser),
+    get(Browser?members, find, @arg1?style \== header, Item),
+    get(Item, object, Error),
+    send(Tool, selected, Error),
+    send(Tool, input_focus, @on),
+    send(Tool, input_focus, @off),
+    get(Tool, current, Current),
+    (   send(Current, instance_of, window)
+    ->  Class = window
+    ;   get(Current, class_name, Class)
+    ).
+
 %       A tool reports on the status bar of the window it is in.  Some
 %       had a reporter of their own below them that stayed blank, as all
 %       reports went to the bar.

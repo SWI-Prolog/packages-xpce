@@ -251,12 +251,4 @@ show_classes(F, From:name) :->
     send(CH?tree, selection, Nodes),
     send(CH, normalise, Nodes).
 
-focus(F, Class:class) :->
-    get(F, member, man_class_hierarchy_window, CH),
-%   send(CH, ensure_class, Class),
-    send(CH, add_class, Class),
-    get(CH, node, Class, Node),
-    send(CH?tree, selection, Node),
-    send(CH, normalise, Node).
-
 :- pce_end_class.

@@ -43,7 +43,11 @@
                    "Error browser").
 
 variable(errors,        man_module,             get).
-variable(current,       error*,                 get).
+%   Not `current`: that is the window of my tab (`tabbed_window
+%   <-current`), which gets the input focus.
+
+variable(current_error, error*,                 get,
+         "The selected error").
 
 initialise(EB, Manual:man_manual) :->
     "Create from Manual"::
@@ -74,9 +78,9 @@ dialog(D) :-
     new(B, ?(EB, member, browser)),
     send(D, append,
          new(T, menu(kind, cycle,
-                     if(EB?current \== @nil,
-                        and(message(EB?current, kind, @arg1),
-                            message(B, update, EB?current)))))),
+                     if(EB?current_error \== @nil,
+                        and(message(EB?current_error, kind, @arg1),
+                            message(B, update, EB?current_error)))))),
     get(class(error), instance_variable, kind, Var),
     get(Var, type, Type),
     get(Type, context, TypeNames),
@@ -108,7 +112,7 @@ fill(EB, Pattern:regex) :->
     send(Chain, sort, ?(@arg1?id, compare, @arg2?id)),
     send(EB, report, done),
     send(Chain, for_all, message(B, append_card, @arg1)),
-    ignore(send(EB, selected, EB?current)).
+    ignore(send(EB, selected, EB?current_error)).
 
 
                 /********************************
@@ -118,7 +122,7 @@ fill(EB, Pattern:regex) :->
 selected(EB, Obj:object*) :->
     "Set the selection"::
     send(Obj, instance_of, error),
-    send(EB, slot, current, Obj),
+    send(EB, slot, current_error, Obj),
     get(?(EB, member, dialog), member, kind, KindMenu),
     send(KindMenu, selection, Obj?kind),
     send(KindMenu, active, @on),
