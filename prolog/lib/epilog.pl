@@ -273,7 +273,7 @@ is_true(true).
 %   <-name of an Epilog window.  The main console is `main'; the rest are
 %   numbered, so that every window can be found back by name.
 
-epilog_name(@default, @on, Name) => Name = main.
+epilog_name(@default, Main, Name), is_true(Main) => Name = main.
 epilog_name(@default, _,   Name) => gensym(epilog, Name).
 epilog_name(Name0,    _,   Name) => Name = Name0.
 

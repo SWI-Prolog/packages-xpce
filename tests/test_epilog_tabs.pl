@@ -179,6 +179,16 @@ test(an_ordinary_console_does_not, [fail]) :-
     epilog_frame(@default, @default, @default, @off, @default, F),
     get(F, attribute, main, _).
 
+%   The main console is called `main', however it was asked for:
+%   boot/toplevel.pl says main(true).
+
+test(the_main_console_is_called_main, Names == [main, main]) :-
+    findall(N, ( member(Main, [true, @on]),
+                 epilog:epilog_name(@default, Main, N)
+               ), Names).
+test(an_ordinary_console_is_numbered, true(Name \== main)) :-
+    epilog:epilog_name(@default, @off, Name).
+
 :- end_tests(epilog_main).
 
 
