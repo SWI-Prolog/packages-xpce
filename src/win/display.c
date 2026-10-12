@@ -80,7 +80,8 @@ getConvertDisplay(Class class, Any obj)
 
 static status
 unlinkDisplay(DisplayObj d)
-{ deleteDisplayManager(d->display_manager, d);
+{ if ( notNil(d->display_manager) )	/* NIL if ->initialise failed */
+    deleteDisplayManager(d->display_manager, d);
   ws_close_display(d);
 
   succeed;

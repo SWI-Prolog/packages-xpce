@@ -23,6 +23,7 @@ test_libs(terminal_graphical   OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(man_search           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bool_item            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(chain_list           OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(failed_initialise    OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(cursor               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(cursor_item          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(help_message         OPTIONS ${XPCE_TEST_OPTIONS})
@@ -96,6 +97,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:man_search
                      xpce:bool_item
                      xpce:chain_list
+                     xpce:failed_initialise
                      xpce:cursor
                      xpce:cursor_item
                      xpce:help_message

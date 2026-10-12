@@ -122,7 +122,10 @@ destroyTransientFrame(FrameObj fr)
 
 static status
 unlinkFrame(FrameObj fr)
-{ if ( fr->status != NAME_unlinking )
+{ if ( isNil(fr->members) )		/* ->initialise failed: nothing to undo */
+    succeed;
+
+  if ( fr->status != NAME_unlinking )
   { FrameObj sfr;
     PceWindow sw;
     Cell cell;

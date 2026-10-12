@@ -642,9 +642,19 @@ getLookupClass(Class class, Name name, Class super)
 }
 
 
+/* Classes cannot be unlinked, except for one whose ->initialise
+ * failed.  initialiseClass() may have registered it already.
+ */
+
 static status
 unlinkClass(Class cl)
-{ assert(0);				/* classes cannot be unlinked */
+{ if ( isCreatingObj(cl) )
+  { if ( notNil(cl->name) && getMemberHashTable(classTable, cl->name) == cl )
+      deleteHashTable(classTable, cl->name);
+    succeed;
+  }
+
+  assert(0);
   fail;
 }
 

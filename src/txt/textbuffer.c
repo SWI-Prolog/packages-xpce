@@ -101,9 +101,11 @@ static status
 unlinkTextBuffer(TextBuffer tb)
 { Any editor;
 
-  for_chain(tb->editors, editor,
-	    send(ReceiverOfEditor(editor), NAME_lostTextBuffer, EAV));
-  clearChain(tb->editors);
+  if ( notNil(tb->editors) )		/* NIL if ->initialise failed */
+  { for_chain(tb->editors, editor,
+	      send(ReceiverOfEditor(editor), NAME_lostTextBuffer, EAV));
+    clearChain(tb->editors);
+  }
 
   while( notNil(tb->first_fragment) )	/* destroy fragments */
     freeObject(tb->first_fragment);

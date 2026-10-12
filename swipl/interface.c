@@ -1553,7 +1553,7 @@ static int
 unlinkProlog(PceObject hd)
 { void *h = getHostDataHandle(hd);
 
-  if ( !((uintptr_t)h & 0x1) )
+  if ( h && !((uintptr_t)h & 0x1) )	/* NULL if ->initialise failed */
   { /*Sdprintf("Erasing recorded Prolog term\n");*/
     PL_erase(h);			/* This is a record */
   }
