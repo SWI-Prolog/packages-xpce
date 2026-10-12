@@ -48,7 +48,9 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(lists)).
 :- use_module(library(apply)).
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(thread)).
+:- endif.
 
 test_chain_list :-
     run_tests([ chain_list,
