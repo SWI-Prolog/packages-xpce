@@ -1528,6 +1528,87 @@ test(a_window_of_a_tool_asks_the_tool_to_show_something) :-
     send(Window, select_node, Class),
     send(Window, open_node, Class).
 
+%       The error browser filters as the user types.  It has no buttons
+%       to apply the search or for help.
+
+test(the_error_browser_searches_as_you_type,
+     [true(Searched < All), true(Searched > 0), Buttons == [quit]]) :-
+    no_frames,
+    open_manual_tool(errors, Tool),
+    get(Tool, member, browser, Browser),
+    get(Browser?members, size, All),
+    get(Tool, member, dialog, Dialog),
+    get(Dialog, member, search, Search),
+    forall(member(C, [0'f, 0'i, 0'l, 0'e]), send(Search, typed, C)),
+    get(Browser?members, size, Searched),
+    get(Dialog, graphicals, Grs),
+    findall(N, ( member_chain(Gr, Grs),
+                 send(Gr, instance_of, button),
+                 get(Gr, name, N)
+               ), Buttons).
+
+%       The Kind menu changes how the selected error is reported, e.g.,
+%       to raise a warning as an error while debugging.  It says so on
+%       the status bar, also when the original kind is restored.
+
+test(the_error_kind_menu_says_what_it_changed,
+     [ Changed-Kind-Restored ==
+       "no_behaviour is reported as error instead of warning until Prolog is restarted"-
+       error-"no_behaviour is reported as warning again",
+       cleanup(send(Error, kind, warning))
+     ]) :-
+    no_frames,
+    open_manual_tool(errors, Tool),
+    get(@pce, convert, no_behaviour, error, Error),
+    get(Error, kind, warning),
+    send(Tool, selected, Error),
+    get(Tool, change_kind_menu, Menu),
+    choose(Menu, error),
+    get(Error, kind, Kind),
+    status_text(Tool, Changed),
+    choose(Menu, warning),
+    status_text(Tool, Restored).
+
+choose(Menu, Value) :-
+    send(Menu, selection, Value),
+    get(Menu, message, Message),        % as the user selecting it
+    send(Message, forward, Value).
+
+status_text(Tool, Text) :-
+    get(Tool, frame, Frame),
+    get(Frame, status_dialog, SD),
+    get(SD, member, reporter, Reporter),
+    get(Reporter?selection, value, Text0),
+    atom_string(Text0, Text).
+
+%       The columns of the error browser leave room for the widest id,
+%       so the book, kind and message columns line up.
+
+test(the_error_ids_fit_their_column, true(Widest < BookStop-IdStop)) :-
+    no_frames,
+    open_manual_tool(errors, Tool),
+    get(Tool, member, browser, Browser),
+    get(Browser?text_image, tab_stops, Stops),
+    get(Stops, element, 1, IdStop),
+    get(Stops, element, 2, BookStop),
+    get(Browser, font, Font),
+    new(M, number(0)),
+    send(@errors, for_all, message(M, maximum, ?(Font, width, @arg1))),
+    get(M, value, Widest).
+
+test(the_error_browser_searches_before_the_kind, Order == [search, kind]) :-
+    no_frames,
+    open_manual_tool(errors, Tool),
+    get(Tool, member, dialog, Dialog),
+    get(Dialog, member, search, Search),
+    get(Tool, change_kind_menu, Kind),
+    get(Search, x, SX),
+    get(Kind, x, KX),
+    (   SX < KX
+    ->  Order = [search, kind]
+    ;   Order = [kind, search]
+    ).
+
 %       The error browser kept the selected error in a slot `current`,
 %       which hid `tabbed_window <-current`, the window of its tab.  The
 %       input focus was then passed to the error.
