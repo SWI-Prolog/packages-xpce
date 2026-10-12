@@ -885,6 +885,44 @@ mixed_window(F) :-
     send(@prolog_ide, new_editor, F, @on),
     send(F, open).
 
+%       When Epilog runs as the main program, Prolog halts once no window
+%       keeps the application alive.  Closing the tab with the last
+%       terminal does that even if another tab holds an editor, so the
+%       IDE says so and the tab asks first.
+
+ends(F, Panes, IdleExit) :-
+    setup_call_cleanup(
+        send(@prolog_ide, exit_when_idle, IdleExit),
+        send(@prolog_ide, closing_ends_application, F, chain(Panes)),
+        send(@prolog_ide, exit_when_idle, @off)).
+
+terminal_and_editor(F, T, EP) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    terminal(F, T),
+    editor_pane(F, EP).
+
+test(closing_the_last_terminal_ends_prolog) :-
+    terminal_and_editor(F, T, _),
+    ends(F, T, @on).
+test(only_if_prolog_halts_when_idle, fail) :-
+    terminal_and_editor(F, T, _),
+    ends(F, T, @off).
+test(closing_an_editor_does_not, fail) :-
+    terminal_and_editor(F, _, EP),
+    ends(F, EP, @on).
+test(nor_does_closing_one_of_two_terminals, fail) :-
+    terminal_and_editor(F, T, _),
+    send(@prolog_ide, new_terminal, F),
+    ends(F, T, @on).
+test(nor_with_a_terminal_in_another_window, fail) :-
+    terminal_and_editor(F, T, _),
+    epilog_frame(@default, @default, @default, @off, @default, F2),
+    send(F2, open),
+    ends(F, T, @on).
+
 :- end_tests(mixed_panes).
 
 

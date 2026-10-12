@@ -2162,11 +2162,30 @@ close_tab(Tab) :->
     "Close my panes, which takes me with them"::
     (   get(Tab, frame, Frame),
         Frame \== @nil
-    ->  pane_frame_closed_tab(Frame),
-        ignore(send(Frame, arranged))   % closing a tab by hand arranges too
-    ;   true
-    ),
-    send(Tab, close).
+    ->  (   closing_ends_application(Frame, Tab),
+            get(Tab, label, Label),
+            \+ send(Frame, confirm,
+                    'Closing tab "%s" ends the application.\nClose it anyway?',
+                    Label)
+        ->  true
+        ;   pane_frame_closed_tab(Frame),
+            ignore(send(Frame, arranged)), % closing a tab by hand arranges too
+            send(Tab, close)
+        )
+    ;   send(Tab, close)
+    ).
+
+%   closing_ends_application(+Frame, +Tab) is semidet.
+%
+%   True when the application of Frame says that closing the panes of
+%   Tab ends it.
+
+closing_ends_application(Frame, Tab) :-
+    get(Frame, application, App),
+    App \== @nil,
+    send(App, has_send_method, closing_ends_application),
+    get(Tab, windows, Panes),
+    send(App, closing_ends_application, Frame, Panes).
 
 close(Tab) :->
     "Close my panes"::

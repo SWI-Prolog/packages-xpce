@@ -111,6 +111,9 @@ prolog_ide(Action) :-
 class_variable(tool_placement, {as_arranged,frame,tab,split}, as_arranged,
                "Where a tool the user asks for is put").
 
+variable(exit_when_idle, bool := @off, both,
+         "Prolog halts when no window keeps the application alive").
+
 initialise(IDE) :->
     "Create as service application"::
     send_super(IDE, initialise, prolog_ide),
@@ -547,6 +550,31 @@ frame_empty(_IDE, F:pane_frame) :->
         )
     ;   send(F, destroy)
     ).
+
+%       When Epilog runs as the main program, Prolog halts as soon as no
+%       window keeps the application alive (see `frame <-keep_alive`).
+%       Closing a tab or pane can do that without the user knowing: the
+%       label of a tab may name another pane than the Prolog console it
+%       holds.  So whoever closes panes asks first.
+
+closing_ends_application(IDE, F:pane_frame, Panes:chain) :->
+    "Succeed if closing Panes of F makes Prolog halt"::
+    get(IDE, exit_when_idle, @on),
+    get(Panes, find, @keep_alive_pane, _),
+    \+ ( get(F, panes, All),
+          member_chain(P, All),
+          \+ send(Panes, member, P),
+          send(@keep_alive_pane, forward, P)
+        ),
+    \+ ( get(@display_manager, members, Displays),
+          member_chain(D, Displays),
+          get(D, frames, Frames),
+          member_chain(Other, Frames),
+          Other \== F,
+          get(Other, status, Status),
+          Status \== unmapped, Status \== hidden,
+          get(Other, keep_alive, @on)
+        ).
 
 close_frame(_IDE, F:pane_frame, Prolog:prolog=[bool]) :->
     "Close a window.  Optionally terminate Prolog"::

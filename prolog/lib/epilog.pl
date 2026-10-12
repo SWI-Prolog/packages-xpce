@@ -119,9 +119,13 @@ ep_wait(Epilog) :-
     get(Epilog, current_terminal, PT),
     capture_messages(PT),
     setup_call_cleanup(
-        asserta(ep_main_running),
+        ( asserta(ep_main_running),
+          send(@prolog_ide, exit_when_idle, @on)
+        ),
         ep_wait_,
-        retractall(ep_main_running)).
+        ( retractall(ep_main_running),
+          ignore(send(@prolog_ide, exit_when_idle, @off))
+        )).
 
 ep_wait_ :-
     E = error(Formal,_),
