@@ -73,6 +73,7 @@ void r_pop_transform (r_transform_save *saved);
  */
 void r_push_group(void);
 void r_pop_group_with_alpha(double alpha);
+void r_pop_group_blend(double alpha, Name blend);
 void r_filloffset(Point offset, int x0, int y0, fill_state *state);
 void r_fillrestore(fill_state *state);
 DisplayObj d_display(DisplayObj d);
@@ -83,6 +84,8 @@ status d_pdf(const char *file, int w, int h, double scale);
 void d_clip(int x, int y, int w, int h);
 void d_done(void);
 void d_clip_done(void);
+int  d_clip_depth(void);
+void d_clip_restore(int depth);
 void intersection_iarea(IArea a, IArea b);
 void r_clear(int x, int y, int w, int h);
 void r_complement(int x, int y, int w, int h);
@@ -147,6 +150,8 @@ void r_polygon(FPoint pts, int n, int close);
 void r_bezier(fpoint start, fpoint end, fpoint control1, fpoint control2);
 void r_path(Chain points, double ox, double oy, double radius, bool closed,
 	    Any fill, Name fill_rule);
+void r_clip_path(Chain points, double ox, double oy, double radius,
+		 bool closed, Name fill_rule);
 bool r_path_extents(Chain points, double radius, bool closed,
 		    double pen, Any texture,
 		    double *x1, double *y1, double *x2, double *y2);

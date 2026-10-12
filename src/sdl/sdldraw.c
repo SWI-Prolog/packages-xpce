@@ -68,6 +68,7 @@ typedef struct
   int		offset_x;		/* Paint offset in X direction */
   int		offset_y;		/* Paint offset in Y direction */
   SDL_Rect	clip_base;		/* Region we may paint (device px) */
+  int		clip_depth;		/* Nesting of d_clip() */
   int		fixed_colours;		/* Colours are fixed */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
@@ -103,6 +104,7 @@ static bool validate_cairo_text_consistency(cairo_t *draw_cr);
 #endif
 
 static bool r_set_fill_fgbg(Any fill, Name which);
+static void clip_rectangle(int x, int y, int w, int h);
 static void r_fill_fgbg(double x, double y, double w, double h,
 			Any fill, Name which);
 
@@ -246,11 +248,56 @@ r_push_group(void)
  */
 void
 r_pop_group_with_alpha(double alpha)
+{ r_pop_group_blend(alpha, NAME_normal);
+}
+
+static const struct blend_mode
+{ Name		  name;
+  cairo_operator_t op;
+} blend_modes[] =
+{ { NAME_normal,     CAIRO_OPERATOR_OVER },
+  { NAME_multiply,   CAIRO_OPERATOR_MULTIPLY },
+  { NAME_screen,     CAIRO_OPERATOR_SCREEN },
+  { NAME_overlay,    CAIRO_OPERATOR_OVERLAY },
+  { NAME_darken,     CAIRO_OPERATOR_DARKEN },
+  { NAME_lighten,    CAIRO_OPERATOR_LIGHTEN },
+  { NAME_colorDodge, CAIRO_OPERATOR_COLOR_DODGE },
+  { NAME_colorBurn,  CAIRO_OPERATOR_COLOR_BURN },
+  { NAME_hardLight,  CAIRO_OPERATOR_HARD_LIGHT },
+  { NAME_softLight,  CAIRO_OPERATOR_SOFT_LIGHT },
+  { NAME_difference, CAIRO_OPERATOR_DIFFERENCE },
+  { NAME_exclusion,  CAIRO_OPERATOR_EXCLUSION },
+  { NAME_hue,	      CAIRO_OPERATOR_HSL_HUE },
+  { NAME_saturation, CAIRO_OPERATOR_HSL_SATURATION },
+  { NAME_color,      CAIRO_OPERATOR_HSL_COLOR },
+  { NAME_luminosity, CAIRO_OPERATOR_HSL_LUMINOSITY },
+  { NAME_add,	      CAIRO_OPERATOR_ADD },
+  { NULL,	      CAIRO_OPERATOR_OVER }
+};
+
+static cairo_operator_t
+blend_operator(Name blend)
+{ for(const struct blend_mode *m = blend_modes; m->name; m++)
+  { if ( m->name == blend )
+      return m->op;
+  }
+
+  return CAIRO_OPERATOR_OVER;
+}
+
+/**
+ * Composite the group pushed by r_push_group() onto what is below it
+ * with the given opacity and blend mode.
+ */
+void
+r_pop_group_blend(double alpha, Name blend)
 { if ( alpha < 0.0 ) alpha = 0.0;
   else if ( alpha > 1.0 ) alpha = 1.0;
 
   cairo_pop_group_to_source(CR);
+  cairo_set_operator(CR, blend_operator(blend));
   cairo_paint_with_alpha(CR, alpha);
+  cairo_set_operator(CR, CAIRO_OPERATOR_OVER);
 }
 
 /**
@@ -380,7 +427,7 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 		    context.clip_base.w, context.clip_base.h);
   }
 
-  d_clip(x, y, w, h);
+  clip_rectangle(x, y, w, h);		/* outermost: see d_clip() */
   if ( clear )
     r_fill(x, y, w, h, context.background);
 
@@ -462,33 +509,6 @@ d_done_pdf(void)
 }
 
 
-/* Intersect the clipping region with <-clip_base, the area d_window()
- * was asked to repaint.  d_clip() and d_clip_done() both discard the
- * clipping region rather than restoring the enclosing one, so without
- * this a graphical that clips itself lifts the clip of the window it
- * is in and the ones painted after it may paint anywhere.  We must
- * know what a redraw changed to upload no more than that (see
- * ws_dirty_window()), so this has to hold.
- *
- * The base is in device pixels because the current transformation is
- * whatever the graphical being painted made of it.
- */
-
-static void
-d_clip_to_base(void)
-{ if ( context.clip_base.w > 0 )
-  { cairo_matrix_t m;
-
-    cairo_get_matrix(CR, &m);
-    cairo_identity_matrix(CR);
-    cairo_rectangle(CR,
-		    context.clip_base.x, context.clip_base.y,
-		    context.clip_base.w, context.clip_base.h);
-    cairo_clip(CR);
-    cairo_set_matrix(CR, &m);
-  }
-}
-
 /**
  * Define a clipping region for subsequent drawing operations.
  *
@@ -497,14 +517,27 @@ d_clip_to_base(void)
  * @param w The width of the clipping region.
  * @param h The height of the clipping region.
  */
-void
-d_clip(int x, int y, int w, int h)
+static void
+clip_rectangle(int x, int y, int w, int h)
 { NormaliseArea(x, y, w, h);
   Translate(x, y);
-  cairo_reset_clip(CR);
+  cairo_new_path(CR);
   cairo_rectangle(CR, x, y, w, h);
   cairo_clip(CR);
-  d_clip_to_base();
+}
+
+/* Clipping regions nest: d_clip() intersects with the current region
+ * and d_clip_done() restores it.  The region of d_window(), the area we
+ * are asked to repaint, is the outermost and is not undone by
+ * d_clip_done().  We must know what a redraw changed to upload no more
+ * than that (see ws_dirty_window()).
+ */
+
+void
+d_clip(int x, int y, int w, int h)
+{ cairo_save(CR);
+  context.clip_depth++;
+  clip_rectangle(x, y, w, h);
 }
 
 /**
@@ -532,8 +565,29 @@ d_done(void)
  */
 void
 d_clip_done(void)
-{ cairo_reset_clip(CR);
-  d_clip_to_base();
+{ if ( context.clip_depth > 0 )
+  { Any texture = context.texture;
+
+    cairo_restore(CR);
+    context.clip_depth--;
+    context.dash = NIL;			/* cairo_restore() restored the */
+    r_dash(texture);			/* stroke state of d_clip() */
+  }
+}
+
+/**
+ * Nesting of d_clip().  Used to undo clips that a graphical did not
+ * undo itself; see d_clip_restore().
+ */
+int
+d_clip_depth(void)
+{ return context.clip_depth;
+}
+
+void
+d_clip_restore(int depth)
+{ while( context.clip_depth > depth )
+    d_clip_done();
 }
 
 /**
@@ -2402,6 +2456,23 @@ r_path(Chain points, double ox, double oy, double radius, bool closed,
   } else
   { cairo_new_path(CR);
   }
+}
+
+
+/**
+ * Clip subsequent drawing to the area the path encloses.  Undo using
+ * d_clip_done().
+ */
+void
+r_clip_path(Chain points, double ox, double oy, double radius, bool closed,
+	    Name fill_rule)
+{ cairo_save(CR);
+  context.clip_depth++;
+  cairo_new_path(CR);
+  path_emit(CR, points, X(ox), Y(oy), radius, closed);
+  path_set_fill_rule(CR, fill_rule);
+  cairo_clip(CR);
+  cairo_set_fill_rule(CR, CAIRO_FILL_RULE_WINDING);
 }
 
 

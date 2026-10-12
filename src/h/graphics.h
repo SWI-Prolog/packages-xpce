@@ -109,7 +109,9 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   Elevation	elevation;		/* elevation of outline */ \
   Transform	transform;		/* optional 2D affine on contents */ \
   Area		local_area;		/* children bbox in local coords */ \
-  Any		shadow;			/* Drop shadow (shadow*) */
+  Any		shadow;			/* Drop shadow (shadow*) */ \
+  Any		clip_path;		/* Clip contents to (path*) */ \
+  Name		blend;			/* Blend mode for compositing */
 
 #define ABSTRACT_DIALOGITEM \
   ABSTRACT_GRAPHICAL \

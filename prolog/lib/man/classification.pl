@@ -4407,8 +4407,10 @@ scope('V.figure.area', advanced).
 scope('V.figure.background', obscure).
 scope('V.figure.bad_bounding_box', advanced).
 scope('V.figure.bad_format', advanced).
+scope('V.figure.blend', advanced).
 scope('V.figure.border', obscure).
 scope('V.figure.clip_area', advanced).
+scope('V.figure.clip_path', advanced).
 scope('V.figure.colour', advanced).
 scope('V.figure.connections', advanced).
 scope('V.figure.cursor', advanced).

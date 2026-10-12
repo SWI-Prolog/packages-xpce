@@ -51,6 +51,8 @@ initialiseFigure(Figure f)
   assign(f, transform,	NIL);
   assign(f, local_area,	newObject(ClassArea, EAV));
   assign(f, shadow,	NIL);
+  assign(f, clip_path,	NIL);
+  assign(f, blend,	NAME_normal);
   assign(f, status,     NAME_allActive);
 
   succeed;
@@ -93,43 +95,77 @@ RedrawBoxFigure(Figure f, Area area)
 }
 
 
-/* Paint the children of f with f->transform applied.  Mirrors the body
- * of RedrawAreaDevice between Enter/Exit, with cairo carrying the affine
- * via r_push_transform/r_pop_transform around the children loop.
+/* Clip to f->clip_path, whose points are in the coordinate system of
+ * the children.  Returns true if a clip must be undone using
+ * d_clip_done().
+ */
+
+static bool
+clipPathChildren(Figure f)
+{ if ( notNil(f->clip_path) )
+  { Path p = f->clip_path;
+
+    ComputeGraphical(p);
+    if ( p->kind == NAME_smooth && isNil(p->interpolation) )
+      return false;
+    r_clip_path(p->kind == NAME_smooth ? p->interpolation : p->points,
+		valNum(p->offset->x), valNum(p->offset->y),
+		p->kind == NAME_smooth ? 0.0 : valNum(p->radius),
+		p->closed == ON, p->fill_rule);
+    return true;
+  }
+
+  return false;
+}
+
+
+/* Paint the children of f, with f->transform applied and clipped to
+ * f->clip_path.
  *
- * After EnterRedrawAreaDevice the incoming `area' is in the figure's
- * POST-transform local coord (where the rotated pixel AABB lives), but
- * the children's own `area' slots live in PRE-transform local coord.
- * RedrawArea's overlap test would then mis-clip the children — visible
- * as text disappearing at ±180° rotation or small scales.  We replace
- * `area' with the figure's local_area for the children loop, which is
- * always in pre-transform coord and encloses every child; cairo's clip
- * (and the dirty-rect filtering done by changed_window) still keeps
- * the paint area minimal.  Exit restores the original area.
+ * If there is a transform, after EnterRedrawAreaDevice the incoming
+ * `area' is in the figure's POST-transform local coord (where the
+ * rotated pixel AABB lives), but the children's own `area' slots live
+ * in PRE-transform local coord.  RedrawArea's overlap test would then
+ * mis-clip the children — visible as text disappearing at ±180°
+ * rotation or small scales.  We replace `area' with the figure's
+ * local_area for the children loop, which is always in pre-transform
+ * coord and encloses every child; cairo's clip (and the dirty-rect
+ * filtering done by changed_window) still keeps the paint area
+ * minimal.  Exit restores the original area.
  */
 
 static void
-RedrawTransformedChildren(Figure f, Area area)
+RedrawChildrenFigure(Figure f, Area area)
 { device_draw_context ctx;
   Device dev = (Device) f;
+  bool transformed = ( notNil(f->transform) &&
+		       !transformIsIdentity(f->transform) );
 
   if ( EnterRedrawAreaDevice(dev, area, &ctx) )
   { Cell cell;
     r_transform_save saved;
-    Area la = f->local_area;
 
-    qassign(area, x, la->x);
-    qassign(area, y, la->y);
-    qassign(area, w, la->w);
-    qassign(area, h, la->h);
+    if ( transformed )
+    { Area la = f->local_area;
+
+      qassign(area, x, la->x);
+      qassign(area, y, la->y);
+      qassign(area, w, la->w);
+      qassign(area, h, la->h);
+    }
 
     if ( notNil(dev->layout_manager) )
       qadSendv(dev->layout_manager, NAME_redrawBackground, 1, (Any*)&area);
 
-    r_push_transform(f->transform, &saved);
+    if ( transformed )
+      r_push_transform(f->transform, &saved);
+    bool clipped = clipPathChildren(f);
     for_cell(cell, dev->graphicals)
       RedrawArea(cell->value, area);
-    r_pop_transform(&saved);
+    if ( clipped )
+      d_clip_done();
+    if ( transformed )
+      r_pop_transform(&saved);
 
     if ( notNil(dev->layout_manager) )
       qadSendv(dev->layout_manager, NAME_redrawForeground, 1, (Any*)&area);
@@ -144,18 +180,13 @@ RedrawTransformedChildren(Figure f, Area area)
 static status
 RedrawAreaFigure(Figure f, Area area)
 { Any bg, obg;
-  bool transformed = ( notNil(f->transform) &&
-		       !transformIsIdentity(f->transform) );
 
   if ( notNil(bg = RedrawBoxFigure(f, area)) )
     obg = r_background(bg);
   else
     obg = NULL;
 
-  if ( transformed )
-    RedrawTransformedChildren(f, area);
-  else
-    RedrawAreaDevice((Device) f, area);
+  RedrawChildrenFigure(f, area);
 
   if ( obg )
     r_background(obg);
@@ -333,6 +364,28 @@ elevationFigure(Figure f, Elevation e)
  */
 
 static status
+blendFigure(Figure f, Name blend)
+{ if ( f->blend != blend )
+  { CHANGING_GRAPHICAL(f,
+		       assign(f, blend, blend);
+		       changedEntireImageGraphical(f));
+  }
+
+  succeed;
+}
+
+
+static status
+clipPathFigure(Figure f, Path p)
+{ CHANGING_GRAPHICAL(f,
+		     assign(f, clip_path, p);
+		     changedEntireImageGraphical(f));
+
+  succeed;
+}
+
+
+static status
 transformFigure(Figure f, Transform t)
 { CHANGING_GRAPHICAL(f,
 		     assign(f, transform, t);
@@ -456,6 +509,14 @@ makeClassFigure(Class class)
 	     "Children bbox in figure-local coords (before transform/offset)");
   localClass(class, NAME_shadow, NAME_appearance, "0..|shadow*", NAME_get,
 	     "Drop shadow outside the figure");
+  localClass(class, NAME_clipPath, NAME_appearance, "path*", NAME_get,
+	     "Clip the contents to this path");
+  localClass(class, NAME_blend, NAME_appearance,
+	     "{normal,multiply,screen,overlay,darken,lighten,"
+	     "color_dodge,color_burn,hard_light,soft_light,difference,"
+	     "exclusion,hue,saturation,color,luminosity,add}",
+	     NAME_get,
+	     "How the figure is composited onto what is below it");
 
   setRedrawFunctionClass(class, RedrawAreaFigure);
 
@@ -467,6 +528,8 @@ makeClassFigure(Class class)
   storeMethod(class, NAME_elevation,  elevationFigure);
   storeMethod(class, NAME_transform,  transformFigure);
   storeMethod(class, NAME_shadow,     shadowGraphical);
+  storeMethod(class, NAME_clipPath,   clipPathFigure);
+  storeMethod(class, NAME_blend,      blendFigure);
 
   sendMethod(class, NAME_initialise, DEFAULT, 0,
 	     "Create figure",

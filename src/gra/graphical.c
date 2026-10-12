@@ -905,7 +905,11 @@ RedrawArea(Any obj, Area area)
 */
 
   double op = valNum(gr->opacity);
-  bool use_group = ( op < 1.0 && !instanceOfObject(gr, ClassWindow) );
+  Name blend = ( instanceOfObject(gr, ClassFigure) &&
+		 notNil(((Figure)gr)->blend) ? ((Figure)gr)->blend
+					      : NAME_normal );
+  bool use_group = ( (op < 1.0 || blend != NAME_normal) &&
+		     !instanceOfObject(gr, ClassWindow) );
 
   if ( use_group )
     r_push_group();
@@ -925,11 +929,14 @@ RedrawArea(Any obj, Area area)
       r_clear(x, y, w, h);
     }
 
+    int clip_depth = d_clip_depth();
+
     rval = qadSendv(gr, NAME_RedrawArea, 1, (Any *)&area);
+    d_clip_restore(clip_depth);		/* ->clip without ->unclip */
   }
 
   if ( use_group )
-    r_pop_group_with_alpha(op);
+    r_pop_group_blend(op, blend);
 
   if ( fix )
     r_unfix_colours(&ctx);

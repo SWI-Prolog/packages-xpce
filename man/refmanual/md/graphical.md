@@ -402,7 +402,7 @@ for creating customised graphical objects:
     @see graphical->set
 
 - graphical->unclip
-    Undo previous ->clip.
+    Undo the last ->clip, restoring the clipping region before it.
 
 - graphical->clip: [area]
     Clip subsequent drawing actions to the indicated rectangle.  If
@@ -411,8 +411,10 @@ for creating customised graphical objects:
     clipping is set to the argument area, which will normally be
     larger than <-area.
 
-    Each ->clip must be undone by an ->unclip before ->_redraw_area
-    returns.  See also ->_redraw_area, ->graphics_state
+    Clipping regions nest: a ->clip inside another one clips to the
+    intersection of both, and ->unclip restores the enclosing region.
+    Each ->clip should be undone by an ->unclip before ->_redraw_area
+    returns.  Clips that are not undone end with the graphical.  See also ->_redraw_area, ->graphics_state
     ->draw_line, etc.
 
 - graphical->colour: [colour]

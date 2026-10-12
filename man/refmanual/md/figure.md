@@ -4,6 +4,7 @@ A figure defines -like a device- a collection of graphicals.  In
 addition of class device, a figure offers:
 
 	| ->clip_area      | Clip graphicals to this area |
+	| ->clip_path      | Clip graphicals to this path |
 	| ->pen, ->texture | Draw a box around the figure |
 	| ->background     | Fill the background          |
 	| ->rotate         | Transform the image          |
@@ -18,7 +19,7 @@ addition of class device, a figure offers:
 
 ## Instance variables {#class-figure-instvars}
 
-- figure<->background: colour|{foreground,background}*
+- figure<->background: colour|gradient|image|{foreground,background}*
     Colour used as background.  Commonly used to prevent the figure
     from being transparent (->background: background).
 
@@ -63,6 +64,29 @@ addition of class device, a figure offers:
     Drop shadow painted outside the box of the figure.  See class shadow.  An
     integer N is a soft shadow N pixels to the bottom right; 0 is no
     shadow.  The default is @nil (no shadow).
+
+- figure<->blend: {normal,multiply,screen,overlay,darken,lighten,color_dodge,color_burn,hard_light,soft_light,difference,exclusion,hue,saturation,color,luminosity,add}
+    How the figure, with its contents, is composited onto what is
+    below it.  `normal` paints it over what is below.  The other modes
+    are those of Cairo and CSS `mix-blend-mode`, e.g., `multiply`
+    darkens what is below by the colours of the figure, as overlapping
+    transparent inks would.  A figure that is not `normal` is drawn on
+    a temporary surface, as is one with `graphical<-opacity` below 1,
+    which is combined with the blend mode.
+
+    **Defaults**: normal
+
+- figure<->clip_path: path*
+    If not @nil, the graphicals of the figure are only drawn where they
+    are inside this path, as determined by `path<-fill_rule`.  The
+    points of the path are in the coordinate system of the graphicals
+    of the figure, so the clipping region moves, rotates and scales
+    with them under <-transform.  The path itself is not displayed.
+    Clipping affects drawing only: graphicals that are clipped away
+    still receive events.  After modifying the path, send ->clip_path
+    again to redraw the figure.
+
+    **Defaults**: @nil
 
 - figure<->transform: transform*
     Optional 2-D affine `transform` applied to the figure's contents.

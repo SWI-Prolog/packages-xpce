@@ -53,7 +53,9 @@ Run with:
 test_cairo_render :-
     run_tests([ cairo_render,
                 stroke_style,
-                gradient_units
+                gradient_units,
+                clip,
+                blend
               ]).
 
 %!  pixel_after_drawing(+Graphical, +Size, +X, +Y, -RGBA) is det.
@@ -364,3 +366,114 @@ test(figure_background, true(( reddish(Top), blueish(Bottom) ))) :-
     pixel_after_drawing(D, 40, 15, 28, Bottom).
 
 :- end_tests(gradient_units).
+
+%   A graphical that draws a red fill over its 40x40 area after
+%   executing a list of clip and unclip steps.
+
+:- pce_begin_class(tcr_clipper, graphical,
+                   "Fill after clipping").
+
+variable(steps, prolog, both, "Steps before the fill").
+
+initialise(G, Steps:prolog) :->
+    send_super(G, initialise, 0, 0, 40, 40),
+    send(G, steps, Steps).
+
+'_redraw_area'(G, _A:area) :->
+    get(G, steps, Steps),
+    forall(member(Step, Steps), step(G, Step)),
+    send(G, draw_fill, 0, 0, 40, 40, colour(red)).
+
+step(G, clip(X,Y,W,H)) :-
+    send(G, clip, area(X,Y,W,H)).
+step(G, unclip) :-
+    send(G, unclip).
+
+:- pce_end_class(tcr_clipper).
+
+clipped_pixels(Steps, Points, Pixels) :-
+    new(G, tcr_clipper(Steps)),
+    findall(P, ( member(X-Y, Points),
+                 pixel_after_drawing(G, 40, X, Y, P)
+               ), Pixels).
+
+:- begin_tests(clip).
+
+test(nested_clips_intersect, Pixels == [R, W, W]) :-
+    R = 0xffff0000, W = 0xffffffff,
+    clipped_pixels([clip(0,0,20,40), clip(0,0,40,20)],
+                   [10-10, 30-10, 10-30], Pixels).
+test(unclip_restores_the_outer_clip, Pixels == [R, W]) :-
+    R = 0xffff0000, W = 0xffffffff,
+    clipped_pixels([clip(0,0,20,40), clip(0,0,40,20), unclip],
+                   [10-30, 30-30], Pixels).
+test(forgotten_unclip_ends_with_graphical, RGBA == 0xffff0000) :-
+    new(D, device),
+    send(D, display, tcr_clipper([clip(0,0,5,5)])),
+    send(D, display, new(B, box(20, 20)), point(20, 20)),
+    send(B, fill, colour(red)),
+    pixel_after_drawing(D, 40, 30, 30, RGBA).
+
+test(figure_clip_path, [Corner, Middle] == [W, R]) :-
+    R = 0xffff0000, W = 0xffffffff,
+    red_figure(F),
+    new(P, path),
+    send(P, svg_data, "M 0 20 A 20 20 0 1 1 40 20 A 20 20 0 1 1 0 20 Z"),
+    send(F, clip_path, P),
+    pixel_after_drawing(F, 40, 2, 2, Corner),
+    pixel_after_drawing(F, 40, 20, 20, Middle).
+test(figure_clip_path_is_transformed, [In, Out] == [R, W]) :-
+    R = 0xffff0000, W = 0xffffffff,
+    red_figure(F),
+    new(P, path),
+    send(P, svg_data, "M 0 0 H 10 V 40 H 0 Z"),
+    send(F, clip_path, P),
+    send(F, translate, 20, 0),          % clip is now x in 20..30
+    new(D, device),
+    send(D, display, F),
+    pixel_after_drawing(D, 60, 25, 10, In),
+    pixel_after_drawing(D, 60, 35, 10, Out).
+test(figure_clip_path_even_odd, Pixel == W) :-
+    W = 0xffffffff,
+    red_figure(F),
+    new(P, path),
+    send(P, svg_data, "M 0 0 H 40 V 40 H 0 Z M 10 10 H 30 V 30 H 10 Z"),
+    send(P, fill_rule, even_odd),
+    send(F, clip_path, P),
+    pixel_after_drawing(F, 40, 20, 20, Pixel).
+
+:- end_tests(clip).
+
+%   A figure holding a red box of 40x40 pixels.
+
+red_figure(F) :-
+    new(F, figure),
+    send(F, display, new(B, box(40, 40))),
+    send(B, pen, 0),
+    send(B, fill, colour(red)).
+
+%   Pixel of a cyan figure blended with Blend over a yellow box.
+
+blended_pixel(Blend, RGBA) :-
+    new(D, device),
+    send(D, display, new(Y, box(20, 20))),
+    send(Y, pen, 0),
+    send(Y, fill, colour(@default, 255, 255, 0)),
+    new(F, figure),
+    send(F, display, new(C, box(20, 20))),
+    send(C, pen, 0),
+    send(C, fill, colour(@default, 0, 255, 255)),
+    send(F, blend, Blend),
+    send(D, display, F),
+    pixel_after_drawing(D, 20, 10, 10, RGBA).
+
+:- begin_tests(blend).
+
+test(normal, RGBA == 0xff00ffff) :-
+    blended_pixel(normal, RGBA).
+test(multiply, RGBA == 0xff00ff00) :-
+    blended_pixel(multiply, RGBA).
+test(difference, RGBA == 0xffff00ff) :-
+    blended_pixel(difference, RGBA).
+
+:- end_tests(blend).
