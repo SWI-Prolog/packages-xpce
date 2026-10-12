@@ -232,6 +232,9 @@ sys_colour(sys_accent).
 sys_colour(sys_separator).
 sys_colour(sys_shadow).
 
+test(unknown_name_is_grey, RGB == rgb(127,127,127)) :- % with a warning
+    new(C, colour(test_colour_no_such_name)),
+    colour_rgb(C, RGB).
 test(colour_names_protected, [R == 250]) :- % kernel keeps pointers
     \+ free(@colour_names),
     \+ free(@colour_list),
