@@ -375,11 +375,16 @@ test(issues_bad, Issues == [ unknown(test_theme_no_such_name),
     theme_issues(test_bad, Issues0),
     test_issues(Issues0, Issues).
 
-test(dark_theme_complete, Errors == []) :-
+test(dark_theme_complete,
+     [ condition(current_prolog_flag(threads, true)),
+       Errors == []
+     ]) :-
     %  library(theme/dark) defines all semantic colours and nothing
     %  else.  If this fails after adding a style to
     %  library(prolog_colour) or a semantic colour to a library, add its
-    %  colour to library(theme/dark).  See check_theme/1.
+    %  colour to library(theme/dark).  See check_theme/1.  Without
+    %  threads, the profiler and thread monitor are not installed, so
+    %  their colours are unknown.
     load_theme_libraries,
     use_module(library(theme/dark), []),
     theme_issues(dark, Issues),

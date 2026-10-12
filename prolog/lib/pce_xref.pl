@@ -257,7 +257,10 @@ browser(F, Which:name, Browser:browser) :<-
 
 update(F) :->
     "Update all windows"::
-    thread_create(xref_all(F), _, [detached(true)]).
+    (   current_prolog_flag(threads, true)
+    ->  thread_create(xref_all(F), _, [detached(true)])
+    ;   xref_all(F)
+    ).
 
 update_browsers(F) :->
     "Update the browsers"::

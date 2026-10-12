@@ -1206,14 +1206,17 @@ check_theme(Theme) :-
 %!  theme_library(?Library) is nondet.
 %
 %   Libraries that declare semantic colours.  These are loaded by
-%   check_theme/1 and load_theme_libraries/0.
+%   check_theme/1 and load_theme_libraries/0.  The profiler and the
+%   thread monitor are only installed if Prolog has threads.
 
 theme_library(library(prolog_colour)).
 theme_library(library(trace/trace)).            % graphical debugger
-theme_library(library(swi/pce_profile)).
+theme_library(library(swi/pce_profile)) :-
+    current_prolog_flag(threads, true).
 theme_library(library(swi/pce_debug_monitor)).
 theme_library(library(pce_xref)).
-theme_library(library(swi/thread_monitor)).
+theme_library(library(swi/thread_monitor)) :-
+    current_prolog_flag(threads, true).
 theme_library(library(emacs/bookmarks)).
 theme_library(library(pce_helper)).
 

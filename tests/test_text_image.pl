@@ -53,7 +53,9 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(swi/thread_monitor), []).
+:- endif.
 
 test_text_image :-
     run_tests([ text_image
@@ -89,7 +91,9 @@ test(a_browser_answers_for_its_list_browser) :-
 %   answer with: <-image on class window used to be reached instead, and
 %   Tools/View threads could not be opened at all.
 
-test(a_browser_answers_before_it_is_created) :-
+test(a_browser_answers_before_it_is_created,
+     [ condition(current_prolog_flag(threads, true))
+     ]) :-
     new(TB, thread_browser),
     get(TB, text_image, Image),
     send(Image, instance_of, text_image).

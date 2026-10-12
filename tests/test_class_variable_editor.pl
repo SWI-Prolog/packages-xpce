@@ -815,7 +815,8 @@ test(emacs_buffer, [ true(memberchk(unicode_encoding, Names)) ]) :-
 %   The profiler shows the preferences of its panes, also of those in
 %   its tabs.
 
-test(profiler, [ Rows == [ prof_frame-auto_reset,
+test(profiler, [ condition(current_prolog_flag(threads, true)),
+                 Rows == [ prof_frame-auto_reset,
                            prof_browser-max_width,
                            prof_graph-caller_depth,
                            prof_graph-callee_depth,
@@ -991,7 +992,8 @@ test(port_style, [ [Colour, Icon] == [red, port_call],
 %   update interval has a slider and a switch to turn updating off.
 
 test(thread_monitor,
-     [ [Colour, Pen, Item, Switch, Interval] == [red, 2.5, menu, @on, 1],
+     [ condition(current_prolog_flag(threads, true)),
+       [Colour, Pen, Item, Switch, Interval] == [red, 2.5, menu, @on, 1],
        cleanup(( forall(member(N-V, Old),
                         send(class(thread_diagram), class_variable_value,
                              N, V)),
