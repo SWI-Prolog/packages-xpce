@@ -107,15 +107,16 @@ static void r_fill_fgbg(double x, double y, double w, double h,
 		 *        CONTEXT STACK         *
 		 *******************************/
 
-#include <gra/graphstate.c>
-
 static sdl_draw_context	context;	/* current context */
 static sdl_draw_context	ctx_stack[MAX_CTX_DEPTH];  /* Context stack */
 static int		ctx_stacked;	/* Saved frames */
 
+#include <gra/graphstate.c>		/* uses `context` */
+
 static void
 reset_context(void)
 { memset(&context, 0, sizeof(context));
+  context.dash = NAME_none;		/* a new cairo_t has no dash */
 }
 
 static void

@@ -36,7 +36,7 @@ typedef struct graphics_state *GraphicsState;
 
 struct graphics_state
 { int		level;
-  int		thickness;
+  double	thickness;
   Name		texture;
   Any		foreground;
   Any		background;
@@ -51,6 +51,10 @@ g_save(void)
 { GraphicsState gs = alloc(sizeof(struct graphics_state));
 
   gs->level	 = (statelist ? statelist->level+1 : 1);
+  gs->thickness  = context.pen;
+  gs->texture    = context.dash;
+  gs->foreground = context.colour;
+  gs->background = context.background;
 
   gs->savedstate = statelist;
   statelist = gs;
@@ -78,5 +82,5 @@ g_restore(void)
 
 int
 g_level(void)
-{ return statelist ? 0 : statelist->level;
+{ return statelist ? statelist->level : 0;
 }
