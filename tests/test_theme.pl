@@ -458,13 +458,19 @@ test(colour_trace, [ condition(\+ dark_system),
                                'ui_window_background = sys_window_background (desktop colour, as the light theme matches the desktop)',
                                Sys
                              ],
-                     Source == desktop,
+                     Source == Expected,
                      true(sub_atom(Sys, 0, _, _, 'sys_window_background = #'))
                    ]) :-
     use_module(library(pce_colour_item), []),
     apply_theme(light),
     theme_colour(ui_margin_background, C),
-    pce_colour_item:colour_trace(C, Lines, Source).
+    pce_colour_item:colour_trace(C, Lines, Source),
+    %  Without a desktop that provides colours, xpce's default is used
+    get(@system_colour_origins, member, sys_window_background, Origin),
+    (   Origin == xpce
+    ->  Expected = default
+    ;   Expected = desktop
+    ).
 
 informational_issue(redundant(_)).
 
