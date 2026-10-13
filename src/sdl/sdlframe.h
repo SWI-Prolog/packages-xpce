@@ -52,6 +52,7 @@ typedef struct
 /* Functions shared with SDL backend */
 FrameObj wsid_to_frame(SDL_WindowID id);
 WsFrame sdl_frame(FrameObj fr, bool create);
+bool sdl_window_screen_position(SDL_Window *win, int *x, int *y);
 bool ws_draw_frame(FrameObj fr);
 bool ws_rounded_popups(Any fr);
 Uint32 SDLCALL flash_end_callback(void *userdata, SDL_TimerID id, Uint32 interval);

@@ -232,6 +232,33 @@ sync_frame_position(FrameObj fr, SDL_Window *win)
 }
 
 
+/* The position of `win` on the screen.  SDL gives the position of a
+   popup window relative to its parent, so we add the positions of the
+   parents up to the first that is not a popup.  False if SDL does not
+   know a position, as on Wayland.
+*/
+
+bool
+sdl_window_screen_position(SDL_Window *win, int *x, int *y)
+{ int gx = 0, gy = 0;
+
+  for(SDL_Window *p = win; p; p = SDL_GetWindowParent(p))
+  { int px, py;
+
+    if ( !SDL_GetWindowPosition(p, &px, &py) )
+      return false;
+    gx += px;
+    gy += py;
+    if ( !(SDL_GetWindowFlags(p) & (SDL_WINDOW_POPUP_MENU|SDL_WINDOW_TOOLTIP)) )
+      break;
+  }
+
+  *x = gx;
+  *y = gy;
+  return true;
+}
+
+
 #ifdef __APPLE__
 /* SDL's popup constraining is disabled on MacOS (see ws_create_frame()),
    so we must keep popups inside the display ourselves.  Popup positions
@@ -242,19 +269,12 @@ sync_frame_position(FrameObj fr, SDL_Window *win)
 
 static void
 constrain_popup(SDL_Window *parent, int *x, int *y, int w, int h)
-{ int gx = *x, gy = *y;
+{ int px, py;
 
-  for(SDL_Window *p = parent; p; p = SDL_GetWindowParent(p))
-  { int px, py;
+  if ( !sdl_window_screen_position(parent, &px, &py) )
+    return;
 
-    if ( !SDL_GetWindowPosition(p, &px, &py) )
-      return;
-    gx += px;
-    gy += py;
-    if ( !(SDL_GetWindowFlags(p) & (SDL_WINDOW_POPUP_MENU|SDL_WINDOW_TOOLTIP)) )
-      break;
-  }
-
+  int gx = *x + px, gy = *y + py;
   SDL_Point pt = { gx, gy };
   SDL_DisplayID id = SDL_GetDisplayForPoint(&pt);
   SDL_Rect r;

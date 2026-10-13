@@ -602,7 +602,10 @@ ws_last_display_from_event(void)
    interaction: a gesture that misses its up-event remains active.
    Translate the position using the screen positions of the two SDL
    windows (unknown on Wayland, where this gives a wrong position, but
-   still delivers the event to the right window).
+   still delivers the event to the right window).  This happens on X11
+   with SDL 3.2, which reports the up-event of the click that opens a
+   popup for the popup window when it takes the focus.  A menu_bar must
+   see that up-event at the position of the down to keep the popup open.
 */
 
 static void
@@ -615,8 +618,8 @@ redirect_to_tracking_frame(SDL_WindowID *wid, SDL_WindowID tracking_wid,
   if ( !to )
     return;
   if ( from &&
-       SDL_GetWindowPosition(from, &x0, &y0) &&
-       SDL_GetWindowPosition(to, &x1, &y1) )
+       sdl_window_screen_position(from, &x0, &y0) &&
+       sdl_window_screen_position(to, &x1, &y1) )
   { *fx += (float)(x0-x1);
     *fy += (float)(y0-y1);
   }
