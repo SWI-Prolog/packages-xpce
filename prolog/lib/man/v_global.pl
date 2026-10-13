@@ -49,6 +49,7 @@ initialise(OB, Manual:man_manual) :->
     send(OB, send_super, initialise, Manual, 'Object Browser'),
 
     new(B, man_summary_browser(man_summary, size(70, 15))),
+    send(B, dynamic_columns, @off),
     send(B?text_image, tab_stops, vector(20, 200)),
     send(B, name, browser),
     dialog(Dialog),

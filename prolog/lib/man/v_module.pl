@@ -118,7 +118,8 @@ view(MB, ModuleName:name, ClassName:name*) :->
     get(MB, browser, Browser),
     send(Module?id_table, for_some,
          message(Browser, append_card, @arg2)),
-    send(Browser, sort).
+    send(Browser, sort),
+    send(Browser, update_columns).
 
 
 %   The .doc tree retired in Phase 8 used to ship serialised modules

@@ -59,6 +59,7 @@ initialise(EB, Manual:man_manual) :->
     send(EB, slot, errors, Module),
 
     new(B, man_summary_browser(man_summary, size(100, 15))),
+    send(B, dynamic_columns, @off),
     error_tab_stops(B, Stops),
     send(B?text_image, tab_stops, Stops),
     send(B, name, browser),
