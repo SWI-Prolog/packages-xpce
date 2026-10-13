@@ -3243,9 +3243,10 @@ restoreGraphicsStateGraphical(Graphical gr)
 }
 
 
-/* The drawing context holds on to the colours after this method
- * returns.  A colour converted from a name is not referenced and freed
- * at the end of the send, so we lock them.
+/* The drawing context holds on to the colours and stroke_style after
+ * this method returns.  An object converted from a name or created for
+ * the argument is not referenced and freed at the end of the send, so
+ * we lock them.
  */
 
 static status
@@ -3255,7 +3256,10 @@ graphicsStateGraphical(Graphical gr,
 { if ( notDefault(pen) )
     r_thickness(valInt(pen));
   if ( notDefault(texture) )
+  { if ( instanceOfObject(texture, ClassStrokeStyle) )
+      lockObject(texture, ON);
     r_dash(texture);
+  }
   if ( notDefault(colour) )
   { lockObject(colour, ON);
     r_colour(colour);
