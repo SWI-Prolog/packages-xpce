@@ -89,7 +89,8 @@ accelerator_code(Name a)
  * change.  That includes the windows displayed inside its windows,
  * such as the dialogs on the tabs of a tabbed_window, which are not
  * members of the frame, and the open popups, which are frames of their
- * own.
+ * own.  A freed frame left in <-frames of the display has a NIL
+ * <-members, but keeps its <-kind as names are not reset.
  */
 
 status
@@ -111,7 +112,8 @@ acceleratorCuesFrame(FrameObj fr, bool held)
 	for_cell(fc, fr->display->frames)
 	{ FrameObj pf = fc->value;
 
-	  if ( pf != fr && pf->kind == NAME_popup )
+	  if ( pf != fr && pf->kind == NAME_popup &&
+	       !onFlag(pf, F_FREED|F_FREEING) && notNil(pf->members) )
 	  { for_cell(cell, pf->members)
 	      appendChain(agenda, cell->value);
 	  }

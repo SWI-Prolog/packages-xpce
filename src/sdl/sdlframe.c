@@ -543,6 +543,9 @@ wsid_to_frame(SDL_WindowID id)
 
     for_cell(c2, d->frames)
     { FrameObj fr = c2->value;
+
+      if ( onFlag(fr, F_FREED|F_FREEING) )
+	continue;
       WsFrame f = sdl_frame(fr, false);
       if ( f && f->ws_id == id )
 	return fr;
