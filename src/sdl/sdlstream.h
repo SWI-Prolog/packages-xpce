@@ -52,5 +52,6 @@ void ws_listen_socket(Socket s);
 status ws_write_stream_data(Stream s, void *data, int len);
 int ws_read_stream_data(Stream s, void *data, int len, Num timeout);
 void ws_done_process(Process p);
+void ws_watch_child_processes(int fd);
 
 #endif /* RAYSTREAM_H */

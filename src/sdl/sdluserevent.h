@@ -41,6 +41,7 @@ typedef enum
   FD_READY_STREAM_INPUT,	/* Data arrives on a process or socket */
   FD_READY_STREAM_ACCEPT,	/* Socket is accepted */
   FD_READY_TERMINAL,		/* TerminalImage pty received data */
+  FD_READY_CHILD,		/* SIGCHLD arrived (see unx/process.c) */
   FD_ASYNC_WRITE		/* Handle asynchronous writes */
 } fd_ready_codes;
 

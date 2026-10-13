@@ -204,20 +204,60 @@ static Name signames[] =
 #define SA_SIGINFO 0
 #endif
 
+/* SIGCHLD may arrive in any thread at any moment, so the handler only
+ * writes a byte to child_pipe.  Its read end is watched by the window
+ * system, which calls reapChildProcesses() from the main thread's event
+ * loop.  Sending ->exited from the handler itself ran Prolog and window
+ * system code in the middle of whatever the main thread was doing.
+ */
+
+static int child_pipe[2] = {-1, -1};
+
 static void
 child_changed(int sig)
-{ Any rstat = NIL;
-  Any sel   = NIL;
-  Process p = NIL;
+{ int saved_errno = errno;
 
-#define wait_t int
+  if ( child_pipe[1] >= 0 )
+  { ssize_t rc = write(child_pipe[1], "c", 1);
+    (void)rc;			/* pipe full: a wakeup is pending */
+  }
 
+  errno = saved_errno;
+}
 
-  DEBUG(NAME_process, Cprintf("child_changed() called\n"));
+static bool
+make_child_pipe(void)
+{ if ( pipe(child_pipe) != 0 )
+    return false;
+
+  for(int i=0; i<2; i++)
+  { fcntl(child_pipe[i], F_SETFD, FD_CLOEXEC);
+    fcntl(child_pipe[i], F_SETFL, fcntl(child_pipe[i], F_GETFL)|O_NONBLOCK);
+  }
+
+  return true;
+}
+
+/* Called from the main thread after child_changed() wrote to fd, the
+ * read end of child_pipe.  Empty the pipe before reaping, such that a
+ * child that changes later wakes us again.
+ */
+
+void
+reapChildProcesses(int fd)
+{ char buf[64];
+  Process p;
+
+  while( read(fd, buf, sizeof(buf)) > 0 )
+    ;
+
+  DEBUG(NAME_process, Cprintf("reapChildProcesses()\n"));
 
   for_chain(ProcessChain, p,
 	    { int pid = valInt(p->pid);
-	      wait_t status;
+	      int status;
+	      Any rstat = NIL;
+	      Name sel = NIL;
 
 	      if ( waitpid(pid, &status, WNOHANG|WUNTRACED) == pid )
 	      { if ( WIFSTOPPED(status) )
@@ -234,12 +274,10 @@ child_changed(int sig)
 		if ( notNil(rstat) )
 		{ DEBUG(NAME_process, Cprintf("Posting %s->%s: %s\n",
 				pp(p), pp(sel), pp(rstat)));
-		  sdl_send(p, sel, false, rstat, EAV);
+		  send(p, sel, rstat, EAV);
 		}
 	      }
 	    });
-
-
 }
 
 #endif /*USE_SIGCHLD*/
@@ -265,11 +303,16 @@ setupProcesses(void)
 #if defined(SIGCHLD) && defined(HAVE_WAIT)
     struct sigaction action, oaction;
 
-    memset((char *) &action, 0, sizeof(action));
-    action.sa_handler   = child_changed;
-    action.sa_flags     = SA_SIGINFO|SA_NOMASK|SA_RESTART;
+    if ( make_child_pipe() )
+    { ws_watch_child_processes(child_pipe[0]);
 
-    sigaction(SIGCHLD, &action, &oaction);
+      memset((char *) &action, 0, sizeof(action));
+      action.sa_handler   = child_changed;
+      action.sa_flags     = SA_NOMASK|SA_RESTART;
+
+      sigaction(SIGCHLD, &action, &oaction);
+    } else
+      Cprintf("Cannot create pipe for SIGCHLD: %s\n", strerror(errno));
 #endif
     at_pce_exit(killAllProcesses, ATEXIT_FIFO);
     initialised++;

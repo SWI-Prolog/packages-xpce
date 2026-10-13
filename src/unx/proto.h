@@ -38,6 +38,7 @@ COMMON(void)	killAllProcesses(int status);
 COMMON(status)	pidProcess(Process p, Int pid);
 COMMON(status)	closeInputProcess(Process p);
 COMMON(status)	makeClassProcess(Class class);
+COMMON(void)	reapChildProcesses(int fd);
 
 /* /home/jan/src/pl/packages/xpce/src/unx/socket.c */
 COMMON(Name)	SockError(void);

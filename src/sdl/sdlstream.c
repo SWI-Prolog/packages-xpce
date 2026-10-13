@@ -93,6 +93,13 @@ sdl_stream_event(SDL_Event *event)
 	pceMTUnlock();
       }
       processed_fd_watch(watch);
+#ifndef __WINDOWS__
+    } else if ( event->user.code == FD_READY_CHILD )
+    { pceMTLock();
+      reapChildProcesses(watch->fd);
+      pceMTUnlock();
+      processed_fd_watch(watch);
+#endif
     } else if ( event->user.code == FD_READY_TERMINAL )
     { TerminalImage ti = event->user.data2;
       if ( !onFlag(ti, F_FREED|F_FREEING) )
@@ -298,6 +305,19 @@ ws_read_stream_data(Stream s, void *data, int len, Num timeout)
 void
 ws_done_process(Process p)
 {
+}
+
+/**
+ * Watch fd, the read end of the pipe the SIGCHLD handler writes to,
+ * and call reapChildProcesses() from the main thread if it is readable.
+ */
+void
+ws_watch_child_processes(int fd)
+{
+#ifndef __WINDOWS__
+  if ( !add_fd_to_watch(fd, FD_READY_CHILD, NULL) )
+    Cprintf("Cannot watch for terminated processes\n");
+#endif
 }
 
 		 /*******************************

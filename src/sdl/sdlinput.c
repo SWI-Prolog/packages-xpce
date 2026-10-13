@@ -401,8 +401,10 @@ poll_thread_fn(void *unused)
     }
 #else/*!__WINDOWS__*/
     int rc = poll(poll_fds, nfds, -1);
-    if (rc < 0)
-    { perror("poll");
+    if ( rc < 0 )
+    { if ( errno == EINTR )	/* e.g., SIGCHLD; see unx/process.c */
+	continue;
+      perror("poll");
       break;
     }
 
@@ -687,6 +689,7 @@ lock_watch_userdata(FDWatch *watch)
       addCodeReference(watch->userdata);
       break;
     case FD_READY_DISPATCH:
+    case FD_READY_CHILD:
     case FD_ASYNC_WRITE:
       break;
   }
@@ -701,6 +704,7 @@ unlock_watch_userdata(FDWatch *watch)
       delCodeReference(watch->userdata);
       break;
     case FD_READY_DISPATCH:
+    case FD_READY_CHILD:
     case FD_ASYNC_WRITE:
       break;
   }

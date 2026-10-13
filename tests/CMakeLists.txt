@@ -150,6 +150,8 @@ set(XPCE_EXTRA_TESTS xpce:colour
 # process_encoding checks the bytes on the wire using od and iconv
 
 if(NOT WIN32)
+  test_libs(process_exit OPTIONS ${XPCE_TEST_OPTIONS})
+  list(APPEND XPCE_EXTRA_TESTS xpce:process_exit)
   find_program(PROG_OD od)
   find_program(PROG_ICONV iconv)
   if(PROG_OD AND PROG_ICONV)
