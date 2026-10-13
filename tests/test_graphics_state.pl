@@ -110,6 +110,16 @@ test(saved_state_used) :-
                 memberchk(Red, Colours)
               )),
     free(Image).
+test(converted_colour_kept) :-       % red is freed after ->graphics_state
+    red(Red),
+    forall(between(1, 5, _),
+           ( rendered(Image),
+             assertion(( between(3, 7, Y),
+                         row_colours(Image, Y, Colours),
+                         memberchk(Red, Colours)
+                       )),
+             free(Image)
+           )).
 test(colour_and_texture_restored) :-
     rendered(Image),
     background(Image, Background),

@@ -3235,6 +3235,11 @@ restoreGraphicsStateGraphical(Graphical gr)
 }
 
 
+/* The drawing context holds on to the colours after this method
+ * returns.  A colour converted from a name is not referenced and freed
+ * at the end of the send, so we lock them.
+ */
+
 static status
 graphicsStateGraphical(Graphical gr,
 		       Int pen, Name texture,
@@ -3244,9 +3249,13 @@ graphicsStateGraphical(Graphical gr,
   if ( notDefault(texture) )
     r_dash(texture);
   if ( notDefault(colour) )
+  { lockObject(colour, ON);
     r_colour(colour);
+  }
   if ( notDefault(background) )
+  { lockObject(background, ON);
     r_background(background);
+  }
 
   succeed;
 }
