@@ -91,6 +91,9 @@ reduced to the facility to terminate the inferior process.
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
+#ifdef USE_SIGCHLD
+#include <poll.h>
+#endif
 #ifdef HAVE_SYS_IOCTL_H
 /* MacOS 15 (beta) sys/ioctl.h pulls in socket.h */
 #undef send
@@ -238,6 +241,24 @@ make_child_pipe(void)
   return true;
 }
 
+/* A child terminated.  Everything it wrote is in the pipe, so handle
+ * that input before reporting the termination: the terminate message
+ * may rely on having seen all output.  We only read what is available,
+ * as the output may be held open by a process the child started.  At
+ * the end of the output handleInputStream() closes the input.
+ */
+
+static void
+drain_input_process(Process p)
+{ for(int i=0; i<1000 && p->rdfd >= 0 && !onFlag(p, F_FREED|F_FREEING); i++)
+  { struct pollfd pfd = { .fd = (int)p->rdfd, .events = POLLIN };
+
+    if ( poll(&pfd, 1, 0) <= 0 || !(pfd.revents & (POLLIN|POLLHUP|POLLERR)) )
+      break;
+    handleInputStream((Stream)p);
+  }
+}
+
 /* Called from the main thread after child_changed() wrote to fd, the
  * read end of child_pipe.  Empty the pipe before reaping, such that a
  * child that changes later wakes us again.
@@ -274,6 +295,8 @@ reapChildProcesses(int fd)
 		if ( notNil(rstat) )
 		{ DEBUG(NAME_process, Cprintf("Posting %s->%s: %s\n",
 				pp(p), pp(sel), pp(rstat)));
+		  if ( sel != NAME_stopped )
+		    drain_input_process(p);
 		  send(p, sel, rstat, EAV);
 		}
 	      }
@@ -767,11 +790,33 @@ exitedProcess(Process p, Int stat)
 }
 
 
+/* End of the output of the process.  If we can see the process
+ * terminate (USE_SIGCHLD), reapChildProcesses() reports it with its
+ * actual status.  The process may continue after closing its output.
+ * Otherwise (Windows) we take the end of output as normal termination.
+ */
+
 static status
 endOfFileProcess(Process p)
 { DEBUG(NAME_stream, Cprintf("Process %s: end of input\n", pp(p)));
 
+#ifndef USE_SIGCHLD
   send(p, NAME_exited, ZERO, EAV);
+#endif
+
+  succeed;
+}
+
+
+/* Wait for the end of the output (as stream->wait) and for the process
+ * to terminate, such that <-status and <-code are known.
+ */
+
+static status
+waitProcess(Process p)
+{ while( !onFlag(p, F_FREED|F_FREEING) &&
+	 (p->rdfd >= 0 || p->status == NAME_running) )
+    dispatchDisplayManager(TheDisplayManager(), DEFAULT, DEFAULT);
 
   succeed;
 }
@@ -860,7 +905,9 @@ static senddecl send_process[] =
   SM(NAME_stopped, 1, "signal=name", stoppedProcess,
      NAME_input, "Process has stopped on named signal"),
   SM(NAME_close, 0, NULL, closeOutputStream,
-     NAME_output, "Same as ->close_output")
+     NAME_output, "Same as ->close_output"),
+  SM(NAME_wait, 0, NULL, waitProcess,
+     NAME_control, "Wait for the output to end and the process to terminate")
 };
 
 /* Get Methods */

@@ -60,6 +60,23 @@ setStreamWatch(Stream s, FDWatch *watch)
 }
 
 
+/* The input that made the watcher post an event may have been read in
+ * the meantime by reapChildProcesses().  Then the read would block.
+ */
+
+static bool
+stream_readable(Stream s)
+{
+#if defined(HAVE_POLL) && !defined(__WINDOWS__)
+  struct pollfd pfd = { .fd = (int)s->rdfd, .events = POLLIN };
+
+  return ( s->rdfd >= 0 && poll(&pfd, 1, 0) > 0 &&
+	   (pfd.revents & (POLLIN|POLLHUP|POLLERR)) );
+#else
+  return true;
+#endif
+}
+
 bool
 sdl_stream_event(SDL_Event *event)
 { if ( event->type == MY_EVENT_FD_READY )
@@ -74,7 +91,7 @@ sdl_stream_event(SDL_Event *event)
 
     if ( event->user.code == FD_READY_STREAM_INPUT )
     { Stream s = event->user.data2;
-      if ( !onFlag(s, F_FREED|F_FREEING) )
+      if ( !onFlag(s, F_FREED|F_FREEING) && stream_readable(s) )
       { assert(instanceOfObject(s, ClassStream));
 	pceMTLock();
 	DEBUG(NAME_stream, Cprintf("handleInputStream(%s)\n", pp(s)));

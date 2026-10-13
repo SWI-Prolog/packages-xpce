@@ -39,9 +39,9 @@ SIGCHLD only wakes the main thread, which reaps the children and sends
 ->exited or ->killed to the process from its event loop.  These tests
 start processes and dispatch events until all have reported.
 
-End of file on the output of a process is also reported as ->exited 0.
-To test the SIGCHLD path, the commands leave a background `sleep`
-holding their output open after they terminate.
+Termination is reported when the process terminates, also if its
+output is held open by a process it started (a background `sleep` in
+these tests), and after the output it wrote has been handled.
 
 Run with:
 
@@ -97,6 +97,50 @@ await_terminated(Count) :-
           fail
       ).
 
+:- dynamic
+    event/1.
+
+on_event(line, Str) :-
+    !,
+    get(Str, value, Line),
+    string_concat(Line, "", S),
+    assertz(event(line(S))).
+on_event(Type, Arg) :-
+    E =.. [Type, Arg],
+    assertz(event(E)).
+
+%   start_line_process(+Command)
+%
+%   Start Command, recording each line of output and its termination
+%   as event/1.
+
+start_line_process(Command) :-
+    retractall(event(_)),
+    new(P, process('/bin/sh', '-c', Command)),
+    send(P, lock_object, @on),
+    assertz(started(P)),
+    send(P, use_tty, @off),
+    send(P, record_separator, '\n'),
+    send(P, input_message, message(@prolog, on_event, line, @arg1)),
+    send(P, terminate_message, message(@prolog, on_event, done, @arg1)),
+    send(P, open).
+
+events(Events) :-
+    findall(E, event(E), Events).
+
+await_event(E) :-
+    get_time(T0),
+    Deadline is T0+3,
+    repeat,
+      (   event(E)
+      ->  !
+      ;   get_time(Now),
+          Now > Deadline
+      ->  !
+      ;   ignore(send(@display, dispatch)),
+          fail
+      ).
+
 dispatch_for(Time) :-
     get_time(T0),
     Deadline is T0+Time,
@@ -122,5 +166,24 @@ test(killed, [cleanup(free_processes), Code == term]) :-
     send(P, kill, term),
     await_terminated(1),
     terminated(sleeper, Code).
+
+test(killed_eof, [cleanup(free_processes), Code == term]) :-
+    start_process(sleeper, 'exec sleep 30', P),
+    dispatch_for(0.5),
+    send(P, kill, term),
+    await_terminated(1),
+    terminated(sleeper, Code).
+test(output_first, [cleanup(free_processes), Last-Lines == done(0)-50000]) :-
+    start_line_process('seq 1 50000'),
+    await_event(done(_)),
+    events(Events),
+    last(Events, Last),
+    aggregate_all(count, member(line(_), Events), Lines).
+
+test(wait, [cleanup(free_processes), Status-Code == killed-term]) :-
+    start_process(self_kill, 'exec >&- 2>&-; sleep 0.3; kill -TERM $$', P),
+    send(P, wait),
+    get(P, status, Status),
+    get(P, code, Code).
 
 :- end_tests(process_exit).
