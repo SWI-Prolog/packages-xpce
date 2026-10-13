@@ -37,15 +37,16 @@
           [ gallery/4,                  % +Label, +Cols, +Rows, -Picture
             gallery_cell/5,             % +Picture, +Col, +Row, +Title, :Goal
             gallery_show/4,             % +Picture, +Path, +X, +Y
-            gallery_save/3              % +Graphical, +Base, +Format
+            gallery_save/3,             % +Graphical, +Base, +Format
+            gallery_save_buttons/3      % +Dialog, +Graphical, +Base
           ]).
 :- use_module(library(pce)).
 
 /** <module> Layout for the demo galleries
 
 A gallery is a frame holding a picture divided into labelled cells of
-238x178 pixels and a dialog with buttons to save the picture as SVG or
-PDF.  Each cell shows one feature.  Used by the path, paint and text
+238x178 pixels and a dialog with buttons to save the picture as SVG
+(if supported) or PDF.  Each cell shows one feature.  Used by the path, paint and text
 galleries.
 */
 
@@ -68,11 +69,7 @@ gallery(Label, Cols, Rows, P) :-
     new(D, dialog),
     send(D, below, P),
     file_base(Label, Base),
-    send(D, append, button(save_svg,
-                           message(@prolog, gallery_save, P, Base, svg))),
-    send(D, append, button(save_pdf,
-                           message(@prolog, gallery_save, P, Base, pdf)),
-         right),
+    gallery_save_buttons(D, P, Base),
     send(D, append, button(quit, message(F, destroy)), right).
 
 %!  gallery_cell(+Picture, +Col, +Row, +Title, :Goal) is det.
@@ -108,6 +105,27 @@ gallery_show(P, Path, X, Y) :-
     get(Path?offset, y, OY),
     DX is PX-OX, DY is PY-OY,
     send(Path, relative_move, point(DX, DY), offset).
+
+%!  gallery_save_buttons(+Dialog, +Graphical, +Base) is det.
+%
+%   Append buttons to Dialog that save Graphical using gallery_save/3:
+%   one for each format XPCE supports.  The first button goes below the
+%   last item of Dialog, the others right of it.
+
+gallery_save_buttons(D, Gr, Base) :-
+    (   send(@pce, has_feature, svg)
+    ->  Formats = [svg, pdf]
+    ;   Formats = [pdf]
+    ),
+    save_buttons(Formats, D, Gr, Base, @default).
+
+save_buttons([], _, _, _, _).
+save_buttons([Format|T], D, Gr, Base, Where) :-
+    atom_concat(save_, Format, Name),
+    send(D, append,
+         button(Name, message(@prolog, gallery_save, Gr, Base, Format)),
+         Where),
+    save_buttons(T, D, Gr, Base, right).
 
 %!  gallery_save(+Graphical, +Base, +Format) is det.
 %

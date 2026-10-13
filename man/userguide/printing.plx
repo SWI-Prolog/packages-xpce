@@ -25,6 +25,9 @@ without the fonts.
 As `window ->pdf', but write an SVG image.
 \end{description}
 
+SVG output depends on the Cairo library XPCE is built with.  Test
+whether it is available using \exam{send(@pce, has_feature, svg)}.
+
 The library \pllib{print_graphics} defines the class template
 \class{print_graphics} that adds methods for printing and saving as
 PDF to a window.  It is used by, for example, PceDraw.  The method

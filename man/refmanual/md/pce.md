@@ -166,6 +166,16 @@ etc.
     @see pce->exit_message
     @see pce->die
 
+- pce-features: chain
+    Features of this XPCE installation, tested using ->has_feature.
+    Currently defined are:
+
+    	process	Class process is supported
+    	socket	Class socket is supported
+    	svg	->svg of graphical and window can write SVG images
+
+    @see pce-operating_system
+
 - pce-home: [name]
     Home directory of the pce system.  Its value is used to find
 

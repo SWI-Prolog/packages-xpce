@@ -52,7 +52,7 @@ ways a figure can combine its graphicals with what is below it:
   * clip_path       — a figure clipped to a path, also when it rotates
   * blend           — figure->blend, using the menu below the gallery
   * draw_markup     — markup and paths drawn from '_redraw_area'
-  * svg export      — try the buttons!
+  * svg export      — try the buttons (if XPCE supports SVG)!
 
 Run with:
 

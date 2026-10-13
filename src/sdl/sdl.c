@@ -38,6 +38,7 @@
 #include "sdlinput.h"
 #include "sdlevent.h"
 #include "sdlframe.h"
+#include <cairo.h>
 #ifdef __APPLE__
 #include "sdlnscolour.h"
 #endif
@@ -58,6 +59,9 @@
 void
 ws_initialise(int argc, char **argv)
 { realiseClass(ClassImage);
+#ifdef CAIRO_HAS_SVG_SURFACE		/* Cairo may lack the SVG surface */
+  send(PCE, NAME_feature, NAME_svg, EAV);
+#endif
 }
 
 static int sdl_main_thread = 0;

@@ -481,7 +481,10 @@ test(difference, RGBA == 0xffff00ff) :-
 
 :- begin_tests(export).
 
-test(svg, [true(sub_string(Head, _, _, _, "<svg")), W == 40]) :-
+test(svg, [ condition(send(@pce, has_feature, svg)),
+            true(sub_string(Head, _, _, _, "<svg")),
+            W == 40
+          ]) :-
     tmp_file_stream(text, File, Out), close(Out),
     filled_box(colour(red), B),
     send(B, size, size(40, 20)),
@@ -493,6 +496,13 @@ test(svg, [true(sub_string(Head, _, _, _, "<svg")), W == 40]) :-
     Start is Pos+7,
     sub_string(Data, Start, 2, _, WS),
     number_string(W, WS).
+test(svg_without_feature, [ condition(\+ send(@pce, has_feature, svg)),
+                            fail
+                          ]) :-
+    tmp_file_stream(text, File, Out), close(Out),
+    filled_box(colour(red), B),
+    call_cleanup(pce_catch_error(_, send(B, svg, File)),
+                 delete_file(File)).
 test(svg_cannot_write, fail) :-
     filled_box(colour(red), B),
     catch(send(B, svg, '/nonexistent/dir/out.svg'), _, fail).

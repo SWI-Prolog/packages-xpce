@@ -245,7 +245,9 @@ test(scaled_in_figure, Pixels == [R, W]) :-
     send(F, display, C),
     send(F, scale, 2),
     pixels(F, [15-15, 25-25], Pixels).
-test(svg, true(sub_string(Data, _, _, _, "<svg"))) :-
+test(svg, [ condition(send(@pce, has_feature, svg)),
+            true(sub_string(Data, _, _, _, "<svg"))
+          ]) :-
     red_canvas(C),
     send(C, paint),
     tmp_file_stream(text, File, Out), close(Out),

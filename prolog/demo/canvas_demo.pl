@@ -37,7 +37,7 @@
           [ canvas_demo/0
           ]).
 :- use_module(library(pce)).
-:- use_module(demo_gallery, [gallery_save/3]).
+:- use_module(demo_gallery, [gallery_save_buttons/3]).
 
 /** <module> Drawing curves on a canvas
 
@@ -78,11 +78,7 @@ canvas_demo :-
     slider(D, a, 1, 12, 7),
     slider(D, b, 1, 12, 3),
     slider(D, line_width, 1, 8, 2),
-    send(D, append, button(save_svg,
-                           message(@prolog, gallery_save, C, curve, svg))),
-    send(D, append, button(save_pdf,
-                           message(@prolog, gallery_save, C, curve, pdf)),
-         right),
+    gallery_save_buttons(D, C, curve),
     send(D, append, button(quit, message(F, destroy)), right),
     send(D, attribute, canvas, C),
     send(P, resize_message, message(@prolog, resized, D, @arg2)),
