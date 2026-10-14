@@ -104,7 +104,7 @@ sections _System colours_ and _Themes_ of the XPCE User Guide.
     Drop the colour from `@colours` and release any per-colour
     resources.  Called automatically on destruction.
 
-- colour->equal: colour
+- colour->equal: any
     Succeed if both colours have the same encoded RGBA value.  Use
     in preference to comparing object references because two
     `colour(@default, ...)` literals can yield distinct objects with

@@ -62,7 +62,7 @@ See also class stream and class socket.
 - process-input_allocated: alien:int
     Allocated size of input_buffer.
 
-- process-input_buffer: alien:char *
+- process-input_buffer: alien:charW *
     This buffer is used to collect the data read from the process before it
     is split into records (see `process <->record_separator` and `process
     <->input_message).

@@ -877,7 +877,7 @@ etc.
 
     @see pce<-max_integer
 
-- pce<-object_from_reference: reference=int|name -> object=unchecked
+- pce<-object_from_reference: reference=name -> object=unchecked
     Converts an object name or integer object-reference into an true object:
 
     	?- get(@pce, object_from_reference, prolog, Obj)

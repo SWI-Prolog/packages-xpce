@@ -18,7 +18,7 @@ document rendering system.
     object; it is displayed on the parbox device and behaves like
     any other graphical.
 
-- grbox<->alignment: {top,center,bottom,left,right}
+- grbox<->alignment: {baseline,top,center,bottom,left,right}
     Placement inside the paragraph:
 
     - `@nil` (or unset)
@@ -33,11 +33,15 @@ document rendering system.
         Vertical alignment relative to the baseline of the line on
         which the grbox sits (see also the ABSTRACT_HBOX
         ascent/descent slots).
+    - `baseline`
+        Align the graphical's `<-ascent` with the baseline of the line.
+        This is the default for a graphical that defines `<-ascent`,
+        such as a text; others default to `center`.
 
 
 ## Send methods {#class-grbox-send}
 
-- grbox->initialise: graphical=graphical, alignment=[{top,center,bottom,left,right}], rubber=[rubber]*
+- grbox->initialise: graphical=graphical, alignment=[{baseline,top,center,bottom,left,right}], rubber=[rubber]*
     Create a grbox wrapping the given graphical with optional
     alignment and a `rubber` for stretch/shrink behaviour.
 

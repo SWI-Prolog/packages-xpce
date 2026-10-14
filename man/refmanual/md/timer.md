@@ -32,7 +32,7 @@ below provides a skeleton:
 
 ## Instance variables {#class-timer-instvars}
 
-- timer<-interval: real
+- timer<-interval: num
     Interval in seconds.  Note that
 
     - The timer is only executing if PCE is in its idle loop
@@ -70,13 +70,16 @@ below provides a skeleton:
 
     	@receiver		The timer itself.
 
-- timer->initialise: interval=real, message=[code]*
+- timer->initialise: interval=num, message=[code]*
     Create a timer object from its interval and the message to execute.
     After creation, the timer is idle.  Use ->start or ->status to start the
     timer.
 
-- timer->start: how=[{repeat,once}]
-    Equivalent to ->status: [repeat].
+- timer->start: how=[{repeat,once}], times=[int]
+    Equivalent to ->status: [repeat].  If `times` is given, the timer
+    stops after it fired this many times.  It counts down <-times
+    before it runs the message, so the message can see from <-times
+    being 0 that it will not be called again.
 
 - timer->stop
     Equivalent to ->status: idle.

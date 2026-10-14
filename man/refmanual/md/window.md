@@ -303,7 +303,7 @@ kinds of windows:
     @see window->left
     @see window->below
 
-- window->background: colour
+- window->background: [colour]
     Colour of the drawing plane.  Changing the colour forces a redraw.
 
     **Defaults**: The `display<-background`.

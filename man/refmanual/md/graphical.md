@@ -234,7 +234,7 @@ for creating customised graphical objects:
     @see device<-get_catch_all
     @see device<-member
 
-- graphical<-pen: 0..
+- graphical<-pen: num
     The pen attribute denotes the thickness in pixels of the drawing pen for
     drawing lines.  It is defined at class graphical, but only applicable to
     classes whose images actually contain lines.  If the pen is 0 (zero),
@@ -539,7 +539,7 @@ for creating customised graphical objects:
     This method may be used to redefine ->_redraw_area.  It should
     not be called outside this context.
 
-- graphical->draw_arc: x=int, y=int, w=int, h=int, angle1=[num], angle2=[num], fill=[colour|{foreground,background}]*
+- graphical->draw_arc: x=int, y=int, w=int, h=int, angle1=[num], angle2=[num], fill=[colour|gradient|image|{foreground,background}]*
     Draw an ellipse-part.  X,Y,W,H define the bounding box if the
     entire ellipse.  Angle1 and Angle2 the start and end angles (in
     degrees).  When omitted, an entire ellipse will be drawn.
@@ -550,7 +550,7 @@ for creating customised graphical objects:
     described with ->_redraw_area and should not be called outside
     this context.
 
-- graphical->draw_box: x=int, y=int, w=int, h=int, radius=[0..], fill=[colour|{foreground,background}|elevation]*, up=[bool]
+- graphical->draw_box: x=int, y=int, w=int, h=int, radius=[0..], fill=[colour|gradient|image|{foreground,background}|elevation]*, up=[bool]
     Draw rectangular (rounded) box with the given X, Y, W, H.
     Radius defines the rounding radius for the corners.  If the last
     argument is a colour object, the interior will be filled with
@@ -562,7 +562,7 @@ for creating customised graphical objects:
     described with ->_redraw_area and should not be called outside
     this context.
 
-- graphical->draw_fill: x=int, y=int, w=int, h=int, fill=[colour|{foreground,background}]*
+- graphical->draw_fill: x=int, y=int, w=int, h=int, fill=[colour|gradient|image|{foreground,background}]*
     Fill rectangle with specified colour.  If the colour is @nil,
     the area is cleared to the current background.  If it is
     @default, the area is filled with the current foreground.
@@ -594,7 +594,7 @@ for creating customised graphical objects:
     described with ->_redraw_area and should not be called outside
     this context.
 
-- graphical->draw_poly: points=chain|vector, closed=[bool], fill=[colour|{foreground,background}]*
+- graphical->draw_poly: points=chain|vector, closed=[bool], fill=[colour|gradient|image|{foreground,background}]*
     Draw/fill a polygon.  Points is a chain object or vector object
     containing the points though which the polyline is drawn.  If
     closed is @on, a line is drawn from the last to the first point.

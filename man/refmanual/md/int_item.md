@@ -51,7 +51,7 @@ See also class text_item, class slider, and ->initialise.
     indicated range.  The default `low` value is `@pce <-min_integer`,
     the default `high` is `@pce <-max_integer`.
 
-- int_item->typed: event_id
+- int_item->typed: event|event_id
     Invokes `text_item ->typed`.  If the result is not an integer,
     or not within ->range a warning is raised and the value is
     reset to the value before calling this method.

@@ -234,7 +234,7 @@ default fonts for their role.
     passed to Pango's own font matcher.  The reported size is
     scaled by `font.scale`.
 
-- font<-lookup: family=name, style=name, points=[int], weight=[name|int] -> font
+- font<-lookup: family=name, style=name, points=[int], weight=[{thin,ultralight,light,semilight,book,normal,medium,bold,ultrabold,heavy,ultraheavy}|100..1000] -> font
     Find an existing font in `@fonts` matching the arguments, or
     fail.  Mirrors `->initialise`; used by the type-checker to
     deduplicate constructions.

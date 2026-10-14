@@ -146,7 +146,7 @@ defines the white space between the item and the box around it.
 
     @see menu-kind
 
-- menu<-focus_item: item=menu_item
+- menu<-focus_item: item=menu_item*
     The item operated by the keyboard: the item with the focus ring.
     Defaults to the (first) selected item or else the first active
     item.  Set it with ->focus_item.

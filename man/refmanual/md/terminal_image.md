@@ -20,17 +20,17 @@ keystrokes and hovered hyperlinks.
 - terminal_image<->bindings: key_binding
     Key bindings active in the image.
 
-- terminal_image<-font: font
+- terminal_image<-font: mono_font
     Default (regular-weight) font used to draw text.
 
-- terminal_image<-bold_font: font*
+- terminal_image<-bold_font: mono_font*
     Optional bold font; bold text falls back to `<-font` if @nil.
 
-- terminal_image<-italic_font: font*
+- terminal_image<-italic_font: mono_font*
     Optional slanted font (SGR 3); italic text falls back to `<-font` if
     @nil.
 
-- terminal_image<-bold_italic_font: font*
+- terminal_image<-bold_italic_font: mono_font*
     Optional bold slanted font (SGR 1 and 3 together).  If @nil, bold
     italic text falls back to `<-italic_font`, then `<-bold_font`, then
     `<-font`.
@@ -120,14 +120,6 @@ keystrokes and hovered hyperlinks.
     are highlighted, and `@nil` when it is not.  See `->selection`; it
     is also what `->isearch_selection_forward` searches for.
 
-- terminal_image<-match_word: bool
-    Whether matching asks for whole words *now*: `<->search_word`, or a
-    selection made by double clicking a word.  A search takes this from
-    the selection it was seeded with; one started with `\C-\S-f` has no
-    selection to take it from.  This, not `<->search_word`, is what the
-    window should show as the state of a `Word` box, so that the box says
-    what the tally beside it was counted with.
-
 - terminal_image<-search_direction: {forward,backward}
     Direction the incremental search is going.
 
@@ -150,13 +142,14 @@ keystrokes and hovered hyperlinks.
 
 ## Send methods {#class-terminal_image-send}
 
-- terminal_image->initialise: width=int, height=int
-    Create a terminal_image of the given column/row size.
+- terminal_image->initialise: width=[int], height=[int]
+    Create a terminal_image of the given width and height in pixels.
+    The default is 200x100.
 
 - terminal_image->geometry: x=[int], y=[int], width=[int], height=[int]
     Move/resize the image.
 
-- terminal_image->font: font=font, bold=[font], italic=[font], bold_italic=[font]
+- terminal_image->font: font=mono_font, bold=[mono_font], italic=[mono_font], bold_italic=[mono_font]
     Change the regular font and its variants.  A variant left at
     @default is derived from `font`, keeping its family and size.  A
     variant that does not advance by the same amount as `font` is
@@ -363,7 +356,15 @@ keystrokes and hovered hyperlinks.
 
 ## Get methods {#class-terminal_image-get}
 
-- terminal_image<-pty_name: -> name*
+- terminal_image<-match_word: -> bool
+    Whether matching asks for whole words *now*: `<->search_word`, or a
+    selection made by double clicking a word.  A search takes this from
+    the selection it was seeded with; one started with `\C-\S-f` has no
+    selection to take it from.  This, not `<->search_word`, is what the
+    window should show as the state of a `Word` box, so that the box says
+    what the tally beside it was counted with.
+
+- terminal_image<-pty_name: -> pty=name*
     Path of the pseudo-terminal device, or `@nil` when not connected
     to one.
 
@@ -374,7 +375,7 @@ keystrokes and hovered hyperlinks.
     While it succeeds the control keys are passed to that process
     rather than looked up in `<-bindings`.  Unix only.
 
-- terminal_image<-displayed_cursor: -> cursor
+- terminal_image<-displayed_cursor: -> cursor=cursor
     Cursor reflecting whether the pointer is on text or over a link.
 
 - terminal_image<-selected: -> string
@@ -389,7 +390,7 @@ keystrokes and hovered hyperlinks.
 - terminal_image<-link: point|event -> name
     Hyperlink URL at the given position or under an event.
 
-- terminal_image<-find: from=int, for=string, times=[int], return=[{start,end}], exact_case=[bool], word=[bool] -> int
+- terminal_image<-find: from=int, for=string, times=[int], return=[{start,end}], exact_case=[bool], word=[bool] -> index=int
     Search the buffer, as `text_buffer<-find` does and with the same
     defaults: case sensitive, ignoring word boundaries, and -- note --
     reporting the *end* of a match going forwards and its start going

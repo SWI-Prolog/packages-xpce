@@ -494,7 +494,7 @@ although the latter is the principal way of manipulating a text.
 
 ## Send methods {#class-editor-send}
 
-- editor->_dabbrev_expand: event_id
+- editor->_dabbrev_expand: event|event_id
     @see editor->dabbrev_expand
 
 - editor->align: column=int, index=[int]
@@ -700,7 +700,7 @@ although the latter is the principal way of manipulating a text.
 
     @see editor->upcase_region
 
-- editor->electric_caret: index=int, seconds=[real]
+- editor->electric_caret: index=int, seconds=[num]
     Temporary display the caret at the indicated position. The caret is
     restored to the insertion-point after the indicated time (in seconds) or
     after the user has typed in the editor.

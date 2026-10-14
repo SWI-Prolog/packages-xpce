@@ -71,7 +71,7 @@ makeClassPen(Class class)
 
   sendMethod(class, NAME_initialise, DEFAULT, 3,
 	     "thickness=[0..]",
-	     "[texture=texture_name]",
+	     "texture=[texture_name]",
 	     "colour=[colour]",
 	     "Create pen from thickness, texture and colour",
 	     initialisePen);

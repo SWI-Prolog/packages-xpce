@@ -183,7 +183,7 @@ bundle menu items.
 - menu_item->font: [font]
     @see menu-value_font
 
-- menu_item->initialise: value=any, message=[code]*, label=[name|image], end_group=[bool], condition=[code]*, accelerator=[name]*
+- menu_item->initialise: value=any, message=[code]*, label=[name|image], end_group=[bool], condition=[code]*, accelerator=[name]*, mnemonic=[name]*
     Create a menu_item from
 
     1. <->value (any)
@@ -205,6 +205,14 @@ bundle menu items.
     	Popup menu's only.  Condition to determine <->active status.
     	When @nil (default), this is not evaluated when the popup is
     	mapped on the screen.
+
+    6. <->accelerator [name]*
+    	Shortcut shown at the right of the label, such as Ctrl-S.
+
+    7. ->mnemonic [name]*
+    	Letter that is underlined in the label and selects the item
+    	from the keyboard.  @default has it assigned by
+    	`menu ->assign_accelerators`; a letter or @nil fixes it.
 
     @see menu_item<-convert
     @see menu_item<-default_label

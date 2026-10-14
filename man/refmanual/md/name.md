@@ -23,7 +23,7 @@ information.
     supports ->syntax and should only be used at boot time to solve
     specific host-language binding problems.
 
-- name->equal: name
+- name->equal: any
     Succeeds if the argument name is the same name as the receiver.
     See notes on uniqueness with class name and ->initialise.
 

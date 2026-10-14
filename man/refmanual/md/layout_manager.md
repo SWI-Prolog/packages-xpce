@@ -55,6 +55,6 @@ tables.  See also `layout_interface`.
     Virtual method: compute the union bounding box of the laid-out
     graphicals.  The default implementation fails (no contribution).
 
-- layout_manager->RedrawArea: area
+- layout_manager->_redraw_area: area
     Paint background objects for the indicated area.  The default
     implementation succeeds without drawing.

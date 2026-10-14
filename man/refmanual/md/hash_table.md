@@ -109,10 +109,11 @@ class sheet and class table (multi-column indexed table).
 
     @see hash_table->for_all
 
-- hash_table->initialise: buckets=[int]
-    Create a hash_table.  The argument is the number of buckets.  Note that
-    this will be automatically increased if necessary.  Normally it is not
-    specified.
+- hash_table->initialise: buckets=[int], refer=[{none,name,value,both}]
+    Create a hash_table.  The first argument is the number of buckets.
+    Note that this will be automatically increased if necessary.
+    Normally it is not specified.  The second argument determines which
+    of key and value create a reference to the object.  See -refer.
 
     **Defaults**: 8
 

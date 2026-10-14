@@ -17,7 +17,7 @@ This class defines the tracing capabilities of PCE using the methods:
 
 ## Instance variables {#class-program_object-instvars}
 
-- program_object<->dflags: int
+- program_object<->dflags: alien:uintptr_t
     The various debugging options are represented by an inclusive or of
     bit-masks.   The only legal user operation on these flags is:
 

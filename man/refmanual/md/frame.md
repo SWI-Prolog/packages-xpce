@@ -313,7 +313,7 @@ imply X-specific semantics.
     @see topic Window Layout
     @see window->above
 
-- frame->delete: member=window
+- frame->delete: member:window
     Remove a window from the frame.  See also `->append`,
     `window->left`, `window->above`, ...
 
@@ -727,12 +727,12 @@ imply X-specific semantics.
     @see frame<-keyboard_focus for the window inside a frame.
     @see application->first, which is what makes the order an order of use.
 
-- frame<-confirm: position=[point], display=[display], grab=[bool] -> return_value=any
+- frame<-confirm: position=[point], display=[display] -> return_value=any
     Open the frame (if not yet opened) and block until `->return` is
     invoked.  Used to implement modal prompts.
 
-    When `grab` is `@on` the frame grabs the pointer.  If the frame
-    is freed while the confirmer is blocking, the call fails.
+    If the frame is freed while the confirmer is blocking, the call
+    fails.
 
     Typical use:
 

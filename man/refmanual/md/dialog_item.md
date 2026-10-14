@@ -134,12 +134,12 @@ is achieved using `device ->append_dialog_item` and `device
 
     @see dialog->layout
 
-- dialog_item<-look: {open_look,motif,win,gtk}
+- dialog_item<-look: {xpce,win}
     General look-and-feel switch.  The interpretation is left to the
     subclasses.  See also `scroll_bar <->look`.
 
-    XPCE is shipped with Defaults both to generate OpenLook
-    style (Unix/X11) or Windows-95 style (Win32).
+    The value `xpce` is the native xpce look; `win` emulates the
+    Windows look.
 
 - dialog_item<->message: [code]*
     Message executed when the item is executed.  The conditions on which the

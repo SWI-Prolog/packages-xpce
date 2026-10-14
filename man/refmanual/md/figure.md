@@ -133,12 +133,6 @@ addition of class device, a figure offers:
     rectangle in the figure's coordinate system.  @nil disables
     clipping (children draw and receive events on their full extent).
 
-- figure->shadow: 0..
-    Backward-compatible shortcut that attaches a shadow elevation object of
-    the given height.  0 removes the elevation.  Equivalent to
-    creating an explicit `elevation(kind := shadow, height := N)` and
-    assigning it via `->elevation`.
-
 - figure->translate: dx=num, dy=num
     Post-compose translate(dx, dy) into `<-transform`.  Creates the
     transform on demand (starting from identity).
@@ -155,18 +149,9 @@ addition of class device, a figure offers:
 - figure->shear: kx=num, ky=num
     Post-compose shear(kx, ky) into `<-transform`.
 
-- figure->convert_old_slot: slot=name, value=any
-    Backward-compatibility hook used when loading older saved
-    figures: translates the obsolete `shadow` slot into an
-    `elevation`.
-
 
 ## Get methods {#class-figure-get}
 
 - figure<-clip_area: -> area
     Return the clipping area set with `->clip_area`, or @nil if no
     clipping is active.
-
-- figure<-shadow: -> 0..
-    Backward-compatible shortcut returning `<-elevation?height` when
-    the elevation kind is `shadow`, 0 otherwise.

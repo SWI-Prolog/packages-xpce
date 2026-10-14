@@ -28,7 +28,7 @@ specification.  See:
 
 ## Send methods {#class-object-send}
 
-- object->_check: recursive=[bool]
+- object->_check: recursive=[bool], checked=[hash_table], silent=[bool]
     Validate the type of the instance variables.  If the argument is @on or
     @default, validation continues recursively over instance variables that
     contain objects.  This method is protected against loops in the

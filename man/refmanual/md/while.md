@@ -33,7 +33,7 @@ Or
 
 ## Send methods {#class-while-send}
 
-- while->initialise: condition=code, statement=code*
+- while->initialise: condition=code, statement=[code]*
     Create from condition and statement (<-body).
 
 - while->_execute

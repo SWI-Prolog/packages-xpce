@@ -53,7 +53,7 @@ Guide.
 
 ## Send methods {#class-theme_colour-send}
 
-- theme_colour->initialise: name=name, derived_from=name|colour
+- theme_colour->initialise: name=name, derived_from=name|colour, summary=[string]*
     Create a theme colour with the given name, derived from the given
     colour.  The colour is added to `@colours` and `@theme_colours` and
     locked.  Its `<-rgba` is @default until it is resolved.  If a theme
@@ -72,7 +72,7 @@ Guide.
 
 ## Get methods {#class-theme_colour-get}
 
-- theme_colour<-lookup: name=name, derived_from=name|colour -> theme_colour
+- theme_colour<-lookup: name=name, derived_from=name|colour, summary=[string]* -> theme_colour
     If a theme colour with this name exists, update it using
     `->derived_from` and return it.  This makes creating a theme
     colour again a way to change it.

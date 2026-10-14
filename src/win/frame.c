@@ -2227,7 +2227,7 @@ static senddecl send_frame[] =
      NAME_area, "Set width of frame"),
   SM(NAME_x, 1, "x=int", xFrame,
      NAME_area, "Set X-coordinate of frame"),
-  SM(NAME_y, 1, "x=int", yFrame,
+  SM(NAME_y, 1, "y=int", yFrame,
      NAME_area, "Set Y-coordinate of frame"),
   SM(NAME_geometry, 2, T_geometry, geometryFrame,
      NAME_area, "X11-style geometry specification"),

@@ -41,7 +41,7 @@ their boundaries:
 
 ## Send methods {#class-resize_table_slice_gesture-send}
 
-- resize_table_slice_gesture->initialise: mode={column,row}, button=[button_name], modifier=[modifier]
+- resize_table_slice_gesture->initialise: mode=[{row,column}], button=[button_name], modifier=[modifier]
     Create the gesture in column- or row-resize mode, bound to the
     given button and modifier.
 

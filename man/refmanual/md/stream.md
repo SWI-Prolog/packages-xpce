@@ -24,7 +24,7 @@ of this class is:
 - stream-input_p: alien:int
     Number of characters in input_buffer.
 
-- stream-input_buffer: alien:char *
+- stream-input_buffer: alien:charW *
     Buffer to collect data from the stream into records.  See
     <-record_separator and <-input_message.
 
