@@ -62,8 +62,8 @@ display a Prolog term. The widget provides   buttons to control the most
 important options to control the output.
 */
 
-resource(pinned,        image, image('pinned.png')).
-resource(not_pinned,    image, image('pin.png')).
+resource(pinned,        image, image('pinned.svg')).
+resource(not_pinned,    image, image('pin.svg')).
 
 %!  view_term(@Term) is det.
 %!  view_term(@Term, +Options) is det.

@@ -121,6 +121,7 @@ sample(ui_window_background,    terminal(text), 'A terminal').
 sample(ui_window_foreground,    terminal(text), 'Text in a terminal').
 sample(help_link,               help_link,      'Link in the xpce help').
 sample(emacs_bookmark_hit,      bookmark,       'Bookmark found by a search').
+sample(emacs_bookmark_filter,   bookmark_filter, 'Text of a hit matching the filter').
 sample(debug_enabled_background, debug_topic,   'Enabled debug topic').
 sample(xref_node_background,    xref_node,      'File in the dependency graph').
 sample(xref_node_foreground,    xref_node,      'File in the dependency graph').
@@ -289,6 +290,9 @@ build(help_link, T) :-
 build(bookmark, E) :-
     code_sample('foo(X) :- ', 'bar(X)', '.',
                 style(background := emacs_bookmark_hit), E).
+build(bookmark_filter, E) :-
+    code_sample('foo(X) :- ', 'bar(X)', '.',
+                style(background := emacs_bookmark_filter), E).
 build(debug_topic, LB) :-
     new(LB, list_browser(@default, 20, 2)),
     send(LB, style, enabled, style(background := debug_enabled_background)),

@@ -41,7 +41,8 @@
 :- use_module(library(pce)).
 :- use_module(library(pce_theme), [theme_colours/1]).
 
-:- theme_colours([ emacs_bookmark_hit = yellow
+:- theme_colours([ emacs_bookmark_hit    = yellow,
+                   emacs_bookmark_filter = '#a8d8ff'
                  ]).
 :- use_module(library(swi_ide), []).
 :- use_module(library(toolbar)).
@@ -49,6 +50,7 @@
 :- use_module(library(pane_frame)).
 :- use_module(library(debug)).
 :- use_module(library(pce_util)).
+:- use_module(library(pce_filter_item), []).
 :- use_module(library(emacs/bookmark_store),
               [ bookmark_store_load/1, bookmark_store_save/1,
                 bookmark_store_forget/1, bookmark_store_tidy/0,
@@ -59,6 +61,7 @@
 	     absolute_file_name/3,
 	     default/3,
 	     member/2,
+	     append/3,
 	     send_list/3
 	   ]).
 
@@ -86,8 +89,8 @@ Some issues to consider:
 resource(save,   image, image('tool/save.svg')).
 resource(cut,    image, image('tool/cut.svg')).
 resource(open,   image, image('tool/edit.svg')).
-resource(pin,    image, image('pin.png')).
-resource(pinned, image, image('pinned.png')).
+resource(pin,    image, image('pin.svg')).
+resource(pinned, image, image('pinned.svg')).
 
 /* Bookmarks and hits as a pane.
 
@@ -114,6 +117,8 @@ variable(persists,     bool,         get, "Bookmarks are persistent").
 variable(exit_message, code*,        get, "Registered exit message").
 variable(pinned,       bool := @off, get, "Pin: do not reuse for the next query").
 variable(label,        name* := @nil, get, "What my tab is called").
+variable(marks,        chain,        get, "All bookmarks, also those filtered out").
+variable(filter,       regex* := @nil, get, "Only show bookmarks that match").
 
 initialise(BM,
            Title:title=[string],
@@ -123,6 +128,7 @@ initialise(BM,
     default(Persist, @off, ThePersist),
     send_super(BM, initialise, bookmarks),
     send(BM, slot, persists, ThePersist),
+    send(BM, slot, marks, new(chain)),
     (   ThePersist == @off
     ->  assert(references_editor(BM))
     ;   true
@@ -195,7 +201,7 @@ pane_label(BM, Label:name) :<-
 fill_dialog(BM) :->
     get(BM, window, dialog, D),
     send(D, pen, 0),
-    send(D, gap, size(0, 5)),
+    send(D, gap, size(5, 5)),
     send(BM, add_pin),
     send(D, append, new(TB, tool_bar(BM)), right),
     (   get(BM, persists, @on)
@@ -209,16 +215,55 @@ fill_dialog(BM) :->
               [ tool_button(goto, resource(open), 'Open editor'),
                 tool_button(cut,  resource(cut),  'Delete selection')
               ]),
-    send(D, resize_message, message(D, layout, @arg2)).
+    send(D, append,
+         new(FI, filter_item(filter, message(BM, filter, @arg1), 'Filter')),
+         right),
+    send(FI, show_label, @off),
+    send(FI, help_message, tag,
+         'Only show hits whose text or file name matches'),
+    (   get(D, member, pin, Pin)
+    ->  center_on(Pin, TB)
+    ;   true
+    ),
+    center_on(FI, TB),
+    send(D, resize_message, message(BM, layout_dialog, @arg2)).
+
+%!  center_on(+Item, +ToolBar) is det.
+%
+%   Items in a row of a dialog line up on their reference point, which
+%   is at the bottom of a tool bar and at the baseline of the text of
+%   the others.  Center Item vertically on ToolBar instead.
+
+center_on(Item, TB) :-
+    get(TB, height, TBH),
+    get(Item, height, H),
+    Ref is (H+TBH)//2,
+    send(Item, reference, point(0, Ref)).
+
+%       The filter takes all the room to the right, but ends where the
+%       scroll bar of the tree starts, rather than above it.
+
+layout_dialog(BM, Size:size) :->
+    "Lay out the dialog to fit Size"::
+    get(BM, window, dialog, D),
+    (   get(BM, window, emacs_bookmark_window, W),
+        get(W, vertical_scrollbar, SB),
+        SB \== @nil
+    ->  get(SB, width, SBW)
+    ;   SBW = 0
+    ),
+    get(D, border, Border),
+    get(Border, width, BW),
+    get(Size, width, Width),
+    get(Size, height, Height),
+    LW is round(Width - SBW) + BW,
+    send(D, layout, size(LW, Height)).
 
 add_pin(BM) :->
     (   get(BM, persists, @off)
     ->  get(BM, window, dialog, D),
         send(D, append, new(Pin, bitmap(image(resource(pin)))), right),
         send(Pin, name, pin),
-        get(@pce, convert, normal, font, Font),
-        get(Font, ascent, RefH),
-        send(Pin, reference, point(0, RefH)),
         send(Pin, recogniser,
              click_gesture(left, '', single, message(BM, toggle_pinned))),
         send(Pin, help_message, tag,
@@ -254,12 +299,58 @@ pinned(BM, Pinned:bool) :->
     ).
 
 clear(BM) :->
-    "Remove all bookmarks from the tree"::
+    "Remove all bookmarks and the filter"::
+    send(BM?marks, clear),
+    send(BM, slot, filter, @nil),
+    get(BM, window, dialog, D),
+    get(D, member, filter, FI),
+    send(FI, selection, ''),
+    send(BM, clear_tree).
+
+clear_tree(BM) :->
+    "Remove all bookmarks from the tree, but not from <-marks"::
     get(BM, window, emacs_bookmark_window, BW),
     send(BM, current, @nil),
     send(BW, clear),
     initial_directory(CWD),
-    send(BW, root, emacs_toc_bookmark_folder(CWD, directory)).
+    send(BW, root, emacs_toc_bookmark_folder(CWD, cwd)).
+
+%       The tree shows the bookmarks of <-marks that pass the filter.
+%       Filtering builds it again from those, as a folder with nothing
+%       to show must go as well.
+
+filter(BM, Filter:regex*) :->
+    "Only show the bookmarks that match Filter; @nil shows all"::
+    (   Filter == @nil
+    ->  true
+    ;   send(Filter, ignore_case, @on)
+    ),
+    send(BM, slot, filter, Filter),
+    send(BM, clear_tree),
+    get(BM, marks, Marks),
+    new(Shown, number(0)),
+    send(Marks, for_all,
+         if(message(BM, shows, @arg1),
+            and(message(BM, show_bookmark, @arg1, @off),
+                message(Shown, plus, 1)))),
+    send(BM, sort),
+    (   Filter == @nil
+    ->  true
+    ;   get(Marks, size, Total),
+        send(BM, report, status, 'Showing %d of %d', Shown, Total)
+    ).
+
+shows(BM, Mark:emacs_bookmark) :->
+    "True if Mark passes the filter"::
+    get(BM, filter, Filter),
+    (   Filter == @nil
+    ->  true
+    ;   send(Filter, search, Mark?title)
+    ->  true
+    ;   get(Mark, file_name, File),
+        file_base_name(File, Base),
+        send(Filter, search, Base)
+    ).
 
 %       Adding many bookmarks one by one, each sorting the folder it is
 %       added to, takes quadratic time.  ->bookmark can leave that out,
@@ -313,6 +404,7 @@ delete_node(BM, Node:toc_node) :->
         send(Marks, for_all, message(BM, forget, @arg1))
     ;   true
     ),
+    send(BM?marks, subtract, Node?bookmarks),
     send(Node, delete_tree).
 
 forget(_BM, Mark:emacs_bookmark) :->
@@ -328,6 +420,18 @@ bookmark(F, BM:emacs_bookmark, Sort:[bool], Store:[bool]) :->
     ->  send(BM, slot, persists, @on)
     ;   true
     ),
+    send(F?marks, append, BM),
+    (   send(F, shows, BM)
+    ->  send(F, show_bookmark, BM, Sort)
+    ;   true
+    ),
+    (   Store == @off
+    ->  true
+    ;   send(BM, store)
+    ).
+
+show_bookmark(F, BM:emacs_bookmark, Sort:[bool]) :->
+    "Add a bookmark to the tree"::
     get(BM, file_name, FileName),
     get(F, tree, Tree),
     (   between(1, 1000, _),
@@ -352,9 +456,10 @@ bookmark(F, BM:emacs_bookmark, Sort:[bool], Store:[bool]) :->
         )
     ),
     send(Tree?root, append, BM, Sort),
-    (   Store == @off
+    (   get(F, filter, @nil)
     ->  true
-    ;   send(BM, store)
+    ;   get(BM, node, Node),            % highlight what the filter matches
+        send(Node, update)              % now Node knows its tree
     ).
 
 %!  parent_directory(+Dir, -Parent) is semidet.
@@ -776,6 +881,9 @@ class_variable(style_title, style,
 class_variable(style_hit, style,
                style(font := fixed,
                      background := emacs_bookmark_hit)).
+class_variable(style_filter, style,
+               style(font := fixed,
+                     background := emacs_bookmark_filter)).
 
 initialise(F, BM:emacs_bookmark) :->
     bookmark_label(F, BM, Label),
@@ -787,7 +895,9 @@ bookmark_label(F, BM, Label) :-
     get(F, class_variable_value, style_line,  StyleLine),
     get(F, class_variable_value, style_title, StyleTitle),
     get(F, class_variable_value, style_hit,   StyleHit),
-    bm_title(BM, StyleTitle, StyleHit, TitleBoxes),
+    get(F, class_variable_value, style_filter, StyleFilter),
+    node_filter(F, Filter),
+    bm_title(BM, Filter, StyleTitle, StyleHit, StyleFilter, TitleBoxes),
     get(@pce, convert, normal, font, Font),
     get(Font, advance, 99999, LW),
     new(Label, parbox(10000, left,
@@ -796,25 +906,78 @@ bookmark_label(F, BM, Label) :-
                       hbox(5))),
     send_list(Label, append, TitleBoxes).
 
-bm_title(BM, Style, StyleHit, Boxes) :-
+%   The filter of the editor I am in, if any.  A node that is not yet
+%   in a tree has none.
+
+node_filter(F, Filter) :-
+    get(F, tree, Tree),
+    Tree \== @nil,
+    get(Tree, window, W),
+    send(W, instance_of, emacs_bookmark_window),
+    get(W, editor, Editor),
+    !,
+    get(Editor, filter, Filter).
+node_filter(_, @nil).
+
+%!  bm_title(+BM, +Filter, +Style, +StyleHit, +StyleFilter, -Boxes)
+%
+%   Boxes show the title of BM, the hit of BM in StyleHit and what
+%   Filter matches in StyleFilter.  Where the two overlap, the filter
+%   wins.
+
+bm_title(BM, Filter, Style, StyleHit, StyleFilter, Boxes) :-
     get(BM, title, Title),
     get(Title, size, TitleLen),
+    hit_ranges(BM, TitleLen, Hits),
+    filter_ranges(Filter, Title, 0, TitleLen, Matches),
+    append(Hits, Matches, Ranges),
+    findall(P, (member(S-E, Ranges), (P = S ; P = E)), Ps),
+    sort([0,TitleLen|Ps], Cuts),
+    segments(Cuts, Title, Hits, Matches,
+             Style, StyleHit, StyleFilter, Boxes).
+
+hit_ranges(BM, TitleLen, [Start-End]) :-
     get(BM, length, Len),
     Len \== @nil,
     Len > 0, Len < TitleLen,
     get(BM, line_pos, Start),
     Start \== @nil,
     !,
-    End is Start+Len,
-    get(Title, sub, 0,   Start, Pre),
-    get(Title, sub, Start, End, Match),
-    get(Title, sub, End,        Post),
-    Boxes = [ tbox(Pre, Style),
-              tbox(Match, StyleHit),
-              tbox(Post, Style)
-            ].
-bm_title(BM, Style, _StyleHit, [tbox(Title, Style)]) :-
-    get(BM, title, Title).
+    End is Start+Len.
+hit_ranges(_, _, []).
+
+filter_ranges(@nil, _, _, _, []) :- !.
+filter_ranges(Re, Title, From, TitleLen, Ranges) :-
+    From < TitleLen,
+    get(Re, search, Title, From, Start),
+    !,
+    get(Re, register_end, End),
+    (   End > Start
+    ->  Ranges = [Start-End|Rest],
+        filter_ranges(Re, Title, End, TitleLen, Rest)
+    ;   Next is Start+1,                % empty match, e.g. for `x*`
+        filter_ranges(Re, Title, Next, TitleLen, Ranges)
+    ).
+filter_ranges(_, _, _, _, []).
+
+segments([S,E|Cuts], Title, Hits, Matches, Style, StyleHit, StyleFilter,
+         [tbox(Text, SegStyle)|Boxes]) :-
+    !,
+    get(Title, sub, S, E, Text),
+    (   in_ranges(S, Matches)
+    ->  SegStyle = StyleFilter
+    ;   in_ranges(S, Hits)
+    ->  SegStyle = StyleHit
+    ;   SegStyle = Style
+    ),
+    segments([E|Cuts], Title, Hits, Matches, Style, StyleHit, StyleFilter,
+             Boxes).
+segments(_, _, _, _, _, _, _, []).
+
+in_ranges(P, Ranges) :-
+    member(S-E, Ranges),
+    P >= S, P < E,
+    !.
 
 unlink(F) :->
     get(F, identifier, BM),

@@ -297,6 +297,7 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     web.png
 
     opendir.svg closedir.svg document.svg builtin_classflash.svg
+    pin.svg pinned.svg
     builtin_class.svg user_classflash.svg user_class.svg sign_alert.svg
     sign_ok.svg send.svg get.svg ivar.svg classvar.svg
     juggler1.svg juggler2.svg juggler3.svg juggler4.svg pce.svg
