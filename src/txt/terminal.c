@@ -12050,7 +12050,11 @@ getPrologStreamTerminalImage(Any obj,
       e = Swin_open_handle(b->ptycon.hTaskError, "w");
 
       if ( i && o && e )
-      { set_stream_properties(i,o,e);
+      { int cols, rows;
+
+	set_stream_properties(i,o,e);
+	rlc_pty_size(b, &cols, &rows);	/* the window may have its size */
+	Ssetttysize(o, cols, rows);	/* already; resizes come later */
 	b->ptycon.pl_streams[0] = i;
 	b->ptycon.pl_streams[1] = o;
 	b->ptycon.pl_streams[2] = e;

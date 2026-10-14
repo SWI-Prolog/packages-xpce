@@ -4366,6 +4366,42 @@ test(resize_keeps_a_prompt_the_program_wrote,
     assertion(wait_until(marker_on_screen(T, '[abcdefgh]'), 15)),
     assertion(wait_for_prompt(T)).
 
+test(fresh_window_not_80_columns,
+     [ condition(current_backend(epilog)),
+       setup(fresh_terminal(110, T)),
+       cleanup(term_stop(T))
+     ]) :-
+    %  A window that already has its size when the client opens its
+    %  streams is never resized, so the size must come with the streams.
+    %  On Windows it did not, and libedit assumed 80 columns: moving the
+    %  caret over a wrapped input line then went to rows it was not on.
+    %  The window may not get the width we ask for; any width other than
+    %  80 will do.  Fill all but the last few columns of two rows: where
+    %  the window wraps once, 80 columns wrap twice.
+    term_cols(T, Width),
+    cursor(T, P, R),
+    N is 2*Width - P - 4,
+    filler(N, Xs),
+    Col is Width - 4,
+    Row is R + 1,
+    type(T, Xs),
+    ignore(wait_until(cursor(T, Col, Row), 5)),
+    assert_cursor(T, Col, Row),
+    key(T, ctrl_a),
+    ignore(wait_until(cursor(T, P, R), 5)),
+    assert_cursor(T, P, R).
+
+fresh_terminal(Cols, terminal(epilog, xpce(Frame, TI))) :-
+    epilog([ object(Frame),
+             title('test_terminal'),
+             rows(25),
+             cols(Cols)
+           ]),
+    get(Frame, current_terminal, TI),
+    T = terminal(epilog, xpce(Frame, TI)),
+    wait_for_prompt(T),
+    wait_settled(T).
+
 :- end_tests(terminal_resize).
 
 
