@@ -78,6 +78,19 @@ rows(Height, Rows, CellHeight, Ascent) :-
     get(Font, ascent, Ascent),
     free(T).
 
+%!  cells(+Cols0, +Rows0, -Cols, -Rows) is det.
+%
+%   Cells of a terminal sized by <-cells_size for Cols0 by Rows0.
+
+cells(Cols0, Rows0, Cols, Rows) :-
+    new(T0, terminal_image),
+    get(T0, cells_size, Cols0, Rows0, size(W, H)),
+    free(T0),
+    new(T, terminal_image(W, H)),
+    get(T, columns, Cols),
+    get(T, rows, Rows),
+    free(T).
+
 caret_size(Size) :-
     get(class(text_cursor), class_variable, height, CV),
     get(CV, value, Size).
@@ -99,5 +112,14 @@ test(xpce_caret_fits, [forall(between(60, 200, Height))]) :-
 test(block_caret_uses_all_rows,
      [forall(between(60, 200, Height)), Rows =:= Height // CH]) :-
     with_caret_style(block, rows(Height, Rows, CH, _)).
+test(cells_size_gives_the_cells,
+     [ forall(( member(Style, [xpce, block]),
+                between(5, 30, Rows0)
+              )),
+       [Cols, Rows] == [80, Rows0]
+     ]) :-
+    %  A window sized for 25 rows must get 25 rows, not one less for
+    %  the room the caret needs below the last.
+    with_caret_style(Style, cells(80, Rows0, Cols, Rows)).
 
 :- end_tests(terminal_rows).

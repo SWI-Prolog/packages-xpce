@@ -424,6 +424,7 @@ static bool	rlc_first_input(RlcData b, int *sl, int *sc,
 static status	clearSelectionTerminalImage(TerminalImage ti);
 static void	dropInputSelectionTerminalImage(TerminalImage ti);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
+static int	rlc_caret_below_cell(RlcData b);
 static void	rlc_translate_mouse(RlcData b, int x, int y,
 				   int *line, int *chr);
 static Name	TCHAR2Name(const uchar_t *str);
@@ -2612,6 +2613,21 @@ getRowsTerminalImage(TerminalImage ti)
 }
 
 
+/* Size in pixels that holds `cols' by `rows' characters.  The inverse
+ * of rlc_pixels_to_cells(), so it includes the room for the margins
+ * and for the caret below the last row.
+ */
+
+static Size
+getCellsSizeTerminalImage(TerminalImage ti, Int cols, Int rows)
+{ RlcData b = ti->data;
+  int w = (valInt(cols)+2)*b->cw;
+  int h = valInt(rows)*b->ch + rlc_caret_below_cell(b);
+
+  answer(newObject(ClassSize, toInt(w), toInt(h), EAV));
+}
+
+
 /* Return the content of the visible row `arg` as a string.
  *
  * `arg` is a 0-based row counted from the top of the terminal window
@@ -4133,6 +4149,8 @@ static char *T_selection[] =
 { "from=[int]", "to=[int]" };
 static char *T_cellStyle[] =
 { "column=int", "row=int" };
+static char *T_cellsSize[] =
+{ "cols=int", "rows=int" };
 
 static vardecl var_terminal_image[] =
 { IV(NAME_bindings, "key_binding", IV_BOTH,
@@ -4343,6 +4361,9 @@ static getdecl get_terminal_image[] =
   GM(NAME_rows, 0, "int", NULL,
      getRowsTerminalImage,
      NAME_dimension, "Height of the terminal in characters"),
+  GM(NAME_cellsSize, 2, "size", T_cellsSize,
+     getCellsSizeTerminalImage,
+     NAME_dimension, "Size in pixels that holds cols by rows characters"),
   GM(NAME_link, 1, "name", "point|event",
      getURLTerminalImage,
      NAME_selected, "Hyperlink content and location"),
