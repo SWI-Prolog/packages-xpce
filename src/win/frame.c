@@ -1999,8 +1999,9 @@ open_file_callback(void *udata, const char * const *filelist, int filter)
       return;				/* wait for legacy dialog callback */
 #endif
     assign(fr, return_value, CtoString(err)); /* error */
-  } else if ( !filelist[0] )
-  { assign(fr, return_value, OFF); /* cancelled */
+  } else if ( !filelist[0] ||
+	      !filelist[0][0] )		/* SDL 3.2 zenity: cancel is [""] */
+  { assign(fr, return_value, OFF);	/* cancelled */
   } else if ( !ctx->allow_many )
   { Name fn = utf8_to_canonical_file(filelist[0]);
     if ( fn )
