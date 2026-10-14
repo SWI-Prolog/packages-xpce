@@ -154,7 +154,7 @@ regex(D, Re:regex) :<-
         send(Pattern, ensure_suffix, '\\b')
     ;   true
     ),
-    new(Re, regex(Pattern, MatchCase)).
+    new(Re, regex(Pattern, MatchCase, @default, @on)).
 
 use_wrapped(D, Wrapped:bool) :<-
     "Use wrapped search?"::

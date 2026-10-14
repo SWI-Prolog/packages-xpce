@@ -72,6 +72,7 @@ test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(display_function     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(display_removed      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(regex                OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(object_reference     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(popup_event          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(scrollbar            OPTIONS ${XPCE_TEST_OPTIONS})
@@ -144,6 +145,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:display_function
                      xpce:display_removed
                      xpce:number_conversion
+                     xpce:regex
                      xpce:object_reference
                      xpce:popup_event
                      xpce:scrollbar

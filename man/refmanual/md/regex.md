@@ -25,6 +25,10 @@ The match is controlled by the following variables:
 	One of basic, extended or advanced.  The default is
 	advanced.  See ->pattern for details.
 
+- <-newline_sensitive
+	If @on, `.` and a negated bracket expression such as
+	`[^a]` do not match a newline.  Default is @off.
+
 - <-pattern
 	Represents the actual pattern.  The syntax of regular
 	expressions is described with <->pattern.
@@ -639,6 +643,15 @@ will be overwritten on a new ->match or ->search.
     synonyms for [[:<:]] and [[:>:]] respec‐ tively; no other
     escapes are available.
 
+- regex<->newline_sensitive: bool
+    If @on, `.` and a negated bracket expression such as `[^a]` do not
+    match a newline, so a match does not cross the end of a line unless
+    the pattern contains a newline explicitly.  This is the expected
+    behaviour for a pattern typed by the user, as in PceEmacs search and
+    replace.  The default is @off, which allows patterns to span lines.
+    Independent of this setting, `^` and `$` match at the start and end
+    of each line.
+
 - regex<-syntax: {basic,extended,advanced}
     Regex syntax used.  See <-pattern for a description of the
     pattern and how it is affected by this variable.  See also
@@ -696,14 +709,16 @@ will be overwritten on a new ->match or ->search.
 - regex->ignore_case: bool
     Ignore case differences during ->search when @on.
 
-- regex->initialise: pattern=[char_array], case_sensitive=[bool], syntax=[{basic,extended,advanced}]
+- regex->initialise: pattern=[char_array], case_sensitive=[bool], syntax=[{basic,extended,advanced}], newline_sensitive=[bool]
     Create a regular expression from a pattern string.  The regular
     expression will be ->compile'd on the first call to ->match or
     ->search.   After creation the pattern may be changed using
     ->pattern.
 
     If the `case_sensitive` argument is @off, searching and matching
-    is caried out ignoring case.  See also ->ignore_case.
+    is caried out ignoring case.  See also ->ignore_case.  If
+    `newline_sensitive` is @on, `.` and `[^...]` do not match a
+    newline.  See also <->newline_sensitive.
 
 - regex->match: in=char_array|text_buffer|fragment, start=[int], end=[int]
     *Inherits description from*: regex<-match

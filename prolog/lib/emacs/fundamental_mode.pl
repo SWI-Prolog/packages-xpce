@@ -602,6 +602,7 @@ query_replace_regex(M,
                     To:'into=string') :->
     "Query replace regular expression"::
     send(M, internal_mark),
+    send(From, newline_sensitive, @on),
     send(M, attribute, attribute(replace_search_pattern, From)),
     send(M, attribute, attribute(replace_replace_pattern, To)),
     send(M, attribute, attribute(replace_count, number(0))),

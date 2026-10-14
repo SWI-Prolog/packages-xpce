@@ -42,6 +42,7 @@ NewClass(regex)
   CharArray		    pattern;	/* Pattern matched */
   Name			    syntax;	/* basic, extended, advanced */
   BoolObj			    ignore_case;/* @on --> case insensitive */
+  BoolObj			    newline_sensitive;/* @on: . and [^ stop at \n */
   Int			    re_flags;	/* REG_* FLAGS */
   regex_t		   *compiled;	/* compiled regex */
   regmatch_t		   *registers;	/* \0-\9 matches */
@@ -51,7 +52,7 @@ End;
 static status
 initialiseRegex(Regex re, CharArray pattern,
 		BoolObj case_sensitive,
-		Name syntax)
+		Name syntax, BoolObj newline_sensitive)
 { if ( isDefault(pattern) )
     pattern = (CharArray)NAME_;
   if ( isDefault(syntax) )
@@ -63,6 +64,7 @@ initialiseRegex(Regex re, CharArray pattern,
   else					/* @default, @on */
     assign(re, ignore_case, OFF);
   assign(re, syntax, syntax);
+  assign(re, newline_sensitive, newline_sensitive == ON ? ON : OFF);
 
   re->compiled  = NULL;
   re->registers = NULL;
@@ -159,6 +161,19 @@ ignoreCaseRegex(Regex re, BoolObj val)
 
 
 static status
+newlineSensitiveRegex(Regex re, BoolObj val)
+{ if ( re->newline_sensitive != val )
+  { assign(re, newline_sensitive, val);
+
+    unlink_registers(re);
+    unlink_compiled(re);		/* force recompilation */
+  }
+
+  succeed;
+}
+
+
+static status
 syntaxRegex(Regex re, Name syntax)
 { if ( re->syntax != syntax )
   { assign(re, syntax, syntax);
@@ -200,6 +215,8 @@ ensure_compiled_regex(Regex re, int flags)
 
   if ( re->ignore_case == ON )
     myflags |= REG_ICASE;
+  if ( re->newline_sensitive == ON )
+    myflags |= REG_NLSTOP;
   if ( (flags & RE_MATCH) )
     myflags |= REG_BOSONLY;
 
@@ -748,7 +765,8 @@ filePatternRegex(Regex re, CharArray file_pattern)
 
 static char *T_initialise[] =
 	{ "pattern=[char_array]", "case_sensitive=[bool]",
-	  "syntax=[{basic,extended,advanced}]"
+	  "syntax=[{basic,extended,advanced}]",
+	  "newline_sensitive=[bool]"
 	};
 static char *T_forAll[] =
         { "in=char_array|text_buffer|fragment",
@@ -771,6 +789,8 @@ static vardecl var_regex[] =
      NAME_pattern, "Regex syntax used"),
   SV(NAME_ignoreCase, "bool", IV_GET|IV_STORE, ignoreCaseRegex,
      NAME_pattern, "Ignore case while matching?"),
+  SV(NAME_newlineSensitive, "bool", IV_GET|IV_STORE, newlineSensitiveRegex,
+     NAME_pattern, "If @on, . and [^...] do not match a newline"),
   IV(NAME_flags, "int*", IV_NONE,
      NAME_internal, "REG_* flags"),
   IV(NAME_compiled, "alien:regex_t*", IV_NONE,
@@ -782,7 +802,7 @@ static vardecl var_regex[] =
 /* Send Methods */
 
 static senddecl send_regex[] =
-{ SM(NAME_initialise, 3, T_initialise, initialiseRegex,
+{ SM(NAME_initialise, 4, T_initialise, initialiseRegex,
      DEFAULT, "Create regex from pattern"),
   SM(NAME_unlink, 0, NULL, unlinkRegex,
      DEFAULT, "Deallocate private storage"),
