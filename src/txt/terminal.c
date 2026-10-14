@@ -7100,12 +7100,38 @@ rlc_normalise(RlcData b)
 }
 
 
-/* Columns and rows that fit in `w' by `h' pixels. */
+/* Pixels the caret reaches below its character cell.  The xpce caret
+ * is a triangle hanging from the baseline that is taller than the
+ * descent of most fonts.  One more pixel covers anti-aliasing.
+ */
+
+static int
+rlc_caret_below_cell(RlcData b)
+{ double ax, ay, aw, ah;
+
+  text_caret_area(rlc_caret_style(b), 0, 0, b->cw, b->ch, b->cb,
+		  &ax, &ay, &aw, &ah);
+  double below = ay + ah - b->ch;
+  int px = (int)below;
+
+  if ( below <= 0 )
+    return 0;
+  if ( px < below )
+    px++;
+
+  return px + 1;
+}
+
+
+/* Columns and rows that fit in `w' by `h' pixels.  The rows leave room
+ * for the caret below the last row, which is otherwise truncated if
+ * `h' is (just over) a multiple of the row height.
+ */
 
 static void
 rlc_pixels_to_cells(RlcData b, int w, int h, int *cols, int *rows)
 { *cols = max(20, w/b->cw)-2;		/* 1 character space for margins */
-  *rows = max(1, h/b->ch);
+  *rows = max(1, (h - rlc_caret_below_cell(b))/b->ch);
 }
 
 

@@ -86,6 +86,7 @@ test_libs(terminal_palette     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_width       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_rewrap      OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(terminal_rows        OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(redraw_reentrance    OPTIONS ${XPCE_TEST_OPTIONS})
 
 set(XPCE_EXTRA_TESTS xpce:colour
@@ -161,6 +162,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:terminal_glyphs
                      xpce:terminal_width
                      xpce:terminal_rewrap
+                     xpce:terminal_rows
                      xpce:redraw_reentrance)
 
 # process_encoding checks the bytes on the wire using od and iconv
