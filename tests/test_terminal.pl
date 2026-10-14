@@ -3202,10 +3202,13 @@ test(thread_output_keeps_input_line, [setup(test_begin(T))]) :-
 %
 %   Paint a row of identical glyphs wrapped in Sgr and sample the window.
 %   The trailing line is there because the last line written lags a
-%   moment; it is the same in every shot, so it cancels out.
+%   moment; it is the same in every shot, so it cancels out.  SGR 0
+%   comes first because out/2 bypasses the line editor: at the prompt
+%   its input decoration is still on, and the first shot would paint
+%   on that background.
 
 attribute_shot(T, Sgr, Pixels) :-
-    out(T, '\e[2J\e[H'),
+    out(T, '\e[0m\e[2J\e[H'),
     out(T, [Sgr, 'HHHHHHHHHHHHHHHHHHHH\e[0m\r\n', '.\r\n']),
     drive(0.3),
     term_screenshot(T, Pixels).
