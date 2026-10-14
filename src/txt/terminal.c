@@ -3113,23 +3113,39 @@ refreshTerminalImage(TerminalImage ti)
  * naming them.  Whatever we end up with must advance by the same amount
  * as the regular font: the cell grid (b->cw) comes from that font alone
  * (rlc_init_text_dimensions()), so a variant of another pitch would put
- * its glyphs beside the cells they belong to.  Such a variant becomes
- * @nil and the painter falls back to a font that does fit.
+ * its glyphs beside the cells they belong to.  Such a variant is derived
+ * from <-font instead.  This is what happens to the variants the class
+ * variables name if the user only changed the size of <-font: they name
+ * fonts of the default size.  If the derived variant does not fit
+ * either, the variant becomes @nil and the painter falls back to a font
+ * that does fit.
  *
  * `style' is the font style to derive and `weight' its weight, which
  * only the boldened slanted variant needs to name: initialiseFont()
  * infers a bold weight from the style `bold' but not from `italic'.
  */
 
+static bool
+same_pitch_font(FontObj f1, FontObj f2)
+{ CharArray cmp = (CharArray)NAME_x;
+
+  return getAdvanceFont(f1, cmp) == getAdvanceFont(f2, cmp);
+}
+
 static FontObj
 variant_font(FontObj font, FontObj var, Name style, Name weight)
-{ if ( isDefault(var) )
-    var = newObject(ClassFont, font->family, style, font->points, weight, EAV);
+{ if ( isNil(var) )
+    return var;
 
-  if ( notNil(var) && var != font )
-  { CharArray cmp = (CharArray)NAME_x;
+  FontObj derived = newObject(ClassFont, font->family, style, font->points,
+			      weight, EAV);
+  if ( isDefault(var) )
+    var = derived;
 
-    if ( getAdvanceFont(font, cmp) != getAdvanceFont(var, cmp) )
+  if ( var != font && !same_pitch_font(font, var) )
+  { if ( var != derived && same_pitch_font(font, derived) )
+    { var = derived;
+    } else
     { Cprintf("%s: pitch differs from %s; ignored\n", pp(var), pp(font));
       var = NIL;
     }

@@ -52,7 +52,7 @@ setup_headless :-
 
 test_font :-
     run_tests([font_member, font_domain, font_fixed_width, mono_font,
-               font_reload]).
+               font_reload, terminal_variant_fonts]).
 
 emoji(0x1F600).                         % 😀
 
@@ -206,3 +206,57 @@ test(old_families, Same == [true, true, true]) :-
             Same).
 
 :- end_tests(font_reload).
+
+
+%   A terminal paints bold and italic text in variants of its <-font that
+%   must have the same pitch.  The class variables name the variants by
+%   the aliases `boldtt`, `itt` and `bitt`, which have the default size.
+%   A user who changed the size of the font (and of the bold font, which
+%   existed long before the italic ones) still gets italic variants of
+%   the right size: they are derived from <-font.
+
+set_terminal_cv(Name, Value, Old) :-
+    get(class(terminal_image), class_variable, Name, CV),
+    get(CV, value, Old),
+    send(class(terminal_image), class_variable_value, Name, Value).
+
+:- begin_tests(terminal_variant_fonts,
+               [ setup(( set_terminal_cv(font, font(mono, normal, 9), OldF),
+                         set_terminal_cv(bold_font, font(mono, bold, 9), OldB),
+                         asserta(old_terminal_fonts(OldF, OldB))
+                       )),
+                 cleanup(( retract(old_terminal_fonts(OldF, OldB)),
+                           set_terminal_cv(font, OldF, _),
+                           set_terminal_cv(bold_font, OldB, _)
+                         ))
+               ]).
+
+:- dynamic old_terminal_fonts/2.
+
+variant_points(Variant, Points) :-
+    new(TI, terminal_image),
+    get(TI, Variant, Font),
+    (   Font == @nil
+    ->  Points = @nil
+    ;   get(Font, points, Points)
+    ),
+    send(TI, free).
+
+test(bold, [Points =:= 9]) :-
+    variant_points(bold_font, Points).
+test(italic, [Points =:= 9]) :-
+    variant_points(italic_font, Points).
+test(bold_italic, [Points =:= 9]) :-
+    variant_points(bold_italic_font, Points).
+test(italic_style, [Style-Weight == italic-normal]) :-
+    new(TI, terminal_image),
+    get(TI?italic_font, style, Style),
+    get(TI?italic_font, weight, Weight),
+    send(TI, free).
+test(bold_italic_style, [Style-Weight == italic-bold]) :-
+    new(TI, terminal_image),
+    get(TI?bold_italic_font, style, Style),
+    get(TI?bold_italic_font, weight, Weight),
+    send(TI, free).
+
+:- end_tests(terminal_variant_fonts).
