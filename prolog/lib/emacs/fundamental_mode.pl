@@ -38,6 +38,7 @@
 :- use_module(library(pce)).
 :- use_module(library(emacs_extend), []).
 :- use_module(window, [emacs_register_closed_tab/1]).
+:- autoload(bookmarks, [hit_list_editor/2]).
 :- use_module(library(swi_ide), []).
 :- require([ append/3
            , auto_call/1
@@ -155,12 +156,12 @@
         ]).
 
 class_variable(grep_command, string,
-               [ 'X'('grep -n %s /dev/null'),
-                 windows('grep -n %s NUL')
+               [ 'X'('grep -n --color=always %s /dev/null'),
+                 windows('grep -n --color=always %s NUL')
                ],
                "Command of M-x grep").
 class_variable(git_grep_command, string,
-               'git --no-pager grep --no-color -n %s',
+               'git --no-pager grep --color=always -n %s',
                "Command of M-x git-grep").
 class_variable(shell_command, chain*,
                [ windows(@nil),
@@ -781,6 +782,21 @@ split_command_string(String, List) :-
          message(Ch, append, ?(@arg1, register_value, @arg2, 0, name))),
     chain_list(Ch, List).
 
+%!  command_process(+Mode, +Class, +Command, -Process) is det.
+%
+%   Process is an instance of Class, a  subclass of process, that runs
+%   Command using <-shell_command.
+
+command_process(M, Class, Command, Process) :-
+    get(M, shell_command, ShellCommandChain),
+    (   ShellCommandChain \== @nil
+    ->  chain_list(ShellCommandChain, List),
+        append(List, [Command], Args)
+    ;   split_command_string(Command, Args)
+    ),
+    Term =.. [Class|Args],
+    new(Process, Term).
+
 compile(M, Command:shell_command=string, Label:[name]) :->
     "Run Unix (compilation) process in buffer"::
     send(M, save_some_buffers),
@@ -803,15 +819,7 @@ compile(M, Command:shell_command=string, Label:[name]) :->
         Status == ok
     ;   true
     ),
-    get(M, shell_command, ShellCommandChain),
-    (   ShellCommandChain \== @nil
-    ->  chain_list(ShellCommandChain, List),
-        append(List, [Command], ArgList),
-        Process =.. [process|ArgList]
-    ;   split_command_string(Command, Args),
-        Process =.. [process|Args]
-    ),
-    new(P, Process),
+    command_process(M, process, Command, P),
     send(P, directory, Dir),
     send(B, clear),
     send(B, format, 'cd %s\n%s\n', Dir?path, Command),
@@ -825,20 +833,31 @@ compile(M, Command:shell_command=string, Label:[name]) :->
              message(@arg1, caret, @default))).
 
 
+:- pce_autoload(emacs_grep_process, library('emacs/grep')).
+
 grep(M, GrepArgs:grep_arguments=string) :->
-    "Run the OS grep command in compilation buffer"::
+    "Run the OS grep command, showing the hits in a hit list"::
     get(M, grep_command, GrepCommad),
-    send(M, compile,
+    send(M, grep_hits,
          string(GrepCommad, GrepArgs),
          string('grep %s', GrepArgs)).
 
 
 git_grep(M, GrepArgs:grep_arguments=string) :->
-    "Run the git grep in compilation buffer"::
+    "Run the git grep, showing the hits in a hit list"::
     get(M, git_grep_command, GrepCommad),
-    send(M, compile,
+    send(M, grep_hits,
          string(GrepCommad, GrepArgs),
-         string('git-grep %s', GrepArgs)).
+         string('git grep %s', GrepArgs)).
+
+grep_hits(M, Command:shell_command=string, Label:name) :->
+    "Run a grep command, showing the hits in a hit list"::
+    send(M, save_some_buffers),
+    send(M, has_processes),
+    get(M, directory, Dir),
+    command_process(M, emacs_grep_process, Command, P),
+    hit_list_editor(Label, BM),
+    send(P, run, BM, Dir).
 
 shell(M) :->
     "Start interactive shell in Epilog"::

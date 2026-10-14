@@ -35,7 +35,8 @@
 */
 
 :- module(emacs_bookmarks,
-          [ find_references_editor/2             % +Title, -Editor
+          [ find_references_editor/2,            % +Title, -Editor
+            hit_list_editor/2                    % +Label, -Editor
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_theme), [theme_colours/1]).
@@ -259,6 +260,15 @@ clear(BM) :->
     send(BW, clear),
     initial_directory(CWD),
     send(BW, root, emacs_toc_bookmark_folder(CWD, directory)).
+
+%       Adding many bookmarks one by one, each sorting the folder it is
+%       added to, takes quadratic time.  ->bookmark can leave that out,
+%       after which this sorts all of them at once.
+
+sort(BM) :->
+    "Sort all folders of the tree"::
+    get(BM?tree, root, Root),
+    send(Root, sort_tree).
 
 tree(BM, Tree:toc_tree) :<-
     get(BM, window, emacs_bookmark_window, W),
@@ -532,18 +542,26 @@ load_bookmark(bookmark(Id, File0, Line, Pos, Len, Title, Stamp, Note), BM) :-
 %!  find_references_editor(+Title, -BM) is det.
 %
 %   True when BM is an emacs_bookmark_editor ready to display references
-%   with the given Title. Reuses an   existing unpinned editor (clearing
-%   it first); creates a fresh one when none exists or all are pinned.
+%   with the given Title.  See hit_list_editor/2.
 
 find_references_editor(Title, BM) :-
+    hit_list_editor(string('References to %s', Title), BM).
+
+%!  hit_list_editor(+Label, -BM) is det.
+%
+%   True when BM is an emacs_bookmark_editor  ready to display hits. Its
+%   tab is called Label. Reuses an existing unpinned editor (clearing it
+%   first); creates a fresh one when none exists or all are pinned.
+
+hit_list_editor(Label, BM) :-
     references_editor(BM),
     get(BM, pinned, @off),
     !,
     send(BM, clear),
-    send(BM, label, string('References to %s', Title)),
+    send(BM, label, Label),
     send(BM, expose).
-find_references_editor(Title, BM) :-
-    new(BM, emacs_bookmark_editor(string('References to %s', Title), @off)).
+hit_list_editor(Label, BM) :-
+    new(BM, emacs_bookmark_editor(Label, @off)).
 
 :- pce_begin_class(emacs_bookmark_window, toc_window).
 
@@ -686,6 +704,13 @@ append(F, BM:emacs_bookmark, Sort:[bool]) :->
 sort(F) :->
     "Sort the nodes"::
     send(F, sort_sons, ?(@arg1, compare, @arg2)).
+
+sort_tree(F) :->
+    "Sort me and the folders below me"::
+    send(F, sort),
+    send(F?sons, for_all,
+         if(message(@arg1, instance_of, emacs_toc_bookmark_folder),
+            message(@arg1, sort_tree))).
 
 compare(F, N:toc_node, Diff:{smaller,equal,larger}) :<-
     "Put folders before files, otherwise alphabetical"::
