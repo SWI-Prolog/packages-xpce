@@ -396,8 +396,30 @@ value_to_defaults_text(Value, Text) :-
     with_output_to(string(Text),
                    write_term(Term, [ quoted(true),
                                       spacing(next_argument),
+                                      portray_goal(defaults_atom),
                                       module(pce_class_variable_editor)
                                     ])).
+
+%   defaults_atom(+Atom, +Options) is semidet.
+%
+%   Write an atom that Prolog writes with escapes, e.g., the key '\\ef'.
+%   xpce reads text between quotes as is: a backslash only escapes the
+%   closing quote.  An atom with a single quote is written between
+%   double quotes, which xpce reads as a string.
+
+defaults_atom(Atom, _Options) :-
+    atom(Atom),
+    format(string(Quoted), '~q', [Atom]),
+    sub_string(Quoted, _, _, _, "\\"),
+    \+ ( sub_atom(Atom, _, 1, _, Char),
+         char_code(Char, Code),
+         Code < 0'\s
+       ),
+    (   \+ sub_atom(Atom, _, _, _, '\'')
+    ->  format('\'~w\'', [Atom])
+    ;   \+ sub_atom(Atom, _, _, _, '"')
+    ->  format('"~w"', [Atom])
+    ).
 
 defaults_term(Value, Value) :-
     number(Value),

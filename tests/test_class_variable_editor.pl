@@ -86,6 +86,10 @@ class_variable(s,      size,      size(10,20)).
 class_variable(d,      '[colour]', @default).
 :- pce_end_class.
 
+:- pce_begin_class(tcve_key, object).
+class_variable(k, name, a).
+:- pce_end_class.
+
 :- pce_begin_class(tcve_box, box).
 class_variable(colour, colour, red).
 class_variable(tcve_shared, bool, @on).
@@ -209,6 +213,20 @@ test(size_rounded, T == "size(14.4, 7.6)") :-
         size(14.362204724409448, 7.559055118110237), T).
 test(number_not_rounded, T == "0.05") :-
     pce_class_variable_editor:value_to_defaults_text(0.05, T).
+test(backslash, [T == "'\\C-x\\C-s'", V == '\\C-x\\C-s']) :-
+    name_round_trip('\\C-x\\C-s', T, V).
+test(backslash_quote, [T == "\"\\e'\"", V == '\\e\'']) :-
+    name_round_trip('\\e\'', T, V).
+
+%   name_round_trip(+Name, -Text, -Value)
+%
+%   Text is how Name is saved and Value what xpce reads back from it.
+
+name_round_trip(Name, Text, Value) :-
+    get(class(tcve_key), class_variable, k, CV),
+    pce_class_variable_editor:defaults_text(CV, Name, Text),
+    get(CV, convert_string, Text, Value0),
+    get(Value0, value, Value).
 
 :- end_tests(class_variable_editor_text).
 
