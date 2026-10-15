@@ -39,6 +39,7 @@
             select_key_binding/1,       % +Key
             key_binding_entries/3,      % +Table, +Target, -Sections
             command_functions/2,        % +Target, -Names
+            command_methods/2,          % +Target, -Pairs
             key_function/2              % +Target, +Name
           ]).
 :- use_module(library(pce)).
@@ -48,10 +49,11 @@
 :- use_module(library(pce_pin_button), []).
 :- use_module(library(help_message), []).
 :- pce_autoload(man_html_card, library(pce_html_manual)).
-:- use_module(library(pce_util), [chain_list/2, center_on/2]).
+:- use_module(library(pce_util),
+              [chain_list/2, center_on/2, pce_text_to_regex/2]).
 :- autoload(library(apply),
             [maplist/3, include/3, foldl/4, convlist/3, partition/4]).
-:- autoload(library(pairs), [pairs_keys/2]).
+:- autoload(library(pairs), [pairs_keys/2, pairs_values/2]).
 :- autoload(library(ordsets), [ord_memberchk/2]).
 :- autoload(library(assoc),
             [empty_assoc/1, get_assoc/3, put_assoc/4]).
@@ -163,7 +165,8 @@ target_table(Gr, Target, Table) :-
     !,
     (   graphical_tables(Gr, Target, Table)
     ->  true
-    ;   send(Gr, report, warning, 'No key bindings for %O', Gr),
+    ;   send(Gr, report, warning,
+             markup('No key bindings for <tt>%O</tt>'), Gr),
         fail
     ).
 target_table(Object, Object, Table) :-
@@ -557,8 +560,9 @@ entry_row(Table, Entry, row(_, Table, Entry, KeyLabel, FText, Summary)) :-
 %
 %   A table that binds many keys to the same function, such as all
 %   printable characters to `insert_self`, shows these as a single row.
-%   The key of its entry is keys(Keys).  Keys the user changed are not
-%   grouped, so they can be changed back.
+%   The key of its entry is keys(Keys) and its label shows the first and
+%   last key.  Keys the user changed are not grouped, so they can be
+%   changed back.
 
 min_group(5).
 
@@ -576,7 +580,7 @@ group_rows([Row|Rows], [Group|Grouped]) :-
     !,
     maplist(row_key, Same, Keys),
     last(Same, row(_, _, _, Last, _, _)),
-    format(atom(Label), '~w \u2026 ~w (~D keys)', [First, Last, N]),
+    format(atom(Label), '~w \u2026 ~w', [First, Last]),
     Group = row(Id, Table, entry(keys([Key|Keys]), Function, Status, Method),
                 Label, FText, Summary),
     group_rows(Others, Grouped).
@@ -706,7 +710,8 @@ initialise(B) :->
     send(B, append_window, new(D, dialog)),
     send(D, name, top),
     send(B, fill_dialog),
-    new(L, browser),
+    new(L, browser(@default, size(50, 20))), % key and summary
+    get(L?area, width, ListWidth),
     send(L, name, keys),
     send(L, select_message, message(B, select, @arg1?key)),
     send(L, style, header,
@@ -719,7 +724,21 @@ initialise(B) :->
     send(B, fill_bottom),
     send(B, append_window, new(Det, key_binding_detail(B)), L, right),
     send(B, append_window, new(Card, man_html_card), Det, below),
-    send(Card, name, documentation).
+    send(Card, name, documentation),
+    list_width(L, ListWidth),
+    send(Det?tile, hor_shrink, 100).
+
+%   list_width(+Browser, +Width)
+%
+%   Make the list of keys share the width with the details.  Appending
+%   the windows lays them out before there is a frame, which squeezes
+%   the list to nothing; hence we set its ideal width afterwards.
+
+list_width(L, Width) :-
+    get(L, tile, T),
+    send(T, ideal_width, Width),
+    send(T, hor_stretch, 100),
+    send(T, hor_shrink, 100).
 
 fill_dialog(B) :->
     "Fill the dialog with the pin, filter and options"::
@@ -877,36 +896,57 @@ append_row(L, header(Id, Table, Label)) :-
     ;   true
     ).
 append_row(L, row(Id, Table, entry(K, _, Status, _), Key, Function, Summary)) :-
-    format(string(Text), '  ~w\t~w\t~w', [Key, Function, Summary]),
+    row_text(Function, Summary, Shown),
+    format(string(Text), '  ~w\t~w', [Key, Shown]),
     (   user_changed(Table, K)
     ->  Style = user
     ;   Status == active
     ->  Style = @default
     ;   Style = shadowed
     ),
-    send(L, append, dict_item(Id, Text, @default, Style)).
+    send(L, append, new(DI, dict_item(Id, Text, @default, Style))),
+    (   key_count(K, N)
+    ->  format(string(Tip), '~w (~D keys)', [Function, N])
+    ;   Tip = Function
+    ),
+    send(DI, help_message, tag, Tip).
+
+%   key_count(+Key, -Count) is semidet.
+%
+%   Count is the number of keys of a grouped row.
+
+key_count(keys(Keys), Count) :-
+    length(Keys, Count).
+
+%   row_text(+Function, +Summary, -Text)
+%
+%   A row shows the key and the summary of its function, which says
+%   more and leaves room in a narrow list.  The function itself is the
+%   tooltip of the row and the title of the details.  Without a
+%   summary, the row shows the function.
+
+row_text(Function, '', Function) :-
+    !.
+row_text(_, Summary, Summary).
 
 %   tab_stops(+Browser, +Rows)
 %
-%   Set the tab stops of Browser such that the key, function and
-%   summary of Rows line up.
+%   Set the tab stop of Browser such that the summaries of Rows line
+%   up.
 
 tab_stops(L, Rows) :-
     get(L, font, Font),
     get(Font, width, '    ', Gap),
-    foldl(column_widths(Font), Rows, 0-0, KW-FW),
-    Tab1 is KW + Gap,
-    Tab2 is Tab1 + FW + Gap,
-    send(L?text_image, tab_stops, vector(Tab1, Tab2)).
+    foldl(key_width(Font), Rows, 0, KW),
+    Tab is KW + Gap,
+    send(L?text_image, tab_stops, vector(Tab)).
 
-column_widths(Font, row(_, _, _, Key, Function, _), K0-F0, K-F) :-
+key_width(Font, row(_, _, _, Key, _, _), K0, K) :-
     !,
     atom_concat('  ', Key, KeyText),
     get(Font, width, KeyText, KW),
-    get(Font, width, Function, FW),
-    K is max(K0, KW),
-    F is max(F0, FW).
-column_widths(_, _, KF, KF).
+    K is max(K0, KW).
+key_width(_, _, K, K).
 
 select(B, Id:name) :->
     "Show the details of the row or table header Id"::
@@ -1033,8 +1073,9 @@ save(B) :->
     (   user_defaults_file(File)
     ->  findall(Table, modified_table(Table), Tables),
         (   maplist(save_table, Tables)
-        ->  send(B, report, status, 'Saved to %s', File)
-        ;   send(B, report, warning, 'Could not save all keys to %s', File)
+        ->  send(B, report, status, markup('Saved to <tt>%s</tt>'), File)
+        ;   send(B, report, warning,
+                 markup('Could not save all keys to <tt>%s</tt>'), File)
         ),
         send(B, update_buttons)
     ;   send(B, report, error, 'No user Defaults file')
@@ -1069,10 +1110,13 @@ variable(browser, key_binding_browser, get, "Browser I show a key of").
 variable(row,     prolog,              get,
          "row/6 term shown, table(Table), add(Table[, Keys]) or `none`").
 variable(scope,   key_binding*,        get, "Table to change").
+variable(functions, prolog,            get,
+         "Name-Method of the functions to choose from").
 
 initialise(D, B:key_binding_browser) :->
     send_super(D, initialise),
     send(D, slot, browser, B),
+    send(D, slot, functions, []),
     send(D, name, detail),
     send(D, gap, size(10, 5)),
     send(D, show, @nil, []).
@@ -1132,8 +1176,12 @@ root_tile(T, T).
 
 detail_items(row(_, Table, entry(Key, Function, Status, Method),
                  KeyLabel, FText, Summary), Rows, D) :-
-    format(string(Title), '~w → ~w', [KeyLabel, FText]),
-    send(D, append, new(T, label(title, Title))),
+    send(D, append, new(T, label(title, ''))),
+    (   key_count(Key, N)
+    ->  format(string(Keys), '~w (~D keys)', [KeyLabel, N])
+    ;   Keys = KeyLabel
+    ),
+    send(T, format, markup('%s → <tt>%s</tt>'), Keys, FText),
     send(T, font, bold),
     (   (   Summary == ''
         ;   Method \== @nil            % the documentation shows it
@@ -1164,6 +1212,20 @@ detail_items(row(_, Table, entry(Key, Function, Status, Method),
         send(E, label, 'Edit source'),
         send(E, alignment, left),
         send(E, help_message, tag, 'Edit the method this key invokes')
+    ;   true
+    ).
+
+%   show_markup(+MarkupText, +Markup)
+%
+%   Show Markup in a markup_text.  The text is as wide as it needs,
+%   wrapped at 400 pixels.
+
+show_markup(T, Markup) :-
+    send(T, width, @nil),
+    send(T, markup, Markup),
+    get(T?area, width, W),
+    (   W > 400
+    ->  send(T, width, 400)
     ;   true
     ).
 
@@ -1246,14 +1308,14 @@ show_table(D, Table:key_binding) :->
     (   atom(Name)
     ->  get(Table, user_bindings_variable, Var),
         get(Var, name, VarName),
-        format(string(Text),
-               'Key binding table ~w.  Keys you change are saved as \c
-                key_binding.~w.', [Name, VarName])
-    ;   Text = "The keys of this object only.  Changes go to a table \c
-                it uses."
+        new(Text, markup('Key binding table <tt>%s</tt>.  Keys you \c
+                          change are saved as <tt>key_binding.%s</tt>.',
+                          Name, VarName))
+    ;   new(Text, markup('The keys of this object only.  Changes go to \c
+                          a table it uses.'))
     ),
-    send(D, append, new(I, text(Text, left))),
-    send(I, margin, 400, wrap),
+    send(D, append, new(I, markup_text(''))),
+    show_markup(I, Text),
     get(Table?defaults, map, @arg1, SuperChain),
     chain_list(SuperChain, Supers),
     (   Supers == []
@@ -1334,9 +1396,8 @@ capture(D) :->
     send(D, append, new(T, label(title, Title))),
     send(T, font, bold),
     send(D, append, new(I, key_capture_item)),
-    send(D, append, new(S, text('', left))),
+    send(D, append, new(S, markup_text(''))),
     send(S, name, status),
-    send(S, margin, 400, wrap),
     send(D, append, new(Bind, button(bind, message(D, bind_captured)))),
     send(D, append, button(clear, message(I, clear)), right),
     send(D, append, button(cancel, message(D, cancel)), right),
@@ -1351,7 +1412,7 @@ capture(D) :->
     ).
 
 capture_title(row(_, _, _, _, FText, _), Title) :-
-    format(string(Title), 'New key for ~w', [FText]).
+    new(Title, markup('New key for <tt>%s</tt>', FText)).
 capture_title(add(Table), Title) :-
     table_label(Table, Label),
     format(string(Title), 'New key in ~w', [Label]).
@@ -1363,7 +1424,7 @@ captured(D) :->
     get(D, scope, Table),
     sequence_status(Table, Keys, OK, Text),
     get(D, member, status, S),
-    send(S, string, Text),
+    show_markup(S, Text),
     get(D, member, bind, Bind),
     send(Bind, active, OK).
 
@@ -1390,8 +1451,9 @@ bind_captured(D) :->
 %   @off if it cannot be bound: a key before the last one invokes a
 %   function rather than waiting for the next.
 
-sequence_status(_, [], @off, 'Type the new key') :-
-    !.
+sequence_status(_, [], @off, Text) :-
+    !,
+    new(Text, markup('Type the new key')).
 sequence_status(Table, Keys, @off, Text) :-
     append(PrefixKeys, [_|_], Keys),            % a key before the last
     PrefixKeys \== [],
@@ -1401,26 +1463,30 @@ sequence_status(Table, Keys, @off, Text) :-
     !,
     get(Table, key_label, Prefix, Label),
     function_text(F, FText),
-    format(string(Text), '~w invokes ~w: it cannot start a longer key',
-           [Label, FText]).
+    new(Text, markup('%s invokes <tt>%s</tt>: it cannot start a \c
+                      longer key', Label, FText)).
 sequence_status(Table, Keys, @on, Text) :-
     atomic_list_concat(Keys, Key),
     get(Table, key_label, Key, Label),
     (   bound_function(Table, Key, prefix)
-    ->  format(string(Text),
-               '~w starts other keys, which no longer work if you bind it.  \c
-                Type more keys to bind a longer one.', [Label])
+    ->  new(Text, markup('%s starts other keys, which no longer work \c
+                          if you bind it.  Type more keys to bind a \c
+                          longer one.', Label))
     ;   bound_function(Table, Key, F)
     ->  function_text(F, FText),
-        format(string(Text), '~w now invokes ~w', [Label, FText])
-    ;   format(string(Text), '~w is not bound', [Label])
+        new(Text, markup('%s now invokes <tt>%s</tt>', Label, FText))
+    ;   new(Text, markup('%s is not bound', Label))
     ).
 
 bound_function(Table, Key, Function) :-
     get(Table, function, Key, Function).
 
-%   Changing the function: a text item that completes the functions the
-%   target of the table implements and a key can invoke.
+%   Changing the function: a list of the functions the target of the
+%   table implements and a key can invoke, with their summaries.  A
+%   filter on the name and summary and a menu of the classes that
+%   implement them narrow the list.  The documentation shows the
+%   selected function.  The filter also takes a function that is not
+%   in the list.
 
 choose_function(D) :->
     "Ask for the new function of the key"::
@@ -1433,37 +1499,174 @@ choose_function(D) :->
     ),
     get(D, browser, B),
     get(B, table_target, Table, Target),
-    command_functions(Target, Names),
+    command_methods(Target, Methods),
+    send(D, slot, functions, Methods),
     clear_dialog(D),
     format(string(Title), 'New function for ~w', [KeyLabel]),
     send(D, append, new(T, label(title, Title))),
     send(T, font, bold),
-    send(D, append, new(I, text_item(function, ''))),
+    send(D, append, new(G, dialog_group(filters, group))),
+    send(G, append,
+         new(I, filter_item(function, message(D, show_functions),
+                            'Filter or function'))),
     send(I, show_label, @off),
-    (   Names == []
-    ->  true
-    ;   Set =.. [chain|Names],
-        send(I, value_set, Set)
+    send(I, help_message, tag,
+         'Only show functions whose name or summary matches'),
+    method_classes(Target, Methods, Classes),
+    (   Classes = [_,_|_]
+    ->  send(G, append,
+             new(C, menu(class, cycle, message(D, show_functions))),
+             right),
+        send(C, show_label, @off),
+        send(C, append, menu_item(all, @default, 'All classes')),
+        forall(member(Class, Classes), send(C, append, Class)),
+        send(C, help_message, tag, 'Only show functions of this class')
+    ;   true
     ),
-    send(D, append, new(S, text('', left))),
+    send(D, append, new(L, list_browser(@default, 40, 8))),
+    send(L, name, functions),
+    send(L, select_message, message(D, show_function, @arg1?key)),
+    send(L, open_message, message(D, bind_function)),
+    send(D, append, new(S, markup_text(''))),
     send(S, name, status),
-    send(S, margin, 400, wrap),
     send(D, append, new(Bind, button(bind, message(D, bind_function)))),
     send(D, append, button(cancel, message(D, cancel)), right),
     send(Bind, alignment, left),
     send(Bind, default_button, @on),
+    send(D, show_functions),
     fit_dialog(D),
+    fit_functions(D),
     send(D, keyboard_focus, I),
     (   get(D, frame, Frame)
     ->  ignore(send(Frame, keyboard_focus, D))
     ;   true
     ).
 
+resize(D) :->
+    "Make the list of functions as wide as I am"::
+    send_super(D, resize),
+    fit_functions(D).
+
+%   fit_functions(+Dialog)
+%
+%   Make the list of functions use the width of Dialog, with the same
+%   margin left and right, and the filter the width the menu of classes
+%   leaves.  A dialog only stretches its items to the widest item.
+
+fit_functions(D) :-
+    get(D, member, functions, L),
+    !,
+    get(D?area, width, W),
+    get(L?area, x, X),
+    LW is max(200, W - 2*X),
+    send(L, do_set, @default, @default, LW),
+    get(D, member, filters, G),
+    get(G, member, function, I),
+    (   get(G, member, class, C)
+    ->  get(C?area, width, CW),
+        get(G?gap, width, Gap),
+        FW is max(100, LW - CW - Gap),
+        send(I, value_width, FW),
+        send(G, layout_dialog)
+    ;   send(I, value_width, LW)
+    ).
+fit_functions(_).
+
+%   method_classes(+Target, +Methods, -Classes)
+%
+%   Classes are the names of the classes that implement Methods, from
+%   the most specific.
+
+method_classes(Target, Methods, Classes) :-
+    target_classes(Target, All),
+    pairs_values(Methods, Ms),
+    maplist(method_class, Ms, Used0),
+    sort(Used0, Used),
+    convlist(used_class(Used), All, Classes).
+
+used_class(Used, Class, Name) :-
+    get(Class, name, Name),
+    ord_memberchk(Name, Used).
+
+method_class(Method, Class) :-
+    get(Method?context, name, Class).
+
+show_functions(D) :->
+    "Fill the list of functions from the filter and class"::
+    get(D, functions, Methods),
+    get(D, member, filters, G),
+    get(G, member, function, I),
+    get(I?displayed_value, value, Text),
+    (   Text \== '',
+        pce_text_to_regex(Text, Filter)
+    ->  true
+    ;   Filter = @nil
+    ),
+    (   get(G, member, class, C)
+    ->  get(C, selection, Class)
+    ;   Class = all
+    ),
+    include(function_visible(Filter, Class), Methods, Visible),
+    get(D, member, functions, L),
+    send(L, clear),
+    get(L, font, Font),
+    get(Font, width, '    ', Gap),
+    foldl(name_width(Font), Visible, 0, NW),
+    Tab is NW + Gap,
+    send(L, tab_stops, vector(Tab)),
+    maplist(append_function(L), Visible).
+
+function_visible(Filter, Class, Name-Method) :-
+    (   Class == all
+    ->  true
+    ;   method_class(Method, Class)
+    ),
+    (   Filter == @nil
+    ->  true
+    ;   method_summary(Method, Summary),
+        format(string(Text), '~w ~w', [Name, Summary]),
+        send(Filter, search, Text)
+    ).
+
+name_width(Font, Name-_, W0, W) :-
+    get(Font, width, Name, NW),
+    W is max(W0, NW).
+
+append_function(L, Name-Method) :-
+    method_summary(Method, Summary),
+    format(string(Text), '~w\t~w', [Name, Summary]),
+    send(L, append, new(DI, dict_item(Name, Text))),
+    method_class(Method, Class),
+    (   Summary == ''
+    ->  format(string(Tip), '~w ->~w', [Class, Name])
+    ;   format(string(Tip), '~w ->~w: ~w', [Class, Name, Summary])
+    ),
+    send(DI, help_message, tag, Tip).
+
+method_summary(Method, Summary) :-
+    get(Method, summary, String),
+    String \== @nil,
+    !,
+    get(String, value, Summary).
+method_summary(_, '').
+
+show_function(D, Name:name) :->
+    "Show the documentation of the selected function"::
+    get(D, functions, Methods),
+    memberchk(Name-Method, Methods),
+    get(D?browser, pane_window, documentation, Card),
+    send(Card, selection, Method).
+
 bind_function(D) :->
-    "Bind the key to the function typed"::
-    get(D, member, function, I),
-    get(I, selection, Text),
-    atom_string(Function, Text),
+    "Bind the key to the function selected or typed"::
+    (   get(D, member, functions, L),
+        get(L, selection, DI)
+    ->  get(DI, key, Function)
+    ;   get(D, member, filters, G),
+        get(G, member, function, I),
+        get(I, selection, Text),
+        atom_string(Function, Text)
+    ),
     get(D, row, Row),
     get(D, scope, Table),
     get(D, browser, B),
@@ -1472,9 +1675,8 @@ bind_function(D) :->
     ->  true
     ;   \+ key_function(Target, Function)
     ->  get(D, member, status, S),
-        format(string(Msg), '~w is not a function a key can invoke',
-               [Function]),
-        send(S, string, Msg),
+        show_markup(S, markup('<tt>%s</tt> is not a function a key \c
+                               can invoke', Function)),
         fit_dialog(D)
     ;   Row = add(_, Keys)
     ->  send(B, add_binding, Table, Keys, Function)
@@ -1590,68 +1792,123 @@ bind_prefixes(Table, Keys) :-
 %   of Target, an object or a class.  These are the send methods that
 %   pass key_function/2 and are meant to be used as a command:
 %
-%     - A built-in method that is not in a group of methods that
-%       manage the object, e.g., `oms`, `area` or `repaint`.
+%     - A built-in method in one of the command_group/1 groups that is
+%       not the setter of a get method of the same name, such as
+%       `caret`.
 %     - A method defined in Prolog that is bound to a key in some
-%       table, or for which the hook command_function/2 succeeds.  The
-%       groups of these methods are too sloppy to rely on.
+%       table, that refines a built-in method as above, or for which
+%       the hook command_function/2 succeeds.  The groups of methods
+%       defined in Prolog are too sloppy to rely on.
 
-command_functions(@nil, []) :-
-    !.
 command_functions(Target, Names) :-
+    command_methods(Target, Pairs),
+    pairs_keys(Pairs, Names).
+
+%!  command_methods(+Target, -Pairs) is det.
+%
+%   Pairs is a list Name-Method of the functions of
+%   command_functions/2, sorted by name.  Method is the method of the
+%   most specific class that implements Name.
+
+command_methods(@nil, []) :-
+    !.
+command_methods(Target, Pairs) :-
     prompts(Target, Prompts),
     bound_functions(Bound),
     target_classes(Target, Classes),
-    foldl(class_commands(Target, Prompts, Bound), Classes, [], Names0),
-    sort(Names0, Names).
+    maplist(class_commands(Target, Prompts, Bound), Classes, PerClass),
+    append(PerClass, Pairs0),
+    sort(1, @<, Pairs0, Pairs).        % keeps the first of each name
 
-class_commands(Target, Prompts, Bound, Class, Names0, Names) :-
+class_commands(Target, Prompts, Bound, Class, Pairs) :-
     get(Class, send_methods, Chain),
     chain_list(Chain, Methods),
-    convlist(command_method(Target, Prompts, Bound), Methods, ClassNames),
-    append(ClassNames, Names0, Names).
+    convlist(command_method(Target, Prompts, Bound), Methods, Pairs).
 
-command_method(Target, Prompts, Bound, Method, Name) :-
+command_method(Target, Prompts, Bound, Method, Name-Method) :-
     key_method(Prompts, Method),
     get(Method, name, Name),
-    (   get(Method, source, Source),
-        Source == @nil                  % built-in
-    ->  \+ ( get(Method, group, Group),
-             plumbing_group(Group)
-           )
+    (   get(Method, source, @nil)
+    ->  builtin_command(Method)
     ;   ord_memberchk(Name, Bound)
     ->  true
+    ;   builtin_group(Method, _)
+    ->  builtin_command(Method)
     ;   command_function(Target, Name)
     ),
     !.
 
-%   plumbing_group(?Group)
-%
-%   Groups of built-in methods that manage the object rather than act
-%   for the user.
+builtin_command(Method) :-
+    builtin_group(Method, Group),
+    command_group(Group),
+    \+ setter(Method).
 
-plumbing_group(accelerator).
-plumbing_group(appearance).
-plumbing_group(area).
-plumbing_group(compatibility).
-plumbing_group(delegate).
-plumbing_group(dialog_item).
-plumbing_group(format).
-plumbing_group(iterate).
-plumbing_group(label).
-plumbing_group(layout).
-plumbing_group(meta).
-plumbing_group(name).
-plumbing_group(oms).
-plumbing_group(organisation).
-plumbing_group(repaint).
-plumbing_group(resize).
-plumbing_group(storage).
-plumbing_group(textual).
-plumbing_group(type).
-plumbing_group(update).
-plumbing_group(virtual).
-plumbing_group(visualisation).
+%   builtin_group(+Method, -Group) is semidet.
+%
+%   Group is the group of Method if it is built-in, or else of the
+%   built-in method it refines.
+
+builtin_group(Method, Group) :-
+    get(Method, source, @nil),
+    !,
+    get(Method, group, Group).
+builtin_group(Method, Group) :-
+    get(Method, name, Name),
+    get(Method?context, super_class, Super),
+    Super \== @nil,
+    class_method(send_method, Super, Name, Refined),
+    builtin_group(Refined, Group).
+
+%   setter(+Method) is semidet.
+%
+%   True if Method sets what a get method of the same name returns.
+%   Its argument is optional, but a key cannot fill it sensibly.
+
+setter(Method) :-
+    get(Method, name, Name),
+    get(Method, context, Class),
+    class_method(get_method, Class, Name, _).
+
+%   class_method(+Kind, +Class, +Name, -Method) is semidet.
+%
+%   Method implements Name for Class or one of its super classes.
+
+class_method(Kind, Class, Name, Method) :-
+    (   get(Class, Kind, Name, Method)
+    ->  true
+    ;   get(Class, super_class, Super),
+        Super \== @nil,
+        class_method(Kind, Super, Name, Method)
+    ).
+
+%   command_group(?Group)
+%
+%   Groups of built-in methods that act for the user.  Other groups
+%   manage the object, e.g., `open`, `area` or `repaint`.
+
+command_group(abort).
+command_group(action).
+command_group(apply).
+command_group(binding).
+command_group(caret).
+command_group(case).
+command_group(complete).
+command_group(delete).
+command_group(edit).
+command_group(file).
+command_group(fill).
+command_group(focus).
+command_group(indentation).
+command_group(insert).
+command_group(mode).
+command_group(process).
+command_group(reset).
+command_group(scroll).
+command_group(search).
+command_group(selection).
+command_group(sort).
+command_group(transpose).
+command_group(undo).
 
 %   bound_functions(-Names) is det.
 %

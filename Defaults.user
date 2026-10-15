@@ -134,7 +134,7 @@
 !key_binding.dialog_style:	apple
 
 ! Keys bound by the user, on top of the style, per key_binding table.
-! The function `none` unbinds the key.  Help/Key bindings in the IDE
+! The function `none` unbinds the key.  Settings/Key bindings in the IDE
 ! maintains these settings.  Keys use a single backslash: text between
 ! quotes is read as is.  A `$` in the name of a table, as in
 ! `emacs$prolog`, is written as `_`.

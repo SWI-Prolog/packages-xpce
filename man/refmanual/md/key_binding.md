@@ -44,7 +44,7 @@ Predefined binding tables are described with ->initialise.  See also
 ## Library keybinding {#class-key_binding-library-keybinding}
 
 The library keybinding.pl defines show_key_bindings/1, which shows the
-keys of an object or table in a browser.  It is opened with **Help/Key
+keys of an object or table in a browser.  It is opened with **Settings/Key
 bindings** in the IDE and with `Control-H b` in PceEmacs.  The keys are
 grouped by the table that binds them, starting with the most specific
 one.  Selecting a key shows the documentation of the method it invokes,
@@ -52,7 +52,15 @@ and the controls to change it:
 
   - **Change function** binds the key to another function: a method of
     the object that takes no arguments, or only arguments the
-    key_binding fills in (see ->fill_arguments_and_execute).
+    key_binding fills in (see ->fill_arguments_and_execute).  Built-in
+    methods are offered if their group is one of commands, such as
+    `caret`, `delete` or `search`; a method defined in Prolog if it
+    refines such a method or is bound to a key elsewhere.  The
+    functions are listed with their summaries.  Typing filters them on
+    name and summary, the menu next to the filter limits them to the
+    methods of one class, and selecting one shows its documentation.
+    Double-click or **Bind** to bind the selected function, or type the
+    name of a function that is not listed.
   - **Change key** binds the function to another key sequence, which is
     typed into the browser.  The keys before the last become prefixes.
   - **Unbind** makes the key do nothing.

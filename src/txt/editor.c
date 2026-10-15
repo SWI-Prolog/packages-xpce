@@ -5700,21 +5700,21 @@ static senddecl send_editor[] =
      NAME_visualisation, "Set width of annotation margin"),
 
   SM(NAME_cursorUp, 2, T_linesADintD_columnADintD, cursorUpEditor,
-     NAME_event, "Handle cursor up-arrow"),
+     NAME_caret, "Handle cursor up-arrow"),
   SM(NAME_cursorDown, 2, T_linesADintD_columnADintD, cursorDownEditor,
-     NAME_event, "Handle cursor down-arrow"),
+     NAME_caret, "Handle cursor down-arrow"),
   SM(NAME_cursorLeft, 1, "[int]", cursorLeftEditor,
-     NAME_event, "Handle cursor left-arrow"),
+     NAME_caret, "Handle cursor left-arrow"),
   SM(NAME_cursorRight, 1, "[int]", cursorRightEditor,
-     NAME_event, "Handle cursor right-arrow"),
+     NAME_caret, "Handle cursor right-arrow"),
   SM(NAME_cursorEnd, 1, "[int]", cursorEndEditor,
-     NAME_event, "Handle 'end'-key"),
+     NAME_caret, "Handle 'end'-key"),
   SM(NAME_cursorHome, 1, "[int]", cursorHomeEditor,
-     NAME_event, "Handle 'home'-key"),
+     NAME_caret, "Handle 'home'-key"),
   SM(NAME_cursorPageUp, 1, "[int]", cursorPageUpEditor,
-     NAME_event, "Handle 'page-up'-key"),
+     NAME_caret, "Handle 'page-up'-key"),
   SM(NAME_cursorPageDown, 1, "[int]", cursorPageDownEditor,
-     NAME_event, "Handle 'page-down'-key")
+     NAME_caret, "Handle 'page-down'-key")
 };
 
 /* Get Methods */

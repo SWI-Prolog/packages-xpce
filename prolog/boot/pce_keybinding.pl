@@ -740,8 +740,8 @@ key_name('<cursor_up>',    'Up').
 key_name('<cursor_down>',  'Down').
 key_name('<cursor_home>',  'Home').
 key_name('<end>',          'End').
-key_name('<page_up>',      'PageUp').
-key_name('<page_down>',    'PageDown').
+key_name('<page_up>',      'PgUp').
+key_name('<page_down>',    'PgDn').
 key_name('<begin>',        'Begin').
 key_name('<insert>',       'Insert').
 key_name('<find>',         'Find').

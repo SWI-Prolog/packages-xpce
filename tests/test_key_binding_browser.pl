@@ -95,6 +95,18 @@ bar(_) :-> "Do bar"::true.
 
 :- pce_end_class(kbt_delegator).
 
+%   An editor that refines a command and a method that is not.  Their
+%   groups are inherited from the built-in methods.
+
+:- pce_begin_class(kbt_editor, editor, "Refines built-in methods").
+
+scroll_one_line_up(E, Lines:[int]) :->
+    send_super(E, scroll_one_line_up, Lines).
+flash(E, Area:[area], Time:[int]) :->
+    send_super(E, flash, Area, Time).
+
+:- pce_end_class(kbt_editor).
+
 %!  tables(-Top) is det.
 %
 %   Top inherits from mid, which inherits from base:
@@ -230,6 +242,9 @@ test(meta, Label == 'Alt-F') :-
     label('\\ef', Label).
 test(function_key, Label == 'F1') :-
     label('<f1>', Label).
+test(page_down, [condition(\+ current_prolog_flag(apple, true)),
+                Label == 'Ctrl-Shift-PgDn']) :-
+    label('\\C-\\S-<page_down>', Label).
 
 :- end_tests(key_label).
 
@@ -354,8 +369,8 @@ test(searched_once, Roles == [top, left, base, right]) :-
 
 test(overridden_hidden,
      Labels == [ 'Top', 'b top_b',
-                 'd prefix Prefix for multikey command',
-                 'Mid', 'a none Unbound',
+                 'd Prefix for multikey command',
+                 'Mid', 'a Unbound',
                  'Base', 'Other keys insert_self', 'c baz'
                ]) :-
     tables(Top),
@@ -390,13 +405,30 @@ test(filter_ignores_case, Labels == ['Base', 'c baz']) :-
     shown(B, Labels0),
     maplist(strip_number, Labels0, Labels).
 
-test(group, Labels == ['a … e (5 keys) same']) :-
+test(group, Labels == ['a … e same']) :-
     fresh_table(group, [], Table),
     forall(member(K, [a,b,c,d,e]), send(Table, function, K, same)),
     browser(Table, @nil, B),
     shown(B, [_Header|Labels]).
 
-test(no_group_below_minimum, Count == 4) :-
+% The label of a group is short; the count is in its tooltip and in
+% the title of the details.
+
+test(group_count, [Tip, Title] == ['same (5 keys)',
+                                   'a … e (5 keys) → <tt>same</tt>']) :-
+    fresh_table(group, [], Table),
+    forall(member(K, [a,b,c,d,e]), send(Table, function, K, same)),
+    browser(Table, @nil, B),
+    send(B, select_key, c),
+    get(B, pane_window, keys, L),
+    get(L, selection, DI),
+    get(DI, help_message, tag, Tip0),
+    get(Tip0, value, Tip),
+    get(B, pane_window, detail, D),
+    get(D, member, title, T),
+    get(T?selection, value, Title).
+
+test(no_group_below_minimum,Count == 4) :-
     fresh_table(group, [], Table),
     forall(member(K, [a,b,c,d]), send(Table, function, K, same)),
     browser(Table, @nil, B),
@@ -447,6 +479,56 @@ test(detail_also_on, Also == 'Also on y') :-
             message(@arg1?string, prefix, 'Also')),
         T),
     get(T?string, value, Also).
+
+% The windows are laid out while appending them, before there is a
+% frame.  That must not leave the list of keys squeezed to nothing.
+test(list_has_room, true(IW > 300)) :-
+    new(B, key_binding_browser),
+    get(B, pane_window, keys, L),
+    get(L?tile, ideal_width, IW),
+    free(B).
+
+% A row shows the summary rather than the function, which is the
+% tooltip.
+
+test(function_as_tooltip, [Label, Tip] == ['x Unbound', none]) :-
+    fresh_table(tip, [], Table),
+    send(Table, function, x, none),
+    browser(Table, @nil, B),
+    send(B, select_key, x),
+    get(B, pane_window, keys, L),
+    get(L, selection, DI),
+    get(DI?label, value, Label0),
+    normalize_space(atom(Label), Label0),
+    get(DI, help_message, tag, Tip0),
+    get(Tip0, value, Tip).
+
+test(detail_title_code,[Class, Title] == [markup, 'x → <tt>foo</tt>']) :-
+    fresh_table(title, [], Table),
+    send(Table, function, x, foo),
+    browser(Table, @nil, B),
+    send(B, select_key, x),
+    get(B, pane_window, detail, D),
+    get(D, member, title, T),
+    get(T, selection, M),
+    get(M, class_name, Class),
+    get(M, value, Title).
+
+test(no_such_function_escaped,
+     Status == '<tt>a&lt;b</tt> is not a function a key can invoke') :-
+    fresh_table(escape, [], Table),
+    send(Table, function, x, foo),
+    get(@pce, convert, editor, class, Editor),
+    browser(Table, Editor, B),
+    send(B, select_key, x),
+    get(B, pane_window, detail, D),
+    send(D, choose_function),
+    get(D, member, filters, G),
+    get(G, member, function, I),
+    send(I, selection, 'a<b'),
+    send(D, bind_function),
+    get(D, member, status, S),
+    get(S?markup, value, Status).
 
 :- end_tests(key_binding_browser).
 
@@ -862,6 +944,41 @@ test(text_item_functions, [Has-Hasnt == [yes, yes, yes]-[no, no, no, no]]) :-
     maplist(has(Names), [forward_char, select_all, kill_line], Has),
     maplist(has(Names), [initialise, draw, geometry, label_width], Hasnt).
 
+% Only built-in methods in a group of commands: a frame has none.
+
+test(frame_functions, Names == []) :-
+    get(@pce, convert, frame, class, Class),
+    command_functions(Class, Names).
+
+% The keys of a terminal are in groups of commands; its tests and the
+% methods its events call are not.
+
+test(terminal_functions, [Has-Hasnt == [yes, yes, yes]-[no, no]]) :-
+    get(@pce, convert, terminal_image, class, Class),
+    command_functions(Class, Names),
+    maplist(has(Names), [cursor_home, interrupt, insert_self], Has),
+    maplist(has(Names), [has_selection, drag_scroll], Hasnt).
+
+% A setter whose argument is optional is no command.
+
+test(no_setters, [Has-Hasnt == [yes]-[no, no]]) :-
+    get(@pce, convert, editor, class, Class),
+    command_functions(Class, Names),
+    maplist(has(Names), [set_mark], Has),
+    maplist(has(Names), [caret, mark], Hasnt).
+
+% A method defined in Prolog that refines a built-in one has its group.
+% The refinement is offered, so the list shows its class and
+% documentation.
+
+test(refined_group, [Context-Hasnt == kbt_editor-[no]]) :-
+    get(@pce, convert, kbt_editor, class, Class),
+    command_methods(Class, Pairs),
+    memberchk(scroll_one_line_up-Method, Pairs),
+    get(Method?context, name, Context),
+    pairs_keys(Pairs, Names),
+    maplist(has(Names), [flash], Hasnt).
+
 test(editor_plumbing, [Has-Hasnt == [yes, yes]-[no, no, no, no, no, no]]) :-
     get(@pce, convert, editor, class, Class),
     command_functions(Class, Names),
@@ -927,7 +1044,7 @@ test(forwarded_function_active, Status == active) :-
 
 %   The browser
 
-test(unbind_in_browser, [Label-Style == 'x none Unbound'-user]) :-
+test(unbind_in_browser, [Label-Style == 'x Unbound'-user]) :-
     fresh_table(user, [], T),
     send(T, function, x, foo),
     send(T, function, y, foo),
@@ -942,8 +1059,8 @@ test(unbind_in_browser, [Label-Style == 'x none Unbound'-user]) :-
     normalize_space(atom(Label1), Label0),
     strip_number(Label1, Label).
 
-test(changed_keys_not_grouped, Labels == ['User', 'a none Unbound',
-                                          'b … f ( keys) none Unbound']) :-
+test(changed_keys_not_grouped, Labels == ['User', 'a Unbound',
+                                          'b … f Unbound']) :-
     fresh_table(user, [], T),
     forall(member(K, [b,c,d,e,f]), send(T, function, K, none)),
     send(T, user_binding, a, none),
@@ -975,18 +1092,77 @@ test(rebind_in_browser, [Old-Prefix-New == none-prefix-foo]) :-
     function(T, '\\C-c', Prefix),
     function(T, '\\C-cz', New).
 
-test(function_completions, [Has == [yes, yes]]) :-
+%   Choosing a function: a list of the functions with their summaries,
+%   narrowed by a filter and a class.
+
+choose_function(Class, D) :-
     fresh_table(user, [], T),
     send(T, function, x, foo),
-    get(@pce, convert, text_item, class, Class),
-    browser(T, Class, B),
+    get(@pce, convert, Class, class, Target),
+    browser(T, Target, B),
     send(B, select_key, x),
     get(B, pane_window, detail, D),
-    send(D, choose_function),
-    get(D, member, function, I),
-    get(I, value_set, Set),
-    chain_list(Set, Names),
+    send(D, choose_function).
+
+functions_shown(D, Names) :-
+    get(D, member, functions, L),
+    get(L?dict?members, map, @arg1?key, Chain),
+    chain_list(Chain, Names).
+
+test(function_list, [Has == [yes, yes]]) :-
+    choose_function(text_item, D),
+    functions_shown(D, Names),
     maplist(has(Names), [forward_char, select_all], Has).
+
+test(function_summary, [Label, Tip] ==
+     ['forward_char\tMove caret characters forwards (\\C-f)',
+      'text ->forward_char: Move caret characters forwards (\\C-f)']) :-
+    choose_function(text_item, D),
+    get(D, member, functions, L),
+    get(L, member, forward_char, DI),
+    get(DI?label, value, Label),
+    get(DI, help_message, tag, Tip0),
+    get(Tip0, value, Tip).
+
+test(function_filter, Names == [forward_char]) :-
+    choose_function(text_item, D),
+    get(D, member, filters, G),
+    get(G, member, function, I),
+    send(I, selection, 'caret characters forw'),
+    send(D, show_functions),
+    functions_shown(D, Names).
+
+test(function_class, [Has-Hasnt == [yes]-[no]]) :-
+    choose_function(text_item, D),
+    get(D, member, filters, G),
+    get(G, member, class, C),
+    send(C, selection, text_item),
+    send(D, show_functions),
+    functions_shown(D, Names),
+    maplist(has(Names), [select_all], Has),
+    maplist(has(Names), [forward_char], Hasnt).
+
+% The list uses the width of the details, which a dialog does not
+% stretch its items to, also after the details are resized.
+
+test(function_list_width, Right == X) :-
+    choose_function(text_item, D),
+    send(D, do_set, @default, @default, 500),
+    send(D, resize),
+    get(D, member, functions, L),
+    get(L?area, x, X),
+    get(L?area, width, LW),
+    get(D?area, width, W),
+    Right is W - X - LW.
+
+test(bind_selected_function, F == select_all) :-
+    choose_function(text_item, D),
+    get(D, member, functions, L),
+    send(L, selection, select_all),
+    send(D, bind_function),
+    get(D, browser, B),
+    get(B, current_row, row(_, T, _, _, _, _)),
+    function(T, x, F).
 
 %   Selecting the header of a named table offers to add a key: type the
 %   key, then the function.
@@ -1005,7 +1181,8 @@ test(add_in_browser, [Prefix-New == prefix-forward_char]) :-
     get(D, member, key_capture_item, I),
     send(I, slot, keys, ['\\C-c', z]),
     send(D, bind_captured),
-    get(D, member, function, FI),
+    get(D, member, filters, G),
+    get(G, member, function, FI),
     send(FI, selection, forward_char),
     send(D, bind_function),
     function(T, '\\C-c', Prefix),

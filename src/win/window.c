@@ -2943,7 +2943,7 @@ static senddecl send_window[] =
   SM(NAME_changedUnion, 4, T_changedUnion, changedUnionWindow,
      NAME_scroll, "Bounding box of content changed"),
   SM(NAME_updateScrollBarValues, 0, NULL, updateScrollbarValuesWindow,
-     NAME_scroll, "Request scroll_bar update"),
+     NAME_update, "Request scroll_bar update"),
   SM(NAME_normalise, 2, T_normalise, normaliseWindow,
      NAME_scroll, "Ensure area|graphical|chain is visible"),
   SM(NAME_scrollHorizontal, 4, T_scrollHV, scrollHorizontalWindow,
