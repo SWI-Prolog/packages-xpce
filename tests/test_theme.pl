@@ -37,6 +37,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_theme)).
+:- use_module(library(pce_report), []).   % class reporter
 :- use_module(library(plunit)).
 :- use_module(library(ansi_term), []).
 
@@ -471,6 +472,21 @@ test(colour_trace, [ condition(\+ dark_system),
     ->  Expected = default
     ;   Expected = desktop
     ).
+
+test(report_colours, Colours == [ui_error, ui_warning, default]) :-
+    %  A reporter shows reports in the theme colour named after the kind
+    new(R, reporter),
+    findall(Name,
+            ( member(Kind, [error, warning, status]),
+              send(R, slot, delay_next_to, @nil),
+              send(R, report, Kind, 'A message'),
+              get(R, colour, C),
+              (   get(C, name, Name), Name \== @default
+              ->  true
+              ;   Name = default
+              )
+            ), Colours),
+    free(R).
 
 informational_issue(redundant(_)).
 

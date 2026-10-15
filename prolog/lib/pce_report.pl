@@ -69,8 +69,9 @@ report(R, Status:name, Fmt:[char_array], Args:any ...) :->
         send_super(R, Msg)
     ).
 
-colour(error, red) :- !.
-colour(_, @default).
+colour(error,   ui_error) :- !.
+colour(warning, ui_warning) :- !.
+colour(_,       @default).
 
 delay(R, warning, Date) :-
     get(R, warning_delay, Delay),

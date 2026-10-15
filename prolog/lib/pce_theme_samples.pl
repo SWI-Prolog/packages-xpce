@@ -39,6 +39,7 @@
             console_sample/2            % +Class, -Segments
           ]).
 :- use_module(library(pce)).
+:- use_module(library(pce_report), []).    % class reporter
 :- use_module(library(pce_theme), [syntax_colour/3, syntax_colour_name/3]).
 :- autoload(library(apply), [maplist/3, exclude/3]).
 :- autoload(library(lists),
@@ -90,6 +91,8 @@ sample(ui_danger,               danger,         'Buttons that start a destructiv
 sample(ui_danger_foreground,    danger,         'Label of the default danger button').
 sample(ui_cursor_inactive,      inactive_cursor,
        'Text cursor of a window without the keyboard focus').
+sample(ui_error,                report(error),  'An error message').
+sample(ui_warning,              report(warning), 'A warning message').
 sample(ui_dialog_background,    dialog,         'A dialog window').
 sample(ui_dialog_foreground,    dialog,         'Text of a dialog window').
 sample(ui_fold,                 terminal(fold), 'Folded output of a command in a terminal').
@@ -136,6 +139,9 @@ sample(Name, xref_predicate(Colour), Caption) :-
 sample(Name, thread_graph(Name), 'Memory and CPU of a thread') :-
     sub_atom(Name, 0, _, _, thread_graph_).
 
+report_sample(error,   'Cannot open "data.csv": no such file').
+report_sample(warning, 'File "data.csv" is not saved').
+
 port_colour(call,      debug_port_call).
 port_colour(break,     debug_port_break).
 port_colour(exit,      debug_port_exit).
@@ -164,6 +170,10 @@ build(danger, D) :-
     send(D, append, new(B2, button(delete_all, @nil)), right),
     send(B2, danger, @on),
     send(B2, slot, default_button, @on).
+build(report(Kind), R) :-
+    new(R, reporter),
+    report_sample(Kind, Message),
+    send(R, report, Kind, Message).
 build(pressed_button, B) :-
     new(B, button(pressed, @nil)),
     send(B, status, preview).
