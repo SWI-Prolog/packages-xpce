@@ -153,7 +153,25 @@ resource(breakpoint,   image, library('trace/icons/stop.svg')).
           forward_predicate            = key('\\e]'),
 
           colourise_or_recenter        = key('\\C-l'),
-          colourise_buffer             = key('<f5>')
+          colourise_buffer             = key('<f5>'),
+
+                                        % Commands for M-x
+          beginning_of_clause          = command,
+          close_warning_window         = command,
+          consult_region               = command,
+          do_export                    = command,
+          error_at_location            = command,
+          find_local_definition        = command,
+          indent_clause                = command,
+          insert_dependencies          = command,
+          pce_check_require_directives = command,
+          pce_define_class             = command,
+          pce_insert_require_directive = command,
+          prolog_navigator             = command,
+          reload_styles                = command,
+          what_class                   = command,
+          what_module                  = command,
+          xref_buffer                  = command
         ],
                                         % SYNTAX TABLE
         [ ($)  = symbol,

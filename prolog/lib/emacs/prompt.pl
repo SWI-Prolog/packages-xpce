@@ -36,6 +36,7 @@
           [ make_item/6
           ]).
 :- use_module(library(pce)).
+:- autoload(library(keybinding), [key_function/2]).
 
 :- pce_autoload(behaviour_item,        library('man/behaviour_item')).
 :- pce_autoload(prolog_predicate_item, library(prolog_predicate_item)).
@@ -249,6 +250,11 @@ selection(TI, Name:name) :<-
     send(TI, canonicalise),
     get_super(TI, selection, Name).
 
+is_complete(_TI, Name:name, _Type:type) :->
+    "Test whether Name is a command of the current mode"::
+    get(@current_emacs_mode, '_value', Mode),
+    key_function(Mode, Name).
+
 :- pce_end_class(emacs_command_item).
 
 
@@ -281,7 +287,8 @@ make_prompt_binding(G) :-
     send(G, function, page_down, Forw),
     send(G, function, '\\en', Forw),
     send(G, function, '\\C-g', Quit),
-    send(G, function, '\\e', Quit).       % ESC; Alt-p/n arrive as \ep/\en
+    send(G, function, '\\e', Quit),       % ESC; Alt-p/n arrive as \ep/\en
+    send(G, apply_user_bindings).
 
 initialise(D, Mode:emacs_mode, Impl:any, Argv:vector) :->
     (   send(Impl, has_get_method, summary),

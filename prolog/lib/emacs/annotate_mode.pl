@@ -105,7 +105,8 @@ do_save(B, File:file) :->
 
 :- initialization
     new(KB, emacs_key_binding(emacs_annotate, emacs_text)),
-    send(KB, function, '\\C-c\\C-d', define_style).
+    send(KB, function, '\\C-c\\C-d', define_style),
+    send(KB, apply_user_bindings).
 
 :- initialization
     new(_, syntax_table(annotate)).

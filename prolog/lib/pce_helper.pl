@@ -278,7 +278,8 @@ open(TB) :->
    send(KB, function, '\\C-x\\C-s', save),
    send(KB, function, '\\C-x2',    split_view),
    send(KB, function, '\\C-x1',    delete_other_views),
-   send(KB, function, '\\C-xi',   insert_file).
+   send(KB, function, '\\C-xi',   insert_file),
+   send(KB, apply_user_bindings).
 
 
 :- pce_begin_class(hlp_editor, editor, "Simple hyper-text editor").

@@ -1048,7 +1048,8 @@ make_pane_prompt_recogniser(G) :-
     send(G, function, 'RET',  if(message(@receiver, apply, @on))),
     send(G, function, '\\C-g', and(message(@receiver, keyboard_quit),
                                    message(@receiver?frame, return,
-                                           canceled))).
+                                           canceled))),
+    send(G, apply_user_bindings).
 
 prompt_in_status_dialog(F, SD:pane_status_dialog,
                            Item:dialog_item, Rval:unchecked) :<-
@@ -2414,7 +2415,8 @@ prompter(D, Prompter:dialog_item*) :->
 make_pane_status_bindings(B) :-
     new(B, key_binding(pane_status_dialog)),
     send(B, function, '\\en', m_x_next),
-    send(B, function, '\\ep', m_x_previous).
+    send(B, function, '\\ep', m_x_previous),
+    send(B, apply_user_bindings).
 
 editor_event(D, Ev:event) :->
     "Take a key typed in a pane while I am prompting"::

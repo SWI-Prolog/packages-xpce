@@ -59,6 +59,7 @@
               edited_theme/2, theme_label/2
             ]).
 :- autoload(library(pce_theme_editor), [theme_editor/0]).
+:- autoload(library(keybinding), [show_key_bindings/1]).
 
 /** <module> SWI-Prolog IDE controller
 
@@ -710,6 +711,10 @@ forget_arrangements(_IDE) :->
          'Forgotten.  New panes go where the arrangements that come\n\c
           with the system say, until you arrange some windows yourself.').
 
+key_bindings(_IDE, F:frame) :->
+    "Show the keys of what has the keyboard focus in F"::
+    show_key_bindings(F).
+
 open_url(_IDE, URL:name) :->
     "Open a URL"::
     www_open_url(URL).
@@ -822,7 +827,11 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                           message(IDE, manpce_tool, event_viewer))
               ]),
     send_list(Help, append,
-              [ menu_item('SWI-Prolog documentation',
+              [ menu_item(key_bindings,
+                          message(IDE, key_bindings, F),
+                          'Key bindings',
+                          end_group := @on),
+                menu_item('SWI-Prolog documentation',
                           message(IDE, open_url,
                                   'https://www.swi-prolog.org')),
                 menu_item('SWI-Prolog Discourse forum',

@@ -633,7 +633,57 @@ selection(MHC, Obj:object*) :->
         spec_url(Class, URL)
     ->  send(MHC, slot, url, @nil),   % force reload if same URL
         send(MHC, url, URL)           % records the URL in the history
+    ;   summary_dom(Obj, DOM)
+    ->  send(MHC, slot, url, @nil),
+        send(MHC, show, [element(dl, [class=latex], DOM)])
     ;   send(MHC, show, [element(p, [], ['No manual entry indexed.'])])
+    ).
+
+%!  summary_dom(+Obj, -DOM) is semidet.
+%
+%   Most methods of classes defined in Prolog only have a summary, the
+%   string before `::`.  Show the signature of such a method with its
+%   summary, as the manual would.
+
+summary_dom(Obj, [ element(dt, [], [element(code, [], [Signature])]),
+                   element(dd, [], [Summary])
+                 ]) :-
+    send(Obj, instance_of, method),
+    get(Obj, summary, String),
+    String \== @nil,
+    get(String, value, Summary),
+    method_signature(Obj, Signature).
+
+method_signature(Method, Signature) :-
+    get(Method?context, name, Class),
+    get(Method, name, Name),
+    (   send(Method, instance_of, get_method)
+    ->  Arrow = '<-'
+    ;   Arrow = '->'
+    ),
+    get(Method, types, Types),
+    get(Types, size, Arity),
+    findall(Arg, ( between(1, Arity, I),
+                   get(Types, element, I, Type),
+                   argument_text(Type, Arg)
+                 ), Args),
+    (   Args == []
+    ->  format(atom(Signature), '~w~w~w', [Class, Arrow, Name])
+    ;   atomic_list_concat(Args, ', ', ArgText),
+        format(atom(Signature), '~w~w~w: ~w', [Class, Arrow, Name, ArgText])
+    ).
+
+%   A type has an argument name if it is written as Name=Type.  The
+%   argument name of a type without one, such as `int`, is the name of
+%   the type.
+
+argument_text(Type, Text) :-
+    get(Type, print_name, TypeName),
+    (   get(Type, argument_name, ArgName),
+        ArgName \== @nil,
+        \+ get(Type, name, ArgName)
+    ->  format(atom(Text), '~w=~w', [ArgName, TypeName])
+    ;   Text = TypeName
     ).
 
 %!  source_doc_dom(+Obj, -Path, -DOM) is semidet.

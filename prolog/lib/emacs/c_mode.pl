@@ -114,7 +114,12 @@ c_keyword('_Alignof',       operator).
                       gdb_step          = button(gdb) + key('\\C-c\\C-s'),
                       gdb_next          = button(gdb) + key('\\C-c\\C-n'),
                       gdb_print         = button(gdb) + key('\\C-c\\C-p'),
-                      prolog_manual     = button(prolog)
+                      prolog_manual     = button(prolog),
+
+                                        % Commands for M-x
+                      add_prototype      = command,
+                      backward_statement = command,
+                      insert_NAME_       = command
                     ],
                     [ '"'  = string_quote(\),
                       '''' = string_quote(\),

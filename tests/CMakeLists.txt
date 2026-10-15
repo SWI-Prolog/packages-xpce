@@ -58,6 +58,7 @@ test_libs(pane_layouts         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(barchart             OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bookmark_store       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bookmarks            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(key_binding_browser  OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(class_template       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(class_doc            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_split          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -141,6 +142,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:barchart
                      xpce:bookmark_store
                      xpce:bookmarks
+                     xpce:key_binding_browser
                      xpce:goal_backtrace
                      xpce:class_template
                      xpce:emacs_split

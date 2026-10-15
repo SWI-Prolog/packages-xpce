@@ -133,6 +133,16 @@
 !key_binding.dialog_style:	emacs
 !key_binding.dialog_style:	apple
 
+! Keys bound by the user, on top of the style, per key_binding table.
+! The function `none` unbinds the key.  Help/Key bindings in the IDE
+! maintains these settings.  Keys use a single backslash: text between
+! quotes is read as is.  A `$` in the name of a table, as in
+! `emacs$prolog`, is written as `_`.
+
+!key_binding.epilog:	[ '\C-jq' := paste, \
+!	  '<f6>' := none \
+!	]
+
 ! Creating a selection using  the  mouse   puts  the  selection into the
 ! copy/paste ! buffer by default.  This behaviour can be disabled with the
 ! preference below.

@@ -41,6 +41,7 @@
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
 :- use_module(library(pane_frame)).
+:- use_module(library(pce_pin_button), []).
 :- require([ is_stream/1,
 	     current_blob/2,
 	     member/2,
@@ -62,8 +63,6 @@ display a Prolog term. The widget provides   buttons to control the most
 important options to control the output.
 */
 
-resource(pinned,        image, image('pinned.svg')).
-resource(not_pinned,    image, image('pin.svg')).
 
 %!  view_term(@Term) is det.
 %!  view_term(@Term, +Options) is det.
@@ -236,24 +235,19 @@ own.
 :- pce_begin_class(term_viewer, tool_pane,
                    "Pretty-print a Prolog term").
 
-variable(pinned, bool, get, "View is pinned").
 variable(tool_label, name*, get, "What my tab is called").
 
 initialise(TV) :->
     send_super(TV, initialise, term),
-    send(TV, slot, pinned, @off),
     send(TV, append_window, new(TD, dialog)),
     send(TV, append_window, new(V, view), TD, below),
     send(V, name, view),
     send(TD, border, size(5,2)),
-    send(TD, append, new(Pin, bitmap(image(resource(not_pinned))))),
-    send(Pin, name, pin),
+    send(TD, append,
+         new(Pin, pin_button('Pin to open next variable in new window'))),
     get(@pce, convert, normal, font, Font),
     get(Font, ascent, RefH),
     send(Pin, reference, point(0, RefH)),
-    send(Pin, recogniser, click_gesture(left, '', single,
-                                        message(TV, toggle_pinned))),
-    send(Pin, help_message, tag, 'Pin to open next variable in new window'),
     send(TD, append, new(M, menu(options, toggle,
                                  message(TV, update))), right),
     send(M, layout, horizontal),
@@ -298,20 +292,17 @@ editable(TV, E:bool) :->
     get(TV, view, View),
     send(View, editable, E).
 
-toggle_pinned(TV) :->
-    get(TV, pinned, Pinned0),
-    get(Pinned0, negate, NewPinned),
-    send(TV, pinned, NewPinned).
-
 pinned(TV, Pinned:bool) :->
-    send(TV, slot, pinned, Pinned),
+    "Pin or unpin me"::
     get(TV, dialog, D),
-    get(D, member, pin, BM),
-    (   Pinned == @off
-    ->  Image = not_pinned
-    ;   Image = pinned
-    ),
-    send(BM, image, image(resource(Image))).
+    get(D, member, pin, Pin),
+    send(Pin, pinned, Pinned).
+
+pinned(TV, Pinned:bool) :<-
+    "@on if I am not to be reused for the next term"::
+    get(TV, dialog, D),
+    get(D, member, pin, Pin),
+    get(Pin, pinned, Pinned).
 
                  /*******************************
                  *             PANE             *

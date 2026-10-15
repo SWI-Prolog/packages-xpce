@@ -43,14 +43,55 @@ Predefined binding tables are described with ->initialise.  See also
 
 ## Library keybinding {#class-key_binding-library-keybinding}
 
-The PCE/Prolog library file keybinding.pl defines the predicate
-show_key_bindings/1, which dumps the key_binding of objects or plain
-tables.
+The library keybinding.pl defines show_key_bindings/1, which shows the
+keys of an object or table in a browser.  It is opened with **Help/Key
+bindings** in the IDE and with `Control-H b` in PceEmacs.  The keys are
+grouped by the table that binds them, starting with the most specific
+one.  Selecting a key shows the documentation of the method it invokes,
+and the controls to change it:
+
+  - **Change function** binds the key to another function: a method of
+    the object that takes no arguments, or only arguments the
+    key_binding fills in (see ->fill_arguments_and_execute).
+  - **Change key** binds the function to another key sequence, which is
+    typed into the browser.  The keys before the last become prefixes.
+  - **Unbind** makes the key do nothing.
+  - **Revert** undoes the change.
+
+Selecting the header of a table says what the table is and where the
+keys you change are saved.  **Add key** binds a new key in it: type the
+key, then choose the function.
+
+**Change in** selects the table that is changed, by default the one that
+binds the key.  The changes apply at once.  **Save** writes them to the
+Defaults file, **Revert** goes back to what the Defaults file says, and
+**Edit defaults file** opens it in the editor.
 
 @see class list_browser
 @see class text_item
 @see class text
 @see class editor
+
+
+## Class variables {#class-key_binding-classvars}
+
+The keys the user binds in a named table are the class variable
+key_binding.<table>: a list of `Key := Function`, where the function
+`none` unbinds the key.  For example:
+
+	key_binding.epilog:	[ '\C-jq' := paste, \
+		  '<f6>' := none \
+		]
+
+Keys are written as for ->function, but with a single backslash: the
+Defaults file reads text between quotes as is.  A `$` in the name of a
+table is written as `_`, e.g., key_binding.emacs_prolog for the table
+`emacs$prolog`.  Class key_binding declares these class variables for
+the tables it defines, such as `editor` and `text_item`; for other
+tables <-user_bindings_variable creates it when the table asks for it.
+These bindings are applied by ->apply_preferences, after those of the
+style, so they win.  The key binding browser of library keybinding.pl
+maintains them.
 
 
 ## Instance variables {#class-key_binding-instvars}
@@ -121,7 +162,14 @@ tables.
     key-binding tables after the default initialisation.  The system
     implementation calls ->bind_resources, which applies
     modifications from class-variables as defined in the
-    XPCE Defaults file.
+    XPCE Defaults file.  The Prolog library refines it: it applies the
+    key binding style and ->apply_user_bindings, which reads the same
+    class variables but remembers the bindings it replaces.
+
+- key_binding->apply_user_bindings
+    Apply the bindings of key_binding.<table> for this table,
+    remembering the bindings they replace.  A named table that is
+    filled after it is created calls this when it is complete.
 
 - key_binding->bind_resources: [name]
     Apply preferences from class-variables.  If `name` is not
@@ -132,6 +180,16 @@ tables.
     	key_binding.editor = \
     		[ '\\C-s' = save \
     		]
+
+- key_binding->user_binding: name, name*
+    Make the user bind a key to a function in this named table and
+    record this in key_binding.<table>.  The function `none`
+    unbinds the key; @nil restores the binding the table had before the
+    user changed it.  This does not save the Defaults file.
+
+- key_binding->user_bindings: prolog
+    Replace the keys the user bound in this named table by a list of
+    Key-Function pairs and apply them.  See ->user_binding.
 
 - key_binding->event: event
     Refinement of the `recogniser->event` method.
@@ -312,6 +370,15 @@ tables.
 
 ## Get methods {#class-key_binding-get}
 
+- key_binding<-user_bindings: -> prolog
+    List of Key-Function pairs the user bound in this named table.
+    Fails if there are none.
+
+- key_binding<-user_bindings_variable: -> class_variable
+    The class variable key_binding.<table> that holds the keys the user
+    bound in this named table, created if class key_binding does not
+    declare it.
+
 - key_binding<-convert: name -> key_binding
     Convert the name of a named (reusable) key_binding object into the
     corresponding object. Named key_binding objects are stored in the table
@@ -340,6 +407,10 @@ tables.
     5. Fail silently if all of the above fails.
 
     @see key_binding->typed
+
+- key_binding<-user_binding: name -> name
+    The function the user bound to a key in this table.  Fails if the
+    user did not change the key.
 
 - key_binding<-lookup: name, key_binding ... -> key_binding
     Lookup existing table in @key_bindings.

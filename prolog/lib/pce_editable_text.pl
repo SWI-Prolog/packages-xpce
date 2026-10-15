@@ -44,6 +44,14 @@ variable(message,       'name|code*',   both,   "Action on enter").
 :- pce_global(@editable_text_gesture, make_edit_text_recogniser).
 :- pce_global(@editable_text_key_binding, make_key_binding).
 
+:- multifile key_binding:widget_key_binding/3.
+
+%   ->typed passes the keys to @editable_text_key_binding.  Used by
+%   the key binding browser.
+
+key_binding:widget_key_binding(T, T, @editable_text_key_binding) :-
+    send(T, instance_of, editable_text).
+
 make_edit_text_recogniser(R) :-
     new(R, edit_text_gesture).
 
@@ -53,7 +61,8 @@ make_key_binding(KB) :-
     send(KB, function, '\\C-a', select_all),
     send(KB, function, 'TAB', advance),
     send(KB, function, '\\e',  enter),
-    send(KB, function, 'RET', enter).
+    send(KB, function, 'RET', enter),
+    send(KB, apply_user_bindings).
 
 
 editable(T, Val:bool) :->

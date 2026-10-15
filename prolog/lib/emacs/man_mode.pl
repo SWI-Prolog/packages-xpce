@@ -38,23 +38,16 @@
 :- require([ member/2
            ]).
 
-:- pce_begin_class(emacs_man_mode, emacs_fundamental_mode).
-
-:- initialization
-    new(KB, emacs_key_binding(man, fundamental)),
-    send(KB, function, '\\C-c\\C-f',        goto_man_page).
-
-:- initialization
-    new(X, syntax_table(man)),
-    send(X, syntax, '"',  string_quote, '\\'),
-    send(X, syntax, '''', string_quote, '\\'),
-
-    send(X, syntax,     '#',  comment_start),
-    send(X, add_syntax, '\n', comment_end).
-
-:- initialization
-    new(MM, emacs_mode_menu(man, fundamental)),
-    send(MM, append, man, goto_man_page).
+:- emacs_begin_mode(man, fundamental,
+                    "Mode for reading Unix manual pages",
+        [ goto_man_page            = key('\\C-c\\C-f') + button(man),
+          man                      = command
+        ],
+        [ '"'  = string_quote('\\'),
+          '''' = string_quote('\\'),
+          '#'  = comment_start,
+          '\n' + comment_end
+        ]).
 
                  /*******************************
                  *             SETUP            *
@@ -189,5 +182,5 @@ goto_man_page(M) :->
     ).
 
 
-:- pce_end_class.
+:- emacs_end_mode.
 

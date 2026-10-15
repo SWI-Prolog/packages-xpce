@@ -39,6 +39,8 @@
 :- use_module(library(emacs_extend), []).
 :- use_module(window, [emacs_register_closed_tab/1]).
 :- autoload(bookmarks, [hit_list_editor/2]).
+:- autoload(library(keybinding),
+            [select_key_binding/1, command_functions/2, key_function/2]).
 :- use_module(library(swi_ide), []).
 :- require([ append/3
            , auto_call/1
@@ -150,7 +152,38 @@
                                         + key('\\C-hb')
                                         + button(help),
           describe_key             = key('\\C-hk') + button(help),
-          describe_function        = key('\\C-hf') + button(help)
+          describe_function        = key('\\C-hf') + button(help),
+
+                                        % Commands for M-x
+          annotate                 = command,
+          chrome_server            = command,
+          comment_column           = command,
+          count_chars_region       = command,
+          delete_matching_lines    = command,
+          editor_preferences       = command,
+          editpce                  = command,
+          encoding                 = command,
+          find_file                = command,
+          gdb                      = command,
+          insert_character_by_code = command,
+          insert_date              = command,
+          key_binding_style        = command,
+          manpce                   = command,
+          manual_entry             = command,
+          newline_mode             = command,
+          normalize_buffer         = command,
+          normalize_region         = command,
+          prolog_preferences       = command,
+          query_replace_regex      = command,
+          save_some_buffers        = command,
+          select_all               = command,
+          sort_lines_in_region     = command,
+          split_view               = command,
+          spypce                   = command,
+          tab_width                = command,
+          tracepce                 = command,
+          what_line                = command,
+          xpce_manual              = command
         ],
         [
         ]).
@@ -750,9 +783,10 @@ chrome_server(_) :->
                  *******************************/
 
 command_names(M, Names:chain) :<-
-    "Find all send_methods on this mode"::
-    get(M, find_all_send_methods, Chain),
-    get(Chain, map, @arg1?name, Names).
+    "Commands of this mode, as offered for binding a key"::
+    command_functions(M, List),
+    Term =.. [chain|List],
+    new(Names, Term).
 
 
 :- initialization
@@ -764,11 +798,17 @@ command_names(M, Names:chain) :<-
             @nil))
    ).
 
+%   M-x completes the commands of the mode, but accepts any method a key
+%   can invoke.  See command_functions/2 and key_function/2.
+
 execute_extended_command(M,
-                         CmdName:command=emacs_mode_command,
+                         CmdName:command='emacs_mode_command|name',
                          Times:[int]) :->
     "Prompt for interactive command"::
-    send(M, noarg_call, CmdName, Times).
+    (   key_function(M, CmdName)
+    ->  send(M, noarg_call, CmdName, Times)
+    ;   send(M, report, error, 'No command %s', CmdName)
+    ).
 
 
                  /*******************************
@@ -1242,16 +1282,22 @@ describe_key(M) :->
     ;   get(Ev, key, KeyName)
     ),
     get(M, bindings, Bindings),
-    get(Bindings, function, KeyName, MethodName),
+    get(Bindings, key_label, KeyName, Label),
+    (   get(Bindings, function, KeyName, MethodName)
+    ->  true
+    ;   MethodName = @nil
+    ),
     (   prefix_method(MethodName)
     ->  send(M, attribute, key_prefix, KeyName),
-        send(M, report, status, 'Describe key: %s', KeyName)
+        send(M, report, status, 'Describe key: %s', Label)
     ;   send(M, focus_function, @nil),
-        (   get(M, send_method, MethodName, tuple(_, Impl))
+        (   atom(MethodName),
+            get(M, send_method, MethodName, tuple(_, Impl))
         ->  get(Impl, summary, Summary),
             send(M, report, inform, 'Key %s executes %s: "%s"',
-                 KeyName, MethodName, Summary)
-        ;   send(M, report, inform, 'Key %s is not bound', KeyName)
+                 Label, MethodName, Summary),
+            ignore(select_key_binding(KeyName))
+        ;   send(M, report, inform, 'Key %s is not bound', Label)
         )
     ).
 

@@ -36,6 +36,7 @@
           [ class_variable_editor/0,
             class_variable_editor/1,    % +Object
             save_class_variable/3,      % +Class, +Name, +Value
+            user_defaults_file/1,       % -File
             class_variable_help/3,      % +Class, +Name, +TransientFor
             class_variable_doc/3        % +Class, +Name, -Markdown
           ]).
@@ -393,12 +394,44 @@ selection(I, Value:any) :->
 
 value_to_defaults_text(Value, Text) :-
     defaults_term(Value, Term),
-    with_output_to(string(Text),
-                   write_term(Term, [ quoted(true),
-                                      spacing(next_argument),
-                                      portray_goal(defaults_atom),
-                                      module(pce_class_variable_editor)
-                                    ])).
+    with_output_to(string(Text), write_defaults_term(Term)).
+
+%   write_defaults_term(+Term)
+%
+%   Write Term as the value of a Defaults entry.  A list of Name := Value
+%   is written one element per line, e.g.,
+%
+%       key_binding.epilog:	[ '\C-x1' := only_window, \
+%       	  '<f6>' := none \
+%       	]
+
+write_defaults_term(List) :-
+    List = [_|_],
+    forall(member(E, List), E = (_ := _)),
+    !,
+    write('[ '),
+    write_bindings(List),
+    write('\\\n\t]').
+write_defaults_term(Term) :-
+    write_defaults_term_(Term).
+
+write_bindings([H|T]) :-
+    H = (Name := Value),
+    write_defaults_term_(Name),
+    write(' := '),
+    write_defaults_term_(Value),
+    (   T == []
+    ->  write(' ')
+    ;   write(', \\\n\t  '),
+        write_bindings(T)
+    ).
+
+write_defaults_term_(Term) :-
+    write_term(Term, [ quoted(true),
+                       spacing(next_argument),
+                       portray_goal(defaults_atom),
+                       module(pce_class_variable_editor)
+                     ]).
 
 %   defaults_atom(+Atom, +Options) is semidet.
 %
@@ -516,7 +549,19 @@ defaults_text(CV, @Ref, Text) :-
     reads_back(CV, Text).
 
 reads_back(CV, Text) :-
-    pce_catch_error(_, get(CV, convert_string, Text, _)).
+    split_string(Text, "\n", "", Lines),
+    maplist(continued_line, Lines, Parts),
+    atomic_list_concat(Parts, OneLine),
+    pce_catch_error(_, get(CV, convert_string, OneLine, _)).
+
+%   The Defaults file joins a line that ends in a backslash to the next
+%   one, replacing the backslash by a space.
+
+continued_line(Line, Part) :-
+    (   string_concat(Part0, "\\", Line)
+    ->  string_concat(Part0, " ", Part)
+    ;   Part = Line
+    ).
 
 
                  /*******************************

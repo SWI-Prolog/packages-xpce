@@ -289,11 +289,13 @@ set_keybinding_style(Domain, Style) :-
 restyle(Domain, Style, KB) :-
     get(KB, name, Table),
     (   table_domain(Table, Domain)
-    ->  send(KB, unmodify),
+    ->  send(KB, unapply_user_bindings),
+        send(KB, unmodify),
         (   binding(Style, Table, Modifications)
         ->  modify(Modifications, KB)
         ;   true
-        )
+        ),
+        send(KB, apply_user_bindings)
     ;   true
     ).
 
@@ -372,7 +374,7 @@ set_style(Domain, Style) :-
 apply_preferences(KB) :->
     "Apply CUA-mode preferences"::
     send(KB, apply_cua),
-    send(KB, bind_resources).       % bind from ~/.xpce/Defaults
+    send(KB, apply_user_bindings).  % bind from ~/.xpce/Defaults
 
 apply_cua(KB) :->
     "Apply our local overrides"::
@@ -425,6 +427,147 @@ unbind(KB, Key:name, Command:[name|code]*) :->
                              [Table, KB, Key, Command]))
     ).
 
+
+                 /*******************************
+                 *         USER BINDINGS        *
+                 *******************************/
+
+%   The keys the user binds in a named table are kept in the class
+%   variable key_binding.<table>, a chain of `Key := Function`, where
+%   Function `none` unbinds Key.  Class key_binding declares these for
+%   the tables it defines itself, e.g., key_binding.editor.  For other
+%   tables the class variable is created when the table asks for it,
+%   so a table that is created later, e.g., when a PceEmacs mode is
+%   loaded, finds the keys in the Defaults file.  A `$` in the name of
+%   the table, as in `emacs$prolog`, is written as `_`, as the Defaults
+%   file does not accept it.  The keys are applied on
+%   top of the bindings of the table and its style.  The binding they
+%   replace is kept in the attribute `user_modified`, a sheet that maps
+%   the key to the replaced function or @nil, to revert them.
+
+:- dynamic
+    table_class_variable/1.             % Name
+
+apply_user_bindings(KB) :->
+    "Apply the keys the user bound in me"::
+    (   get(KB, user_bindings, Pairs)
+    ->  forall(member(Key-Function, Pairs),
+               send(KB, apply_user_binding, Key, Function))
+    ;   true
+    ).
+
+user_bindings_variable(KB, Var:class_variable) :<-
+    "Class variable that holds the keys the user bound in me"::
+    get(KB, name, Table),
+    atom(Table),
+    atomic_list_concat(Parts, '$', Table),
+    atomic_list_concat(Parts, '_', Name),
+    get(@pce, convert, key_binding, class, Class),
+    (   get(Class, class_variable, Name, Var)
+    ->  get(Var, type, Type),           % not, e.g., key_binding.style
+        get(Type, name, chain)
+    ;   new(Var, class_variable(Class, Name, [], chain,
+                                'Keys bound by the user')),
+        assertz(table_class_variable(Name))
+    ).
+
+user_bindings(KB, Pairs:prolog) :<-
+    "List of Key-Function the user bound in me"::
+    get(KB, user_bindings_variable, Var),
+    get(Var, value, Chain),
+    chain_list(Chain, Bindings),
+    Bindings \== [],
+    maplist(binding_pair, Bindings, Pairs).
+
+binding_pair(Binding, Key-Function) :-
+    get(Binding, name, Key0),
+    get(Binding, value, Function0),
+    to_name(Key0, Key),
+    to_name(Function0, Function).
+
+to_name(Atom, Atom) :-
+    atom(Atom),
+    !.
+to_name(Text, Atom) :-
+    get(Text, value, Atom).
+
+user_bindings(KB, Pairs:prolog) :->
+    "Make the user bind the Key-Function pairs, replacing the old ones"::
+    get(KB, user_bindings_variable, Var),
+    new(Chain, chain),
+    forall(member(Key-Function, Pairs),
+           ( new(Binding, ':='(Key, Function)), % not a named argument
+             send(Chain, append, Binding)
+           )),
+    send(Var, value, Chain),
+    send(KB, unapply_user_bindings),
+    send(KB, apply_user_bindings).
+
+apply_user_binding(KB, Key:name, Function:name) :->
+    "Bind Key to Function, remembering the old binding"::
+    (   get(KB, attribute, user_modified, Undo)
+    ->  true
+    ;   send(KB, attribute, user_modified, new(Undo, sheet))
+    ),
+    (   get(Undo, value, Key, _)
+    ->  true
+    ;   get(KB?bindings, value, Key, Old)
+    ->  send(Undo, value, Key, Old)
+    ;   send(Undo, value, Key, @nil)
+    ),
+    send(KB, function, Key, Function).
+
+unapply_user_bindings(KB) :->
+    "Restore the bindings the user changed"::
+    (   get(KB, attribute, user_modified, Undo)
+    ->  send(KB, delete_attribute, user_modified),
+        send(Undo, for_all,
+             message(KB, restore_binding, @arg1?name, @arg1?value))
+    ;   true
+    ).
+
+restore_binding(KB, Key:name, Function:'name|code*') :->
+    "Bind Key to Function; @nil deletes the binding"::
+    (   Function == @nil
+    ->  send(KB?bindings, delete, Key)
+    ;   send(KB, function, Key, Function)
+    ).
+
+user_binding(KB, Key:name, Function:name) :<-
+    "The function the user bound to Key in me; fails if none"::
+    get(KB, user_bindings, Pairs),
+    memberchk(Key-Function, Pairs).
+
+user_binding(KB, Key:name, Function:name*) :->
+    "Make the user bind Key to Function in me; @nil reverts Key"::
+    (   get(KB, user_bindings, Pairs0)
+    ->  true
+    ;   Pairs0 = []
+    ),
+    (   Function == @nil
+    ->  delete_key(Pairs0, Key, Pairs)
+    ;   memberchk(Key-_, Pairs0)
+    ->  replace_key(Pairs0, Key, Function, Pairs)
+    ;   append(Pairs0, [Key-Function], Pairs)
+    ),
+    send(KB, user_bindings, Pairs).
+
+delete_key([], _, []).
+delete_key([K-_|T0], Key, T) :-
+    K == Key,
+    !,
+    delete_key(T0, Key, T).
+delete_key([H|T0], Key, [H|T]) :-
+    delete_key(T0, Key, T).
+
+replace_key([], _, _, []).
+replace_key([K-_|T0], Key, F, [K-F|T]) :-
+    K == Key,
+    !,
+    replace_key(T0, Key, F, T).
+replace_key([H|T0], Key, F, [H|T]) :-
+    replace_key(T0, Key, F, T).
+
 accelerator_label(KB, Cmd:'name|code', Accell:name) :<-
     "Get a string to use as accelerator label in a menu"::
     findall(KeySet,
@@ -436,6 +579,86 @@ accelerator_label(KB, Cmd:'name|code', Accell:name) :<-
     preferred_key(Keys, Key),
     human_accelerator(Key, Accell),
     !.
+
+%       In a menu, a thin space starts each modifier.  A list of keys
+%       reads better with the modifiers of a key joined (`Ctrl-Shift-A`,
+%       not `Ctrl- Shift-A`) and a space between the keys of a sequence,
+%       also after a prefix that is a plain key (`Ctrl-X 4 f`).
+
+key_label(_KB, Key:name, Label:name) :<-
+    "Human readable label for Key, e.g. Ctrl-X Ctrl-S"::
+    key_sequence(Key, Keys),
+    maplist(single_key_label, Keys, Labels),
+    atomic_list_concat(Labels, ' ', Label).
+
+single_key_label('\\e', Label) :-
+    !,
+    single_key_label('ESC', Label).
+single_key_label(Key, Label) :-
+    human_accelerator(Key, Accel),
+    atomic_list_concat(Parts, ' ', Accel),
+    atomic_list_concat(Parts, Label).
+
+%!  key_sequence(+Key, -Keys) is det.
+%
+%   Split a key sequence as written by characterName() into the keys
+%   that are typed one after the other.  A key is a sequence of
+%   modifiers (`\e`, `\C-`, `\S-`, `\s-`) followed by a named key
+%   (`<cursor_up>`, `RET`) or a character.  A lone `\e` is Escape.
+
+key_sequence(Key, Keys) :-
+    atom_codes(Key, Codes),
+    phrase(keys(Keys), Codes).
+
+keys([Key|Keys]) -->
+    key(Codes),
+    !,
+    { atom_codes(Key, Codes) },
+    keys(Keys).
+keys([]) -->
+    [].
+
+key(Codes) -->
+    key_modifier(M),
+    key(K),
+    !,
+    { append(M, K, Codes) }.
+key([0'<|Codes]) -->
+    "<",
+    string_without(`>`, Name),
+    ">",
+    !,
+    { append(Name, `>`, Codes) }.
+key(Codes) -->
+    { named_key(Codes) },
+    Codes,
+    !.
+key(`\\e`) -->
+    `\\e`,
+    !.
+key([C]) -->
+    [C].
+
+key_modifier(`\\e`)  --> `\\e`.
+key_modifier(`\\C-`) --> `\\C-`.
+key_modifier(`\\S-`) --> `\\S-`.
+key_modifier(`\\s-`) --> `\\s-`.
+
+named_key(`RET`).
+named_key(`TAB`).
+named_key(`SPC`).
+named_key(`LFD`).
+named_key(`DEL`).
+named_key(`BS`).
+named_key(`ESC`).
+
+string_without(End, [C|T]) -->
+    [C],
+    { \+ memberchk(C, End) },
+    !,
+    string_without(End, T).
+string_without(_, []) -->
+    [].
 
 alt_function(Func, Func).
 alt_function(Func, Alt) :-
@@ -584,6 +807,8 @@ capitalise_key(S0, S) :-
 capitalise_key(S, S).
 
 :- pce_end_class(key_binding).
+
+
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

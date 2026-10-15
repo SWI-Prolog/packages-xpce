@@ -108,6 +108,11 @@ declare_file_patterns([Ext|Rest], Mode, Sheet) :-
 %               Selector = [key(Key)]
 %                          [+ button(Button)]
 %                          [+ button(Button, Function)]         (pullright)
+%                          [+ command]
+%
+%       `command` declares Selector a command that is not bound to a
+%       key or menu.  Commands are offered by M-x and for binding a key
+%       in the key binding browser.
 %
 %       Syntax:
 %
@@ -156,31 +161,53 @@ emacs_mode_bindings(Mode, Module, Bindings, Syntax) :-
     ->  true
     ;   new(ST, syntax_table(Mode, SuperMode))
     ),
-    make_bindings(Bindings, Module, KB, MM),
+    retractall(emacs_command(PceClass, Module, _)),
+    make_bindings(Bindings, Mode, Module, KB, MM),
     send(KB, apply_preferences),
     make_syntax(Syntax, ST).
 
-make_bindings([], _, _, _).
-make_bindings([Selector = Term|Rest], Module, KB, MM) :-
-    bind(Term, Selector, Module, KB, MM),
-    make_bindings(Rest, Module, KB, MM).
+%!  emacs_command(?ModeClass, ?Module, ?Name)
+%
+%   Name is declared a command of ModeClass by Module using `command`.
+
+:- dynamic
+    emacs_command/3.
+
+:- multifile key_binding:command_function/2.
+
+key_binding:command_function(Target, Name) :-
+    emacs_command(PceClass, _, Name),
+    (   send(Target, instance_of, PceClass)
+    ->  true
+    ;   send(Target, instance_of, class),
+        send(Target, is_a, PceClass)
+    ),
+    !.
+
+make_bindings([], _, _, _, _).
+make_bindings([Selector = Term|Rest], Mode, Module, KB, MM) :-
+    bind(Term, Selector, Mode, Module, KB, MM),
+    make_bindings(Rest, Mode, Module, KB, MM).
 
 make_syntax([], _).
 make_syntax([S|Rest], ST) :-
     syntax(S, ST),
     make_syntax(Rest, ST).
 
-bind(key(Key), Selector, _, KB, _) :-
+bind(key(Key), Selector, _, _, KB, _) :-
     send(KB, function, Key, Selector).
-bind(-button(Button), Selector, _, _, MM) :-
+bind(-button(Button), Selector, _, _, _, MM) :-
     send(MM, delete, Button, Selector).
-bind(button(Button), Selector, _, _, MM) :-
+bind(button(Button), Selector, _, _, _, MM) :-
     send(MM, append, Button, Selector).
-bind(button(Button, Func), Selector, Module, _, MM) :-
+bind(button(Button, Func), Selector, _, Module, _, MM) :-
     send(MM, Module:append(Button, emacs_argument_item(Selector, Func))).
-bind(A+B, Selector, Module, KB, MM) :-
-    bind(A, Selector, Module, KB, MM),
-    bind(B, Selector, Module, KB, MM).
+bind(command, Selector, Mode, Module, _, _) :-
+    emacs_mode_class(Mode, PceClass),
+    assertz(emacs_command(PceClass, Module, Selector)).
+bind(A+B, Selector, Mode, Module, KB, MM) :-
+    bind(A, Selector, Mode, Module, KB, MM),
+    bind(B, Selector, Mode, Module, KB, MM).
 
 syntax(Char = Term, ST) :-
     Term =.. TermArgs,

@@ -124,6 +124,32 @@ accelerator(Cmd,  Mode, Accell) :-
     get(Mode, bindings, KeyBindings),
     get(KeyBindings, accelerator_label, Cmd, Accell).
 
+:- multifile key_binding:widget_key_binding/3.
+
+%   The editor passes the keys typed in it to its mode; see
+%   emacs_mode->typed.  Used by the key binding browser.
+
+key_binding:widget_key_binding(E, Mode, Table) :-
+    send(E, instance_of, emacs_editor),
+    get(E, mode, Mode),
+    get(Mode, bindings, Table).
+
+:- multifile key_binding:command_function/2.
+
+%   The commands of the menus of a mode are offered for binding a key
+%   and by M-x.
+
+key_binding:command_function(Mode, Name) :-
+    send(Mode, instance_of, emacs_mode),
+    get(Mode, mode_menu, MM),
+    get(MM?members, find,
+        message(@prolog, menu_has_action, @arg1?value, Name), _).
+
+:- public menu_has_action/2.
+
+menu_has_action(Chain, Name) :-
+    locate_action(Chain, Name, _).
+
 :- multifile pce_keybinding:alt_binding_function/2.
 
 pce_keybinding:alt_binding_function(copy, prefix_or_copy). % Ctrl-V can be bound to prefix_or_copy.

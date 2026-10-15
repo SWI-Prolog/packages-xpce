@@ -51,6 +51,7 @@
 :- use_module(library(debug)).
 :- use_module(library(pce_util)).
 :- use_module(library(pce_filter_item), []).
+:- use_module(library(pce_pin_button), []).
 :- use_module(library(emacs/bookmark_store),
               [ bookmark_store_load/1, bookmark_store_save/1,
                 bookmark_store_forget/1, bookmark_store_tidy/0,
@@ -89,8 +90,6 @@ Some issues to consider:
 resource(save,   image, image('tool/save.svg')).
 resource(cut,    image, image('tool/cut.svg')).
 resource(open,   image, image('tool/edit.svg')).
-resource(pin,    image, image('pin.svg')).
-resource(pinned, image, image('pinned.svg')).
 
 /* Bookmarks and hits as a pane.
 
@@ -115,7 +114,6 @@ class_variable(pane_side, {above,below,left,right}, below,
 
 variable(persists,     bool,         get, "Bookmarks are persistent").
 variable(exit_message, code*,        get, "Registered exit message").
-variable(pinned,       bool := @off, get, "Pin: do not reuse for the next query").
 variable(label,        name* := @nil, get, "What my tab is called").
 variable(marks,        chain,        get, "All bookmarks, also those filtered out").
 variable(filter,       regex* := @nil, get, "Only show bookmarks that match").
@@ -228,18 +226,6 @@ fill_dialog(BM) :->
     center_on(FI, TB),
     send(D, resize_message, message(BM, layout_dialog, @arg2)).
 
-%!  center_on(+Item, +ToolBar) is det.
-%
-%   Items in a row of a dialog line up on their reference point, which
-%   is at the bottom of a tool bar and at the baseline of the text of
-%   the others.  Center Item vertically on ToolBar instead.
-
-center_on(Item, TB) :-
-    get(TB, height, TBH),
-    get(Item, height, H),
-    Ref is (H+TBH)//2,
-    send(Item, reference, point(0, Ref)).
-
 %       The filter takes all the room to the right, but ends where the
 %       scroll bar of the tree starts, rather than above it.
 
@@ -262,12 +248,9 @@ layout_dialog(BM, Size:size) :->
 add_pin(BM) :->
     (   get(BM, persists, @off)
     ->  get(BM, window, dialog, D),
-        send(D, append, new(Pin, bitmap(image(resource(pin)))), right),
-        send(Pin, name, pin),
-        send(Pin, recogniser,
-             click_gesture(left, '', single, message(BM, toggle_pinned))),
-        send(Pin, help_message, tag,
-             'Pin: keep this view and open next result in a new window')
+        send(D, append,
+             pin_button('Pin: keep this view and open next result \c
+                         in a new window'), right)
     ;   true
     ).
 
@@ -282,20 +265,12 @@ unlink(BM) :->
     ),                                  % window half taken apart
     send_super(BM, unlink).
 
-toggle_pinned(BM) :->
-    "Toggle the pinned state"::
-    get(BM, pinned, P0),
-    get(P0, negate, P1),
-    send(BM, pinned, P1).
-
-pinned(BM, Pinned:bool) :->
-    "Set pinned state and update pin button icon"::
-    send(BM, slot, pinned, Pinned),
-    get(BM, window, dialog, D),
-    get(D, member, pin, Btn),
-    (   Pinned == @off
-    ->  send(Btn, image, image(resource(pin)))
-    ;   send(Btn, image, image(resource(pinned)))
+pinned(BM, Pinned:bool) :<-
+    "@on if the pin says not to reuse me for the next query"::
+    (   get(BM, window, dialog, D),
+        get(D, member, pin, Pin)
+    ->  get(Pin, pinned, Pinned)
+    ;   Pinned = @off                   % the bookmarks: no pin
     ).
 
 clear(BM) :->

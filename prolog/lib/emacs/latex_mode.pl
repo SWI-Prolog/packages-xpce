@@ -44,7 +44,12 @@
                       open_document     = key('\\C-c\\C-o') + button('LaTeX'),
                       close_environment = key('\\C-c\\C-f') + button('LaTeX'),
                       make_command      = key('\\C-\\') + button('LaTeX'),
-                      make_environment  = key('\\C-c\\C-m') + button('LaTeX')
+                      make_environment  = key('\\C-c\\C-m') + button('LaTeX'),
+
+                                        % Commands for M-x
+                      expand_tabs_region    = command,
+                      insert_section_header = command,
+                      what_environment      = command
                     ],
                     [ \    = symbol,
                       -    = symbol,

@@ -677,7 +677,8 @@ key_binding(KB) :-
 key_binding(KB) :-
     new(KB, key_binding(epilog, terminal)),
     forall(binding(Key, Method),
-           send(KB, function, Key, Method)).
+           send(KB, function, Key, Method)),
+    send(KB, apply_user_bindings).
 
 :- multifile pce_keybinding:alt_binding_function/2.
 

@@ -43,7 +43,11 @@
           update_outline               = key('\\C-c\\C-l') + button(outline),
           toggle_open_outline          = key('\\e\\e') + button(outline),
           open_all_outlines            = button(outline),
-          close_all_outlines           = button(outline)
+          close_all_outlines           = button(outline),
+
+                                        % Commands for M-x
+          outline_off                  = command,
+          outline_on                   = command
         ],
                                         % SYNTAX TABLE
         [

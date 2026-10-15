@@ -57,6 +57,7 @@ Run with:
 :- use_module(library(pldoc/doc_process),
               [doc_comment/4, doc_signature/2]).
 :- use_module(library(pldoc/doc_html), [doc_for_file/2]).
+:- use_module(library(pce_html_manual), []).
 :- use_module(library(pce_class_doc),
               [xpce_doc_comment/5, xpce_doc_dom/3]).
 :- use_module(library(prolog_xref),
@@ -66,7 +67,9 @@ Run with:
               ]).
 
 test_class_doc :-
-    run_tests([ class_doc ]).
+    run_tests([ class_doc,
+                summary_only
+              ]).
 
 :- dynamic
     fixture/1,                          % File
@@ -151,6 +154,36 @@ test(file_page, [Heading, Members] == [1, 7]) :-
                   Members).
 
 :- end_tests(class_doc).
+
+%   Most methods of Prolog defined classes have a summary and no PlDoc
+%   comment.  The manual card shows their signature and summary.
+
+:- pce_begin_class(test_summary_only, object, "Methods without PlDoc").
+
+reset(_) :->
+    "Clear everything"::
+    true.
+
+size(_, Scale:int, Size:int) :<-
+    "Size at Scale"::
+    Size = Scale.
+
+:- pce_end_class(test_summary_only).
+
+:- begin_tests(summary_only).
+
+test(send, DOM == [ element(dt, [], [element(code, [], ['test_summary_only->reset'])]),
+                    element(dd, [], ['Clear everything'])
+                  ]) :-
+    get(@pce, convert, test_summary_only, class, Class),
+    get(Class, send_method, reset, Method),
+    pce_html_manual:summary_dom(Method, DOM).
+test(get, Signature == 'test_summary_only<-size: int') :-
+    get(@pce, convert, test_summary_only, class, Class),
+    get(Class, get_method, size, Method),
+    pce_html_manual:summary_dom(Method, [element(dt, _, [element(code, _, [Signature])])|_]).
+
+:- end_tests(summary_only).
 
 %   The text of a DOM.  Once the class is known, the class name in the
 %   heading is rendered as code.

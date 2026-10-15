@@ -289,7 +289,18 @@ make_toc_window_recogniser(G) :-
                          message(@receiver, scroll_vertical, goto,
                                  file, 1000))
               ]),
+    send(KB, apply_user_bindings),
     new(G, handler_group(C, KB)).
+
+:- multifile key_binding:widget_key_binding/3.
+
+%   ->event below handles the keys using the key_binding of
+%   @toc_window_recogniser.  Used by the key binding browser.
+
+key_binding:widget_key_binding(TW, TW, Table) :-
+    send(TW, instance_of, toc_window),
+    get(@toc_window_recogniser, members, Members),
+    get(Members, find, message(@arg1, instance_of, key_binding), Table).
 
 event(TW, Ev:event) :->
     "Handle key-bindings"::

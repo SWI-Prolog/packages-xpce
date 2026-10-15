@@ -326,7 +326,8 @@ open(B, Where:[{as_arranged,here,tab,split,window}]) :->
     send(KB, function, '\\C-c\\C-f', visit_file),
     send(KB, function, '\\C-c\\C-e', goto_error),
     send(KB, function, '\\C-c\\C-\\', quit_subjob),
-    send(KB, function, '\\C-c\\C-k', kill_subjob).
+    send(KB, function, '\\C-c\\C-k', kill_subjob),
+    send(KB, apply_user_bindings).
 
 :- initialization
     new(T, syntax_table(shell)),

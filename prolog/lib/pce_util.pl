@@ -49,7 +49,9 @@
 
             default/3,                  % +MethodArg, +Default, -Arg
 
-            pce_text_to_regex/2         % +Text, -Regex
+            pce_text_to_regex/2,        % +Text, -Regex
+
+            center_on/2                 % +Item, +On
           ]).
 
 
@@ -288,6 +290,25 @@ default(@default, Default, Value) :-
     ;   Value = Default
     ).
 default(Value, _Default, Value).
+
+
+                /********************************
+                *            LAYOUT             *
+                ********************************/
+
+%!  center_on(+Item, +On) is det.
+%
+%   Items in a row of a dialog line up on their reference point, which
+%   is at the baseline of the text of most items and at the bottom of a
+%   tool bar or picture.  Center Item vertically on On instead.
+
+center_on(Item, On) :-
+    get(On, height, OnH),
+    get(On, reference, OnRef),
+    get(OnRef, y, OnY),
+    get(Item, height, H),
+    Ref is (H + 2*OnY - OnH)//2,
+    send(Item, reference, point(0, Ref)).
 
 
                 /********************************

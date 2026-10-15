@@ -88,10 +88,19 @@ initialise(D, E:editor) :->
 :- pce_global(@editor_find_dialog_recogniser,
               make_recogniser).
 
+:- multifile key_binding:widget_extra_key_binding/3.
+
+%   ->event below handles some keys before the items of the dialog.
+%   Used by the key binding browser.
+
+key_binding:widget_extra_key_binding(D, D, @editor_find_dialog_recogniser) :-
+    send(D, instance_of, editor_find_dialog).
+
 make_recogniser(G) :-
     new(G, key_binding(editor_find_dialog)),
     send(G, function, '\\C-g', cancel),
-    send(G, function, 'ESC', done).
+    send(G, function, 'ESC', done),
+    send(G, apply_user_bindings).
 
 event(D, Ev:event) :->
     "Handle special keys"::

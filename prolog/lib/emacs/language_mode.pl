@@ -66,7 +66,18 @@
           xref_go_back		= key('\\e,'),
           find_references               = key('\\e?') + button(browse),
           camelcase_word                = key('\\C-c\\C-c'),
-          underscores_word              = key('\\C-c\\C--')
+          underscores_word              = key('\\C-c\\C--'),
+
+                                        % Commands for M-x
+          align_with_previous_line      = command,
+          beginning_of_text_on_line     = command,
+          comment_region                = command,
+          prolog_manual                 = command,
+          restyle_word                  = command,
+          show_caret_line               = command,
+          show_line_numbers             = command,
+          visit_tag_table               = command,
+          what_syntax                   = command
         ],
         [ '"'  = string_quote('"'),
           '''' = string_quote(''''),

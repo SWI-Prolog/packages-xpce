@@ -73,7 +73,14 @@ elements that are closed by omited elements.
                       colourise_and_recenter = key('\\C-l'),
                       tag_selection          = key('\\e,'),
                       colourise_element      = key('\\C-c\\C-s'),
-                      forward_move_out       = key('\\ee')
+                      forward_move_out       = key('\\ee'),
+
+                                        % Commands for M-x
+                      insert_begin           = command,
+                      insert_element         = command,
+                      insert_end             = command,
+                      reload_styles          = command,
+                      report_allowed         = command
                     ],
                     % SYNTAX TABLE
                     [ '"'  = string_quote('"'),
