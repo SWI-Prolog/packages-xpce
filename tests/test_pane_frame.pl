@@ -82,7 +82,8 @@ sandbox_tracer_config :-
 :- use_module(library(plunit)).
 :- use_module(library(pane_frame)).
 :- use_module(library(pce_util), [chain_list/2, member_chain/2]).
-:- use_module(library(lists), [member/2, memberchk/2, reverse/2]).
+:- use_module(library(lists), [member/2, memberchk/2, reverse/2, append/2]).
+:- use_module(library(apply), [exclude/3, maplist/3]).
 :- use_module(library(pane_layouts), [forget_arrangements/0]).
 
 %       An arrangements file of their own: the tests must neither read nor
@@ -2212,6 +2213,34 @@ test(nor_a_bar_the_window_was_made_with, true(Text \== no_bar)) :-
     send(F, pane_changed),
     status_text(F, Text),
     P1 \== P2.
+
+%       A window that is not open yet drops its bar too, and the bar must
+%       go from its layout.  It used to stay there, freed, and laying out
+%       the window raised errors.
+
+test(an_unopened_window_drops_its_bar_from_its_layout,
+     [Text, Freed] == [no_bar, []]) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @off),
+    send(F, current_pane, P1),
+    send(P1, report, inform, 'Summary %d', 42),
+    send(P1, detach),
+    status_text(F, Text),
+    get(F, tabs, TW),
+    get(TW?tile, root, Root),
+    tile_objects(Root, Objects),
+    exclude(object, Objects, Freed).
+
+tile_objects(T, Objects) :-
+    get(T, members, Members),
+    Members \== @nil,
+    !,
+    chain_list(Members, List),
+    maplist(tile_objects, List, Nested),
+    append(Nested, Objects).
+tile_objects(T, [Object]) :-
+    get(T, object, Object).
 
 :- end_tests(pane_frame_status).
 

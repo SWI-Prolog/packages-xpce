@@ -1144,7 +1144,8 @@ update_status_bar(F) :->
               get(Panes, find, message(@prolog, uses_status_bar_, @arg1),
                   _)
             )
-    ->  send(F, delete, SD),
+    ->  send(SD?tile, unrelate),         % frame ->delete keeps the tile
+        send(F, delete, SD),            % if I am not created
         free(SD),
         (   get(F, status, unmapped)
         ->  true
