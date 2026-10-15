@@ -251,6 +251,24 @@ test(inactive_drops_foreground, [Active, Inactive] == [true, false]) :-
     truth(memberchk(Red, Set1), Active),
     truth(memberchk(Red, Set2), Inactive).
 
+%   A clipped label draws a one-line copy of its text, which is not
+%   0-terminated.  Showing a long text first leaves its tail behind
+%   the copy of the short one.
+test(clip_after_longer_text, Width == Fresh) :-
+    Short = "<b>x</b>",
+    length(Xs, 200), maplist(=(0'x), Xs),
+    format(string(Long), "<b>~s</b>", [Xs]),
+    new(L, label(l, markup(Long))),
+    send(L, wrap, clip),
+    send(L, length, 0),
+    get(L, width, _),
+    send(L, selection, markup(Short)),
+    get(L, width, Width),
+    new(L2, label(l, markup(Short))),
+    send(L2, wrap, clip),
+    send(L2, length, 0),
+    get(L2, width, Fresh).
+
 truth(G, true) :- call(G), !.
 truth(_, false).
 

@@ -3588,18 +3588,23 @@ markup_resolve_colours(const char *s)
 }
 
 
-/* UTF-8 text of `markup' with the colours resolved.  If `*buf' is
- * not NULL on return, the caller must g_free() it.
+/* UTF-8 text of `markup' with the colours resolved.  The caller must
+ * g_free() `*buf', which is the returned string.  We always copy, as the
+ * text of `markup' need not be 0-terminated, e.g., a LocalString().
  */
 
 static const char *
 markup_utf8(CharArray markup, char **buf)
-{ const char *s = charArrayToUTF8(markup);
+{ size_t len;
+  const char *s = stringToUTF8(&markup->data, &len);
+  char *copy = g_strndup(s, len);
 
-  if ( (*buf = markup_resolve_colours(s)) )
+  if ( (*buf = markup_resolve_colours(copy)) )
+  { g_free(copy);
     return *buf;
+  }
 
-  return s;
+  return *buf = copy;
 }
 
 
