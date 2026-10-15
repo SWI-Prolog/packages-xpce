@@ -181,6 +181,45 @@ test(draw_markup, RGBA == Red) :-
     red(Red),
     new(G, tmt_drawer),
     pixel(G, 100, 40, 5, 5, RGBA).
+% Map mono to the family xpce uses for sans: the Pango alias `sans` need
+% not be that family, e.g., on Windows.
+
+test(tt_is_xpce_mono, [TT-Family == W-W,
+                       cleanup(set_font_cv(pango_families, Old))]) :-
+    get(@font_class, class_variable, pango_families, CV),
+    get(CV, value, Families),
+    get(Families, find, @arg1?name == sans, Binding),
+    get(Binding, value, Sans),
+    set_font_cv(pango_families, chain(mono := Sans, sans := Sans), Old),
+    Text = "iiiiMMMM",
+    tt_width("<tt>~s</tt>", Text, TT),
+    tt_width("<span font_family='mono'>~s</span>", Text, Family),
+    tt_width("<span font_family='sans'>~s</span>", Text, W).
+
+test(tt_background, RGBA == Red) :-
+    red(Red),
+    get(@pce, convert, ui_code_background, colour, C),
+    get(C, derived_from, Old),
+    setup_call_cleanup(
+        send(C, derived_from, red),
+        ( new(T, markup_text("<tt>      </tt>")),
+          pixel(T, 100, 40, 5, 5, RGBA)
+        ),
+        send(C, derived_from, Old)).
+
+tt_width(Fmt, Text, W) :-
+    format(string(M), Fmt, [Text]),
+    new(T, markup_text(M)),
+    size(T, W-_).
+
+set_font_cv(Name, Value, Old) :-
+    get(@font_class, class_variable, Name, CV),
+    get(CV, value, Old),
+    set_font_cv(Name, Value).
+
+set_font_cv(Name, Value) :-
+    send(@font_class, class_variable_value, Name, Value),
+    send(@display_manager, fonts_changed).
 
 :- end_tests(markup_text).
 

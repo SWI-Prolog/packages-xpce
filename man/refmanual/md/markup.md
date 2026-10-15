@@ -7,7 +7,8 @@ wherever text is accepted.  Its class tells the receiver that the text
 is markup: a label renders it (see `label<-selection`), while receivers
 that cannot render markup use its text without the markup.  See class
 markup_text for the tags and their attributes.  Colour attributes also
-accept xpce colour names, notably theme colours such as `ui_link`.
+accept xpce colour names, notably theme colours such as `ui_link`,
+and `<tt>` uses xpce's fixed-width font.
 
 Formatting with a markup as format makes the format markup and the
 arguments text.  The text for the arguments is escaped, unless the

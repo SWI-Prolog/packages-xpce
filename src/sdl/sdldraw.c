@@ -3514,22 +3514,82 @@ markup_colour_value(const char *name, char hex[10])
 }
 
 
+/* Attributes of <span> whose value is a font family.
+ */
+
+static bool
+is_markup_family_attribute(const char *name, size_t len)
+{ return ( (len == 11 && strncmp(name, "font_family", len) == 0) ||
+	   (len == 4  && strncmp(name, "face", len) == 0) );
+}
+
+
+/* The Pango family for the xpce family `name', e.g., `mono'.
+ */
+
+static const char *
+markup_family_value(const char *name)
+{ Name n = CtoName(name);
+  Name pf = pangoFamilyFont(n);
+
+  return pf == n ? NULL : nameToUTF8(pf);
+}
+
+
+/* Replace the text from `from' to `to' by `text'.  `copied' is the
+ * start of the text that is not yet copied to `out'.
+ */
+
+static void
+markup_replace(GString **out, const char **copied,
+	       const char *from, const char *to, const char *text)
+{ if ( !*out )
+    *out = g_string_new(NULL);
+  g_string_append_len(*out, *copied, from-*copied);
+  g_string_append(*out, text);
+  *copied = to;
+}
+
+
 /* Pango only knows the X11 colour names and the #rgb notations.  Replace
  * the value of a colour attribute that names an xpce colour by its
  * #rrggbb value.  This allows for theme colours, e.g., <span
- * foreground='ui_link'>.  The colours are resolved whenever we make a
- * layout, so a change of theme only requires a redraw.  Returns a
- * g_malloc()ed string, or NULL if nothing was replaced.
+ * foreground='ui_link'>.  Likewise, the value of a font family
+ * attribute is mapped through xpce's font families and <tt> uses the
+ * family `mono', i.e., the font of fixed-width text in xpce, on the
+ * theme colour `ui_code_background'.  The
+ * values are resolved whenever we make a layout, so a change of theme
+ * only requires a redraw.  Returns a g_malloc()ed string, or NULL if
+ * nothing was replaced.
  */
 
 static char *
-markup_resolve_colours(const char *s)
+markup_resolve(const char *s)
 { GString *out = NULL;
   const char *copied = s;		/* Start of text not yet copied */
   const char *p = s;
 
   while( (p = strchr(p, '<')) )
-  { p++;
+  { const char *tag = p++;
+
+    if ( strncmp(p, "tt>", 3) == 0 )
+    { char span[200];
+      char bg[10];
+
+      if ( !markup_colour_value("ui_code_background", bg) )
+	strcpy(bg, "#00000000");
+      snprintf(span, sizeof(span),
+	       "<span font_family=\"%s\" background=\"%s\">",
+	       nameToUTF8(pangoFamilyFont(NAME_mono)), bg);
+      markup_replace(&out, &copied, tag, p+3, span);
+      p += 3;
+      continue;
+    } else if ( strncmp(p, "/tt>", 4) == 0 )
+    { markup_replace(&out, &copied, tag, p+4, "</span>");
+      p += 4;
+      continue;
+    }
+
     while( *p && *p != '>' )
     { if ( *p == '"' || *p == '\'' )	/* Value without attribute */
       { const char *e = strchr(p+1, *p);
@@ -3560,18 +3620,22 @@ markup_resolve_colours(const char *s)
 	p = ve+1;
 
 	char name[100];
-	char hex[10];
 	size_t vl = ve-vs;
-	if ( is_markup_colour_attribute(ns, nl) && vl < sizeof(name) )
-	{ memcpy(name, vs, vl);
-	  name[vl] = EOS;
+	if ( vl >= sizeof(name) )
+	  continue;
+	memcpy(name, vs, vl);
+	name[vl] = EOS;
+
+	if ( is_markup_colour_attribute(ns, nl) )
+	{ char hex[10];
+
 	  if ( markup_colour_value(name, hex) )
-	  { if ( !out )
-	      out = g_string_new(NULL);
-	    g_string_append_len(out, copied, vs-copied);
-	    g_string_append(out, hex);
-	    copied = ve;
-	  }
+	    markup_replace(&out, &copied, vs, ve, hex);
+	} else if ( is_markup_family_attribute(ns, nl) )
+	{ const char *family = markup_family_value(name);
+
+	  if ( family )
+	    markup_replace(&out, &copied, vs, ve, family);
 	}
       } else
 	p++;
@@ -3588,7 +3652,7 @@ markup_resolve_colours(const char *s)
 }
 
 
-/* UTF-8 text of `markup' with the colours resolved.  The caller must
+/* UTF-8 text of `markup' with the colours and fonts resolved.  The caller must
  * g_free() `*buf', which is the returned string.  We always copy, as the
  * text of `markup' need not be 0-terminated, e.g., a LocalString().
  */
@@ -3599,7 +3663,7 @@ markup_utf8(CharArray markup, char **buf)
   const char *s = stringToUTF8(&markup->data, &len);
   char *copy = g_strndup(s, len);
 
-  if ( (*buf = markup_resolve_colours(copy)) )
+  if ( (*buf = markup_resolve(copy)) )
   { g_free(copy);
     return *buf;
   }

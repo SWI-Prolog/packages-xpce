@@ -26,6 +26,10 @@ Besides the colours Pango knows, colour attributes such as `foreground`
 and `background` accept the name of any existing xpce colour.  Notably,
 this allows for theme colours, for example
 `<span foreground='ui_link'>`, which follow a change of theme.
+Likewise, `font_family` and `face` accept xpce's font families such as
+`mono`, and `<tt>` uses the family `mono`, the font xpce uses for
+fixed-width text, rather than Pango's `Monospace`, on the faint theme
+colour `ui_code_background`.
 
 ## Instance variables {#class-markup-text-instvars}
 

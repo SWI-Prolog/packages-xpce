@@ -93,6 +93,7 @@ sample(ui_cursor_inactive,      inactive_cursor,
        'Text cursor of a window without the keyboard focus').
 sample(ui_error,                report(error),  'An error message').
 sample(ui_warning,              report(warning), 'A warning message').
+sample(ui_code_background,      code_text,      'Code in running text').
 sample(ui_dialog_background,    dialog,         'A dialog window').
 sample(ui_dialog_foreground,    dialog,         'Text of a dialog window').
 sample(ui_fold,                 terminal(fold), 'Folded output of a command in a terminal').
@@ -176,6 +177,9 @@ build(report(Kind), R) :-
     new(R, reporter),
     report_sample(Kind, Message),
     send(R, report, Kind, Message).
+build(code_text, T) :-
+    new(T, markup_text('Bound to <tt>forward_char</tt> in \
+<tt>key_binding.editor</tt>')).
 build(failed_isearch, R) :-             % as editor.c
     new(R, reporter),
     new(M, markup('Failing ISearch: \
