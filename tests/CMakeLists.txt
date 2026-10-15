@@ -13,6 +13,7 @@ test_libs(graphics_state      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(toc                 OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(type_syntax         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(pending_exception   OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(goal_backtrace      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(font_alias           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(font                 OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(visual               OPTIONS ${XPCE_TEST_OPTIONS})
@@ -140,6 +141,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:barchart
                      xpce:bookmark_store
                      xpce:bookmarks
+                     xpce:goal_backtrace
                      xpce:class_template
                      xpce:emacs_split
                      xpce:event_clone

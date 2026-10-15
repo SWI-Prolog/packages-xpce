@@ -3804,14 +3804,18 @@ static bool
 PrologWriteGoalArgs(PceGoal g)
 { int i, argn = 0;
   term_t l;
+  IOSTREAM *s = XPCE_OUTPUT();		/* where Cprintf() writes the rest */
+
+  if ( !s )
+    return false;
 
   for(i=0; i<g->argc; i++)
   { if ( argn++ )
-      Sprintf(", ");
+      Sfprintf(s, ", ");
     if ( g->argv[i] )
-      PL_write_term(Soutput, (term_t)g->argv[i], 999, PL_WRT_PORTRAY);
+      PL_write_term(s, (term_t)g->argv[i], 999, PL_WRT_PORTRAY);
     else
-      Sprintf("(nil)");
+      Sfprintf(s, "(nil)");
   }
 
   if ( g->va_type && (l = (term_t)g->host_closure) )
@@ -3820,12 +3824,12 @@ PrologWriteGoalArgs(PceGoal g)
 
     while( PL_get_list(tail, head, tail) )
     { if ( argn++ )
-	Sprintf(", ");
-      PL_write_term(Soutput, head, 999, PL_WRT_PORTRAY);
+	Sfprintf(s, ", ");
+      PL_write_term(s, head, 999, PL_WRT_PORTRAY);
     }
   }
 
-  return true;
+  return PL_release_stream(s);
 }
 
 
