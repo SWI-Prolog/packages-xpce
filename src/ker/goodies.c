@@ -681,6 +681,9 @@ Comment to avoid mkproto not generating the prototype for this function
 			     } \
 			   } while(0)
 
+#define NextFmtChar() (++i < fmt->s_size ? (c = str_fetch(fmt, i), true) \
+					   : false)
+
 static int
 swritefv(int (*out)(void*, uchar_t), void *closure,
 	 const PceString fmt, int argc, const Any argv[], bool markup)
@@ -707,11 +710,10 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	  continue;
 	}
       case '%':
-	if ( ++i == fmt->s_size )
-	{ Put('\\');
-	  continue;
-	}
-        c = str_fetch(fmt, i);
+      { int start = i;
+
+	if ( !NextFmtChar() )
+	  goto verbatim;
 	if ( c == '%' )			/* `%%' */
 	{ Put('%');
 	  continue;
@@ -724,27 +726,32 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 
 	  if ( c == '+' || c == '-' || c == ' ' || c == '#' )
 	  { *r++ = c;
-	    i++;
-	    c = str_fetch(fmt, i);
+	    if ( !NextFmtChar() )
+	      goto verbatim;
 	  }
 
 	  if ( c == '*' )
-	  { Int i;
+	  { Int w;
 
 	    if ( argc <= 0 )
 	      arg = 0;
-	    else if ( (i = checkType(argv[0], TypeInt, NIL)) )
-	      arg = valInt(i);
+	    else if ( (w = checkType(argv[0], TypeInt, NIL)) )
+	      arg = valInt(w);
 	    else
 	      arg = 0;
 
 	    argc--, argv++;
+	    *r++ = '*';
+	    if ( !NextFmtChar() )
+	      goto verbatim;
 	  } else
 	  { arg = NOT_SET;
 	    while( (c >= '0' && c <= '9') || c == '.' )
-	    { *r++ = c;
-	      i++;
-	      c = str_fetch(fmt, i);
+	    { if ( r >= &fmtbuf[sizeof(fmtbuf)-2] )
+		goto verbatim;
+	      *r++ = c;
+	      if ( !NextFmtChar() )
+		goto verbatim;
 	    }
 	  }
 
@@ -936,6 +943,8 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 
 	      if ( arg == NOT_SET )
 		arg = atoi(fmtbuf+1);
+	      else if ( fmtbuf[1] == '-' )
+		arg = -abs(arg);
 
 	      int (*put)(int (*)(void*, uchar_t), void *, PceString) =
 		( markup && !(c != 'O' && argc > 0 &&
@@ -979,11 +988,15 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	      continue;
 	    }
 	    default:
-	      Put('%');
-	      Put(c);
-	      continue;
+	      goto verbatim;
 	  }
 	}
+
+      verbatim:				/* incomplete or invalid: copy */
+	for(int j=start; j<=i && j<fmt->s_size; j++)
+	  Put(str_fetch(fmt, j));
+	continue;
+      }
       default:
 	Put(c);
 	continue;

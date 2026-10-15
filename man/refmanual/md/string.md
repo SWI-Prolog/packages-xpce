@@ -71,7 +71,8 @@ name and class text_buffer.
     control-arguments.  The % sign introduces a conversion
     statement, while the \ character introduces a special character.
     The % sign is optionally followed by a numeric argument,
-    controlling the output.
+    controlling the output.  An incomplete or unknown conversion is
+    copied to the output unmodified.
 
 - string->initialise: format=[char_array], argument=any ...
     Create a string object from a format specification and
