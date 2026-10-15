@@ -59,6 +59,7 @@ those of the system.
 
 test_key_binding_browser :-
     run_tests([ key_label,
+                key_sequences,
                 key_binding_entries,
                 key_binding_browser,
                 widget_key_bindings,
@@ -231,6 +232,47 @@ test(function_key, Label == 'F1') :-
     label('<f1>', Label).
 
 :- end_tests(key_label).
+
+
+:- begin_tests(key_sequences).
+
+%   sequence_editor(-Editor, -Table)
+%
+%   An editor whose keys go through Table, where unbound keys insert
+%   themselves and Control-X is a prefix of one bound sequence.
+
+sequence_editor(E, KB) :-
+    new(E, editor),
+    new(KB, key_binding),
+    send(KB, default_function, insert_self),
+    send(KB, function, '\\C-x', prefix),
+    send(KB, function, '\\C-x2', newline).
+
+type(KB, E, Keys) :-
+    forall(member(K, Keys), send(KB, typed, K, E)).
+
+contents(E, Text) :-
+    get(E?text_buffer, contents, S),
+    get(S, value, Text).
+
+test(plain_key_inserts, Text == '1') :-
+    sequence_editor(E, KB),
+    type(KB, E, [0'1]),
+    contents(E, Text).
+test(bound_sequence, Text == '\n') :-
+    sequence_editor(E, KB),
+    type(KB, E, [24, 0'2]),
+    contents(E, Text).
+test(unbound_sequence_is_undefined, Text == '') :-
+    sequence_editor(E, KB),
+    type(KB, E, [24, 0'1]),
+    contents(E, Text).
+test(prefix_is_reset, Text == '1') :-
+    sequence_editor(E, KB),
+    type(KB, E, [24, 0'1, 0'1]),
+    contents(E, Text).
+
+:- end_tests(key_sequences).
 
 
                  /*******************************

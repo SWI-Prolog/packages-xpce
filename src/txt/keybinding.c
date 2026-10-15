@@ -261,6 +261,19 @@ cuaKeyAsPrefixKeyBinding(KeyBinding kb, EventObj ev, Graphical receiver)
 }
 
 
+/* A key sequence is bound if some table binds it.  After a prefix, the
+ * default function, e.g. insert_self, does not apply: the sequence is
+ * undefined.
+ */
+
+static bool
+bound_sequence(KeyBinding kb, Name key)
+{ Any cmd = get_function_key_binding(kb, key);
+
+  return cmd && cmd != NAME_none;
+}
+
+
 status
 typedKeyBinding(KeyBinding kb, Any id, Graphical receiver)
 { Name key;
@@ -289,6 +302,15 @@ typedKeyBinding(KeyBinding kb, Any id, Graphical receiver)
   if ( kb->status == NAME_quotedInsert )
   { cmd = NAME_insertQuoted;
     reset |= RESET_STATUS;
+  } else if ( kb->prefix != NAME_ && !bound_sequence(kb, key) )
+  { Any label = get(kb, NAME_keyLabel, key, EAV);
+
+    resetKeyBinding(kb, receiver);	/* <prefix> <unbound key> */
+    assign(kb, saved_column, NIL);
+    assign(kb, status, NIL);
+    send(receiver, NAME_report, NAME_warning,
+	 CtoName("%s is undefined"), label ? label : key, EAV);
+    succeed;
   } else
   { cmd = get(kb, NAME_function, key, EAV);
   }
