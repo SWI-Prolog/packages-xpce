@@ -547,6 +547,14 @@ imply X-specific semantics.
     Re-dispatch a keyboard event that wasn't consumed elsewhere.
     Fails by default.
 
+- frame->shortcut: event
+    A key typed in any window of the frame is offered to this
+    method first, after the key that opens the menu bar (see
+    frame.menu_bar_key).  If it succeeds the key is used up;
+    otherwise it goes to the window with the keyboard focus.  Fails
+    by default.  Class pane_frame of the IDE uses it to
+    switch tabs with Control-Page-Up and Control-Page-Down.
+
 - frame->typed: event|event_id
     Distribute a typed key across the frame's sub-windows so any
     window can accept it as an accelerator.

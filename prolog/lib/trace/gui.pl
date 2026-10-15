@@ -572,12 +572,15 @@ member(F, Name:name, Window:window) :<-
 %       leave the thread waiting for ever, so it asks what to do instead
 %       and lets the answer take me away.
 
-can_close(F, Close:bool) :<-
+can_close(F, Ask:[bool]) :->
     "Only when nobody is waiting for me"::
     (   get(F, mode, wait_user)
-    ->  send(F, quit),
-        Close = @off
-    ;   Close = @on
+    ->  (   Ask == @off
+        ->  true
+        ;   send(F, quit)
+        ),
+        fail
+    ;   true
     ).
 
                  /*******************************

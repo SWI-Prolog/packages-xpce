@@ -134,6 +134,11 @@ new_tab_message(W, Message:'code*') :->
     get_super(W, member, tab_stack, TS),
     send(TS, layout_labels).
 
+cycle(W, Direction:{next,previous}) :->
+    "Put the next or previous tab on top"::
+    get_super(W, member, tab_stack, TS),
+    send(TS, cycle, Direction).
+
 hide_single_label(W, Hide:bool) :->
     "Give a lone tab the room its label would take"::
     get_super(W, member, tab_stack, TS),

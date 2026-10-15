@@ -113,6 +113,41 @@ its own), `pane_frame ->split' (beside a given pane) and
 `pane_frame ->split_beside' (beside a set of panes, taking a share of
 their room).
 
+\subsection{Keys}				\label{sec:panekeys}
+
+The window sees a key before the pane with the keyboard focus does, using
+the key binding table \const{pane_frame} (see `frame ->shortcut'). It
+binds:
+
+\begin{description}
+    \item[Control-Page-Down, Control-Page-Up]
+Show the next or the previous tab.
+    \item[Control-X 1]
+Close the panes beside the one you work in, so it is all the tab shows.
+A pane inside a group, e.g., a view of PceEmacs, also closes the panes
+beside the group. A pane that does not agree to be closed without asking
+is moved into a new tab instead: a terminal running a query or holding a
+half-typed command, and the console that shows the messages of Prolog.
+    \item[Control-X 0]
+Close the pane you work in, unless it is the only one of the window.
+    \item[F6, Shift-F6, Control-X o]
+Move the keyboard focus to the next or previous pane of the tab in view,
+from left to right and top to bottom.  The panes of a group count, e.g.,
+two views of PceEmacs.
+\end{description}
+
+An editor or a terminal handles Control-X itself; their own Control-X 0,
+Control-X 1 and Control-X o do the same. A pane says so using
+`pane ->handles_prefix'. In a dialog, Control-X cuts the selection of the
+text item that has the keyboard focus, if it has one.
+
+Closing a pane, a tab or the window first asks every pane involved
+->can_close. A pane that does not define it agrees. A terminal asks
+the user whether to close it if a query is running or a command is
+being typed, and the console that shows the messages of Prolog does the
+same, unless closing it ends Prolog. With the argument \const{@off},
+->can_close does not ask but just fails.
+
 
 \section{Where a new pane goes}			\label{sec:paneplacement}
 

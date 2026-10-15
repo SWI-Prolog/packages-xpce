@@ -106,6 +106,7 @@ test_pane_frame :-
                 pane_frame_opacity,
                 pane_frame_panes,
                 pane_frame_tab_order,
+                pane_frame_only_pane,
                 pane_frame_plain_pane,
                 pane_frame_minimum,
                 pane_frame_strips,
@@ -155,8 +156,8 @@ pane_exposed(P) :->
     N is N0+1,
     send(P, exposed, N).
 
-can_close(P, Reply:bool) :<-
-    get(P, closable, Reply).
+can_close(P, _Ask:[bool]) :->
+    get(P, closable, @on).
 
 sibling(P, New:window) :<-
     new(New, tp_pane),
@@ -194,6 +195,16 @@ initialise(P, Level:int) :->
 
 :- pce_begin_class(tp_bare, window, "Pane answering nothing at all").
 :- pce_end_class(tp_bare).
+
+%       A pane that handles its own Control-X sequences, as an editor or
+%       terminal does.
+
+:- pce_begin_class(tp_prefix_pane, tp_pane, "Pane with its own Control-X").
+
+handles_prefix(_P, _Key:name) :->
+    true.
+
+:- pce_end_class(tp_prefix_pane).
 
 :- pce_begin_class(tp_app, application, "Application of a test frame").
 
@@ -1254,10 +1265,10 @@ test(the_template_closes_a_pane, Names == [one]) :-
     get(F, panes, Chain),
     findall(N, (member_chain(P, Chain), get(P, name, N)), Names).
 
-test(a_pane_that_refuses_to_close_stops_the_frame, true(Reply == @off)) :-
+test(a_pane_that_refuses_to_close_stops_the_frame, fail) :-
     frame(F, _App, P),
     send(P, closable, @off),
-    get(F, can_close, Reply).
+    send(F, can_close).
 
 test(closing_a_frame_with_one_tab_destroys_it, [fail]) :-
     frame(F, _App, _P),
@@ -1270,11 +1281,11 @@ test(a_pane_that_refuses_keeps_the_frame_alive, true(Alive == true)) :-
     send(F, close),
     (   object(F) ->  Alive = true ;  Alive = false ).
 
-test(a_pane_that_says_nothing_agrees_to_close, true(Reply == @on)) :-
+test(a_pane_that_says_nothing_agrees_to_close) :-
     new(App, tp_app(test)),
     new(P, tp_bare),
     new(F, pane_frame(App, @default, P)),
-    get(F, can_close, Reply).
+    send(F, can_close).
 
 :- end_tests(pane_frame_panes).
 
@@ -1384,7 +1395,207 @@ test(a_tab_can_still_be_asked_for_at_the_end,
     send(F, append_pane, Last, 'Last', @on, @nil),
     tab_row(F, Row).
 
+
+%       Control-Page-Up and Control-Page-Down show the previous and next
+%       tab from whatever pane has the keyboard: the frame offers each key
+%       to ->shortcut before the pane sees it.
+
+%!  on_top(+Frame, -Label) is det.
+
+on_top(F, Label) :-
+    get(F, tabs, TW),
+    get(TW, on_top, Tab),
+    get(Tab, label, Label).
+
+%!  typed(+Pane, +Id, +Buttons) is det.
+%
+%   Type Id in Pane with Buttons held down (1: Control, 2: Shift).  The
+%   pane takes every key, as an editor or terminal does, so only the
+%   frame can switch tabs.
+
+typed(P, Id, Buttons) :-
+    send(P, recogniser, handler(keyboard, new(and))),
+    new(Ev, event(Id, P, 0, 0, Buttons, 1000)),
+    send(P, post_event, Ev).
+
+test(next_and_previous, Shown == ['B', 'One', 'A', 'One', 'B']) :-
+    back_in_the_middle(F, _A),
+    findall(L, ( member(Method, [next_tab, next_tab, next_tab,
+                                 previous_tab, previous_tab]),
+                 send(F, Method),
+                 on_top(F, L)
+               ), Shown).
+
+test(control_page_down, Shown == 'B') :-
+    back_in_the_middle(F, A),
+    send(F, open),
+    typed(A, page_down, 0x1),
+    on_top(F, Shown).
+
+test(control_page_up, Shown == 'One') :-
+    back_in_the_middle(F, A),
+    send(F, open),
+    typed(A, page_up, 0x1),
+    on_top(F, Shown).
+
+test(control_tab_is_left_to_the_pane, Shown == 'A') :-
+    back_in_the_middle(F, A),
+    send(F, open),
+    typed(A, 9, 0x1),
+    on_top(F, Shown).
+
 :- end_tests(pane_frame_tab_order).
+
+
+:- begin_tests(pane_frame_only_pane).
+
+%!  three_in_a_tab(-Frame, -Panes) is det.
+%
+%   An open frame whose only tab holds three panes, `one` (the current
+%   one), `two` and `three`.
+
+three_in_a_tab(F, [P1, P2, P3]) :-
+    three_in_a_tab(F, tp_pane, [P1, P2, P3]).
+
+three_in_a_tab(F, Class, [P1, P2, P3]) :-
+    new(App, tp_app(test)),
+    new(P1, Class),
+    send(P1, name, one),
+    new(F, pane_frame(App, @default, P1)),
+    pane(two, alpha, P2),
+    pane(three, alpha, P3),
+    send(F, split, P2, P1, vertically),
+    send(F, split, P3, P1, vertically),
+    send(F, open),
+    send(F, current_pane, P1),
+    send(F, keyboard_focus, P1).
+
+%!  tab_panes(+Frame, -Tabs) is det.
+%
+%   Tabs holds, per tab of Frame, the names of its panes.
+
+tab_panes(F, Tabs) :-
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    findall(Names,
+            ( member_chain(Tab, Chain),
+              get(Tab, windows, Ws),
+              findall(N, ( member_chain(W, Ws), get(W, name, N) ), Names0),
+              msort(Names0, Names)
+            ), Tabs).
+
+%!  keys(+Pane, +Ids) is det.
+%
+%   Type Ids in Pane, which takes every key the frame leaves it.
+
+keys(P, Ids) :-
+    send(P, recogniser, handler(keyboard, new(and))),
+    forall(member(Id, Ids),
+           ( control(Id, Buttons),
+             new(Ev, event(Id, P, 0, 0, Buttons, 1000)),
+             ignore(send(P, post_event, Ev))
+           )).
+
+control(Id, 0x1) :- Id < 32, !.          % a control character
+control(_, 0).
+
+test(only_pane_closes_the_others, Tabs == [[one]]) :-
+    three_in_a_tab(F, _),
+    get(F, current_pane, P),
+    send(P, only_pane),
+    tab_panes(F, Tabs).
+
+test(a_pane_that_refuses_moves_to_a_new_tab,
+     [Tabs, Destroyed] == [[[one], [three]], true]) :-
+    three_in_a_tab(F, [P1, P2, P3]),
+    send(P3, closable, @off),
+    send(P1, only_pane),
+    tab_panes(F, Tabs),
+    (   object(P2) -> Destroyed = false ; Destroyed = true ).
+
+test(the_pane_stays_in_view, Current == one) :-
+    three_in_a_tab(F, [_, _, P3]),
+    send(P3, closable, @off),
+    get(F, current_pane, P1),
+    send(P1, only_pane),
+    get(F, current_pane, P),
+    get(P, name, Current).
+
+test(control_x_1, Tabs == [[one]]) :-
+    three_in_a_tab(F, [P1|_]),
+    keys(P1, [24, 0'1]),
+    tab_panes(F, Tabs).
+
+test(control_x_0, Tabs == [[three, two]]) :-
+    three_in_a_tab(F, [P1|_]),
+    keys(P1, [24, 0'0]),
+    tab_panes(F, Tabs).
+
+test(a_pane_with_its_own_control_x_keeps_it,
+     Tabs == [[one, three, two]]) :-
+    three_in_a_tab(F, tp_prefix_pane, [P1|_]),
+    keys(P1, [24, 0'1]),
+    tab_panes(F, Tabs).
+
+%       Control-X cuts the selection of a text item in a dialog pane, as
+%       the CUA style of dialogs has it.  Without a selection it starts
+%       a sequence.
+
+dialog_pane(F, TI) :-
+    new(App, tp_app(test)),
+    new(D, dialog),
+    send(D, append, new(TI, text_item(name, 'some text'))),
+    new(F, pane_frame(App, @default, D)),
+    send(F, open),
+    send(F, keyboard_focus, D),
+    send(D, keyboard_focus, TI).
+
+control_x_starts_sequence(F, TI, Starts) :-
+    new(Ev, event(24, TI?device, 0, 0, 0x1, 1000)),
+    ignore(send(F, shortcut, Ev)),
+    get(@pane_frame_bindings, slot, prefix, Prefix),
+    (   Prefix == ''
+    ->  Starts = false
+    ;   Starts = true,
+        send(@pane_frame_bindings, typed, 7, F)   % Control-G
+    ).
+
+test(control_x_without_selection, Starts == true) :-
+    dialog_pane(F, TI),
+    control_x_starts_sequence(F, TI, Starts).
+
+test(control_x_with_selection_cuts, Starts == false) :-
+    dialog_pane(F, TI),
+    send(TI?value_text, selection, 0, 4),
+    control_x_starts_sequence(F, TI, Starts).
+
+%       F6 and Shift-F6 visit the panes of the tab, left to right, and
+%       wrap around.
+
+current_name(F, Name) :-
+    get(F, current_pane, P),
+    get(P, name, Name).
+
+visit(F, P, Key, Buttons, Name) :-
+    new(Ev, event(Key, P, 0, 0, Buttons, 1000)),
+    ignore(send(P, post_event, Ev)),
+    current_name(F, Name).
+
+test(f6_visits_all_panes, Visited == [three, two, one]) :-
+    three_in_a_tab(F, [P1|_]),
+    send(P1, recogniser, handler(keyboard, new(and))),
+    findall(N, ( between(1, 3, _),
+                 get(F, current_pane, P),
+                 visit(F, P, f6, 0, N)
+               ), Visited).
+
+test(shift_f6_goes_back, [Next, Back] == [three, one]) :-
+    three_in_a_tab(F, [P1|_]),
+    visit(F, P1, f6, 0, Next),
+    get(F, current_pane, P),
+    visit(F, P, f6, 0x2, Back).
+
+:- end_tests(pane_frame_only_pane).
 
 :- begin_tests(pane_frame_plain_pane).
 

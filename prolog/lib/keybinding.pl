@@ -98,7 +98,8 @@ The pane is reused for the next object, unless it is pinned.
 %
 %   Hook for a Container (a device or window) whose ->event handles
 %   some keys typed in the graphicals it holds using Table, before these
-%   see them.  Target implements the functions of Table.
+%   see them.  Target implements the functions of Table.  Container is
+%   also the frame, whose ->shortcut handles keys typed in its windows.
 
 %!  command_function(+Target, +Name) is semidet.
 %
@@ -237,7 +238,7 @@ extra_table(Container, Table-Target) :-
 %   containers(+Graphical, -Containers)
 %
 %   Containers are the devices and windows Graphical is in, outermost
-%   first, up to the frame.
+%   first, starting with the frame.
 
 containers(Gr, Containers) :-
     containers(Gr, [], Containers).
@@ -247,6 +248,10 @@ containers(Gr, Acc, Containers) :-
     send(C, instance_of, graphical),
     !,
     containers(C, [C|Acc], Containers).
+containers(Gr, Acc, [Frame|Acc]) :-
+    get(Gr, contained_in, Frame),
+    send(Frame, instance_of, frame),
+    !.
 containers(_, Containers, Containers).
 
 %   default_widget_key_binding(+Graphical, -Target, -Table)

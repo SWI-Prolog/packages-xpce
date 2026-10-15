@@ -32,6 +32,12 @@ specify a PC:
     ->layout_dialog for fixing the layout after adding to a
     displayed tab_stack.
 
+- tab_stack->cycle: direction={next,previous}
+    Put the next or previous tab on top, skipping inactive tabs and
+    wrapping around at the ends.  A tab_stack does this itself on
+    Control-Tab and Control-Page-Down (next) and Control-Shift-Tab
+    and Control-Page-Up (previous) if no tab takes the key.
+
 - tab_stack->erase: graphical
     Erases a tab object or graphical from the tab-stack.  Ensures
     another tab is raised if this is the <-on_top tab and recompute

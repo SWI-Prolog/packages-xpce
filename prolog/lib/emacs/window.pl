@@ -306,6 +306,10 @@ menu_bar_key(V, Key:name) :<-
     get(V, mode, Mode),
     get(Mode, name, Key).
 
+handles_prefix(_V, _Key:name) :->
+    "The editor handles all its key sequences"::
+    true.
+
 keep_alive(V, Keep:bool) :<-
     "@on if my buffer holds unsaved changes to a file"::
     (   get(V, text_buffer, TB),

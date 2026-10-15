@@ -211,6 +211,21 @@ test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_pane, epilog_window]) 
     send(@prolog_ide, new_terminal, F),
     classes(F, Classes).
 
+%       Control-X 1 in an editor closes what is beside it: the other
+%       view of its source in the tab of the editor and the terminal
+%       beside the editor in the tab of the window.
+
+test(only_pane_from_a_split_editor, [Classes, Views] == [[emacs_pane], 1]) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F, @on),
+    editor(F, V),
+    send(V?editor?mode, split_view, horizontally),
+    send(V, only_pane),
+    classes(F, Classes),
+    editor_pane(F, EP),
+    get(EP?members, size, Views).
+
 %       Both panes are dragged by a grip of their own.  A grip shows
 %       itself only on a window its frame calls a pane (see `split_handle
 %       ->update_displayed'), so it is the editor that shows one and the

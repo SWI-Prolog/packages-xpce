@@ -646,6 +646,8 @@ binding('\\C-x8s',   insert_symbol).
 binding('\\C-x2',    split_horizontally). % Emacs compatibility
 binding('\\C-x3',    split_vertically).
 binding('\\C-x0',    delete_window).
+binding('\\C-x1',    only_window).
+binding('\\C-xo',    other_window).
 binding('\\C-\\S-o', split_horizontally). % Terminator compatibility
 binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
@@ -1240,9 +1242,12 @@ make(PT) :->
 close(PT) :->
     "Close this Prolog shell"::
     get(PT, window, Window),
-    get(PT, frame, Epilog),
-    pane_frame_closed_tab(Epilog),
-    send(Epilog, delete_pane, Window, @on).
+    (   send(Window, can_close)
+    ->  get(PT, frame, Epilog),
+        pane_frame_closed_tab(Epilog),
+        send(Epilog, delete_pane, Window, @on)
+    ;   true
+    ).
 
 %!  save_history(+PrologTerminal) is det.
 %
@@ -1410,8 +1415,19 @@ delete_window(T) :->
     get(T, window, Window),
     (   send(Window, last_in_frame)
     ->  send(T, report, status, 'Single terminal')
-    ;   send(Window, close_pane)
+    ;   send(Window, request_close)
     ).
+
+only_window(T) :->
+    "Close the other panes of this tab"::
+    get(T, window, Window),
+    send(Window, only_pane).
+
+other_window(T) :->
+    "Move the focus to the next pane of this tab"::
+    get(T, window, Window),
+    get(Window, pane_frame, F),
+    send(F, next_pane).
 
 new_tab(T) :->
     "Open a new terminal in a tab of this window"::
@@ -2094,6 +2110,59 @@ create(T, Parent:[window]) :->
 keep_alive(_T, Keep:bool) :<-
     "A terminal keeps the application alive"::
     Keep = @on.
+
+handles_prefix(_T, _Key:name) :->
+    "The terminal handles all its key sequences"::
+    true.
+
+%       A terminal can be closed without asking when its Prolog sits at
+%       an empty prompt.  The OSC 133 marks say where the prompt is: if
+%       there is none, a query is running or the program reads from the
+%       terminal itself.  Before the first prompt it is still starting
+%       and can go.  A shell is busy if a program of its own runs
+%       in the foreground.  The console that shows the messages of Prolog
+%       (see capture_messages/1) is closed without asking only if that
+%       ends the application.
+
+can_close(T, Ask:[bool]) :->
+    "Succeed if nothing is lost by closing me; unless Ask is @off, ask"::
+    get(T, terminal, PT),
+    (   capturing(PT, _, _),
+        \+ closing_ends_application(T)
+    ->  ask_close(T, Ask, 'This console shows the messages of Prolog')
+    ;   terminal_busy(PT, Why)
+    ->  ask_close(T, Ask, Why)
+    ;   true
+    ).
+
+closing_ends_application(T) :-
+    get(T, pane_frame, F),
+    get(F, application, App),
+    App \== @nil,
+    send(App, has_send_method, closing_ends_application),
+    send(App, closing_ends_application, F, chain(T)).
+
+terminal_busy(PT, Why) :-
+    get(PT, profile, prolog),
+    !,
+    \+ send(PT?blocks, empty),         % no prompt yet: still starting
+    (   get(PT, input, tuple(Text, _))
+    ->  get(Text, size, Len),
+        Len > 0,
+        Why = 'The command being typed is lost'
+    ;   Why = 'A query is running'
+    ).
+terminal_busy(PT, 'A program is running') :-
+    get(PT, foreground_process, _).
+
+ask_close(T, Ask, Why) :-
+    Ask \== @off,
+    get(T, pane_frame, F),
+    (   get(T, pane_tab, Tab)
+    ->  get(Tab, label, Label)
+    ;   get(T, pane_label, Label)
+    ),
+    send(F, confirm_danger, close, '%s: %s.  Close anyway?', Label, Why).
 
 thread_connected(T, Thread:name) :->
     "Name my tab after the thread that has just been connected"::

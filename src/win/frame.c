@@ -1642,8 +1642,9 @@ frame_menu_bar(FrameObj fr)
 /* The key that opens the menu bar, F10 by default, is handled before
  * the window with the keyboard focus sees it, as Gnome does.  The class
  * variable frame.menu_bar_key changes it; @nil disables it, e.g. for a
- * terminal whose programs use F10.  Called by eventFrame() and
- * eventWindow().
+ * terminal whose programs use F10.  Next, ->shortcut gets the key; it
+ * fails by default, and a subclass uses it e.g. to switch tabs.  Called by
+ * eventFrame() and eventWindow().
  */
 
 status
@@ -1658,7 +1659,16 @@ menuBarKeyFrame(FrameObj fr, EventObj ev)
        (mb = frame_menu_bar(fr)) )
     return send(mb, NAME_key, CtoName("<f10>"), EAV);
 
+  if ( send(fr, NAME_shortcut, ev, EAV) )
+    succeed;
+
   fail;
+}
+
+
+static status
+shortcutFrame(FrameObj fr, EventObj ev)
+{ fail;
 }
 
 
@@ -2206,6 +2216,8 @@ static senddecl send_frame[] =
      DEFAULT, "Destroy windows and the related window-system window"),
   SM(NAME_status, 1, "{unmapped,hidden,iconic,window,full_screen,open}",
      statusFrame, DEFAULT, "Current visibility of the frame"),
+  SM(NAME_shortcut, 1, "event", shortcutFrame,
+     NAME_accelerator, "Handle a key before the window with the focus"),
   SM(NAME_typed, 1, "event|event_id", typedFrame,
      NAME_accelerator, "Dispatch over available windows"),
   SM(NAME_showLabel, 1, "show=bool", showLabelFrame,

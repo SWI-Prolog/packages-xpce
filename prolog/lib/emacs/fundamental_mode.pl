@@ -999,17 +999,9 @@ split_view(M, Direction:{horizontally,vertically}) :->
     send(TF, arranged).                 % C-x 2 arranges the window by hand
 
 only_window(M) :->
-    "Close the other views of this tab"::
+    "Close the other panes of this tab"::
     get(M, view, V),
-    get(M, views, Views),
-    (   Views = [_,_|_]
-    ->  forall(( member(Other, Views), Other \== V ),
-               send(Other, destroy)),
-        send(V?frame, keyboard_focus, V),
-        get(M, tab, TF),
-        send(TF, arranged)              % and so does C-x 1
-    ;   send(M, report, status, 'Single view')
-    ).
+    send(V, only_pane).
 
 delete_window(M) :->
     "Close this view, keeping the others of this tab or window"::
@@ -1025,18 +1017,15 @@ delete_window(M) :->
         ;   true
         )
     ;   \+ send(V, last_in_frame)       % the window shows more: a console
-    ->  send(V, close_pane)
+    ->  send(V, request_close)
     ;   send(M, report, warning, 'Cannot close the only view of a window')
     ).
 
 other_window(M) :->
-    "Move the focus to the next view of this tab"::
+    "Move the focus to the next pane of this tab"::
     get(M, view, V),
-    get(M, views, Views),
-    (   next_view(V, Views, Next)
-    ->  send(V?frame, keyboard_focus, Next)
-    ;   send(M, report, status, 'Single view')
-    ).
+    get(V, pane_frame, F),
+    send(F, next_pane).
 
 new_frame(M) :->
     "Open this buffer in a frame of its own"::
@@ -1045,21 +1034,6 @@ new_frame(M) :->
     get(View, editor, NewEditor),
     get(M, caret, Here),
     send(NewEditor, caret, Here).
-
-%       next_view(+View, +Views, -Next)
-%
-%       The view after View, wrapping around.  Identity rather than
-%       unification: the views are objects.
-
-next_view(V, Views, Next) :-
-    append(Before, [W|After], Views),
-    W == V,
-    !,
-    (   After = [Next|_]
-    ->  true
-    ;   Before = [Next|_]
-    ).
-
 
 /* The location history is also reachable from the two buttons the mode
    dialog puts in its tool_bar, but those are not there when the menu

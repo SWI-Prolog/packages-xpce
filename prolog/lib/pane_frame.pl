@@ -51,8 +51,9 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
 :- use_module(library(toolbar), []).
-:- use_module(library(lists), [member/2, max_list/2, nth1/3, last/2]).
-:- use_module(library(apply), [maplist/3]).
+:- use_module(library(lists), [member/2, max_list/2, nth1/3, last/2, append/3, append/2]).
+:- use_module(library(apply), [maplist/3, exclude/3, partition/4]).
+:- use_module(library(pairs), [map_list_to_pairs/3, pairs_values/2]).
 :- use_module(library(pane_layouts),
               [ arrangement_of/2, record_arrangement/2,
                 remember_arrangement/1
@@ -302,6 +303,159 @@ menu_bar(F, MB:menu_bar) :<-
 tabs(F, TW:pane_tabbed_window) :<-
     "The tabbed window holding my panes"::
     get(F, member, pane_tabbed_window, TW).
+
+%       Keys of the window as a whole, such as switching tabs.  The
+%       frame offers each key to ->shortcut before the window with the
+%       keyboard focus sees it.  Control-Tab is left alone: it moves the
+%       focus between the items of a dialog or the windows of a tool.
+%
+%       Control-X starts a sequence here unless the pane handles it
+%       itself, as an editor and a terminal do (see `pane ->handles_prefix`)
+%       or the item with the keyboard focus has a selection, which
+%       Control-X cuts in the CUA style of dialogs.
+
+:- pce_global(@pane_frame_bindings, make_pane_frame_bindings).
+
+make_pane_frame_bindings(B) :-
+    new(B, key_binding(pane_frame)),
+    send(B, function, '\\C-<page_down>', next_tab),
+    send(B, function, '\\C-<page_up>',   previous_tab),
+    send(B, function, '\\C-x',           prefix),
+    send(B, function, '\\C-x0',          close_current_pane),
+    send(B, function, '\\C-x1',          only_pane),
+    send(B, function, '\\C-xo',          next_pane),
+    send(B, function, '<f6>',             next_pane),
+    send(B, function, '\\S-<f6>',         previous_pane),
+    send(B, apply_user_bindings).
+
+shortcut(F, Ev:event) :->
+    "Handle a key for the window as a whole"::
+    KB = @pane_frame_bindings,
+    (   get(KB, slot, prefix, '')       % not inside a sequence of mine
+    ->  get(Ev, key, Key),
+        \+ ( get(KB, function, Key, prefix),
+             pane_takes_prefix(F, Key)
+           )
+    ;   true
+    ),
+    send(KB, typed, Ev, F).
+
+%   pane_takes_prefix(+Frame, +Key) is semidet.
+%
+%   True if the pane the user works in handles the sequences starting
+%   with Key, or the item with the keyboard focus has a selection.
+
+pane_takes_prefix(F, Key) :-
+    get(F, current_pane, P),
+    (   send(P, has_send_method, handles_prefix),
+        send(P, handles_prefix, Key)
+    ->  true
+    ;   get(F, keyboard_focus, W),
+        W \== @nil,
+        focus_graphical(W, Gr),
+        has_selection(Gr)
+    ).
+
+focus_graphical(Gr0, Gr) :-
+    send(Gr0, instance_of, window),
+    get(Gr0, keyboard_focus, Gr1),
+    Gr1 \== @nil,
+    Gr1 \== Gr0,
+    !,
+    focus_graphical(Gr1, Gr).
+focus_graphical(Gr, Gr).
+
+has_selection(Gr) :-
+    send(Gr, instance_of, text_item),
+    !,
+    get(Gr, value_text, Text),
+    has_selection(Text).
+has_selection(Gr) :-
+    send(Gr, has_get_method, selection),
+    get(Gr, selection, point(From, To)),
+    From \== To.
+
+only_pane(F) :->
+    "Close the other panes of the tab I am working in"::
+    get(F, current_pane, P),
+    send(P, only_pane).
+
+%       F6 and Shift-F6 move the keyboard focus to the next or previous
+%       pane of the tab in view, as in most desktop applications, and so
+%       does Control-X o.  Panes are visited from left to right and top
+%       to bottom.  A group counts with the panes of the tab it shows.
+
+next_pane(F) :->
+    "Move to the next pane of the tab in view"::
+    step_pane(F, next).
+
+previous_pane(F) :->
+    "Move to the previous pane of the tab in view"::
+    step_pane(F, previous).
+
+step_pane(F, Dir) :-
+    get(F, tabs, TW),
+    visible_panes(TW, Panes0),
+    map_list_to_pairs(position_key, Panes0, Keyed),
+    keysort(Keyed, Sorted),
+    pairs_values(Sorted, Panes),
+    get(F, current_pane, Current),
+    (   Panes = [_,_|_],
+        neighbour(Dir, Current, Panes, To)
+    ->  send(F, current_pane, To),
+        send(F, keyboard_focus, To)
+    ;   send(F, report, status, 'Single pane')
+    ).
+
+position_key(W, X-Y) :-
+    get(W, display_position, point(X, Y)).
+
+neighbour(next, P, Panes, Next) :-
+    append(_, [P,Next|_], Panes),
+    !.
+neighbour(next, _, [First|_], First).
+neighbour(previous, P, Panes, Prev) :-
+    append(_, [Prev,P|_], Panes),
+    !.
+neighbour(previous, _, Panes, Last) :-
+    last(Panes, Last).
+
+%   visible_panes(+Window, -Panes) is det.
+%
+%   Panes are the windows shown by Window: the windows of the tab that a
+%   tabbed window or a group shows, and so on down.
+
+visible_panes(W, Panes) :-
+    send(W, instance_of, tabbed_window),
+    get(W, current, Current),
+    Current \== @nil,
+    get(Current, container, tab_frame, Tab),
+    !,
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    maplist(visible_panes, Windows, Nested),
+    append(Nested, Panes).
+visible_panes(W, [W]).
+
+close_current_pane(F) :->
+    "Close the pane I am working in, if it agrees"::
+    get(F, current_pane, P),
+    (   last_in_frame(P)
+    ->  send(F, report, warning, 'Cannot close the only pane of a window')
+    ;   send(P, has_send_method, request_close)
+    ->  send(P, request_close)
+    ;   send(P, close_pane)
+    ).
+
+next_tab(F) :->
+    "Show the next tab"::
+    get(F, tabs, TW),
+    send(TW, cycle, next).
+
+previous_tab(F) :->
+    "Show the previous tab"::
+    get(F, tabs, TW),
+    send(TW, cycle, previous).
 
 status_dialog(F, SD:pane_status_dialog) :<-
     "The bar at my bottom; fails if I have none"::
@@ -636,22 +790,33 @@ close(F) :->
         (   Count > 1,
             \+ send(F, confirm_danger, close_tabs, 'Close %d tabs?', Count)
         ->  true
-        ;   get(F, can_close, @on)
+        ;   send(F, can_close)
         ->  ignore(send(F, record_arrangement)),
             send(F, destroy)
         ;   true
         )
     ).
 
-can_close(F, Reply:bool) :<-
-    "@on if every pane of mine agrees to be closed"::
+can_close(F) :->
+    "Succeed if every pane of mine agrees to be closed"::
     get(F, panes, Panes),
     chain_list(Panes, List),
-    (   member(P, List),
-        send(P, has_get_method, can_close),
-        \+ get(P, can_close, @on)
-    ->  Reply = @off
-    ;   Reply = @on
+    forall(member(P, List), pane_can_close(P)).
+
+%!  pane_can_close(+Pane) is semidet.
+%!  pane_can_close(+Pane, +Ask) is semidet.
+%
+%   True if Pane agrees to be closed.  A pane that has no ->can_close
+%   agrees.  Unless Ask is `@off`, ->can_close may ask the user, e.g.,
+%   whether to stop what a terminal is running.
+
+pane_can_close(P) :-
+    pane_can_close(P, @default).
+
+pane_can_close(P, Ask) :-
+    (   send(P, has_send_method, can_close)
+    ->  send(P, can_close, Ask)
+    ;   true
     ).
 
 %       I keep the application alive if I was told to or if one of my
@@ -1203,7 +1368,7 @@ pane_term(F, Term:prolog) :<-
 pane_term(F, Term:prolog) :->
     "Hold what Term says, in place of what I hold now"::
     Term = pane_frame(Options, Tabs),
-    get(F, can_close, @on),             % refused: leave me as I was
+    send(F, can_close),                 % refused: leave me as I was
     get(F, tabs, TW),
     get(TW, tabs, Chain),
     chain_list(Chain, Old),
@@ -2206,11 +2371,9 @@ close(Tab) :->
     "Close my panes"::
     get(Tab, windows, Chain),
     chain_list(Chain, Panes),
-    (   member(P, Panes),
-        send(P, has_get_method, can_close),
-        \+ get(P, can_close, @on)
-    ->  true
-    ;   forall(member(P, Panes), close_pane(P))
+    (   forall(member(P, Panes), pane_can_close(P))
+    ->  forall(member(P, Panes), close_pane(P))
+    ;   true
     ).
 
 close_pane(P) :-
@@ -2411,6 +2574,14 @@ prompter(D, Prompter:dialog_item*) :->
     ),
     send(D, slot, prompter, Prompter).
 
+:- multifile key_binding:widget_extra_key_binding/3.
+
+%   ->shortcut handles some keys before the window that has the keyboard
+%   focus.  Used by the key binding browser.
+
+key_binding:widget_extra_key_binding(F, F, @pane_frame_bindings) :-
+    send(F, instance_of, pane_frame).
+
 :- pce_global(@pane_status_bindings, make_pane_status_bindings).
 
 make_pane_status_bindings(B) :-
@@ -2507,6 +2678,18 @@ kind for ->split and ->new_tab to have anything to put there.
 
 :- pce_begin_class(pane, template,
                    "Common behaviour of a window in a pane_frame").
+
+can_close(_, _:[bool]) :->
+    "Succeed if I agree to be closed; unless Ask is @off, I may ask"::
+    true.
+
+%       Whether I handle the key sequences that start with Key myself.
+%       If not, the frame handles some, e.g., Control-X 1 (see
+%       `pane_frame ->shortcut`).  An editor or terminal does.
+
+handles_prefix(_, _:name) :->
+    "Succeed if I handle key sequences starting with Key"::
+    fail.
 
 pane_label(P, Label:name) :<-
     "What my tab is called; my name unless I say otherwise"::
@@ -2726,6 +2909,69 @@ close_pane(P) :->
 last_in_frame(P) :->
     "Succeed if closing me would leave my frame empty"::
     last_in_frame(P).
+
+request_close(P) :->
+    "Close me if I agree"::
+    pane_can_close(P),
+    send(P, close_pane).
+
+%       Control-X 1.  The panes beside me are closed, and so are those
+%       beside the group I am in, up to the tab of the window, so I am all
+%       the tab shows.  The other tabs of a group are left alone.  The
+%       panes that do not agree to be closed without asking, e.g., a
+%       terminal running a query or the console showing the messages of
+%       Prolog, are moved together into a new tab rather than closed, so
+%       nothing is lost and nobody is asked.
+
+only_pane(P) :->
+    "Close the panes beside me; move those that refuse to a new tab"::
+    beside(P, Others),
+    (   Others == []
+    ->  send(P, report, status, 'Single pane')
+    ;   partition(closes_silently, Others, Close, Keep),
+        forall(member(W, Close), close_pane(W)),
+        move_to_one_tab(Keep),
+        get(P, pane_frame, F),
+        send(F, current_pane, P),
+        send(F, keyboard_focus, P),
+        pane_arranged(P)
+    ).
+
+closes_silently(P) :-
+    pane_can_close(P, @off).
+
+%   beside(+Pane, -Others) is det.
+%
+%   Others are the windows that share a tab with Pane, or with a group
+%   that holds Pane, innermost first.
+
+beside(P, Others) :-
+    get(P, container, tab_frame, Tab),
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    exclude(==(P), Windows, Here),
+    (   get(Tab, container, pane_stack, Group)
+    ->  beside(Group, Up),
+        append(Here, Up, Others)
+    ;   Others = Here
+    ).
+
+%   move_to_one_tab(+Panes) is det.
+%
+%   Move Panes out of the tab they are in, into one new tab, without
+%   showing it.
+
+move_to_one_tab([]).
+move_to_one_tab([First|Rest]) :-
+    get(First, pane_frame, F),
+    get(First, pane_tab, Tab),
+    send(Tab, delete, First),
+    send(F, append_pane, First, @default, @off),
+    get(First, pane_tab, New),
+    forall(member(P, Rest),
+           ( pane_side(P, Side),
+             send(New, append, P, @default, Side)
+           )).
 
 %!  last_in_frame(+Window) is semidet.
 %
@@ -2950,16 +3196,11 @@ empty(TP) :->
     ;   send(TP, destroy)
     ).
 
-can_close(TP, Reply:bool) :<-
-    "@on if every window of mine agrees to be closed"::
+can_close(TP, Ask:[bool]) :->
+    "Succeed if every window of mine agrees to be closed"::
     get(TP, members, Windows),
     chain_list(Windows, List),
-    (   member(W, List),
-        send(W, has_get_method, can_close),
-        \+ get(W, can_close, @on)
-    ->  Reply = @off
-    ;   Reply = @on
-    ).
+    forall(member(W, List), pane_can_close(W, Ask)).
 
 keep_alive(TP, Reply:bool) :<-
     "@on if one of my windows must keep the application alive"::

@@ -1862,7 +1862,9 @@ make_split_handle_popup(P) :-
                           end_group := EndGroup))),
     send(P, append,
          menu_item(close,
-                   message(Window, close_pane),
+                   if(message(Window, has_send_method, request_close),
+                      message(Window, request_close),
+                      message(Window, close_pane)),
                    condition := message(Window, has_send_method,
                                         close_pane))).
 

@@ -2767,11 +2767,11 @@ test(the_source_takes_the_keyboard, true(Focus == @on)) :-
     get(F, source, Src),
     get(Src, input_focus, Focus).
 
-test(and_it_can_be_closed_when_nobody_is_waiting, true(Close == @on)) :-
+test(and_it_can_be_closed_when_nobody_is_waiting) :-
     no_frames,
     debugger(F),
     send(F, mode, query_finished),
-    get(F, can_close, Close).
+    send(F, can_close).
 
 :- end_tests(debugger_pane).
 

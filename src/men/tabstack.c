@@ -404,6 +404,12 @@ cycleTabStack(TabStack ts, bool forward)
 }
 
 
+static status
+cycleDirectionTabStack(TabStack ts, Name direction)
+{ return cycleTabStack(ts, direction != NAME_previous);
+}
+
+
 /* An accelerator key: offer it to the tabs; only the one on top takes
  * it.  Otherwise, Control-Tab and Control-Page-Down show the next tab
  * and Control-Shift-Tab and Control-Page-Up the previous, as on
@@ -571,6 +577,8 @@ static senddecl send_tab_stack[] =
      NAME_layout, "The labels have been given their places"),
   SM(NAME_layoutDialog, 1, "[size]", layoutDialogTabStack,
      NAME_layout, "Adjust the members"),
+  SM(NAME_cycle, 1, "direction={next,previous}", cycleDirectionTabStack,
+     NAME_stack, "Put the next or previous active tab on top"),
   SM(NAME_onTop, 1, "member:tab", onTopTabStack,
      NAME_stack, "Put indicated tab on top of the others")
 };

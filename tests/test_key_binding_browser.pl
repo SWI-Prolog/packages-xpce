@@ -581,6 +581,25 @@ test(find_dialog, [First, Class] == [editor_find_dialog, editor_find_dialog]) :-
     !,
     get(Method?context, name, Class).
 
+%   The window of the IDE switches tabs with Control-Page-Up and
+%   Control-Page-Down before the editor in it sees these keys.
+
+test(pane_frame, [First, Function, Class] ==
+                 [pane_frame, next_tab, pane_frame]) :-
+    use_module(library(pane_frame)),
+    new(V, view),
+    new(F, pane_frame(@default, @default, V)),
+    get(V, editor, E),
+    key_binding:graphical_tables(E, Targets, Table),
+    get(Table?defaults, head, FirstTable),
+    get(FirstTable, name, First),
+    key_binding_entries(Table, Targets, Sections),
+    member(section(_, Entries), Sections),
+    memberchk(entry('\\C-<page_down>', Function, active, Method), Entries),
+    !,
+    get(Method?context, name, Class),
+    send(F, destroy).
+
 :- end_tests(widget_key_bindings).
 
 
