@@ -35,85 +35,12 @@
 :- module(emacs_cpp_mode, []).
 :- use_module(library(pce)).
 :- use_module(library(emacs_extend), []).
-:- require([ forall/2
-           , ignore/1
-           ]).
 
 :- emacs_begin_mode(cpp, c,
                     "Mode for (XPCE) C++ programs",
-                    [ pce_insert_include_files = button(pce),
-                      pce_collect_selectors    = button(pce),
-                      pce_replace_selectors    = button(pce),
-                      pce_unreplace_selectors  = button(pce)
+                    [
                     ],
                     []).
-
-from_pce('Arg',                 'Pce').
-from_pce('Object',              'Pce').
-from_pce('Global',              'Pce').
-from_pce('Status',              'Pce').
-
-from_pce('Funcall',             'Call').
-from_pce('Variable',            'Class').
-from_pce('Receiver',            'Class').
-from_pce('Cell',                'Chain').
-from_pce('Pointer',             'Pointer').
-
-canonicalise(Headers) :-
-    forall(from_pce(F, T), ignore(send(Headers, replace, F, T))),
-    send(Headers, sort), send(Headers, unique),
-    ignore(send(Headers, move_after, 'Pce')).
-
-
-pce_insert_include_files(M) :->
-    "Collect the used Pce classes and insert includes"::
-    get(M, collect, regex('#\\s*include\\s+<pce/([A-Za-z]+).h>'), 1, CE),
-    canonicalise(CE),
-
-    get(M, collect, regex('\\yPce([A-Z][a-zA-Z]*)'), 1, Ch),
-    canonicalise(Ch),
-
-    (   send(CE, equal, Ch)
-    ->  send(M, report, status, 'No changes necessary')
-    ;   send(Ch, for_all,
-             message(M, insert,
-                     create(string, '#include <pce/%s.h>\n', @arg1)))
-    ).
-
-
-pce_collect_selectors(M) :->
-    "Collect selectors and generate PcN... lines"::
-    get(M, collect, regex('\\y(send|get)\\("(\\w+)"'), 2, Used),
-    get(M, collect, regex('^PceArg\\s+\\yPcN(\\w+)\\y'), 1, Defined),
-    (   send(Used, equal, Defined)
-    ->  send(M, report, status, 'No changes necessary')
-    ;   send(Used, for_all,
-             message(M, insert,
-                     create(string, 'static PceArg PcN%s("%s");\n',
-                            @arg1, @arg1)))
-    ).
-
-
-pce_replace_selectors(M) :->
-    "Replace all ""bla"" by PcN..."::
-    get(M, collect,
-        regex('^(static\\s+)?PceArg\\s+\\yPcN(\\w+)\\y'), 2, Defined),
-    send(Defined, for_all, message(M, pce_replace_selector, @arg1)).
-
-pce_replace_selector(M, Name:char_array) :->
-    "Replace all occurrences after the caret of ""name"" by PcNname"::
-    get(M, text_buffer, TB),
-    send(regex(string('"%s"', Name)), for_all, TB,
-               message(@arg1, replace, @arg2, string('PcN%s', Name)),
-               M?caret).
-
-pce_unreplace_selectors(M) :->
-    "Replace all PcNbla by ""bla"""::
-    get(M, text_buffer, TB),
-    send(regex('PcN(\\w+)'), for_all, TB,
-         message(@arg1, replace, @arg2, '"\\1"'),
-         M?caret).
-
 
 collect(M, Re:regex, Reg:[int], Result) :<-
     "Collect specified register of regex matches"::
