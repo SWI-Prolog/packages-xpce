@@ -157,6 +157,7 @@ scope('C.lbox', advanced).
 scope('C.line', basic).
 scope('C.link', basic).
 scope('C.list_browser', basic).
+scope('C.markup', basic).
 scope('C.markup_text', basic).
 scope('C.menu', basic).
 scope('C.menu_bar', basic).
@@ -1897,6 +1898,9 @@ scope('M.list_browser.S.style', basic).
 scope('M.list_browser.S.tab_stops', advanced).
 scope('M.list_browser.S.typed', basic_programming).
 scope('M.list_browser.S.unlink', basic_programming).
+scope('M.markup.G.convert', advanced).
+scope('M.markup.G.text', basic).
+scope('M.markup.S.initialise', basic).
 scope('M.markup_text.G.text', basic).
 scope('M.markup_text.S.geometry', advanced).
 scope('M.markup_text.S.initialise', basic).

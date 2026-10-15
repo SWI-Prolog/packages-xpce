@@ -52,6 +52,9 @@ name and class text_buffer.
     reference, with a summary appended where that says more than the class
     name.  This is the conversion used by error messages and `->report`.
 
+    If `format` is a markup, the result is the text without the markup.
+    Formatting a markup itself escapes the arguments.  See class markup.
+
     Various other classes implement the ->format method.  See also
     `editor ->format`, `text_buffer->format`, `pce->format`.
 

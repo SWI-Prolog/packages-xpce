@@ -39,6 +39,55 @@
 static status	statusLabel(Label lb, Name stat);
 static status	selectionLabel(Label lb, Any selection);
 
+/* A selection that is a markup is laid out by Pango.  See class markup
+ * and r_markup().  The text_size_label() and draw_text_label() get the
+ * text of the selection, possibly made into one line.
+ */
+
+static void
+markup_spec_label(Label lb, markup_spec *m, CharArray markup)
+{ m->markup	  = markup;
+  m->font	  = lb->font;
+  m->width	  = 0.0;
+  m->alignment	  = NAME_left;
+  m->justify	  = false;
+  m->ellipsize	  = NAME_none;
+  m->line_spacing = 0.0;
+  m->inactive	  = (lb->active != ON);
+}
+
+
+static void
+text_size_label(Label lb, PceString s, int *w, int *h)
+{ if ( instanceOfObject(lb->selection, ClassMarkup) )
+  { CharArray ca = StringToScratchCharArray(s);
+    markup_spec m;
+    double mw = 0.0, mh = 0.0;
+
+    markup_spec_label(lb, &m, ca);
+    r_markup_extents(&m, &mw, &mh);
+    doneScratchCharArray(ca);
+    *w = (int)mw;
+    *h = (int)mh;
+  } else
+    str_size(s, lb->font, w, h);
+}
+
+
+static void
+draw_text_label(Label lb, PceString s, int x, int y, int w, int h)
+{ if ( instanceOfObject(lb->selection, ClassMarkup) )
+  { CharArray ca = StringToScratchCharArray(s);
+    markup_spec m;
+
+    markup_spec_label(lb, &m, ca);
+    r_markup(&m, x, y);
+    doneScratchCharArray(ca);
+  } else
+    str_label(s, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
+	      lb->active == ON ? 0 : LABEL_INACTIVE);
+}
+
 static status
 initialiseLabel(Label lb, Name name, Any selection, FontObj font)
 { if ( isDefault(name) )
@@ -87,11 +136,9 @@ RedrawAreaLabel(Label lb, Area a)
     { LocalString(buf, s->s_iswide, s->s_size+1);
 
       str_one_line(buf, s);
-      str_label(buf, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
-		lb->active == ON ? 0 : LABEL_INACTIVE);
+      draw_text_label(lb, buf, x, y, w, h);
     } else
-    { str_label(s, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
-		lb->active == ON ? 0 : LABEL_INACTIVE);
+    { draw_text_label(lb, s, x, y, w, h);
     }
   } else /*if ( instanceOfObject(lb->selection, ClassImage) )*/
   { Image image = (Image) lb->selection;
@@ -172,9 +219,9 @@ computeLabel(Label lb)
       { LocalString(buf, s->s_iswide, s->s_size+1);
 
 	str_one_line(buf, s);
-	str_size(buf, lb->font, &w, &h);
+	text_size_label(lb, buf, &w, &h);
       } else
-      { str_size(s, lb->font, &w, &h);
+      { text_size_label(lb, s, &w, &h);
       }
       w += ex;
 
@@ -250,17 +297,27 @@ clearLabel(Label lb)
 }
 
 
-static status
-formatLabel(Label lb, CharArray fm, int argc, Any *argv)
+/* Format a string.  If the format is a markup, so is the result.
+ */
+
+static StringObj
+format_text(CharArray fm, int argc, Any *argv)
 { ArgVector(av, argc+1);
-  int ac;
-  StringObj str;
 
   av[0] = fm;
-  for(ac=1; ac <= argc; ac++)
-    av[ac] = argv[ac-1];
+  copyArgs(argc, argv, &av[1]);
 
-  TRY(str = newObjectv(ClassString, ac, av));
+  return newObjectv(instanceOfObject(fm, ClassMarkup) ? ClassMarkup
+						      : ClassString,
+		    argc+1, av);
+}
+
+
+static status
+formatLabel(Label lb, CharArray fm, int argc, Any *argv)
+{ StringObj str;
+
+  TRY(str = format_text(fm, argc, argv));
   return selectionLabel(lb, str);
 }
 
@@ -345,22 +402,21 @@ reportLabel(Label lb, Name kind, CharArray fmt, int argc, Any *argv)
 
   if ( kind == NAME_done )
   { if ( instanceOfObject(lb->selection, ClassCharArray) )
-    { CharArray t1 = getEnsureSuffixCharArray(lb->selection,
-					      (CharArray) CtoName(" "));
+    { CharArray sel = lb->selection;
+      PceString s = &sel->data;
+      bool space = (s->s_size > 0 && str_fetch(s, s->s_size-1) == ' ');
       StringObj str;
-      ArgVector(av, argc+1);
-      int ac;
 
-      av[0] = fmt;
-      for(ac=1; ac <= argc; ac++)
-	av[ac] = argv[ac-1];
-
-      TRY(str = newObjectv(ClassString, ac, av));
-      t1 = getAppendCharArray(t1, (CharArray) str);
+      TRY(str = format_text(fmt, argc, argv));
+      Class class = ( instanceOfObject(sel, ClassMarkup) ||
+		      instanceOfObject(str, ClassMarkup) ? ClassMarkup
+							 : ClassString );
+      StringObj t = newObject(class, CtoName(space ? "%s%s" : "%s %s"),
+			      sel, str, EAV);
       doneObject(str);
+      TRY(t);
 
-      selectionLabel(lb, t1);
-      doneObject(t1);
+      selectionLabel(lb, t);
     } else
       TRY(formatLabel(lb, fmt, argc, argv));
   } else
@@ -383,7 +439,7 @@ reportLabel(Label lb, Name kind, CharArray fmt, int argc, Any *argv)
 static char *T_initialise[] =
         { "name=[name]", "selection=[string|image]", "font=[font]" };
 static char *T_format[] =
-        { "name", "any ..." };
+        { "format=char_array", "argument=any ..." };
 static char *T_catchAll[] =
         { "name", "unchecked ..." };
 static char *T_geometry[] =

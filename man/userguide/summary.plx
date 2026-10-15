@@ -1082,6 +1082,11 @@ show_source_files :-
 	send(D, open).
 \end{code}
 
+#class markup "markup(format, argument ...)"
+A \class{markup} is a \class{string} holding Pango markup.  Formatting
+escapes the arguments.  A \class{label} renders a markup selection,
+which also applies to messages from `object ->report'.
+
 #class markup_text "markup_text(markup, width, font)"
 A \class{markup_text} displays read-only text formatted using Pango
 markup, mixing fonts, sizes, styles and colours, for example

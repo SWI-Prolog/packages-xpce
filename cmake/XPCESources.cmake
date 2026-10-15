@@ -57,7 +57,7 @@ set(REL_SRC	constraint.c hyper.c identity.c relation.c
 set(RGX_SRC	regcompW.c regexecW.c
 		regfree.c regerror.c)
 
-set(TXT_SRC	chararray.c editor.c fragment.c keybinding.c
+set(TXT_SRC	chararray.c editor.c fragment.c keybinding.c markup.c
 		regex.c str.c string.c style.c syntax.c
 		textbuffer.c textcursor.c textimage.c
 		textmargin.c undo.c terminal.c

@@ -28,6 +28,7 @@ COMMON(Colour)	getFadeColour(Colour c, Num f);
 COMMON(Colour)	getMixColour(Colour c, Colour with, Num f);
 COMMON(Int)	getIntensityColour(Colour c);
 COMMON(status)	rgbaColour(Colour c, Int rgba);
+COMMON(Colour)	getExistingColour(Name name);
 COMMON(status)	makeClassColour(Class class);
 COMMON(status)	makeClassThemeColour(Class class);
 COMMON(status)	resolveThemeColour(ThemeColour tc);

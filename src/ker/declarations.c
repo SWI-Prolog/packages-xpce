@@ -368,6 +368,9 @@ static struct class_definition classdefs[] =
   { NAME_canvas, NAME_graphical, makeClassCanvas,
     &ClassCanvas, "Graphical to draw on with Cairo-style operations" },
 
+  { NAME_markup, NAME_string, makeClassMarkup,
+    &ClassMarkup, "String holding Pango markup" },
+
   { NAME_markupText, NAME_graphical, makeClassMarkupText,
     &ClassMarkupText, "Text formatted using Pango markup" },
 

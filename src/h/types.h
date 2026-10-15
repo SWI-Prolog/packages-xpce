@@ -363,6 +363,7 @@ PUBLIC_GLOBAL Class ClassGetMethod;
 PUBLIC_GLOBAL Class ClassGraphical;
 PUBLIC_GLOBAL Class ClassGradient;
 PUBLIC_GLOBAL Class ClassStrokeStyle;
+PUBLIC_GLOBAL Class ClassMarkup;
 PUBLIC_GLOBAL Class ClassMarkupText;
 PUBLIC_GLOBAL Class ClassCanvas;
 PUBLIC_GLOBAL Class ClassCurvePoint;

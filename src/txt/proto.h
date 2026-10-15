@@ -125,6 +125,11 @@ COMMON(status)	str_insert_string(StringObj str, Int where, PceString s);
 COMMON(StringObj) getSubString(StringObj n, Int start, Int end);
 COMMON(status)	makeClassString(Class class);
 
+/* /swi40/jan/src/pl/packages/xpce/src/txt/markup.c */
+COMMON(status)	str_writefv_markup_text(PceString s, CharArray fmt,
+					int argc, const Any *argv);
+COMMON(status)	makeClassMarkup(Class class);
+
 /* /swi40/jan/src/pl/packages/xpce/src/txt/style.c */
 COMMON(status)	boldStyle(Style s, BoolObj on);
 COMMON(status)	makeClassStyle(Class class);

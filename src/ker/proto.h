@@ -155,6 +155,7 @@ COMMON(Name)	characterName(Any chr);
 COMMON(status)	writef_arguments(char *fm, va_list args, int *argc, Any *argv);
 COMMON(void)	writef(char *fm, ...);
 COMMON(status)	str_writefv(PceString s, CharArray format, int argc, const Any *argv);
+COMMON(status)	str_writefv_markup(PceString s, CharArray format, int argc, const Any *argv);
 COMMON(Int)	scanstr(char *str, char *fmt, Any *r);
 COMMON(status)	sysPce(char *fm, ...);
 COMMON(int64_t) mclock(void);

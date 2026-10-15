@@ -34,7 +34,7 @@
 
 :- module(test_markup_text, [test_markup_text/0]).
 
-/** <module> Tests for class markup_text and graphical->draw_markup
+/** <module> Tests for class markup_text, graphical->draw_markup and class markup
 
 Run with:
 
@@ -48,7 +48,9 @@ Run with:
 :- use_module(library(plunit)).
 
 test_markup_text :-
-    run_tests([ markup_text
+    run_tests([ markup_text,
+                markup,
+                label_markup
               ]).
 
 red(0xffff0000).
@@ -159,9 +161,97 @@ test(geometry_sets_width, W == 120) :-
     new(T, markup_text("text")),
     send(T, set, 10, 10, 120),
     get(T, width, W).
+test(theme_colour, [RGBA1, RGBA2] == [Red, Blue]) :-
+    red(Red),
+    Blue = 0xff0000ff,
+    setup_call_cleanup(
+        new(C, theme_colour(tmt_block, red)),
+        ( new(T, markup_text("<span background='tmt_block'>      </span>")),
+          pixel(T, 100, 40, 5, 5, RGBA1),
+          send(C, derived_from, blue),
+          pixel(T, 100, 40, 5, 5, RGBA2)
+        ),
+        free(C)).
+test(xpce_colour_name, RGBA == 0xffafeeee) :-
+    new(T, markup_text("<span background='pale_turquoise'>      </span>")),
+    pixel(T, 100, 40, 5, 5, RGBA).
+test(unknown_colour_is_rejected, fail) :-
+    new(_, markup_text("<span background='no_such_colour'>x</span>")).
 test(draw_markup, RGBA == Red) :-
     red(Red),
     new(G, tmt_drawer),
     pixel(G, 100, 40, 5, 5, RGBA).
 
 :- end_tests(markup_text).
+
+value(Obj, Value) :-
+    get(Obj, value, A),
+    atom_string(A, Value).
+
+:- begin_tests(markup).
+
+test(escapes_arguments, V == "<b>a&lt;b&amp;&quot;c&#39;</b> 42 &lt;") :-
+    new(M, markup("<b>%s</b> %d %c", 'a<b&"c\'', 42, 0'<)),
+    value(M, V).
+test(markup_argument_as_is, V == "<b><i>x</i></b>") :-
+    new(M, markup("<b>%s</b>", markup("<i>x</i>"))),
+    value(M, V).
+test(no_arguments_is_not_a_format, V == "100% <b>%s</b>") :-
+    new(M, markup("100% <b>%s</b>")),
+    value(M, V).
+test(format_escapes, V == "<i>&lt;</i>") :-
+    new(M, markup("<b>x</b>")),
+    send(M, format, "<i>%s</i>", '<'),
+    value(M, V).
+test(convert_escapes, [Class, V] == [markup, "a &lt; b"]) :-
+    get(@pce, convert, 'a < b', markup, M),
+    get(M, class_name, Class),
+    value(M, V).
+test(text, V == "a&b") :-
+    new(M, markup("<b>a&amp;b</b>")),
+    get(M, text, T),
+    value(T, V).
+test(invalid_markup_is_rejected, fail) :-
+    new(_, markup("<b>bad")).
+test(plain_format_of_markup, V == "a<b") :-
+    new(S, string(markup("<b>%s</b>"), 'a<b')),
+    value(S, V).
+
+:- end_tests(markup).
+
+:- begin_tests(label_markup).
+
+test(format, [Class, V] == [markup, "<b>a&lt;b</b>"]) :-
+    new(L, label(l, '')),
+    send(L, format, markup("<b>%s</b>"), 'a<b'),
+    get(L, selection, S),
+    get(S, class_name, Class),
+    value(S, V).
+test(report_done, [Class, V] == [markup, "<b>go</b> ok&amp;"]) :-
+    new(L, label(l, '')),
+    send(L, report, progress, markup("<b>%s</b>"), go),
+    send(L, report, done, 'ok&'),
+    get(L, selection, S),
+    get(S, class_name, Class),
+    value(S, V).
+test(draws_markup, RGBA == Red) :-
+    red(Red),
+    red_block(M),
+    new(L, label(l, markup(M))),
+    send(L, border, 0),
+    pixel(L, 100, 40, 10, 5, RGBA).
+test(inactive_drops_foreground, [Active, Inactive] == [true, false]) :-
+    Markup = "<span size='xx-large' foreground='#ff0000'><b>MW</b></span>",
+    new(L, label(l, markup(Markup))),
+    size(L, W-H),
+    pixels(L, W, H, Set1),
+    send(L, active, @off),
+    pixels(L, W, H, Set2),
+    red(Red),
+    truth(memberchk(Red, Set1), Active),
+    truth(memberchk(Red, Set2), Inactive).
+
+truth(G, true) :- call(G), !.
+truth(_, false).
+
+:- end_tests(label_markup).

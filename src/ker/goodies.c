@@ -609,6 +609,35 @@ put_string(int (*out)(void*, uchar_t), void *closure, PceString s)
 }
 
 
+/* Emit `c' as Pango (XML) markup text
+ */
+
+static int
+put_markup_char(int (*out)(void*, uchar_t), void *closure, uchar_t c)
+{ switch(c)
+  { case '&':  PutString("&amp;");  break;
+    case '<':  PutString("&lt;");   break;
+    case '>':  PutString("&gt;");   break;
+    case '"':  PutString("&quot;"); break;
+    case '\'': PutString("&#39;");  break;
+    default:   Put(c);
+  }
+
+  return TRUE;
+}
+
+
+static int
+put_markup_string(int (*out)(void*, uchar_t), void *closure, PceString s)
+{ for(int i=0; i<s->s_size; i++)
+  { if ( !put_markup_char(out, closure, str_fetch(s, i)) )
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+
 #ifdef __WINDOWS__
 /* See pl-nt.c of SWI-Prolog for details on this madness
 */
@@ -638,9 +667,23 @@ c99_snprintf(char *buffer, size_t count, const char *fmt, ...)
 Comment to avoid mkproto not generating the prototype for this function
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+/* If `markup' is true, the format is Pango markup and the text of the
+ * arguments is escaped, unless the argument is a markup object.
+ */
+
+#define PutArg(c) \
+	if ( markup ) \
+	{ if ( !put_markup_char(out, closure, c) ) return FALSE; \
+	} else Put(c)
+#define PutArgString(s) do { const char *_s=(s); \
+			     while(*_s) \
+			     { PutArg(*_s); _s++; \
+			     } \
+			   } while(0)
+
 static int
 swritefv(int (*out)(void*, uchar_t), void *closure,
-	 const PceString fmt, int argc, const Any argv[])
+	 const PceString fmt, int argc, const Any argv[], bool markup)
 { int i;
 
   for( i=0; i<fmt->s_size; i++ )
@@ -719,7 +762,7 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	      { if ( (i = checkType(argv[0], TypeInt, NIL)) )
 		  a = valInt(i);
 		else
-		{ PutString(pp(argv[0]));
+		{ PutArgString(pp(argv[0]));
 		  argc--, argv++;
 
 		  continue;
@@ -747,7 +790,7 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	      { while ( width-- > 1 )
 		  Put(' ');
 	      }
-	      Put(a);
+	      PutArg(a);
 	      if ( left )
 	      { while ( width-- > 1 )
 		  Put(' ');
@@ -772,7 +815,7 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	      { if ( (i = checkType(argv[0], TypeInt, NIL)) )
 		  a = valInt(i);
 		else
-		{ PutString(pp(argv[0]));
+		{ PutArgString(pp(argv[0]));
 		  argc--, argv++;
 
 		  continue;
@@ -830,7 +873,7 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	      { if ( (f = checkType(argv[0], TypeReal, NIL)) )
 		  a = valReal(f);
 		else
-		{ PutString(pp(argv[0]));
+		{ PutArgString(pp(argv[0]));
 		  argc--, argv++;
 
 		  continue;
@@ -894,8 +937,13 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	      if ( arg == NOT_SET )
 		arg = atoi(fmtbuf+1);
 
+	      int (*put)(int (*)(void*, uchar_t), void *, PceString) =
+		( markup && !(c != 'O' && argc > 0 &&
+			      instanceOfObject(argv[0], ClassMarkup))
+		  ? put_markup_string : put_string );
+
 	      if ( a.s_size >= abs(arg) )
-	      { if ( !put_string(out, closure, &a) )
+	      { if ( !(*put)(out, closure, &a) )
 		  return FALSE;
 	      } else
 	      { int pad = abs(arg) - a.s_size;
@@ -904,10 +952,10 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 		if ( arg > 0 )
 		{ for(i=0; i<pad; i++)
 		    Put(' ');
-		  if ( !put_string(out, closure, &a) )
+		  if ( !(*put)(out, closure, &a) )
 		    return FALSE;
 		} else
-		{ if ( !put_string(out, closure, &a) )
+		{ if ( !(*put)(out, closure, &a) )
 		    return FALSE;
 		  for(i=0; i<pad; i++)
 		    Put(' ');
@@ -969,21 +1017,51 @@ put_str(void *ctx, uchar_t c)
 }
 
 
-status
-str_writefv(PceString s, CharArray format, int argc, const Any *argv)
+static status
+str_writefv_(PceString s, CharArray format, int argc, const Any *argv,
+	     bool markup)
 { int len;
 
   str_inithdr(s, FALSE);
   s->s_size = 0;
-  swritefv(put_void_str, s, &format->data, argc, argv);
+  swritefv(put_void_str, s, &format->data, argc, argv, markup);
   len = s->s_size;
   str_alloc(s);
   s->s_size = 0;		/* dubious */
-  swritefv(put_str, s, &format->data, argc, argv);
+  swritefv(put_str, s, &format->data, argc, argv, markup);
   assert(s->s_size == len);
   (void)len;
 
   succeed;
+}
+
+
+/* Format.  If `format' is a markup, the result is the text without the
+ * markup, such that receivers that cannot render markup can use this.
+ */
+
+status
+str_writefv(PceString s, CharArray format, int argc, const Any *argv)
+{ if ( ClassMarkup && instanceOfObject(format, ClassMarkup) )
+    return str_writefv_markup_text(s, format, argc, argv);
+
+  return str_writefv_(s, format, argc, argv, false);
+}
+
+
+/* As str_writefv(), but `format' is Pango markup.  Text inserted for
+ * the arguments is escaped, except for arguments that are markup.
+ * Without arguments, `format' is used as is, so formatting a markup
+ * that holds a `%' is safe.
+ */
+
+status
+str_writefv_markup(PceString s, CharArray format, int argc, const Any *argv)
+{ if ( argc == 0 )
+    return str_writefv_(s, (CharArray)name_procent_s, 1,
+			(const Any *)&format, false);
+
+  return str_writefv_(s, format, argc, argv, true);
 }
 
 

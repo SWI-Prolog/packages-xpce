@@ -22,6 +22,11 @@ such as `font`, `size`, `weight`, `style`, `foreground`, `background`,
 `underline` and `strikethrough`.  The characters `<`, `>` and `&` must
 be written as `&lt;`, `&gt;` and `&amp;`.
 
+Besides the colours Pango knows, colour attributes such as `foreground`
+and `background` accept the name of any existing xpce colour.  Notably,
+this allows for theme colours, for example
+`<span foreground='ui_link'>`, which follow a change of theme.
+
 ## Instance variables {#class-markup-text-instvars}
 
 - markup_text<-markup: char_array

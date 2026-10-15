@@ -103,6 +103,7 @@ typedef struct markup_spec
   bool		justify;		/* Justify wrapped lines */
   Name		ellipsize;		/* none, start, middle, end */
   double	line_spacing;		/* Factor; 0: the font's */
+  bool		inactive;		/* Greyed out: no foreground colours */
 } markup_spec;
 
 bool r_markup_extents(const markup_spec *m, double *w, double *h);

@@ -3461,6 +3461,148 @@ s_print_utf8_scaled(const char *u, size_t len, int x, int y, FontObj font,
 		 *	   PANGO MARKUP		*
 		 *******************************/
 
+/* Attributes of <span> whose value is a colour.
+ */
+
+static const char *markup_colour_attributes[] =
+{ "foreground", "fgcolor", "color",
+  "background", "bgcolor",
+  "underline_color", "strikethrough_color", "overline_color",
+  NULL
+};
+
+static bool
+is_markup_colour_attribute(const char *name, size_t len)
+{ for(const char **a = markup_colour_attributes; *a; a++)
+  { if ( strlen(*a) == len && strncmp(*a, name, len) == 0 )
+      return true;
+  }
+
+  return false;
+}
+
+
+/* If Pango does not know the colour `name', but xpce does, write its
+ * value as #rrggbb[aa] to `hex' and return true.  This is the case for
+ * theme colours such as `ui_link' and for xpce's names that use an
+ * underscore, such as `pale_turquoise'.
+ */
+
+static bool
+markup_colour_value(const char *name, char hex[10])
+{ PangoColor pc;
+
+  if ( pango_color_parse(&pc, name) )
+    return false;
+
+  Name n = CtoName(name);
+  Colour c = getExistingColour(n);
+
+  if ( !c &&
+       !(getNamedRGB(n) && (c = newObject(ClassColour, n, EAV))) )
+    return false;
+
+  SDL_Color sc = pceColour2SDL_Color(c);
+#if PANGO_VERSION_CHECK(1,46,0)
+  if ( sc.a != 255 )
+  { snprintf(hex, 10, "#%02x%02x%02x%02x", sc.r, sc.g, sc.b, sc.a);
+    return true;
+  }
+#endif
+  snprintf(hex, 10, "#%02x%02x%02x", sc.r, sc.g, sc.b);
+  return true;
+}
+
+
+/* Pango only knows the X11 colour names and the #rgb notations.  Replace
+ * the value of a colour attribute that names an xpce colour by its
+ * #rrggbb value.  This allows for theme colours, e.g., <span
+ * foreground='ui_link'>.  The colours are resolved whenever we make a
+ * layout, so a change of theme only requires a redraw.  Returns a
+ * g_malloc()ed string, or NULL if nothing was replaced.
+ */
+
+static char *
+markup_resolve_colours(const char *s)
+{ GString *out = NULL;
+  const char *copied = s;		/* Start of text not yet copied */
+  const char *p = s;
+
+  while( (p = strchr(p, '<')) )
+  { p++;
+    while( *p && *p != '>' )
+    { if ( *p == '"' || *p == '\'' )	/* Value without attribute */
+      { const char *e = strchr(p+1, *p);
+	if ( !e )
+	  break;
+	p = e+1;
+      } else if ( isalpha((unsigned char)*p) || *p == '_' )
+      { const char *ns = p;
+
+	while( isalnum((unsigned char)*p) || *p == '_' || *p == '-' )
+	  p++;
+	size_t nl = p-ns;
+	while( isspace((unsigned char)*p) )
+	  p++;
+	if ( *p != '=' )
+	  continue;
+	p++;
+	while( isspace((unsigned char)*p) )
+	  p++;
+	if ( *p != '"' && *p != '\'' )
+	  continue;
+
+	char q = *p++;
+	const char *vs = p;
+	const char *ve = strchr(vs, q);
+	if ( !ve )
+	  break;
+	p = ve+1;
+
+	char name[100];
+	char hex[10];
+	size_t vl = ve-vs;
+	if ( is_markup_colour_attribute(ns, nl) && vl < sizeof(name) )
+	{ memcpy(name, vs, vl);
+	  name[vl] = EOS;
+	  if ( markup_colour_value(name, hex) )
+	  { if ( !out )
+	      out = g_string_new(NULL);
+	    g_string_append_len(out, copied, vs-copied);
+	    g_string_append(out, hex);
+	    copied = ve;
+	  }
+	}
+      } else
+	p++;
+    }
+    if ( !*p )
+      break;
+  }
+
+  if ( !out )
+    return NULL;
+
+  g_string_append(out, copied);
+  return g_string_free(out, FALSE);
+}
+
+
+/* UTF-8 text of `markup' with the colours resolved.  If `*buf' is
+ * not NULL on return, the caller must g_free() it.
+ */
+
+static const char *
+markup_utf8(CharArray markup, char **buf)
+{ const char *s = charArrayToUTF8(markup);
+
+  if ( (*buf = markup_resolve_colours(s)) )
+    return *buf;
+
+  return s;
+}
+
+
 /**
  * Parse Pango markup.  On success, `plain' (if not NULL) is the text
  * without the markup.  On failure, `error' (if not NULL) is Pango's
@@ -3468,21 +3610,33 @@ s_print_utf8_scaled(const char *u, size_t len, int x, int y, FontObj font,
  */
 bool
 ws_parse_markup(CharArray markup, StringObj *plain, StringObj *error)
-{ const char *s = charArrayToUTF8(markup);
+{ char *buf;
+  const char *s = markup_utf8(markup, &buf);
   char *text = NULL;
   GError *err = NULL;
+  bool rc;
 
   if ( pango_parse_markup(s, -1, 0, NULL, &text, NULL, &err) )
   { if ( plain )
       *plain = UTF8ToString(text);
     g_free(text);
-    return true;
+    rc = true;
+  } else
+  { if ( error )
+      *error = UTF8ToString(err->message);
+    g_error_free(err);
+    rc = false;
   }
 
-  if ( error )
-    *error = UTF8ToString(err->message);
-  g_error_free(err);
-  return false;
+  g_free(buf);
+  return rc;
+}
+
+
+static gboolean
+is_foreground_attribute(PangoAttribute *a, gpointer data)
+{ return ( a->klass->type == PANGO_ATTR_FOREGROUND ||
+	   a->klass->type == PANGO_ATTR_FOREGROUND_ALPHA );
 }
 
 
@@ -3496,11 +3650,13 @@ markup_layout(cairo_t *cr, const markup_spec *m)
   if ( !layout )
     return NULL;
 
-  const char *s = charArrayToUTF8(m->markup);
+  char *buf;
+  const char *s = markup_utf8(m->markup, &buf);
   if ( pango_parse_markup(s, -1, 0, NULL, NULL, NULL, NULL) )
     pango_layout_set_markup(layout, s, -1);
   else
     pango_layout_set_text(layout, s, -1);
+  g_free(buf);
 
   if ( m->width > 0.0 )
   { pango_layout_set_width(layout, (int)(m->width*PANGO_SCALE));
@@ -3520,6 +3676,19 @@ markup_layout(cairo_t *cr, const markup_spec *m)
   if ( m->line_spacing > 0.0 )
     pango_layout_set_line_spacing(layout, (float)m->line_spacing);
 #endif
+  if ( m->inactive )
+  { PangoAttrList *attrs = pango_layout_get_attributes(layout);
+
+    if ( attrs )
+    { PangoAttrList *removed =
+	pango_attr_list_filter(attrs, is_foreground_attribute, NULL);
+
+      if ( removed )
+      { pango_attr_list_unref(removed);
+	pango_layout_set_attributes(layout, attrs);
+      }
+    }
+  }
 
   pango_cairo_update_layout(cr, layout);
 
@@ -3566,7 +3735,8 @@ r_markup(const markup_spec *m, double x, double y)
 
   PangoLayout *layout = markup_layout(CR, m);
   if ( layout )
-  { pce_cairo_set_source_color(CR, context.colour);
+  { pce_cairo_set_source_color(CR, m->inactive ? ws_3d_grey()
+					       : context.colour);
     cairo_move_to(CR, x, y);
     pango_cairo_show_layout(CR, layout);
     g_object_unref(layout);
@@ -4368,7 +4538,8 @@ ws_canvas_op(Canvas c, Name op, int argc, Any *argv, bool *changed)
       .alignment    = isDefault(argv[5]) ? NAME_left : argv[5],
       .justify	    = false,
       .ellipsize    = NAME_none,
-      .line_spacing = 0.0
+      .line_spacing = 0.0,
+      .inactive	    = false
     };
     PangoLayout *layout = markup_layout(cr, &m);
 

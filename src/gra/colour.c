@@ -211,6 +211,18 @@ ensure_theme_colours(void)
 }
 
 
+/* The colour named `name' if it exists, notably a theme colour.  Unlike
+ * converting a name to a colour, this does not create a colour.
+ */
+
+Colour
+getExistingColour(Name name)
+{ ensure_theme_colours();
+
+  answer(getMemberHashTable(ColourTable, name));
+}
+
+
 static Colour
 getLookupColour(Class class, Name name, Int r, Int g, Int b, Int a, Name model)
 { ensure_theme_colours();

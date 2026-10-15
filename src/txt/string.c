@@ -160,6 +160,26 @@ promoteString(StringObj s)
 }
 
 
+/* Formatting a markup object makes the format markup and escapes
+ * the text of the arguments.  See class markup.
+ */
+
+static inline bool
+is_markup(Any obj)
+{ return ClassMarkup && instanceOfObject(obj, ClassMarkup); /* boot */
+}
+
+
+static status
+writefv_string(StringObj str, PceString s, CharArray fmt,
+	       int argc, const Any *argv)
+{ if ( is_markup(str) )
+    return str_writefv_markup(s, fmt, argc, argv);
+  else
+    return str_writefv(s, fmt, argc, argv);
+}
+
+
 status
 initialiseStringv(StringObj str, CharArray fmt, int argc, Any *argv)
 { if ( isDefault(fmt) )
@@ -167,7 +187,9 @@ initialiseStringv(StringObj str, CharArray fmt, int argc, Any *argv)
     str->data.s_size = 0;
     str_alloc(&str->data);
   } else if ( (Name) fmt == name_procent_s &&
-	      argc == 1 && instanceOfObject(argv[0], ClassCharArray) )
+	      argc == 1 &&
+	      instanceOfObject(argv[0],
+			       is_markup(str) ? ClassMarkup : ClassCharArray) )
   { CharArray v = argv[0];
 
     str_cphdr(&str->data, &v->data);
@@ -180,7 +202,7 @@ initialiseStringv(StringObj str, CharArray fmt, int argc, Any *argv)
       memcpy(str->data.s_textA, v->data.s_textA, str_datasize(&v->data));
     }
   } else
-    TRY(str_writefv(&str->data, fmt, argc, argv));
+    TRY(writefv_string(str, &str->data, fmt, argc, argv));
 
   succeed;
 }
@@ -236,7 +258,7 @@ formatString(StringObj s, CharArray fmt, int argc, Any *argv)
 { prepareWriteString(s);
 
   str_unalloc(&s->data);
-  str_writefv(&s->data, fmt, argc, argv);
+  writefv_string(s, &s->data, fmt, argc, argv);
 
   return setString(s, &s->data);
 }

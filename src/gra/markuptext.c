@@ -53,6 +53,7 @@ markup_spec_text(MarkupText t, markup_spec *m)
   m->justify	  = (t->justify == ON);
   m->ellipsize	  = t->ellipsize;
   m->line_spacing = valNum(t->line_spacing);
+  m->inactive	  = false;
 }
 
 

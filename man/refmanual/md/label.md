@@ -30,9 +30,13 @@ advocated.
 
 - label<-selection: char_array|image
     Currently displayed text or image object.  If the selection is a text
-    (instance of class char_array), it is displayed in <-font.  The field
-    width is described by <-length.  If the actual text does not fit in the
-    field the label is automatically enlarged.
+    (instance of class char_array), it is displayed in <-font.  If it is
+    a markup object, the markup is rendered, mixing fonts, styles and
+    (theme) colours.  The <-font is used for text without a font in the
+    markup.  If the label is not active, the colours of the text in the
+    markup are ignored.  The field width is described by <-length.  If
+    the actual text does not fit in the field the label is automatically
+    enlarged.
 
 
 ## Send methods {#class-label-send}
@@ -67,11 +71,14 @@ advocated.
     This method is normally invoked from ->event through a click_gesture
     object.
 
-- label->format: name, any ...
+- label->format: format=char_array, argument=any ...
     Create a formatted string from the arguments and make it the
     <-selection.  Equivalent to:
 
     	send(Label, selection, string(Format, Argument ...)).
+
+    If _Format_ is a markup, the selection is a markup and the
+    arguments are escaped.  See class markup.
 
 - label->initialise: name=[name], selection=[string|image], font=[font]
     Create a label from its name (used to reference it in its device; see
@@ -97,6 +104,9 @@ advocated.
     <-selection.   _Kind_ is done appends the formatted text to the
     current <-selection of the label.  If `format` is @default,
     `done` is appended to the selection.
+
+    If `format` is a markup, the message is rendered as markup.  See
+    class markup.
 
     @see dialog<-report_to
 
