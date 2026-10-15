@@ -5,6 +5,7 @@ test_libs(colour               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(theme                OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_image           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(editor_placeholder   OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(editor_isearch       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_item            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(filter_item          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
@@ -96,6 +97,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:theme
                      xpce:text_image
                      xpce:editor_placeholder
+                     xpce:editor_isearch
                      xpce:text_item
                      xpce:tab_frame
                      xpce:fixed_graphicals

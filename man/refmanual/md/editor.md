@@ -878,6 +878,10 @@ although the latter is the principal way of manipulating a text.
     	ESCAPE					Terminate search
     	\C-w					Extend target to current word
 
+    If the target cannot be found, the editor reports a warning with
+    the part of the target that was found on `ui_isearch_background`
+    and the remainder on `ui_isearch_failed_background`.
+
     @see editor->isearch_backward
     @see editor-search_string
     @see editor-search_origin

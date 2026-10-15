@@ -3816,6 +3816,35 @@ backwardDeleteCharSearchStringEditor(Editor e)
 }
 
 
+/* Report a failing isearch.  The current hit is the longest prefix of
+ * the search string that matched; show it as the hit in the text and
+ * the remainder as failed.
+ */
+
+static status
+reportFailingIsearchEditor(Editor e)
+{ int len = valInt(getSizeCharArray(e->search_string));
+  int hit = min(abs(valInt(e->caret) - valInt(e->mark)), len);
+  StringObj matched = getSubString(e->search_string, ZERO, toInt(hit));
+  StringObj failed  = getSubString(e->search_string, toInt(hit), DEFAULT);
+  Any msg = newObject(ClassMarkup,
+		      CtoName("Failing ISearch: "
+			      "<span foreground=\"ui_window_foreground\" "
+			      "background=\"ui_isearch_background\">%s</span>"
+			      "<span foreground=\"ui_window_foreground\" "
+			      "background=\"ui_isearch_failed_background\">"
+			      "%s</span>"),
+		      matched, failed, EAV);
+
+  send(e, NAME_report, NAME_warning, msg, EAV);
+  doneObject(msg);
+  doneObject(matched);
+  doneObject(failed);
+
+  succeed;
+}
+
+
 static status
 executeSearchEditor(Editor e, Int chr, Int from)
 { int l, hit_start, hit_end;
@@ -3867,8 +3896,7 @@ executeSearchEditor(Editor e, Int chr, Int from)
   }
 
   if ( hit_start < 0 )
-  { send(e, NAME_report, NAME_warning,
-	 CtoName("Failing ISearch: %s"), e->search_string, EAV);
+  { reportFailingIsearchEditor(e);
     if ( e->search_wrapped_warned == OFF )
       assign(e, search_wrapped_warned, ON);
 

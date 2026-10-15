@@ -532,14 +532,17 @@ test(a_click_does_not_repeat_a_warning, true(Said == '')) :-
 
 %!  bar_report(+Frame, -Message) is det.
 %
-%   What the bar of Frame was last told to say.
+%   What the bar of Frame was last told to say.  For a markup, this is
+%   the text without the markup.
 
 bar_report(F, Message) :-
     (   get(F, status_dialog, SD),
         get(SD, member, reporter, Label),
         get(Label, selection, Selection),
         Selection \== @nil
-    ->  (   send(Selection, instance_of, char_array)
+    ->  (   send(Selection, instance_of, markup)
+        ->  get(Selection?text, value, Message)
+        ;   send(Selection, instance_of, char_array)
         ->  get(Selection, value, Message)
         ;   Message = Selection
         )

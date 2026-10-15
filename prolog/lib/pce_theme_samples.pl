@@ -99,6 +99,8 @@ sample(ui_fold,                 terminal(fold), 'Folded output of a command in a
 sample(ui_inactive,             inactive,       'Items that cannot be used').
 sample(ui_isearch_background,   isearch,        'Incremental search').
 sample(ui_isearch_other_background, isearch,    'Incremental search').
+sample(ui_isearch_failed_background, failed_isearch,
+       'Incremental search for text that cannot be found').
 sample(ui_link,                 terminal(link), 'A hyperlink in a terminal').
 sample(ui_margin_background,    margin,         'Margin of an editor').
 sample(ui_placeholder,          placeholder,    'An empty text field').
@@ -174,6 +176,15 @@ build(report(Kind), R) :-
     new(R, reporter),
     report_sample(Kind, Message),
     send(R, report, Kind, Message).
+build(failed_isearch, R) :-             % as editor.c
+    new(R, reporter),
+    new(M, markup('Failing ISearch: \
+<span foreground="ui_window_foreground" \
+background="ui_isearch_background">%s</span>\
+<span foreground="ui_window_foreground" \
+background="ui_isearch_failed_background">%s</span>',
+                  'bar(', 'Z')),
+    send(R, report, warning, M).
 build(pressed_button, B) :-
     new(B, button(pressed, @nil)),
     send(B, status, preview).

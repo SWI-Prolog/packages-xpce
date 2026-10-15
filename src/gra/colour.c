@@ -1159,6 +1159,8 @@ static const struct builtin_theme_colour
     "Current match of incremental search" },
   { "ui_isearch_other_background",  "pale_turquoise",
     "Other matches of incremental search" },
+  { "ui_isearch_failed_background", "rosybrown1",
+    "Part of the search string that cannot be found" },
   { "ui_fold",			    "grey50",
     "Marker of folded (hidden) text" },
   { "ui_cursor",		    "red",
