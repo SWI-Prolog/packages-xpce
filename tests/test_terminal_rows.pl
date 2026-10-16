@@ -68,14 +68,18 @@ with_caret_style(Style, Goal) :-
 
 %!  rows(+Height, -Rows, -CellHeight, -Ascent) is det.
 %
-%   Rows of a terminal that is Height pixels high.
+%   Rows of a terminal that is Height pixels high.  The terminal lays
+%   out its cells in whole pixels, truncating the metrics of the font,
+%   which are fractional on, e.g., Windows.
 
 rows(Height, Rows, CellHeight, Ascent) :-
     new(T, terminal_image(400, Height)),
     get(T, rows, Rows),
     get(T, font, Font),
-    get(Font, height, CellHeight),
-    get(Font, ascent, Ascent),
+    get(Font, height, FontHeight),
+    get(Font, ascent, FontAscent),
+    CellHeight is truncate(FontHeight),
+    Ascent is truncate(FontAscent),
     free(T).
 
 %!  cells(+Cols0, +Rows0, -Cols, -Rows) is det.
