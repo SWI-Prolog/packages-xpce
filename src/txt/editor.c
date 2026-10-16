@@ -3849,7 +3849,8 @@ backwardDeleteCharSearchStringEditor(Editor e)
 static status
 reportFailingIsearchEditor(Editor e)
 { int len = valInt(getSizeCharArray(e->search_string));
-  int hit = min(abs(valInt(e->caret) - valInt(e->mark)), len);
+  intptr_t dist = valInt(e->caret) - valInt(e->mark);
+  int hit = (int)min(dist < 0 ? -dist : dist, len);
   StringObj matched = getSubString(e->search_string, ZERO, toInt(hit));
   StringObj failed  = getSubString(e->search_string, toInt(hit), DEFAULT);
   Any msg = newObject(ClassMarkup,
