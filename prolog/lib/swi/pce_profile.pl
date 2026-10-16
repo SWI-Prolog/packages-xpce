@@ -43,6 +43,7 @@
                    prof_node              = blue
                  ]).
 :- use_module(library(lists)).
+:- use_module(library(aggregate), [aggregate_all/3]).
 :- use_module(library(apply)).
 :- use_module(library(pairs)).
 :- use_module(library(yall)).
@@ -277,7 +278,8 @@ help(_) :->
 
 :- multifile
     pce_preferences:preferences/2,
-    pce_preferences:edit_type/3.
+    pce_preferences:edit_type/3,
+    pce_preferences:class_variable_changed/3.
 
 %   The preferences a user may want to change for the profiler.  See
 %   library(pce_preferences) and the class variable editor.
@@ -297,6 +299,11 @@ pce_preferences:edit_type(prof_graph, prune_above,   '1..20').
 pce_preferences:edit_type(prof_graph, max_relatives, '1..30').
 pce_preferences:edit_type(prof_graph, max_nodes,     '10..100').
 pce_preferences:edit_type(prof_graph, natural_zoom,  '0.5..3.0').
+
+%   The call graphs are drawn again when one of their limits changes.
+
+pce_preferences:class_variable_changed(prof_graph, _, _) :-
+    send(@prof_graphs, for_all, message(@arg1, refresh)).
 
 
                  /*******************************
@@ -582,7 +589,7 @@ update_label(DI, SortBy:name, F:prof_frame) :->
 
 time_key(ticks).
 time_key(ticks_self).
-time_key(ticks_children).
+time_key(ticks_siblings).
 
 details(DI) :->
     "Show details"::
@@ -907,8 +914,9 @@ status(T, Status:{on_top,hidden}) :->
 
 /* A call graph around the current node, as kcachegrind shows it: the
 node in the middle, its callers above and its callees below, each box
-tinted by the time spent in it and its children, and each arrow as
-thick as the time that flows along it.
+tinted by the time spent in it and its children, and each arrow
+labelled with the number of calls and as thick as the time that flows
+along it.
 
 A graph is only of use as long as it can be read, so it is pruned once
 it grows, but no sooner.  The callers or callees of a predicate are all
@@ -945,6 +953,7 @@ class_variable(max_nodes,    '1..', 30,
 
 initialise(W) :->
     send_super(W, initialise, @default, call_graph, size(300,200)),
+    send(@prof_graphs, append, W),
     send(W, slot, fitted, none),
     get(W, xdot, X),
     send(X, node_clicked, message(W, clicked, @arg1)),
@@ -954,6 +963,10 @@ initialise(W) :->
                 menu_item(edit, message(W, edit, @arg1))
               ]),
     send(X, node_popup, P).
+
+unlink(W) :->
+    send(@prof_graphs, delete_all, W),
+    send_super(W, unlink).
 
 node(W, Data:prolog) :->
     "Show the call graph around a node"::
@@ -1106,6 +1119,11 @@ edit(W, Node:xdot_node) :->
 
 :- pce_end_class(prof_graph).
 
+%   The call graphs, so they can be drawn again if one of the class
+%   variables that limit them changes.
+
+:- pce_global(@prof_graphs, new(chain)).
+
 numbered_ids([], _, []).
 numbered_ids([_|T0], N, [Id|T]) :-
     atom_concat(n, N, Id),
@@ -1164,7 +1182,23 @@ call_graph(Tool, Data, Limits, Edges) :-
     MoreUp is CallerDepth-1,
     MoreDown is CalleeDepth-1,
     walk(MoreUp-Up, MoreDown-Down, Tool, Limits, Seen, Direct, Edges1),
-    unique_edges(Edges1, Edges).
+    unique_edges(Edges1, Edges2),
+    graph_preds(Pred, Edges2, Preds),
+    foldl(recursion_edge(Tool, Data), Preds, Edges, Edges2).
+
+%   Recursion shows as one call of a predicate to itself.  That is for
+%   every predicate in the graph, also those of which the relatives are
+%   not walked.
+
+recursion_edge(Tool, Data, P, [edge(P, P, 0, Calls)|Edges], Edges) :-
+    (   P == Data.predicate
+    ->  PData = Data
+    ;   get(Tool, node_data, P, PData)
+    ),
+    recursive_calls(PData, Calls),
+    Calls > 0,
+    !.
+recursion_edge(_, _, _, Edges, Edges).
 
 %!  walk(+Up, +Down, +Tool, +Limits, +Seen, +Edges0, -Edges) is det.
 %
@@ -1230,16 +1264,19 @@ new_end(callees, edge(_, End, _, _), End).
 %   The calls to (callers) or from (callees) Pred, as far as
 %   prune_relatives/3 keeps them.  The relatives of a predicate are
 %   split by the cycles it is part of; the calls between the same two
-%   predicates are summed here.  Recursion shows as one call of Pred to
-%   itself, taken from the callers only, as that is where the profile
-%   lists it.
+%   predicates are summed here.  The time of the call is that of cycle 0,
+%   the outermost: that of a deeper cycle is part of it.  Recursion is
+%   added by call_graph/4.
 
 pred_edges(Dir, Pred, Data, Limits, Edges) :-
     findall(Other-t(Ticks,Calls),
-            ( member(node(Other, _Cycle, Self, Children, Calls, _, _),
+            ( member(node(Other, Cycle, Self, Children, Calls, _, _),
                      Data.Dir),
               Other \== '<recursive>',
-              Ticks is Self+Children
+              (   Cycle == 0
+              ->  Ticks is Self+Children
+              ;   Ticks = 0
+              )
             ),
             Pairs0),
     keysort(Pairs0, Pairs),
@@ -1254,12 +1291,17 @@ pred_edges(Dir, Pred, Data, Limits, Edges) :-
             ( member(r(Ticks, Calls, Other), Kept),
               edge(Dir, Pred, Other, Ticks, Calls, Edge)
             ),
-            Edges0),
-    (   Dir == callers,
-        member(node('<recursive>', _, _, _, RCalls, _, _), Data.callers)
-    ->  Edges = [edge(Pred, Pred, 0, RCalls)|Edges0]
-    ;   Edges = Edges0
-    ).
+            Edges).
+
+%!  recursive_calls(+Data, -Calls) is det.
+%
+%   The calls of the predicate of Data to itself.  The profile lists them
+%   per cycle the predicate is part of.
+
+recursive_calls(Data, Calls) :-
+    aggregate_all(sum(C),
+                  member(node('<recursive>', _, _, _, C, _, _), Data.callers),
+                  Calls).
 
 %!  prune_relatives(+Relatives, +Limits, -Kept) is det.
 %
@@ -1339,7 +1381,7 @@ dot_graph(Tool, Pred, Total, colours(FG), Ids, Edges) -->
     "  edge [fontname=\"Helvetica\" fontsize=9 arrowsize=0.7 ",
     "color=", dot_string(FG), " fontcolor=", dot_string(FG), "];\n",
     dot_nodes(Ids, Tool, Pred, Total),
-    dot_edges(Edges, Tool, Total, Ids),
+    dot_edges(Edges, Total, Ids),
     "}\n".
 
 dot_nodes([], _, _, _) --> [].
@@ -1357,11 +1399,9 @@ node_attrs(Tool, P, Pred, Total, Attrs) :-
         time_text(Tool, Incl, InclText),
         time_text(Tool, Self, SelfText),
         format(string(Label), '~w\n~w (self ~w)', [Short, InclText, SelfText]),
-        format(string(Tooltip),
-               '~w\nTime: ~w, self ~w\nCall: ~D, redo: ~D, exit: ~D',
-               [ Name, InclText, SelfText,
-                 Data.call, Data.redo, Data.exit
-               ]),
+        port_text(Tool, Data, PortText),
+        format(string(Tooltip), '~w\nTime: ~w, self ~w\n~w',
+               [Name, InclText, SelfText, PortText]),
         heat_colour(Incl, Total, Fill)
     ;   Label = Short,
         Tooltip = Name,
@@ -1373,6 +1413,17 @@ node_attrs(Tool, P, Pred, Total, Attrs) :-
     ;   Extra = []
     ),
     Attrs = [label=Label, tooltip=Tooltip, fillcolor=Fill|Extra].
+
+%   The calls to a predicate, and how they ended if the profile
+%   recorded the ports.
+
+port_text(Tool, Data, Text) :-
+    (   get(Tool, ports, false)
+    ->  format(string(Text), 'Call: ~D', [Data.call])
+    ;   Fail is Data.call + Data.redo - Data.exit,
+        format(string(Text), 'Call: ~D, redo: ~D, exit: ~D, fail: ~D',
+               [Data.call, Data.redo, Data.exit, Fail])
+    ).
 
 pred_label(P, Label) :-
     atom(P),
@@ -1412,21 +1463,22 @@ heat_colour(Ticks, Total, Colour) :-
     B is round(215 - F*165),
     format(atom(Colour), '#ff~|~`0t~16r~2+~|~`0t~16r~2+', [G, B]).
 
-dot_edges([], _, _, _) --> [].
-dot_edges([edge(From,To,Ticks,Calls)|T], Tool, Total, Ids) -->
+dot_edges([], _, _) --> [].
+dot_edges([edge(From,To,Ticks,Calls)|T], Total, Ids) -->
     { memberchk(FromId-From, Ids),
       memberchk(ToId-To, Ids),
-      edge_attrs(Tool, Ticks, Calls, Total, Attrs)
+      edge_attrs(Ticks, Calls, Total, Attrs)
     },
     "  ", atom(FromId), " -> ", atom(ToId), " [", dot_attrs(Attrs), "];\n",
-    dot_edges(T, Tool, Total, Ids).
+    dot_edges(T, Total, Ids).
 
-edge_attrs(Tool, Ticks, Calls, Total, [label=Label, penwidth=Width]) :-
-    (   Ticks > 0
-    ->  time_text(Tool, Ticks, TimeText),
-        format(string(Label), '~w\n~D×', [TimeText, Calls])
-    ;   format(string(Label), '~D×', [Calls])
-    ),
+%   An edge is labelled with the number of calls only.  The time of a
+%   call into a cycle does not add up to anything that reads well: the
+%   time of a call at an outer level includes that of the calls further
+%   in.  It does set the width of the edge.
+
+edge_attrs(Ticks, Calls, Total, [label=Label, penwidth=Width]) :-
+    format(string(Label), '~D×', [Calls]),
     Width is round(10*(1 + 4*min(1.0, Ticks/float(Total))))/10.0.
 
 dot_attrs([]) --> [].
