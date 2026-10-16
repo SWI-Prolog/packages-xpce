@@ -1218,6 +1218,7 @@ theme_library(library(swi/thread_monitor)) :-
     current_prolog_flag(threads, true).
 theme_library(library(emacs/bookmarks)).
 theme_library(library(pce_helper)).
+theme_library(library(pce_symbol_picker)).
 
 %!  load_theme_libraries is det.
 %

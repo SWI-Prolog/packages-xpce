@@ -66,8 +66,19 @@ displays the status of threads.
 :- theme_colours([ thread_graph_local  = blue,
                    thread_graph_global = orange,
                    thread_graph_trail  = dark_green,
-                   thread_graph_cpu    = purple
+                   thread_graph_cpu    = purple,
+                   thread_cpu_idle     = grey80 -
+                       "Background of the CPU gauge of a running thread",
+                   thread_cpu_busy     = green -
+                       "CPU usage in the gauge of a running thread"
                  ]).
+
+thread_icon(running,   thread_running).
+thread_icon(true,      thread_true).
+thread_icon(false,     thread_false).
+thread_icon(exception, thread_exception).
+thread_icon(exited,    thread_exited).
+thread_icon(profiling, thread_profiling).
 
 resource(thread_running,   image, image('ide/threads/thread-running.svg')).
 resource(thread_true,      image, image('ide/threads/thread-true.svg')).
@@ -376,14 +387,8 @@ class_variable(size, size, size(20, 10)).
 
 initialise(TB) :->
     send_super(TB, initialise),
-    send(TB, style, running, style(icon := resource(thread_running))),
-    send(TB, style, true, style(icon := resource(thread_true))),
-    send(TB, style, false, style(icon := resource(thread_false))),
-    send(TB, style, exception, style(icon := resource(thread_exception))),
-    send(TB, style, exited, style(icon := resource(thread_exited))),
-    send(TB, style, profiling, style(icon := resource(thread_profiling))),
     send(TB, select_message, message(TB, details, @arg1)),
-    send(TB, running_styles),
+    send(TB, icon_styles),
     send(TB?text_image, recogniser,
          handler(button,
                  and(message(@event, is_popup),
@@ -435,27 +440,48 @@ initialise(TB) :->
                           condition := IsRunning)
               ]).
 
-running_styles(TB) :->
-    "Define styles running_0..running_<H>"::
+%   icon_styles defines the styles for the status of a thread.  The
+%   icons are H pixels square and stand on the baseline, where H is
+%   computed from the font.  The styles running_0..running_<H> show
+%   the CPU usage as a gauge behind the icon of a running thread.  The
+%   gauges are images, so we draw them again if the colours or the
+%   font change.
+
+icon_styles(TB) :->
+    "Define the styles of the thread status icons"::
     get(TB, font, Font),
-    get(Font, height, Ascent0),
+    get(Font, height, Height),
     get(Font, descent, Descent),
-    Ascent is Ascent0*0.8,
-    H is floor((Ascent+Descent)),
+    Ascent is round(Height*0.8),
+    H is Ascent+Descent,
     send(TB, slot, cpu_height, H),
-    new(Running, image(resource(thread_running), H)),
-    get(Running, size, size(W,IH)),
+    forall(thread_icon(Style, Resource),
+           ( status_icon(Resource, H, Ascent, Icon),
+             send(TB, style, Style, style(icon := Icon)))),
+    status_icon(thread_running, H, Ascent, Running),
     (   between(0, H, N),
-        new(Img, image(@nil, W, H, pixmap)),
+        new(Img, image(@nil, H, H, pixmap)),
         send(Img, hot_spot, point(0, Ascent)),
-        send(Img, fill, grey80),
-        send(Img, fill, green, area(0, H-N, W, N)),
-        send(Img, draw_in, bitmap(Running), point(0,Ascent-IH)),
+        send(Img, fill, thread_cpu_idle),
+        send(Img, fill, thread_cpu_busy, area(0, H-N, H, N)),
+        send(Img, draw_in, bitmap(Running)),
         atom_concat(running_, N, Style),
         send(TB, style, Style, style(icon := Img)),
         fail
     ;   true
     ).
+
+status_icon(Resource, H, Ascent, Icon) :-
+    new(Icon, image(resource(Resource), H, H)),
+    send(Icon, hot_spot, point(0, Ascent)).
+
+colours_changed(TB) :->
+    "Draw the CPU gauges in the new colours"::
+    send(TB, icon_styles).
+
+fonts_changed(TB) :->
+    "Size the icons to the new font"::
+    send(TB, icon_styles).
 
 update(TB) :->
     "Update with thread-status"::

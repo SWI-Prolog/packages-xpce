@@ -665,9 +665,10 @@ initialise(F, Current:[colour], Msg:[code]*) :->
     default(Msg, @nil, TheMsg),
     send(F, message, TheMsg),
     send(F, append, new(B, browser(size := size(90, 20)))),
-    get(B?font, width, "  ui_text_selection_background  ", W1),
+    get(B?font, width, "ui_text_selection_background  ", W1),
     source_column_width(B?font, W2),
-    W is W1+24,
+    get(B, icon_gap, Gap),
+    W is 20+Gap+W1,                     % swatch_icon/2, gap and name
     send(B?text_image, tab_stops, vector(W, W+W2)),
     send(B, open_message, message(F, ok)),
     get(@theme_colours, copy, Colours),
@@ -688,20 +689,40 @@ append_colour(F, Colour:theme_colour) :->
     "Add an entry for Colour"::
     get(F, member, browser, B),
     get(Colour, name, Name),
-    new(Icon, image(@nil, 20, 14, pixmap)),
-    send(Icon, fill, Colour),
-    send(Icon, draw_in, new(Border, box(20, 14))),
-    send(Border, colour, grey50),
+    swatch_icon(Colour, Icon),
     send(B, style, Name, style(icon := Icon)),
     colour_trace(Colour, Trace, Source),
     (   get(Colour, summary, Summary), Summary \== @nil
     ->  true
     ;   Summary = ''
     ),
-    Label = string('  %s\t%s\t%s', Name, Source, Summary), % spaces: gap after icon
+    Label = string('%s\t%s\t%s', Name, Source, Summary),
     send(B, append, new(DI, dict_item(Name, Label, Colour, Name))),
     atomic_list_concat(Trace, '\n', Tip),
     send(DI, help_message, tag, Tip).
+
+%   The swatches are images, so we fill them again if the theme changes
+%   the value of the colours.
+
+swatch_icon(Colour, Icon) :-
+    new(Icon, image(@nil, 20, 14, pixmap)),
+    send(Icon, fill, Colour),
+    send(Icon, draw_in, new(Border, box(20, 14))),
+    send(Border, colour, grey50).
+
+colours_changed(F) :->
+    "Fill the swatches with the new value of the colours"::
+    get(F, member, browser, B),
+    send(B?dict, for_all,
+         message(@prolog, update_swatch, B, @arg1)).
+
+:- public update_swatch/2.
+
+update_swatch(B, DI) :-
+    get(DI, object, Colour),
+    get(DI, key, Name),
+    swatch_icon(Colour, Icon),
+    send(B, style, Name, style(icon := Icon)).
 
 ok(F) :->
     "Call <-message with the selected colour and close"::

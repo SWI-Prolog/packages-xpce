@@ -1237,11 +1237,10 @@ fill(F) :->
 tab_stops(B, Theme, Issues, Rows) :-
     get(B, font, Font),
     get(Font, width, '  ', Gap),
-    icon_width(IconW),
+    icon_width(B, IconW),
     findall(W, ( member(Row, Rows),
                  row_name(Row, Name),
-                 atom_concat('  ', Name, Text),
-                 get(Font, width, Text, W)
+                 get(Font, width, Name, W)
                ), NameWs),
     max_list([0|NameWs], NameW),
     findall(W, ( member(Row, Rows),
@@ -1257,7 +1256,14 @@ tab_stops(B, Theme, Issues, Rows) :-
     ),
     send(B?text_image, tab_stops, vector(Tab1, Tab2)).
 
-icon_width(24).                         % icon of look_icon/2 and the gap
+%   icon_width(+Browser, -Width)
+%
+%   Width is the width of the icons of look_icon/2 and colour_icon/2
+%   plus the space the browser leaves after them.
+
+icon_width(B, W) :-
+    get(B, icon_gap, Gap),
+    W is 22 + Gap.
 
 show_row(Theme, Group, Status, Filter, Issues, Row) :-
     (   Group == all
@@ -1296,7 +1302,7 @@ row_text(Theme, Row, Issues, Label, Icon) :-
     row_status(Theme, Row, Issues, Status),
     row_info(Theme, Row, Info),
     row_icon(Theme, Row, Icon),
-    format(string(Label), '  ~w\t~w\t~w', [Name, Status, Info]).
+    format(string(Label), '~w\t~w\t~w', [Name, Status, Info]).
 
 row_icon(_, colour(Name), Icon) :-
     !,

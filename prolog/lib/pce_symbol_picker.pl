@@ -40,6 +40,7 @@
 :- use_module(library(pce)).
 :- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
+:- use_module(library(pce_theme), [theme_colours/1]).
 :- autoload(library(unicode/blocks), [unicode_block/3]).
 :- autoload(library(apply), [include/3]).
 :- autoload(library(lists),
@@ -50,6 +51,12 @@
 :- if(exists_source(library(uniname))).
 :- autoload(library(uniname), [unicode_name/2]).
 :- endif.
+
+:- theme_colours([ symbol_picker_user   = darkgreen -
+                       "Code ranges of the user in the symbol picker",
+                   symbol_picker_prolog = navyblue -
+                       "Code ranges of Prolog in the symbol picker"
+                 ]).
 
 :- multifile code_range/3.              % Name, Ranges, Sample
 
@@ -558,8 +565,10 @@ initialise(SP) :->
     new(UnicodeIcon, image(resource(logo_unicode), IH, IH)),
     new(UserIcon, image(resource(ublock_user), IH, IH)),
     send(B, tab_stops, vector(Tab)),
-    send(B, style, user,    style(colour := darkgreen, icon := UserIcon)),
-    send(B, style, prolog,  style(colour := navyblue, icon := PrologIcon)),
+    send(B, style, user,    style(colour := symbol_picker_user,
+                                  icon := UserIcon)),
+    send(B, style, prolog,  style(colour := symbol_picker_prolog,
+                                  icon := PrologIcon)),
     send(B, style, unicode, style(icon := UnicodeIcon)),
 
     format(string(Row), '~20c', [0'W]),
