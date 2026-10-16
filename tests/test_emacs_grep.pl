@@ -57,6 +57,7 @@ Run with:
 :- use_module(library(emacs/bookmarks)).
 :- use_module(library(emacs/grep)).
 :- use_module(library(lists), [member/2]).
+:- use_module(library(process), [process_which/2]).
 
 test_emacs_grep :-
     run_tests([ grep_line,
@@ -101,7 +102,14 @@ test(long_line, [TextLen-Pos-Len == 500-0-(@default)]) :-
 
 :- end_tests(grep_line).
 
-:- begin_tests(grep_hit_list, [ setup(make_tree),
+%   These run the grep program, which need not be installed, e.g., on
+%   Windows.
+
+has_grep :-
+    process_which(path(grep), _).
+
+:- begin_tests(grep_hit_list, [ condition(has_grep),
+                                setup(make_tree),
                                 cleanup(remove_tree)
                               ]).
 
