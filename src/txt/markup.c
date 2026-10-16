@@ -107,6 +107,39 @@ str_writefv_markup_text(PceString s, CharArray fmt,
 }
 
 
+/* The text `text' as markup that shows it as is.  The result is a
+ * string rather than a markup, so a receiver that displays its label
+ * with a markup_text can tell an escaped plain label from a markup.
+ */
+
+StringObj
+escapedMarkupString(CharArray text)
+{ string s;
+  Any av[1] = { text };
+  StringObj str;
+
+  if ( !str_writefv_markup(&s, (CharArray)name_procent_s, 1, av) )
+    return NULL;
+  str = StringToString(&s);
+  str_unalloc(&s);
+
+  return str;
+}
+
+
+/* The markup for displaying `label' with a markup_text: a markup as
+ * is, other text escaped.
+ */
+
+CharArray
+labelMarkup(CharArray label)
+{ if ( instanceOfObject(label, ClassMarkup) )
+    return label;
+
+  return (CharArray)escapedMarkupString(label);
+}
+
+
 		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/

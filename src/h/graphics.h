@@ -703,7 +703,7 @@ NewClass(list_browser)
   Dict		dict;			/* dict in which items reside */
   TextImage	text_image;		/* The text area */
   ScrollBar	scroll_bar;		/* The scrollbar */
-  TextObj	label_text;		/* Text to display the label */
+  MarkupText	label_text;		/* Markup text to display the label */
   Name		status;			/* active/inactive */
   KeyBinding	key_binding;		/* Keybinding table */
   Any		selection;		/* DictItem (Chain) of selected */
@@ -717,6 +717,7 @@ NewClass(list_browser)
   Sheet		styles;			/* Name --> style mapping */
   BoolObj	drop_unrenderable;	/* Drop items the style cannot show */
   BoolObj	focus_border;		/* Field look: rounded, focus border */
+  Int		icon_gap;		/* Space between icon and label */
   Size		size;			/* Size in characters */
   Int		start;			/* Index of first item shown */
   Int		search_origin;		/* Origin of incremental search */
@@ -1007,7 +1008,7 @@ NewClass(window_decorator)
   PceWindow	window;			/* Client (decorated) window */
   ScrollBar	horizontal_scrollbar;	/* Horizontal scrollbar */
   ScrollBar	vertical_scrollbar;	/* Vertical scrollbar */
-  TextObj	label_text;		/* Text object to display label */
+  MarkupText	label_text;		/* Markup text to display label */
 End;
 
 NewClass(picture)

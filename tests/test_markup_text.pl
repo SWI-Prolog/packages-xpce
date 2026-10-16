@@ -50,7 +50,10 @@ Run with:
 test_markup_text :-
     run_tests([ markup_text,
                 markup,
-                label_markup
+                label_markup,
+                list_browser_markup,
+                decorator_markup,
+                editor_markup
               ]).
 
 red(0xffff0000).
@@ -312,3 +315,174 @@ truth(G, true) :- call(G), !.
 truth(_, false).
 
 :- end_tests(label_markup).
+
+
+:- begin_tests(list_browser_markup).
+
+markup_browser(Labels, LB) :-
+    new(LB, list_browser(@default, 20, 5)),
+    forall(nth1(I, Labels, Label),
+           send(LB, append, dict_item(I, Label))).
+
+browser_pixels(LB, Set) :-
+    size(LB, W-H),
+    pixels(LB, W, H, Set).
+
+key(DI, Key) :-
+    get(DI, key, Key).
+
+test(item_draws_markup, true(memberchk(Red, Set))) :-
+    red(Red),
+    red_block(M),
+    markup_browser([markup(M)], LB),
+    browser_pixels(LB, Set).
+test(string_item_shows_tags, true(\+ memberchk(Red, Set))) :-
+    red(Red),
+    red_block(M),
+    markup_browser([M], LB),
+    browser_pixels(LB, Set).
+test(selection_overrides_markup, true(\+ memberchk(Red, Set))) :-
+    red(Red),
+    red_block(M),
+    markup_browser([markup(M)], LB),
+    send(LB, selection, 1),
+    browser_pixels(LB, Set).
+test(find_prefix_ignores_markup, Key == 2) :-
+    markup_browser([markup("<b>a</b>bc"), markup("<i>x</i>yz")], LB),
+    get(LB?dict, find_prefix, "xy", DI),
+    key(DI, Key).
+test(match_ignores_markup, Keys == [1]) :-
+    markup_browser([markup("<b>a</b>bc"), markup("<i>x</i>yz")], LB),
+    get(LB?dict, match, "ab", Chain),
+    chain_list(Chain, DIs),
+    maplist(key, DIs, Keys).
+test(sort_ignores_markup, Keys == [2, 1]) :-
+    markup_browser([markup("<b>z</b>a"), "b"], LB),
+    send(LB, sort),
+    get(LB?dict?members, map, @arg1?key, Chain),
+    chain_list(Chain, Keys).
+test(search_ignores_markup) :-
+    markup_browser([markup("<b>foo</b>")], LB),
+    send(LB, insert_self, 1, 0'f).
+test(search_does_not_find_tags, fail) :-
+    markup_browser([markup("<b>foo</b>")], LB),
+    send(LB, insert_self, 1, 0'<).
+test(label_markup, [Class, TextClass, V] == [markup, markup_text, "<b>x</b>"]) :-
+    new(LB, list_browser),
+    send(LB, label, markup("<b>x</b>")),
+    get(LB, label, L),
+    get(L, class_name, Class),
+    get(LB?label_text, class_name, TextClass),
+    value(L, V).
+test(label_plain, L == 'a<b&c') :-
+    new(LB, list_browser),
+    send(LB, label, 'a<b&c'),
+    get(LB, label, L).
+test(label_draws_markup, true(memberchk(Red, Set))) :-
+    red(Red),
+    red_block(M),
+    new(LB, list_browser),
+    send(LB, label, markup(M)),
+    browser_pixels(LB, Set).
+
+%   The label of an item with an icon starts <-icon_gap pixels after
+%   the icon.  The icon is a red square.  The text starts at the first
+%   pixel right of the icon, in the rows of the icon, that is not
+%   white.
+
+text_start(LB, X) :-
+    size(LB, W-H),
+    new(I, image(@nil, W, H)),
+    send(I, draw_in, LB),
+    red(Red), white(White),
+    W1 is W-1, H1 is H-1,
+    findall(X0-Y, ( between(0, H1, Y), between(0, W1, X0),
+                    rgba(I, X0, Y, Red)
+                  ), Icon),
+    aggregate_all(max(X0), member(X0-_, Icon), Right),
+    aggregate_all(min(X0),
+                  ( member(_-Y, Icon), between(Right, W1, X0),
+                    rgba(I, X0, Y, RGBA),
+                    RGBA \== Red, RGBA \== White
+                  ),
+                  X),
+    free(I).
+
+rgba(I, X, Y, RGBA) :-
+    get(I, pixel, X, Y, C),
+    get(C, rgba, RGBA).
+
+test(icon_gap, [Gap, D] == [4, 7]) :-
+    new(Icon, image(@nil, 8, 8)),
+    send(Icon, fill, red),
+    new(LB, list_browser),
+    send(LB, style, icon, style(icon := Icon)),
+    send(LB, append, dict_item(x, 'MMM', style := icon)),
+    get(LB, icon_gap, Gap),
+    send(LB, icon_gap, 0),
+    text_start(LB, X0),
+    send(LB, icon_gap, 7),
+    text_start(LB, X7),
+    D is X7 - X0.
+
+:- end_tests(list_browser_markup).
+
+
+:- begin_tests(decorator_markup).
+
+decorated_label(Label, Class, Value) :-
+    get(Label, class_name, Class),
+    value(Label, Value).
+
+test(markup_label, [Class, V, TextClass] ==
+                   [markup, "<b>a&lt;b</b>", markup_text]) :-
+    new(P, picture),
+    send(P, label, markup("<b>%s</b>"), 'a<b'),
+    get(P, decoration, D),
+    get(D, label, L),
+    decorated_label(L, Class, V),
+    get(D?label_text, class_name, TextClass).
+test(plain_label, [Class, V] == [string, "a<b 42&"]) :-
+    new(P, picture),
+    send(P, label, 'a<b %d&', 42),
+    get(P?decoration, label, L),
+    decorated_label(L, Class, V).
+test(label_above_window, true(Y >= H)) :-
+    new(P, picture),
+    send(P, label, markup("<big>Big</big> title")),
+    get(P?decoration, label_text, T),
+    get(T?area, height, H),
+    get(P?area, y, Y).
+test(label_width, W == DW) :-
+    new(P, picture),
+    send(P, label, markup("<b>title</b>")),
+    get(P, decoration, D),
+    send(D, set, width := 300),
+    get(D?label_text?area, width, W),
+    get(D?area, width, DW).
+
+:- end_tests(decorator_markup).
+
+
+:- begin_tests(editor_markup).
+
+test(label_markup, [Class, TextClass, V] == [markup, markup_text, "<b>x</b>"]) :-
+    new(E, editor),
+    send(E, label, markup("<b>x</b>")),
+    get(E, label, L),
+    get(L, class_name, Class),
+    get(E?label_text, class_name, TextClass),
+    value(L, V).
+test(label_plain, L == 'a<b&c') :-
+    new(E, editor),
+    send(E, label, 'a<b&c'),
+    get(E, label, L).
+test(label_draws_markup, true(memberchk(Red, Set))) :-
+    red(Red),
+    red_block(M),
+    new(E, editor),
+    send(E, label, markup(M)),
+    size(E, W-H),
+    pixels(E, W, H, Set).
+
+:- end_tests(editor_markup).

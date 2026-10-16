@@ -94,6 +94,8 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   assign(lb,   styles,		      newObject(ClassSheet, EAV));
   assign(lb,   drop_unrenderable,     OFF);
   assign(lb,   focus_border,          ON);
+  assign(lb,   icon_gap,	      getClassVariableValueObject(lb,
+							  NAME_iconGap));
   assign(lb,   selection_style,       getClassVariableValueObject(lb,
 						      NAME_selectionStyle));
 
@@ -194,6 +196,8 @@ loadListBrowser(ListBrowser lb, IOSTREAM *fd, ClassDef def)
 
   if ( !isBoolean(lb->focus_border) )	/* saved before it existed */
     assign(lb, focus_border, ON);
+  if ( !isInteger(lb->icon_gap) )
+    assign(lb, icon_gap, getClassVariableValueObject(lb, NAME_iconGap));
 
   if ( isNil(lb->status) )
     assign(lb, status, NAME_inactive);
@@ -208,21 +212,33 @@ loadListBrowser(ListBrowser lb, IOSTREAM *fd, ClassDef def)
 		*            LABEL		*
 		********************************/
 
-static status
-labelListBrowser(ListBrowser lb, Name lbl)
-{ showLabelListBrowser(lb, ON);
+/* The label is displayed by a markup_text, see labelMarkup().
+ */
 
-  send(lb->label_text, NAME_string, lbl, EAV);
+static status
+labelListBrowser(ListBrowser lb, CharArray lbl)
+{ CharArray markup;
+
+  TRY(markup = labelMarkup(lbl));
+  showLabelListBrowser(lb, ON);
+  TRY(send(lb->label_text, NAME_markup, markup, EAV));
   geometryListBrowser(lb, DEFAULT, DEFAULT, DEFAULT, DEFAULT);
 
   succeed;
 }
 
 
-static Name
+static CharArray
 getLabelListBrowser(ListBrowser lb)
 { if ( notNil(lb->label_text) )
-    answer(getValueCharArray((CharArray) lb->label_text->string));
+  { CharArray markup = lb->label_text->markup;
+    StringObj text;
+
+    if ( instanceOfObject(markup, ClassMarkup) )
+      answer(markup);
+    if ( (text = get(lb->label_text, NAME_text, EAV)) )
+      answer((CharArray)getValueCharArray((CharArray)text));
+  }
 
   fail;
 }
@@ -233,9 +249,11 @@ showLabelListBrowser(ListBrowser lb, BoolObj val)
 { if ( isNil(lb->label_text) )
   { if ( val == ON )
     { assign(lb, label_text,
-	     newObject(ClassText, GetLabelNameName(lb->name), NAME_left,
+	     newObject(ClassMarkupText,
+		       labelMarkup((CharArray)GetLabelNameName(lb->name)),
+		       lb->area->w,
 		       getClassVariableValueObject(lb, NAME_labelFont), EAV));
-      marginText(lb->label_text, lb->area->w, NAME_clip);
+      send(lb->label_text, NAME_ellipsize, NAME_end, EAV);
       displayDevice(lb, lb->label_text, DEFAULT);
       return geometryListBrowser(lb, DEFAULT, DEFAULT,
 				 add(lb->text_image->area->x, lb->text_image->area->w),
@@ -391,6 +409,7 @@ geometryListBrowser(ListBrowser lb, Int x, Int y, Int w, Int h)
   ix = (sw < 0 ? -sw : 0);
   if ( getShowLabelListBrowser(lb) == ON )
   { send(lb->label_text, NAME_set, ZERO, ZERO, w, EAV);
+    ComputeGraphical(lb->label_text);
     iy = valInt(lb->label_text->area->h) - pen;
   } else
   { iy = 0;
@@ -476,6 +495,11 @@ static Colour	     current_colour;	/* Current colour */
 static Any	     current_background; /* Current background */
 static Any	     current_underline;	/* Current underline */
 static Image	     current_image;	/* Image to flag line */
+static int	     current_icon_gap;	/* Space after the image */
+static Style	     current_selected;	/* Selected: its style or @default */
+static StringObj     current_text;	/* Text of a markup label */
+static markup_run   *current_runs;	/* Runs of a markup label */
+static int	     current_run_count;	/* Number of runs */
 
 /* <-drop_unrenderable: an item whose style has a font that does not
  * provide all characters of the label, e.g., the name of a symbol font
@@ -534,9 +558,31 @@ dropUnrenderableItemsListBrowser(ListBrowser lb)
 }
 
 
+/* A label that is a markup is shown as its text, where the runs that
+ * Pango finds for the markup change the font, colours and underline
+ * of the item's style.  The selection and search feedback are on top
+ * of that.  See ws_markup_runs().
+ */
+
+static void
+clear_current_markup(void)
+{ if ( current_text )
+  { doneObject(current_text);
+    current_text = NULL;
+  }
+  if ( current_runs )
+  { pceFree(current_runs);
+    current_runs = NULL;
+  }
+  current_run_count = 0;
+}
+
+
 static void
 compute_current(ListBrowser lb)
-{ if ( notNil(current_cell) )
+{ clear_current_markup();
+
+  if ( notNil(current_cell) )
   { DictItem di = (DictItem) current_cell->value;
     CharArray label = getLabelDictItem(di);
     Style style;
@@ -569,19 +615,13 @@ compute_current(ListBrowser lb)
       current_image      = NIL;
     }
 
-    if ( selectedListBrowser(lb, di) )
-    { if ( isDefault(lb->selection_style) )
-	current_atts ^= TXT_HIGHLIGHTED;
-      else
-      { current_atts |= lb->selection_style->attributes;
-	if ( notDefault(lb->selection_style->font) )
-	  current_font = lb->selection_style->font;
-	if ( notDefault(lb->selection_style->colour) )
-	  current_colour = lb->selection_style->colour;
-	if ( notDefault(lb->selection_style->background) )
-	  current_background = lb->selection_style->background;
-      }
-    }
+    if ( label && instanceOfObject(label, ClassMarkup) &&
+	 ws_markup_runs(label, current_font, &current_text,
+			&current_runs, &current_run_count) )
+      current_name = &current_text->data;
+
+    current_selected = (selectedListBrowser(lb, di) ? lb->selection_style
+						    : NULL);
 
     if ( di->index == lb->search_hit )
     { current_search = lb->search_string->data.s_size;
@@ -595,7 +635,40 @@ compute_current(ListBrowser lb)
     current_background = DEFAULT;
     current_underline  = DEFAULT;
     current_image      = NIL;
+    current_selected   = NULL;
+    current_search     = 0;
   }
+}
+
+
+/* Apply the run of the markup label at character `i'.
+ */
+
+static void
+apply_markup_run(TextChar tc, int i)
+{ for(int r=0; r < current_run_count; r++)
+  { markup_run *run = &current_runs[r];
+
+    if ( i < run->start )
+      break;
+    if ( i < run->end )
+    { tc->font = run->font;
+      if ( notDefault(run->colour) )     tc->colour     = run->colour;
+      if ( notDefault(run->background) ) tc->background = run->background;
+      if ( notDefault(run->underline) )  tc->underline  = run->underline;
+      break;
+    }
+  }
+}
+
+
+static void
+apply_style(TextChar tc, Style s)
+{ tc->attributes |= s->attributes;
+  if ( notDefault(s->font) )       tc->font	  = s->font;
+  if ( notDefault(s->colour) )     tc->colour     = s->colour;
+  if ( notDefault(s->background) ) tc->background = s->background;
+  if ( notDefault(s->underline) )  tc->underline  = s->underline;
 }
 
 
@@ -671,6 +744,7 @@ fetch_list_browser(Any obj, TextChar tc)
       { if ( notNil(current_image) )
 	{ tc->value.image  = current_image;
 	  tc->type = CHAR_IMAGE;
+	  tc->gap  = current_icon_gap;
 	} else
 	{ tc->value.image = NULL_IMAGE;
 	  tc->type = CHAR_IMAGE;
@@ -696,16 +770,22 @@ fetch_list_browser(Any obj, TextChar tc)
   tc->underline    = current_underline;
   tc->index        = index;
 
+  if ( current_run_count > 0 && pos > 0 )
+    apply_markup_run(tc, pos-1);
+
+  if ( current_selected )
+  { if ( isDefault(current_selected) )
+      tc->attributes ^= TXT_HIGHLIGHTED;
+    else
+      apply_style(tc, current_selected);
+  }
+
   if ( pos > 0 && pos <= current_search )
   { Style s = getClassVariableValueObject(lb, NAME_isearchStyle);
 
     if ( s && notDefault(s) )
-    { tc->attributes |= s->attributes;
-      if ( notDefault(s->font) )       tc->font	      = s->font;
-      if ( notDefault(s->colour) )     tc->colour     = s->colour;
-      if ( notDefault(s->background) ) tc->background = s->background;
-      if ( notDefault(s->underline) )  tc->underline  = s->underline;
-    } else
+      apply_style(tc, s);
+    else
       tc->attributes ^= TXT_HIGHLIGHTED;
   }
 
@@ -728,6 +808,9 @@ rewind_list_browser(Any obj)
   current_item = valInt(lb->start);
   current_dict = lb->dict;
   compute_current(lb);
+
+  Int gap = get(lb, NAME_iconGap, EAV);
+  current_icon_gap = (gap && isInteger(gap) ? valInt(gap) : 0);
 }
 
 
@@ -808,7 +891,7 @@ getExtendPrefixDict(Dict dict, CharArray pref, BoolObj ign_case)
 
   for_cell(cell, dict->members)
   { DictItem di = cell->value;
-    CharArray c = getLabelDictItem(di);
+    CharArray c = getTextLabelDictItem(di);
     PceString name;
 
     if ( !c )
@@ -868,7 +951,8 @@ extendToCurrentListBrowser(ListBrowser lb)
 
     if ( notNil(lb->dict) && (di=getFindIndexDict(lb->dict, lb->search_hit)) )
     { assign(lb, search_string,
-	     newObject(ClassString, name_procent_s, getLabelDictItem(di), EAV));
+	     newObject(ClassString, name_procent_s,
+		       getTextLabelDictItem(di), EAV));
       return executeSearchListBrowser(lb);
     }
   }
@@ -1561,7 +1645,7 @@ nextLineListBrowser(ListBrowser lb, Int lines)
 
       di = getNth0Chain(lb->dict->members, newi);
       if ( di )
-      { CharArray lbl = getLabelDictItem(di);
+      { CharArray lbl = getTextLabelDictItem(di);
 	DictItem di2 = getNth0Chain(lb->dict->members, lb->search_hit);
 	BoolObj ign_case = getClassVariableValueObject(lb,
 						    NAME_searchIgnoreCase);
@@ -1692,6 +1776,28 @@ styleListBrowser(ListBrowser lb, Name name, Style style)
   ChangedListBrowser(lb);
 
   succeed;
+}
+
+
+/* <-icon_gap is the space between the icon of an item's style and its
+ * label.  It is asked for on each redraw, so a subclass may refine
+ * the get method.
+ */
+
+static status
+iconGapListBrowser(ListBrowser lb, Int gap)
+{ if ( lb->icon_gap != gap )
+  { assign(lb, icon_gap, gap);
+    ChangedListBrowser(lb);
+  }
+
+  succeed;
+}
+
+
+static Int
+getIconGapListBrowser(ListBrowser lb)
+{ answer(lb->icon_gap);
 }
 
 
@@ -1908,8 +2014,8 @@ static vardecl var_listBrowser[] =
      NAME_components, "TextImage used to display textlines"),
   IV(NAME_scrollBar, "scroll_bar", IV_GET,
      NAME_components, "Scrollbar used to scroll window"),
-  IV(NAME_labelText, "text*", IV_GET,
-     NAME_components, "Text object that displays the label"),
+  IV(NAME_labelText, "markup_text*", IV_GET,
+     NAME_components, "Markup text object that displays the label"),
   SV(NAME_status, "{active,inactive}", IV_GET|IV_STORE, statusListBrowser,
      NAME_event, "Handle typing?"),
   IV(NAME_keyBinding, "key_binding", IV_BOTH,
@@ -1938,6 +2044,8 @@ static vardecl var_listBrowser[] =
      NAME_appearance, "Drop items whose style font cannot show the label"),
   SV(NAME_focusBorder, "bool", IV_GET|IV_STORE, focusBorderListBrowser,
      NAME_appearance, "Look of a field: rounded, with a focus border"),
+  SV(NAME_iconGap, "0..", IV_NONE|IV_STORE, iconGapListBrowser,
+     NAME_appearance, "Pixels between the icon and the label of an item"),
   IV(NAME_size, "characters=size", IV_GET,
      NAME_area, "Size in characters/lines"),
   IV(NAME_start, "int", IV_GET,
@@ -2003,8 +2111,8 @@ static senddecl send_listBrowser[] =
      NAME_event, "Test if ready to accept input (non-empty)"),
   SM(NAME_event, 1, "event", eventListBrowser,
      NAME_event, "Handle arbitrary event"),
-  SM(NAME_label, 1, "name", labelListBrowser,
-     NAME_label, "Set the name of the label"),
+  SM(NAME_label, 1, "char_array", labelListBrowser,
+     NAME_label, "Set the label; a markup is shown with its markup"),
   SM(NAME_ChangeItem, 1, "dict_item", ChangeItemListBrowser,
      NAME_repaint, "Handle changed item from dict"),
   SM(NAME_Clear, 0, NULL, ClearListBrowser,
@@ -2088,8 +2196,10 @@ static getdecl get_listBrowser[] =
      NAME_internal, "Pointer to C-function to scan for char-type"),
   GM(NAME_SeekFunction, 0, "alien:SeekFunction", NULL, getSeekFunctionListBrowser,
      NAME_internal, "Pointer to C-function to seek to position"),
-  GM(NAME_label, 0, "name", NULL, getLabelListBrowser,
-     NAME_label, "Current value of the label"),
+  GM(NAME_iconGap, 0, "0..", NULL, getIconGapListBrowser,
+     NAME_appearance, "Pixels between the icon and the label of an item"),
+  GM(NAME_label, 0, "char_array", NULL, getLabelListBrowser,
+     NAME_label, "Current value of the label (name or markup)"),
   GM(NAME_member, 1, "dict_item", "any", getMemberListBrowser,
      NAME_member, "DictItem with given key"),
   GM(NAME_length, 0, "int", NULL, getLengthListBrowser,
@@ -2120,6 +2230,8 @@ static classvardecl rc_listBrowser[] =
      "Colour of the box around list_browser"),
   RC(NAME_pen, "0..", "1",
      "Thickness of box around list_browser"),
+  RC(NAME_iconGap, "0..", "4",
+     "Pixels between the icon and the label of an item"),
   RC(NAME_searchIgnoreCase, "bool", "@on",
      "@on: ignore case when searching"),
   RC(NAME_selectionStyle, "[style]", "@_select_style",

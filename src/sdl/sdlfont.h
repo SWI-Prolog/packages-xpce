@@ -75,6 +75,8 @@ bool   s_has_char_family(FontObj f, unsigned int c);
 void   f_domain(FontObj f, bool family, int *a, int *z);
 Sheet  ws_font_families(BoolObj mono, CharArray covers);
 Any    ws_get_pango_property(FontObj f, Name property);
+FontObj ws_font_from_description(FontObj base,
+				 const PangoFontDescription *desc);
 
 static inline WsFont
 ws_get_font(FontObj f)

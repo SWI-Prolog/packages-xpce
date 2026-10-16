@@ -181,7 +181,9 @@ compute_margins_window_decorator(WindowDecorator dw,
 { int l=0, t=0, r=0, b=0;		/* margins we need */
 
   if ( notNil(dw->label_text) )
+  { ComputeGraphical(dw->label_text);
     t += valInt(getAreaGraphical((Graphical) dw->label_text)->h);
+  }
   if ( notNil(dw->horizontal_scrollbar) )
   { int m = valInt(getMarginScrollBar(dw->horizontal_scrollbar));
 
@@ -207,6 +209,8 @@ static status
 rearrangeWindowDecorator(WindowDecorator dw)
 { Int lm, tm, rm, bm;			/* margins we need */
 
+  if ( notNil(dw->label_text) )
+    send(dw->label_text, NAME_set, ZERO, ZERO, dw->area->w, EAV);
   compute_margins_window_decorator(dw, &lm, &tm, &rm, &bm);
   doSetGraphical(dw->window,
 		 lm, tm,
@@ -324,24 +328,54 @@ layoutDialogWindowDecorator(Device d, Size gap, Size bb, Size border)
 		 *	    WINDOW LABEL	*
 		 *******************************/
 
+/* The label is displayed by a markup_text.  If the format is a markup,
+ * the label is a markup with escaped arguments.  Otherwise the
+ * formatted text is escaped, see escapedMarkupString().
+ */
+
+static CharArray
+label_markup(CharArray fmt, int argc, Any *argv)
+{ if ( instanceOfObject(fmt, ClassMarkup) )
+  { ArgVector(av, argc+1);
+
+    av[0] = fmt;
+    copyArgs(argc, argv, &av[1]);
+
+    return newObjectv(ClassMarkup, argc+1, av);
+  } else
+  { string tmp;
+    StringObj rc;
+
+    TRY(str_writefv(&tmp, fmt, argc, argv));
+    CharArray ca = StringToScratchCharArray(&tmp);
+    rc = escapedMarkupString(ca);
+    doneScratchCharArray(ca);
+    str_unalloc(&tmp);
+
+    return (CharArray)rc;
+  }
+}
+
+
 static status
 labelWindowDecorator(WindowDecorator dw, CharArray fmt, int argc, Any *argv)
 { if ( isNil(fmt) )
   { freeObject(dw->label_text);
     assign(dw, label_text, NIL);
   } else
-  { string tmp;
-    FontObj font = getClassVariableValueObject(dw, NAME_labelFont);
+  { CharArray markup;
 
-    str_writefv(&tmp, fmt, argc, argv);
+    TRY(markup = label_markup(fmt, argc, argv));
 
     if ( isNil(dw->label_text) )
-    { assign(dw, label_text, newObject(ClassText, DEFAULT, DEFAULT, font, EAV));
+    { FontObj font = getClassVariableValueObject(dw, NAME_labelFont);
+
+      assign(dw, label_text,
+	     newObject(ClassMarkupText, markup, dw->area->w, font, EAV));
+      send(dw->label_text, NAME_ellipsize, NAME_end, EAV);
       displayDevice(dw, dw->label_text, DEFAULT);
-    }
-    transparentText(dw->label_text, ON);
-    stringText(dw->label_text, (CharArray) StringToString(&tmp));
-    str_unalloc(&tmp);
+    } else
+      TRY(send(dw->label_text, NAME_markup, markup, EAV));
   }
 
   send(dw, NAME_rearrange, EAV);
@@ -350,10 +384,19 @@ labelWindowDecorator(WindowDecorator dw, CharArray fmt, int argc, Any *argv)
 }
 
 
+/* A label that is a markup is returned as is, other labels as their
+ * text.
+ */
+
 static CharArray
 getLabelWindowDecorator(WindowDecorator dw)
 { if ( notNil(dw->label_text) )
-    answer(dw->label_text->string);
+  { CharArray markup = dw->label_text->markup;
+
+    if ( instanceOfObject(markup, ClassMarkup) )
+      answer(markup);
+    answer(get(dw->label_text, NAME_text, EAV));
+  }
 
   fail;
 }
@@ -393,8 +436,8 @@ static vardecl var_windowDecorator[] =
      NAME_scroll, "Scrollbar for X-direction"),
   IV(NAME_verticalScrollbar, "scroll_bar*", IV_GET,
      NAME_scroll, "Scrollbar for Y-direction"),
-  IV(NAME_labelText, "text*", IV_GET,
-     NAME_label, "Text object to display label")
+  IV(NAME_labelText, "markup_text*", IV_GET,
+     NAME_label, "Markup text object to display label")
 };
 
 /* Send Methods */

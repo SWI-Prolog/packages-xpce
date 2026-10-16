@@ -129,7 +129,7 @@ NewClass(editor)
   ScrollBar	scroll_bar;		/* The scrollbar */
   TextMargin	margin;			/* The margin */
   TextCursor	text_cursor;		/* The cursor */
-  TextObj	label_text;		/* Text for the label */
+  MarkupText	label_text;		/* Markup text for the label */
   FontObj	font;			/* editors default font */
   FontObj	bold_font;		/* editors default bold font */
   Size		size;			/* Size in characters */
@@ -245,6 +245,7 @@ struct text_char
   intptr_t	index;			/* Index in line (relative) */
   float		x;			/* X-position in line (pixels) */
   short		vcol;			/* Visual column (0-based); 0 for combiners */
+  short		gap;			/* Pixels of space after an image */
   unsigned char attributes;		/* Its attributes */
   unsigned	type : 2;		/* type of character */
 };

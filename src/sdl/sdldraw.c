@@ -3702,6 +3702,133 @@ ws_parse_markup(CharArray markup, StringObj *plain, StringObj *error)
 }
 
 
+static Colour
+markup_run_colour(const PangoAttrColor *c, const PangoAttrInt *alpha)
+{ return newObject(ClassColour, DEFAULT,
+		   toInt(c->color.red>>8),
+		   toInt(c->color.green>>8),
+		   toInt(c->color.blue>>8),
+		   toInt(alpha ? alpha->value>>8 : 255), EAV);
+}
+
+
+/**
+ * Parse Pango markup into its text and the runs of characters whose
+ * font, colours or underline differ from those of unmarked text in
+ * `font'.  This allows code that draws characters with attributes,
+ * such as class text_image, to show markup.  Attributes that cannot be
+ * expressed this way, e.g., strikethrough or rise, are ignored.
+ *
+ * @param plain is the text without the markup.  The caller must
+ * doneObject() it.
+ * @param runs is a pceMalloc()ed array of `*count' runs, ordered by
+ * position.  The caller must pceFree() it.
+ * @return false if `markup' is not valid markup.
+ */
+bool
+ws_markup_runs(CharArray markup, FontObj font,
+	       StringObj *plain, markup_run **runs, int *count)
+{ WsFont wsf = ws_get_font(font);
+  char *buf;
+  const char *s = markup_utf8(markup, &buf);
+  PangoAttrList *attrs = NULL;
+  char *text = NULL;
+
+  if ( !wsf || !pango_parse_markup(s, -1, 0, &attrs, &text, NULL, NULL) )
+  { g_free(buf);
+    return false;
+  }
+  g_free(buf);
+
+  int len = (int)strlen(text);
+  int size = 0;
+  markup_run *r = NULL;
+  int n = 0;
+  PangoAttrIterator *it = pango_attr_list_get_iterator(attrs);
+
+  do
+  { int start, end;
+    PangoFontDescription *desc = pango_font_description_copy(wsf->desc);
+    GSList *extra = NULL;
+    markup_run run = { .font = font, .colour = DEFAULT,
+		       .background = DEFAULT, .underline = DEFAULT };
+    PangoAttrColor *fg = NULL, *bg = NULL, *ul_colour = NULL;
+    PangoAttrInt *fg_alpha = NULL, *bg_alpha = NULL;
+    bool underline = false;
+
+    pango_attr_iterator_range(it, &start, &end);
+    if ( end > len )
+      end = len;
+    if ( start >= end )
+    { pango_font_description_free(desc);
+      continue;
+    }
+
+    pango_attr_iterator_get_font(it, desc, NULL, &extra);
+    run.font = ws_font_from_description(font, desc);
+    pango_font_description_free(desc);
+
+    for(GSList *e = extra; e; e = e->next)
+    { PangoAttribute *a = e->data;
+
+      switch(a->klass->type)
+      { case PANGO_ATTR_FOREGROUND:
+	  fg = (PangoAttrColor*)a;
+	  break;
+	case PANGO_ATTR_BACKGROUND:
+	  bg = (PangoAttrColor*)a;
+	  break;
+	case PANGO_ATTR_FOREGROUND_ALPHA:
+	  fg_alpha = (PangoAttrInt*)a;
+	  break;
+	case PANGO_ATTR_BACKGROUND_ALPHA:
+	  bg_alpha = (PangoAttrInt*)a;
+	  break;
+	case PANGO_ATTR_UNDERLINE:
+	  underline = (((PangoAttrInt*)a)->value != PANGO_UNDERLINE_NONE);
+	  break;
+	case PANGO_ATTR_UNDERLINE_COLOR:
+	  ul_colour = (PangoAttrColor*)a;
+	  break;
+	default:
+	  break;
+      }
+    }
+
+    if ( fg )
+      run.colour = markup_run_colour(fg, fg_alpha);
+    if ( bg )
+      run.background = markup_run_colour(bg, bg_alpha);
+    if ( underline )
+      run.underline = ul_colour ? (Any)markup_run_colour(ul_colour, NULL)
+				: (Any)ON;
+
+    g_slist_free_full(extra, (GDestroyNotify)pango_attribute_destroy);
+
+    if ( run.font != font || notDefault(run.colour) ||
+	 notDefault(run.background) || notDefault(run.underline) )
+    { run.start = (int)g_utf8_pointer_to_offset(text, text+start);
+      run.end   = (int)g_utf8_pointer_to_offset(text, text+end);
+      if ( n == size )
+      { size = size ? size*2 : 4;
+	r = pceRealloc(r, size*sizeof(*r));
+      }
+      r[n++] = run;
+    }
+  } while( pango_attr_iterator_next(it) );
+
+  pango_attr_iterator_destroy(it);
+  pango_attr_list_unref(attrs);
+
+  *plain = UTF8ToString(text);
+  g_free(text);
+  *runs  = r;
+  *count = n;
+
+  return true;
+}
+
+
 static gboolean
 is_foreground_attribute(PangoAttribute *a, gpointer data)
 { return ( a->klass->type == PANGO_ATTR_FOREGROUND ||

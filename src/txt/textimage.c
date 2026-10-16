@@ -460,6 +460,7 @@ do_fill_line(TextImage ti, TextLine l, long index)
       tc = &l->chars[i];
     }
 
+    tc->gap = 0;
     index = (*ti->fetch)(ti->text, tc);
     tc->index -= start;
     tc->x = x;
@@ -518,7 +519,7 @@ do_fill_line(TextImage ti, TextLine l, long index)
 	last_is_space = FALSE;
 	break;
       case CHAR_IMAGE:
-	x += valInt(tc->value.image->size->w);
+	x += valInt(tc->value.image->size->w) + tc->gap;
 	current_vcol++;
 	if ( last_is_space )
 	  last_break = i;

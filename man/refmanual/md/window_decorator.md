@@ -17,7 +17,7 @@ look-and-feel.
     methods take a boolean argument and attach or detach a
     scrollbar.  Normally called through ->scrollbars.
 
-- window_decorator<-label_text: text*
+- window_decorator<-label_text: markup_text*
     *Inherits description from*: window_decorator->label
 
 - window_decorator<-vertical_scrollbar: scroll_bar*
@@ -53,14 +53,18 @@ look-and-feel.
 - window_decorator->label: format=char_array*, argument=any ...
     Define a window-level (opposed to `frame <->label`) label for
     the window.  The label is visualised by <-label_text using the
-    font Pce.WindowDecorator.label_font.
+    font Pce.WindowDecorator.label_font.  If the format is a markup
+    object, the label shows its markup and the arguments are escaped
+    (see class markup).  Otherwise the formatted text is shown as is.
+    A label that does not fit the width of the window ends in `...`.
 
-    <-label returns the `text <-string` of the <-label_text or
-    fails if <-label_text yields @nil.
+    <-label returns the markup if the label is a markup and otherwise
+    its text.  It fails if <-label_text yields @nil.
 
 - window_decorator->rearrange
     Rearrange <-window, <-scrollbars and <-label_text.  The default
-    method places the label_text at the top-left corner and the
+    method places the label_text at the top-left corner, as wide as
+    the decorator, and the
     scrollbars according to the scroll_bar.placement.
 
     This method is normally called by ->geometry and may be

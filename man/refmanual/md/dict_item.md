@@ -42,6 +42,12 @@ The <-label defaults to the <-key, the object and style default to
     When @default, the displayed label is the <-print_name of the
     <-key.  Otherwise the value of this variable is displayed.  See <-label.
 
+    If the label is a markup object, a list_browser shows its text
+    using the fonts, colours and underlining of the markup on top of
+    the <-style.  Other attributes, such as strikethrough and rise, are
+    ignored.  Searching and sorting the dict use the text without the
+    markup.
+
     @see dict_item-key
     @see dict_item<-label
 

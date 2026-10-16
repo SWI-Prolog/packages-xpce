@@ -524,14 +524,38 @@ getLengthEditor(Editor e)
 		*            LABEL		*
 		********************************/
 
-static status
-labelEditor(Editor e, Name lbl)
-{ showLabelEditor(e, ON);
+/* The label is displayed by a markup_text, see labelMarkup().
+ */
 
-  send(e->label_text, NAME_string, lbl, EAV);
+static status
+labelEditor(Editor e, CharArray lbl)
+{ CharArray markup;
+
+  TRY(markup = labelMarkup(lbl));
+  showLabelEditor(e, ON);
+  TRY(send(e->label_text, NAME_markup, markup, EAV));
   geometryEditor(e, DEFAULT, DEFAULT, DEFAULT, DEFAULT);
 
   succeed;
+}
+
+
+/* A label that is a markup is returned as is, other labels as a name.
+ */
+
+static CharArray
+getLabelEditor(Editor e)
+{ if ( notNil(e->label_text) )
+  { CharArray markup = e->label_text->markup;
+    StringObj text;
+
+    if ( instanceOfObject(markup, ClassMarkup) )
+      answer(markup);
+    if ( (text = get(e->label_text, NAME_text, EAV)) )
+      answer((CharArray)getValueCharArray((CharArray)text));
+  }
+
+  fail;
 }
 
 
@@ -540,9 +564,11 @@ showLabelEditor(Editor e, BoolObj val)
 { if ( isNil(e->label_text) )
   { if ( val == ON )
     { assign(e, label_text,
-	     newObject(ClassText, GetLabelNameName(e->name), NAME_left,
+	     newObject(ClassMarkupText,
+		       labelMarkup((CharArray)GetLabelNameName(e->name)),
+		       e->area->w,
 		       getClassVariableValueObject(e, NAME_labelFont), EAV));
-      marginText(e->label_text, e->area->w, NAME_clip);
+      send(e->label_text, NAME_ellipsize, NAME_end, EAV);
       displayDevice(e, e->label_text, DEFAULT);
       return geometryEditor(e, DEFAULT, DEFAULT, DEFAULT, DEFAULT);
     } else
@@ -703,9 +729,8 @@ geometryEditor(Editor e, Int x, Int y, Int w, Int h)
 			     valInt(w), valInt(h)));
 
   if ( notNil(e->label_text) && e->label_text->displayed == ON )
-  { marginText(e->label_text, w, NAME_clip);
+  { send(e->label_text, NAME_set, ZERO, ZERO, w, DEFAULT, EAV);
     ComputeGraphical(e->label_text);
-    send(e->label_text, NAME_set, ZERO, ZERO, DEFAULT, DEFAULT, EAV);
     iy = valInt(e->label_text->area->h);
   } else
   { iy = 0;
@@ -5275,8 +5300,8 @@ static vardecl var_editor[] =
      NAME_components, "Margin for annotations"),
   IV(NAME_textCursor, "text_cursor", IV_GET,
      NAME_components, "The caret"),
-  IV(NAME_labelText, "text*", IV_GET,
-     NAME_components, "Text object that displays the label"),
+  IV(NAME_labelText, "markup_text*", IV_GET,
+     NAME_components, "Markup text object that displays the label"),
   IV(NAME_font, "font", IV_GET,
      NAME_appearance, "Default font for the text"),
   IV(NAME_boldFont, "font*", IV_GET,
@@ -5530,8 +5555,8 @@ static senddecl send_editor[] =
      NAME_event, "Handle a general event"),
   SM(NAME_hoverFragmentIcon, 2, T_hoverFragmentIcon, hoverFragmentIconEditor,
      NAME_event, "User hovers fragment icon in margin"),
-  SM(NAME_label, 1, "name", labelEditor,
-     NAME_label, "Set the name of the label"),
+  SM(NAME_label, 1, "char_array", labelEditor,
+     NAME_label, "Set the label; a markup is shown with its markup"),
   SM(NAME_load, 1, "file=source_sink", loadEditor,
      NAME_file, "Clear editor and load a file"),
   SM(NAME_save, 1, "file=[file]", saveEditor,
@@ -5772,6 +5797,8 @@ static getdecl get_editor[] =
      NAME_read, "New string with text of current word"),
   GM(NAME_first, 0, "line=int", NULL, getFirstEditor,
      NAME_scroll, "Line-number (1-based) of the first line on the window"),
+  GM(NAME_label, 0, "char_array", NULL, getLabelEditor,
+     NAME_label, "Current value of the label (name or markup)"),
   GM(NAME_length, 0, "int", NULL, getLengthEditor,
      NAME_scroll, "Length of contents (# characters)"),
   GM(NAME_linesVisible, 0, "point", NULL, getLinesVisibleEditor,

@@ -100,6 +100,8 @@ COMMON(status)	makeClassDict(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/adt/dictitem.c */
 COMMON(CharArray) getLabelDictItem(DictItem di);
+COMMON(CharArray) textLabel(CharArray label);
+COMMON(CharArray) getTextLabelDictItem(DictItem di);
 COMMON(status)	makeClassDictItem(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/adt/hashtable.c */

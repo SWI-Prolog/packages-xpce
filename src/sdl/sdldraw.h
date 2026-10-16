@@ -117,6 +117,19 @@ void   r_canvas(Canvas c, double x, double y);
 status d_canvas(Canvas c);
 void r_markup(const markup_spec *m, double x, double y);
 bool ws_parse_markup(CharArray markup, StringObj *plain, StringObj *error);
+
+/* A run of characters of text with markup, see ws_markup_runs() */
+typedef struct markup_run
+{ int		start;			/* First character */
+  int		end;			/* Character after the run */
+  FontObj	font;			/* Font of the run */
+  Any		colour;			/* Colour or @default */
+  Any		background;		/* Colour or @default */
+  Any		underline;		/* @on, colour or @default */
+} markup_run;
+
+bool ws_markup_runs(CharArray markup, FontObj font,
+		    StringObj *plain, markup_run **runs, int *count);
 void r_fillpattern(Any fill, Name which);
 void r_fix_colours(Any fg, Any bg, ColourContext ctx);
 void r_unfix_colours(ColourContext ctx);

@@ -126,6 +126,8 @@ COMMON(StringObj) getSubString(StringObj n, Int start, Int end);
 COMMON(status)	makeClassString(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/txt/markup.c */
+COMMON(StringObj) escapedMarkupString(CharArray text);
+COMMON(CharArray) labelMarkup(CharArray label);
 COMMON(status)	str_writefv_markup_text(PceString s, CharArray fmt,
 					int argc, const Any *argv);
 COMMON(status)	makeClassMarkup(Class class);

@@ -36,24 +36,54 @@ method <-dict_item may be used to translate events to dict_item objects.
 ## Fonts and images {#class-list_browser-fonts-and-images}
 
 XPCE browsers support multiple fonts and images indicating the
-type of the item.  Each item can only be displayed in one font.
-Font and icon specification use the style object based mechanism
-to specify the appearance of a dict_item object of specified
-style.  For example, to make a browser for files and
-directories, where the directories are printed purple and using
-the `dir.bm` icon, use the following code as a starting point:
+type of the item.  Font, colour and icon specification use the style
+object based mechanism to specify the appearance of a dict_item
+object of specified style.  For example, to make a browser for files
+and directories, where the directories are printed purple and using
+the `closedir.svg` icon, use the following code as a starting point:
 
-	...
-	new(B, browser),
-	send(B, style, directory,
-		 style(icon := 'dir.bm', colour := purple)),
-	send(B, style, file,
-		 style(icon := 'file.bm')),
-	...
+	file_browser(B) :-
+		new(B, browser),
+		line_icon(B, 'closedir.svg', DirIcon),
+		line_icon(B, 'document.svg', FileIcon),
+		send(B, style, directory,
+			 style(icon := DirIcon, colour := purple)),
+		send(B, style, file,
+			 style(icon := FileIcon)).
 
 	append_directory(B, Name) :-
 		send(B, append,
 			 dict_item(Name, style := directory)).
+
+	append_file(B, Name) :-
+		send(B, append,
+			 dict_item(Name, style := file)).
+
+An icon is placed on the baseline at its `image<->hot_spot`.  An SVG
+image is rendered at the size given when it is created, so we can
+scale it to the ascent of the browser's <-font, which makes it stand
+on the baseline as high as the capitals.  The browser leaves
+<-icon_gap pixels between the icon and the label.
+
+	line_icon(B, File, Icon) :-
+		get(B, font, Font),
+		get(Font, ascent, A),
+		new(Icon, image(File, A, A)),
+		send(Icon, hot_spot, point(0, A)).
+
+A style applies to the whole item.  To use multiple fonts or colours
+within an item, make its label a markup object (see
+`dict_item<-label` and class markup).  The markup applies on top of
+the style, so the item below still gets the icon and colour of style
+`directory`, while the name is bold and the number of entries grey.
+Icons can only be specified using a style.
+
+	append_directory(B, Name, Entries) :-
+		send(B, append,
+			 dict_item(Name,
+				   markup("<b>%s</b> <span foreground='grey50'>%d items</span>",
+					  Name, Entries),
+				   style := directory)).
 
 @see class key_binding
 @see class browser
@@ -61,6 +91,9 @@ the `dir.bm` icon, use the following code as a starting point:
 
 
 ## Class variables {#class-list_browser-classvars}
+
+- list_browser.icon_gap: 0.. = 4
+    Default for <-icon_gap.
 
 - list_browser.isearch_style: [style] = style(background := ui_isearch_background)
     Style of the part of the item that matches the incremental search.
@@ -113,8 +146,9 @@ the `dir.bm` icon, use the following code as a starting point:
 
     These functions are local to this list_browser.
 
-- list_browser<-label_text: text*
-    Text object used to display the <->label.  When @nil, no label is
+- list_browser<-label_text: markup_text*
+    Markup text object used to display the <->label.  A label that is
+    not a markup is escaped, so it is shown as is.  When @nil, no label is
     displayed (default).   The <-label_text may be accessed directly,
     but be aware that the layout of the list_browser (i.e. placement and
     sizes of the <-scroll_bar, <-text_image and <-label_text) will not be
@@ -282,7 +316,12 @@ the `dir.bm` icon, use the following code as a starting point:
 - list_browser->insert_self: times=[int], character=[char]
     Start/Continue incremental search.
 
-- list_browser->label: name
+- list_browser->icon_gap: 0..
+    Set the number of pixels between the icon of an item (see
+    `style<->icon`) and its label.  Items without an icon are not
+    indented.  The default is list_browser.icon_gap.
+
+- list_browser->label: char_array
     *Inherits description from*: list_browser<-label
 
 - list_browser->next
@@ -359,6 +398,11 @@ the `dir.bm` icon, use the following code as a starting point:
     		),
     		send(B, open).
 
+    A style applies to the whole item.  To use multiple fonts or
+    colours within an item, use a markup object as label (see
+    `dict_item<-label`).  The markup applies on top of the style.  An
+    icon can only be specified using a style.
+
 - list_browser->tab_stops: vector*
     Set a number of tabulator stops.  The argument is a vector with pixel
     locations of the tab stops.  See also `text_image ->tab_stops`.
@@ -409,10 +453,16 @@ the `dir.bm` icon, use the following code as a starting point:
 - list_browser<-height: -> characters=int
     Set/Query the height in lines.  See also <-width and <->size.
 
-- list_browser<-label: -> name
+- list_browser<-icon_gap: -> 0..
+    Pixels between the icon of an item and its label.  This is asked
+    for each time the browser is redrawn, so a subclass may refine it.
+
+- list_browser<-label: -> char_array
     A list_browser may be assigned a label.  When a label is assigned, a
     <-label_text will be displayed on the list_browser.  See also
-    <->show_label.
+    <->show_label.  A label that is a markup object is shown with its
+    markup and returned as is.  Otherwise the label is returned as a
+    name.
 
     Note that class browser inherits ->label from class window.
 

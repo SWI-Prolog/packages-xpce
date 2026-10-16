@@ -273,7 +273,7 @@ getFindPrefixDict(Dict dict, StringObj str, Int from, BoolObj ign_case)
   TRY(cell = getNth0CellChain(dict->members, isDefault(from) ? ZERO : from));
   for( ; notNil(cell); cell = cell->next )
   { DictItem di = cell->value;
-    CharArray label = getLabelDictItem(di);
+    CharArray label = getTextLabelDictItem(di);
 
     if ( label )
     { if ( ign_case == OFF )
@@ -298,36 +298,53 @@ static int	sort_ignore_case   = FALSE;
 static int	sort_ignore_blanks = FALSE;
 
 static int
+compare_labels(PceString s1, PceString s2)
+{ if ( sort_ignore_blanks )
+  { LocalString(t1, s1->s_iswide, s1->s_size);
+    LocalString(t2, s2->s_iswide, s2->s_size);
+
+    str_cpy(t1, s1);
+    str_cpy(t2, s2);
+    str_strip(t1);
+    str_strip(t2);
+
+    if ( sort_ignore_case == TRUE )
+      return str_icase_cmp(t1, t2);
+    else
+      return str_cmp(t1, t2);
+  } else
+  { if ( sort_ignore_case == TRUE )
+      return str_icase_cmp(s1, s2);
+    else
+      return str_cmp(s1, s2);
+  }
+}
+
+
+/* Labels that are markup are compared without the markup.  The text
+ * of such a label is a new string that we discard immediately, as
+ * sorting compares many labels.
+ */
+
+static int
 compare_dict_items(const void *d1, const void *d2)
-{ CharArray c1 = getLabelDictItem(*(DictItem *)d1);
-  CharArray c2 = getLabelDictItem(*(DictItem *)d2);
+{ CharArray l1 = getLabelDictItem(*(DictItem *)d1);
+  CharArray l2 = getLabelDictItem(*(DictItem *)d2);
+  int rc = 0;
 
-  if ( c1 && c2 )
-  { PceString s1 = &c1->data;
-    PceString s2 = &c2->data;
+  if ( l1 && l2 )
+  { CharArray c1 = textLabel(l1);
+    CharArray c2 = textLabel(l2);
 
-    if ( sort_ignore_blanks )
-    { LocalString(t1, s1->s_iswide, s1->s_size);
-      LocalString(t2, s2->s_iswide, s2->s_size);
+    rc = compare_labels(&c1->data, &c2->data);
 
-      str_cpy(t1, s1);
-      str_cpy(t2, s2);
-      str_strip(t1);
-      str_strip(t2);
-
-      if ( sort_ignore_case == TRUE )
-	return str_icase_cmp(t1, t2);
-      else
-	return str_cmp(t1, t2);
-    } else
-    { if ( sort_ignore_case == TRUE )
-	return str_icase_cmp(s1, s2);
-      else
-	return str_cmp(s1, s2);
-    }
+    if ( c1 != l1 )
+      doneObject(c1);
+    if ( c2 != l2 )
+      doneObject(c2);
   }
 
-  fail;
+  return rc;
 }
 
 
@@ -483,7 +500,7 @@ getMatchDict(Dict dict, CharArray name)
 
   for_cell(cell, dict->members)
   { DictItem di = cell->value;
-    CharArray label = getLabelDictItem(di);
+    CharArray label = getTextLabelDictItem(di);
 
     if ( label && str_sub(&label->data, &name->data) )
       appendChain(matching, di);

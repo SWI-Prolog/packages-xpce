@@ -303,8 +303,8 @@ although the latter is the principal way of manipulating a text.
 - editor-internal_mark: alien:int
     Additional (floating) mark, used by some internal functions.
 
-- editor<-label_text: text*
-    Text object that displays the label.  Initially @nil.  A label
+- editor<-label_text: markup_text*
+    Markup text object that displays the label.  Initially @nil.  A label
     is associated using ->label.  See also <->show_label.
 
 - editor<->left_margin: int
@@ -910,10 +910,12 @@ although the latter is the principal way of manipulating a text.
     Without an argument, ->kill the current region.  Otherwise
     ->grab the region.
 
-- editor->label: name
+- editor->label: char_array
     Associate a label with the editor and set the string of the
     label.  The label is displayed by <-label_text.  The font of
     the label is dictated by editor.label_font. See also <->show_label.
+    A label that is a markup object is shown with its markup; other
+    text is shown as is.  A label that does not fit ends in `...`.
 
 - editor->line_number: line=int
     Position the caret at the start of nth (1-based) line.
@@ -1269,6 +1271,10 @@ although the latter is the principal way of manipulating a text.
 - editor<-start: [int] -> int
 
 - editor<-view: -> int
+
+- editor<-label: -> char_array
+    The label: the markup if the label is a markup, otherwise a name.
+    Fails if there is no <-label_text.
 
 - editor<-length: -> int
     The methods <-length, <-start and <-view are used by the related

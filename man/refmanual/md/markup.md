@@ -4,7 +4,11 @@ A markup is a string that holds
 [Pango markup](https://docs.gtk.org/Pango/pango_markup.html), for
 example `"Saved <b>%s</b>"`.  Being a string, a markup can be used
 wherever text is accepted.  Its class tells the receiver that the text
-is markup: a label renders it (see `label<-selection`), while receivers
+is markup: a label renders it (see `label<-selection`), as does a
+list_browser for the label of an item (see `dict_item<-label`) and its
+own `list_browser<-label`, an editor for its `editor<-label` and a
+decorated window for its label (see `window_decorator->label`), while
+receivers
 that cannot render markup use its text without the markup.  See class
 markup_text for the tags and their attributes.  Colour attributes also
 accept xpce colour names, notably theme colours such as `ui_link`,

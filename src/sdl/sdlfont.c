@@ -266,6 +266,48 @@ ws_create_font(FontObj f)
   succeed;
 }
 
+
+/**
+ * The xpce font for `desc', a variant of `base' as found by Pango for
+ * text with markup.  A family that is the Pango family of `base' or of
+ * `mono' maps back to that xpce family.
+ *
+ * @return `base' if `desc' does not change it.
+ */
+FontObj
+ws_font_from_description(FontObj base, const PangoFontDescription *desc)
+{ WsFont wsf = ws_get_font(base);
+
+  if ( !wsf || pango_font_description_equal(desc, wsf->desc) )
+    return base;
+
+  Name family = base->family;
+  const char *pf = pango_font_description_get_family(desc);
+  if ( pf && !streq(pf, nameToUTF8(pangoFamilyFont(base->family))) )
+    family = ( streq(pf, nameToUTF8(pangoFamilyFont(NAME_mono)))
+		 ? NAME_mono : UTF8ToName(pf) );
+
+  PangoStyle slant = pango_font_description_get_style(desc);
+  Name style = ( slant == PANGO_STYLE_ITALIC  ? NAME_italic :
+		 slant == PANGO_STYLE_OBLIQUE ? NAME_oblique :
+						NAME_normal );
+
+  PangoWeight pw = pango_font_description_get_weight(desc);
+  Any weight = toInt(pw);
+  for(const weight_name *wn = weight_names; wn->name; wn++)
+  { if ( wn->pango == pw )
+    { weight = wn->name;
+      break;
+    }
+  }
+
+  double points = P2D(pango_font_description_get_size(desc))/font_scale;
+  FontObj f = newObject(ClassFont, family, style, toInt(lround(points)),
+			weight, EAV);
+
+  return f ? f : base;
+}
+
 /**
  * Destroy the native font resource associated with the specified
  * FontObj on the given display.

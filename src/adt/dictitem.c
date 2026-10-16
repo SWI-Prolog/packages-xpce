@@ -96,6 +96,30 @@ getLabelDictItem(DictItem di)
 }
 
 
+/* The text of a label without the markup if the label is a markup.
+ * Searching and sorting a dict use this, so they ignore the markup.
+ * If the result differs from `label', it is a new string.
+ */
+
+CharArray
+textLabel(CharArray label)
+{ if ( label && instanceOfObject(label, ClassMarkup) )
+  { CharArray text = get(label, NAME_text, EAV);
+
+    if ( text )
+      return text;
+  }
+
+  return label;
+}
+
+
+CharArray
+getTextLabelDictItem(DictItem di)
+{ return textLabel(getLabelDictItem(di));
+}
+
+
 static status
 keyDictItem(DictItem di, Any key)
 { if ( notNil(di->dict) && notNil(di->dict->table) )
