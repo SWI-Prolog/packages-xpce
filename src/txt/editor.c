@@ -5844,7 +5844,7 @@ static classvardecl rc_editor[] =
      "If not @nil, skip this"),
   RC(NAME_font, "font", "tt",
      "Default font"),
-  RC(NAME_labelFont, "font", "bold",
+  RC(NAME_labelFont, "font", "label",
      "Font used to display the label"),
   RC(NAME_indentIncrement, "int", "2",
      "Indent/undent amount"),

@@ -54,6 +54,10 @@ read.
 Bold version of the normal font.
     \fontalias{italic}{font(sans, italic, 12)}
 Slanted version of the normal font.
+    \fontalias{label}{font(sans, bold, 12)}
+Labels of dialog items, dialog groups, browsers, editors and windows.
+Change this alias to change the font of labels without affecting bold
+text, e.g., \exam{label := font(sans, normal, 12)}.
     \fontalias{small}{font(sans, normal, 10)}
 Small version of the normal font.  To be used in notes, subscripts, etc.
 May not be so easy to read, so avoid using it for long texts.

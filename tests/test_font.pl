@@ -262,6 +262,25 @@ test(derived_from_theme_font, [ Props == font(mono, italic, 14),
     get(F, derived_from, From),
     \+ send(From, instance_of, theme_font),
     font_props(F, Props).
+test(label_alias, Props == font(sans, bold, 12)) :-
+    alias(label, F),
+    font_props(F, Props).
+test(item_labels_use_label, F == L) :-
+    new(TI, text_item(x)),
+    get(TI, label_font, F),
+    alias(label, L).
+test(label_independent_of_bold,
+     [ Props == font(sans, normal, 12)-font(sans, bold, 12),
+       cleanup(restore_alias(label, Old)) ]) :-
+    alias(label, L),
+    get(L, derived_from, Old),
+    send(L, derived_from, font(sans, normal, 12)),
+    new(TI, text_item(x)),
+    get(TI, label_font, F),
+    font_props(F, LabelProps),
+    alias(bold, B),
+    font_props(B, BoldProps),
+    Props = LabelProps-BoldProps.
 test(new_alias, F == F2, [cleanup(free(F))]) :-
     new(F, theme_font(test_theme_font, font(serif, normal, 9))),
     alias(test_theme_font, F2).

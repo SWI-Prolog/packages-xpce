@@ -26,7 +26,7 @@ See `display_manager <-current`.
 - display.foreground: colour = ui_window_foreground
     Default foreground for newly created windows.
 
-- display.label_font: font = bold
+- display.label_font: font = label
     Font used for the prompt of `display ->inform` and
     `display ->confirm`.  Companion: `display.value_font`.
 

@@ -1352,7 +1352,7 @@ place_x(O, MinX, MaxX, Gr) :-
 :- use_class_template(msg_object_template).
 
 class_variable(size,       size, size(120, 60), "Default size of object").
-class_variable(label_font, font, bold,          "Default name-font").
+class_variable(label_font, font, label,         "Default name-font").
 
 :- pce_global(@dia_component_elevation,
               new(elevation(@nil, 2, grey80))).

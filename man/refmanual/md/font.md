@@ -101,7 +101,7 @@ default fonts for their role.
 - font.system_fonts: chain
     Define the font aliases.  The user interface does not name fonts
     by their family, style and size, but by an _alias_ that describes
-    their role: `normal` for most text, `bold` for labels, `tt` for
+    their role: `normal` for most text, `label` for labels, `tt` for
     the text of editors and terminals, etc.  This setting defines the
     font of each alias as a list of `Alias := Font`.  The
     built-in value is
@@ -109,6 +109,7 @@ default fonts for their role.
     	[ normal    := font(sans, normal, 12),
     	  bold      := font(sans, bold,   12),
     	  italic    := font(sans, italic, 12),
+    	  label     := font(sans, bold,   12),
     	  small     := font(sans, normal, 10),
     	  large     := font(sans, normal, 14),
     	  boldlarge := font(sans, bold,   14),
@@ -129,6 +130,11 @@ default fonts for their role.
     larger font for editors and terminals:
 
     	font.system_fonts: [ tt := font(mono, normal, 16) ]
+
+    To show labels in a normal rather than a bold font, without
+    changing bold text, use
+
+    	font.system_fonts: [ label := font(sans, normal, 12) ]
 
     Use `font.scale` to make all text larger or smaller.  Note that
     changing an alias changes all text that uses it, while a setting

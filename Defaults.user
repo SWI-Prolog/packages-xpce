@@ -230,6 +230,7 @@
 ! font.system_fonts:	[ normal    := font(sans, normal, 12), \
 !			  bold      := font(sans, bold,   12), \
 !			  italic    := font(sans, italic, 12), \
+!			  label     := font(sans, bold,   12), \
 !			  small     := font(sans, normal, 10), \
 !			  large     := font(sans, normal, 14), \
 !			  boldlarge := font(sans, bold,   14), \

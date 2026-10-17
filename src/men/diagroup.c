@@ -778,7 +778,7 @@ static classvardecl rc_diagroup[] =
      "Distance between items in X and Y"),
   RC(NAME_border, "[size]", "size(3mm,3mm)",
      "Distance around the items in a box (@default: <-gap)"),
-  RC(NAME_labelFont, "font", "bold",
+  RC(NAME_labelFont, "font", "label",
      "Font used to display the label"),
   RC(NAME_labelFormat, "{above,top,center,bottom}", "above",
      "Position of the label: above the box or on its top-line"),

@@ -48,7 +48,7 @@
                    "Online manual for a class").
 
 class_variable(value_font,      font,   normal).
-class_variable(label_font,      font,   bold).
+class_variable(label_font,      font,   label).
 class_variable(active_font,     font,   italic).
 
 variable(search_filter, regex*,      get,

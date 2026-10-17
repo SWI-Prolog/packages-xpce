@@ -2222,7 +2222,7 @@ static classvardecl rc_listBrowser[] =
   RC(NAME_isearchStyle, "[style]",
      "style(background := ui_isearch_background)",
      "Style for the hit of an incremental search (@default: inverse)"),
-  RC(NAME_labelFont, "font", "bold",
+  RC(NAME_labelFont, "font", "label",
      "Font used to display the label"),
   RC(NAME_accentColour, "colour", "ui_accent",
      "Colour of the box if the list_browser has the focus"),

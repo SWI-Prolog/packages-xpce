@@ -493,7 +493,7 @@ static getdecl get_windowDecorator[] =
 static classvardecl rc_windowDecorator[] =
 { RC(NAME_border, "int", "0",
      "Distance between outside and inside"),
-  RC(NAME_labelFont, "font", "bold",
+  RC(NAME_labelFont, "font", "label",
      "Font to display label"),
   RC(NAME_pen, "int", "0",
      "Thickness of outside line"),

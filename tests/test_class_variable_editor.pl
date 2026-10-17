@@ -592,8 +592,8 @@ test(font_aliases_item, [Class-Revert == font_aliases_item-(@off)]) :-
                                               system_fonts)),
     get(Row?item, class_name, Class),
     revert_shown(Row, Revert).
-test(font_aliases_builtin_order, Fields == [ normal, bold, italic, small,
-                                             large, boldlarge, huge,
+test(font_aliases_builtin_order, Fields == [ normal, bold, italic, label,
+                                             small, large, boldlarge, huge,
                                              boldhuge, tt, boldtt,
                                              itt, bitt ]) :-
     aliases_item(new(chain), AI),
@@ -770,8 +770,8 @@ test(font_item_select_theme_font, State == "tt"-"tt") :-
     get(@pce, convert, tt, font, TT),
     ignore(send(FI, user_selection, TT)),
     font_item_state(FI, State).
-test(theme_font_chooser_all, Names == [ normal, bold, italic, small, large,
-                                        boldlarge, huge, boldhuge, tt,
+test(theme_font_chooser_all, Names == [ normal, bold, italic, label, small,
+                                        large, boldlarge, huge, boldhuge, tt,
                                         boldtt, itt, bitt ]) :-
     chooser_names(@default, Names).
 test(theme_font_chooser_mono, Names == [tt, boldtt, itt, bitt]) :-

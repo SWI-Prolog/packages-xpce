@@ -494,9 +494,10 @@ static const struct
 } alias_summaries[] =
 { { "normal",	 "Default font for text, menus, buttons and the values "
 		 "of dialog items" },
-  { "bold",	 "Labels of dialog items and groups, headers and "
-		 "emphasis" },
+  { "bold",	 "Bold text, such as emphasis and headers" },
   { "italic",	 "Emphasis and secondary information" },
+  { "label",	 "Labels of dialog items and groups, browsers, editors "
+		 "and windows" },
   { "small",	 "Small print, such as the accelerator keys in menus.  "
 		 "Avoid it for long texts" },
   { "large",	 "Slightly larger text" },
@@ -917,6 +918,7 @@ static classvardecl rc_font[] =
      "[ normal    := font(sans, normal, 12),\n"
      "  bold      := font(sans, bold,   12),\n"
      "  italic    := font(sans, italic, 12),\n"
+     "  label     := font(sans, bold,   12),\n"
      "  small     := font(sans, normal, 10),\n"
      "  large     := font(sans, normal, 14),\n"
      "  boldlarge := font(sans, bold,   14),\n"

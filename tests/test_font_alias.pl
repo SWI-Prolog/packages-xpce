@@ -160,6 +160,7 @@ read_terms(Pipe, Terms) :-
 builtin_alias(normal).
 builtin_alias(bold).
 builtin_alias(italic).
+builtin_alias(label).
 builtin_alias(small).
 builtin_alias(large).
 builtin_alias(boldlarge).

@@ -696,7 +696,7 @@ static classvardecl rc_display[] =
      "Default background for windows"),
   RC(NAME_foreground, "colour", "ui_window_foreground",
      "Default foreground for windows"),
-  RC(NAME_labelFont, "font", "bold",
+  RC(NAME_labelFont, "font", "label",
      "Label font for confirm/inform"),
   RC(NAME_valueFont, "font", "normal",
      "Text font for confirm/inform"),

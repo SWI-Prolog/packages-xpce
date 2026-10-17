@@ -1106,7 +1106,7 @@ static classvardecl rc_dialogItem[] =
      "Background of the item"),
   RC(NAME_elevation, "elevation*", "1",
      "3-D elevation"),
-  RC(NAME_labelFont, "font", "bold",
+  RC(NAME_labelFont, "font", "label",
      "Default font for labels"),
   RC(NAME_labelFormat, "{left,center,right}", "right",
      "Alignment of the label in its box"),
