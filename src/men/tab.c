@@ -699,7 +699,9 @@ static senddecl send_tab[] =
   SM(NAME_active, 1, "bool", activeTab,
      NAME_event, "Enable/disable the tab"),
   SM(NAME_ChangedLabel, 0, NULL, ChangedLabelTab,
-     NAME_update, "Add label-area to the update")
+     NAME_update, "Add label-area to the update"),
+  SM(NAME_fontsChanged, 0, NULL, ChangedLabelTab,
+     NAME_appearance, "Recompute the label after the font changed in place")
 };
 
 /* Get Methods */

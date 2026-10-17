@@ -290,6 +290,19 @@ test(text_follows, [ true(W1 > W0),
     send(@display_manager, fonts_changed),
     get(T, width, W1).
 
+test(tab_labels_follow, [ true(X1 > X0),
+                          cleanup(( restore_alias(normal, Old), free(D) )) ]) :-
+    alias(normal, F),
+    get(F, derived_from, Old),
+    new(D, dialog),
+    send(D, append,
+         new(_TS, tab_stack(new(_T1, tab(first)), new(T2, tab(second))))),
+    send(D, wait),
+    get(T2, label_offset, X0),
+    send(F, derived_from, font(sans, normal, 24)),
+    send(@display_manager, fonts_changed),
+    get(T2, label_offset, X1).
+
 :- end_tests(theme_font).
 
 
