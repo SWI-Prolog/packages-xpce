@@ -51,6 +51,10 @@ text_item and friends.  Summary:
         <->default:     Default value, which may be function (->restore)
         ->apply:        Execute the item
 
+The family menu offers the generic families `sans`, `serif` and `mono`,
+followed by the families installed on the system.  These are shown in
+their own font and long names are ellipsized.
+
 The button "Theme…" selects a theme font, such as the font aliases
 `normal` and `bold`.  The item then shows the properties of the theme
 font and its name, and <-selection is the theme font, until the user
@@ -61,10 +65,21 @@ class may be used as an   example/template  for defining compound dialog
 items.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+:- pce_begin_class(font_family_menu, menu,
+                   "Cycle menu for a font family").
+
+%   There are typically hundreds of installed families, so the list
+%   that opens from the menu shows more lines than for other menus.
+
+class_variable(combo_box_height, '1..', 15).
+
+:- pce_end_class(font_family_menu).
+
 :- pce_begin_class(font_item, label_box, "Dialog item for defining a font").
 
 variable(value_set,     [chain],          get,    "List of fonts").
 variable(theme_font,    theme_font*,      get,    "Selected theme font").
+variable(families,      chain*,           get,    "Generic families offered").
 
 initialise(FI, Name:[name],
            Default:'[font|function]', Message:[code]*,
@@ -76,7 +91,8 @@ initialise(FI, Name:[name],
     send(FI, gap, size(5,0)),
     send(FI, alignment, column),
     send(FI, append,
-         new(Fam, menu(family, cycle, message(FI, family, @arg1)))),
+         new(Fam, font_family_menu(family, cycle,
+                                   message(FI, family, @arg1)))),
     send(FI, append,
          new(Wgt, menu(weight, cycle, message(FI, weight, @arg1))), right),
     (   ValueSet == @default
@@ -87,6 +103,9 @@ initialise(FI, Name:[name],
              new(Pts, menu(points, cycle, message(FI, points, @arg1))), right)
     ),
     send(Fam, show_label, @off),
+    get(Fam?value_font, ex, Ex),
+    FamWidth is 15*Ex,
+    send(Fam, max_value_width, FamWidth),
     send(Wgt, show_label, @off),
     send(Pts, show_label, @off),
     (   Theme == @off
@@ -99,6 +118,7 @@ initialise(FI, Name:[name],
         send(NL, length, 0)             % as wide as the name
     ),
     send(FI, slot, theme_font, @nil),
+    send(FI, slot, families, @nil),
     send(FI, value_set, ValueSet),
     send(FI, default, Def).
 
@@ -137,6 +157,7 @@ value_set(FI, ValueSet:[chain]) :->
     send_list([Fam, Wgt, Pts], clear),
     (   ValueSet == @default
     ->  send_list(Fam, append, [sans,serif,mono]),
+        append_installed_families(Fam, @default),
         send_list(Wgt, append, [normal,bold,italic]),
         (   send(Pts, instance_of, int_item)
         ->  true
@@ -150,9 +171,9 @@ value_set(FI, ValueSet:[chain]) :->
                     message(Wgt, append, @arg1?style)),
                  if(and(message(Pts, instance_of, int_item),
                         not(?(Pts, member, @arg1?points))),
-                    message(Pts, append, @arg1?points))))
+                    message(Pts, append, @arg1?points)))),
+        send(Fam, sort)
     ),
-    send(Fam, sort),
     send(Wgt, sort),
     (   send(Pts, instance_of, int_item)
     ->  true
@@ -275,9 +296,10 @@ show_theme_font(FI, Font:theme_font*) :->
 
 choose_theme_font(FI) :->
     "Select a theme font"::
-    get(FI, member, family, Fam),
-    (   get(Fam?members, size, 1)       % e.g., only mono
-    ->  get(Fam?members?head, value, Family)
+    (   get(FI, families, Families),
+        Families \== @nil,
+        get(Families, size, 1)          % e.g., only mono
+    ->  get(Families, head, Family)
     ;   Family = @default
     ),
     new(Chooser, theme_font_chooser(FI?theme_font, Family,
@@ -297,17 +319,36 @@ user_selection(FI, Font:font) :->
 
 
 families(FI, Families:chain) :->
-    "Only offer these families"::
+    "Only offer these families and the matching installed ones"::
+    send(FI, slot, families, Families),
     get(FI, member, family, Fam),
     get(Fam, selection, Current),
     send(Fam, clear),
     send(Families, for_all, message(Fam, append, @arg1)),
-    (   send(Families, member, Current)
+    chain_list(Families, List),
+    (   List == [mono]
+    ->  append_installed_families(Fam, @on)
+    ;   subtract(List, [sans,serif,mono], [])
+    ->  append_installed_families(Fam, @default)
+    ;   true
+    ),
+    (   get(Fam, member, Current, _)
     ->  true
     ;   send(Fam, append, Current)      % do not lose the current value
     ),
     send(Fam, selection, Current),
     single_family(FI).
+
+%   append_installed_families(+Menu, +Monospace)
+%
+%   Append the installed families to the family menu: the monospaced
+%   ones if Monospace is @on, all if it is @default.
+
+append_installed_families(Fam, Monospace) :-
+    get(Fam?value_font, points, Points),
+    installed_families(Monospace, Installed),
+    send(Installed, for_all,
+         message(@prolog, append_family_item, Fam, @arg1, Points, @off)).
 
                  /*******************************
                  *  GENERIC DIALOG OPERATIONS   *
@@ -318,7 +359,12 @@ selection(FI, Font:font) :->
     get(FI, member, family, Fam),
     get(FI, member, weight, Wgt),
     get(FI, member, points, Pts),
-    send(Fam, selection, Font?family),
+    get(Font, family, Family),
+    (   get(Fam, member, Family, _)
+    ->  true
+    ;   send(Fam, append, Family)       % e.g., not installed
+    ),
+    send(Fam, selection, Family),
     send(Wgt, selection, Font?style),
     send(Pts, selection, Font?points),
     (   send(Font, instance_of, theme_font)
@@ -489,7 +535,7 @@ pango_text(Obj, Text) :-
 
 append_family(PI, Generic:name, Families:name, Installed:chain) :->
     "Add a menu for the families of Generic"::
-    new(M, menu(Generic, cycle, message(PI, forward))),
+    new(M, font_family_menu(Generic, cycle, message(PI, forward))),
     get(M, value_font, Font),
     get(Font, points, Points),
     send(Installed, for_all,
@@ -593,7 +639,8 @@ the built-in aliases in their built-in order, followed by the aliases
 the value adds.  An alias that the value does not mention uses its
 built-in font.  A font_item has no weight, so an alias keeps its font,
 e.g., `bitt`, which is bold italic, as long as the user does not change
-it.  A sample text in the font follows each font_item.  The tooltip of
+it.  A sample text in the font follows each font_item.  The aliases
+for monospaced fonts, such as `tt`, only offer monospaced families.  The tooltip of
 a font_item explains the role of the alias.
 
 Fonts are _related_ if they only differ by their style and weight, such
@@ -616,6 +663,7 @@ initialise(AI, Name:[name], Aliases:chain, Message:[code]*) :->
              send(FI, message, message(AI, forward, FI)),
              send(FI, label, string(Alias)),    % no capitalisation
              alias_help(FI, Alias),
+             mono_alias_families(FI, Alias, Font),
              send(AI, append, FI),
              send(AI, append, new(L, label(sample, '')), right),
              send(FI, attribute, sample, L)
@@ -633,6 +681,23 @@ initialise(AI, Name:[name], Aliases:chain, Message:[code]*) :->
     send(AI, selection, Aliases).
 
 sample_text('AaBbCc 0O1lI').
+
+%   mono_alias_families(+FontItem, +Alias, +Font)
+%
+%   A monospaced alias, such as `tt`, only offers the monospaced
+%   families.  An alias is monospaced if its built-in font, or for an
+%   alias the user added its font, has the family `mono`.
+
+mono_alias_families(FI, Alias, Font) :-
+    (   builtin_aliases(Builtin),
+        memberchk(Alias-BuiltinFont, Builtin)
+    ->  get(BuiltinFont, family, Family)
+    ;   get(Font, family, Family)
+    ),
+    (   Family == mono
+    ->  send(FI, families, chain(mono))
+    ;   true
+    ).
 
 %   alias_help(+FontItem, +Alias)
 %

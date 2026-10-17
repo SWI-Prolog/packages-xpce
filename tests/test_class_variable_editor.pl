@@ -116,6 +116,18 @@ round_trip(Name, Text) :-
     get(CV, convert_string, Text, Value2),
     pce_class_variable_editor:value_to_defaults_text(Value2, Text).
 
+%   installed_families(+Monospace, -Families) is det.
+%
+%   The sorted list of installed families that are monospaced (@on) or
+%   all of them (@default).
+
+installed_families(Monospace, Families) :-
+    get(@pce, convert, normal, font, _),        % realise class font
+    get(@font_class, font_families, Monospace, Sheet),
+    get(Sheet, attribute_names, Chain),
+    send(Chain, sort),
+    chain_list(Chain, Families).
+
 :- begin_tests(class_variable_editor_types).
 
 test(int, T == int-[]) :-
@@ -145,21 +157,26 @@ test(font, T == font-[]) :-
     config_type(f, T).
 test(mono_font, T == mono_font-[]) :-
     config_type(m, T).
-test(mono_font_families, [Fs == [mono]]) :-
+test(mono_font_families, [Fs == [mono|Installed]]) :-
     cv(m, CV),
     get(CV, value, V),
     pce_class_variable_editor:cv_item(mono_font, m, CV, V, Item),
     get(Item, member, family, Menu),
     get(Menu?members, map, @arg1?value, C),
-    chain_list(C, Fs).
-test(mono_font_family_inactive, [A0-A1 == @off - @off]) :-
+    chain_list(C, Fs),
+    installed_families(@on, Installed).
+test(mono_font_family_active, [A0-A1 == A-A]) :-
     cv(m, CV),
     get(CV, value, V),
     pce_class_variable_editor:cv_item(mono_font, m, CV, V, Item),
     get(Item, member, family, Menu),
     get(Menu, active, A0),
     send(Item, active, @on),            % e.g., a Default tick box
-    get(Menu, active, A1).
+    get(Menu, active, A1),
+    (   installed_families(@on, [])     % nothing to choose
+    ->  A = @off
+    ;   A = @on
+    ).
 test(colour, T == colour-[]) :-
     config_type(c, T).
 test(generic, T == generic-[]) :-
@@ -620,6 +637,22 @@ test(font_aliases_help_all, Missing == []) :-
         Ch),
     get(Ch, map, @arg1?name, Names),
     chain_list(Names, Missing).
+test(font_aliases_mono_families, [Mono-Sans == [mono|Installed]-true]) :-
+    aliases_item(new(chain), AI),
+    alias_families(AI, tt, Mono),
+    alias_families(AI, normal, SansFamilies),
+    installed_families(@on, Installed),
+    (   SansFamilies = [sans, serif, mono|_]
+    ->  Sans = true
+    ;   Sans = false
+    ).
+
+alias_families(AI, Alias, Families) :-
+    get(AI, member, Alias, FI),
+    get(FI, member, family, Menu),
+    get(Menu?members, map, @arg1?value, C),
+    chain_list(C, Families).
+
 test(font_aliases_sample, Texts == ["font(mono, italic, 14, bold)",
                                     "font(sans, normal, 16)"]) :-
     aliases_item(new(chain), AI),
@@ -706,6 +739,32 @@ test(font_item_changed_theme_font, State == "font(sans, normal, 14)"-"") :-
     send(Pts, selection, 14),
     ignore(send(FI, points, 14)),       % ->forward fails without message
     font_item_state(FI, State).
+test(font_item_families, Fs == [sans, serif, mono|Installed]) :-
+    new(FI, font_item(f, font(sans, normal, 12))),
+    get(FI, member, family, Menu),
+    get(Menu?members, map, @arg1?value, C),
+    chain_list(C, Fs),
+    installed_families(@default, Installed).
+test(font_item_pango_family, [Family == Installed, true(nonvar(Installed))]) :-
+    installed_families(@default, [Installed|_]),
+    new(FI, font_item(f, font(sans, normal, 12))),
+    send(FI, selection, font(Installed, normal, 15)),
+    get(FI, selection, Font),
+    get(Font, family, Family).
+test(font_item_unknown_family, Family == 'No Such Family') :-
+    new(FI, font_item(f, font(sans, normal, 12))),
+    send(FI, selection, font('No Such Family', normal, 15)),
+    get(FI, selection, Font),
+    get(Font, family, Family).
+test(font_item_family_height, H == 15) :-
+    new(FI, font_item(f, font(sans, normal, 12))),
+    get(FI, member, family, Menu),
+    get(Menu, class_variable_value, combo_box_height, H).
+test(font_item_family_width, true(W \== @nil)) :-
+    new(FI, font_item(f, font(sans, normal, 12))),
+    get(FI, member, family, Menu),
+    get(Menu, max_value_width, W).
+
 test(font_item_select_theme_font, State == "tt"-"tt") :-
     new(FI, font_item(f, font(sans, normal, 12))),
     get(@pce, convert, tt, font, TT),
