@@ -1571,6 +1571,8 @@ openComboBoxMenu(Menu m)
     send(c, NAME_selection, selection, EAV);
 
   selectCompletionDialogItem(m, NIL, NIL, ZERO);
+  if ( notNil(selection) )		/* now we know the browser's size */
+    send(c->list_browser, NAME_normalise, selection, EAV);
 
   changedDialogItem(m);
 
