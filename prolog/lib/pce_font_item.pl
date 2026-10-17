@@ -35,6 +35,7 @@
 
 :- module(pce_font_item, []).
 :- use_module(library(pce)).
+:- use_module(library(help_message)).    % ->help_message
 :- require([ send_list/2
            , default/3
            ]).
@@ -50,6 +51,11 @@ text_item and friends.  Summary:
         <->default:     Default value, which may be function (->restore)
         ->apply:        Execute the item
 
+The button "Theme…" selects a theme font, such as the font aliases
+`normal` and `bold`.  The item then shows the properties of the theme
+font and its name, and <-selection is the theme font, until the user
+changes the family, style or points.
+
 Though a bit complicated due to all  interaction between the items, this
 class may be used as an   example/template  for defining compound dialog
 items.
@@ -58,10 +64,11 @@ items.
 :- pce_begin_class(font_item, label_box, "Dialog item for defining a font").
 
 variable(value_set,     [chain],          get,    "List of fonts").
+variable(theme_font,    theme_font*,      get,    "Selected theme font").
 
 initialise(FI, Name:[name],
            Default:'[font|function]', Message:[code]*,
-           ValueSet:[chain]) :->
+           ValueSet:[chain], Theme:[bool]) :->
     "Create font-selector"::
     default(Name, font, Nm),
     default(Default, normal, Def),
@@ -82,6 +89,16 @@ initialise(FI, Name:[name],
     send(Fam, show_label, @off),
     send(Wgt, show_label, @off),
     send(Pts, show_label, @off),
+    (   Theme == @off
+    ->  true
+    ;   send(FI, append,
+             new(B, button(theme, message(FI, choose_theme_font))), right),
+        send(B, label, 'Theme…'),
+        send(B, help_message, tag, 'Select a font of the theme'),
+        send(FI, append, new(NL, label(theme_name, '')), right),
+        send(NL, length, 0)             % as wide as the name
+    ),
+    send(FI, slot, theme_font, @nil),
     send(FI, value_set, ValueSet),
     send(FI, default, Def).
 
@@ -230,13 +247,52 @@ activate(FI) :->
 family(FI, _Fam:name) :->
     "User changed family cycle"::
     send(FI, activate),
-    send(FI, forward).
+    send(FI, user_changed).
 
 weight(FI, _Wgt:name) :->
     send(FI, activate),
-    send(FI, forward).
+    send(FI, user_changed).
 
 points(FI, _Pts:int) :->
+    send(FI, user_changed).
+
+user_changed(FI) :->
+    "The user changed a property: the font is no longer a theme font"::
+    send(FI, show_theme_font, @nil),
+    send(FI, forward).
+
+show_theme_font(FI, Font:theme_font*) :->
+    "Remember the theme font and show its name"::
+    send(FI, slot, theme_font, Font),
+    (   get(FI, member, theme_name, Label)
+    ->  (   Font == @nil
+        ->  send(Label, selection, '')
+        ;   get(Font, name, Name),
+            send(Label, selection, Name)
+        )
+    ;   true
+    ).
+
+choose_theme_font(FI) :->
+    "Select a theme font"::
+    get(FI, member, family, Fam),
+    (   get(Fam?members, size, 1)       % e.g., only mono
+    ->  get(Fam?members?head, value, Family)
+    ;   Family = @default
+    ),
+    new(Chooser, theme_font_chooser(FI?theme_font, Family,
+                                    message(FI, user_selection, @arg1))),
+    (   get(FI, frame, Frame)
+    ->  send(Chooser, transient_for, Frame),
+        send(Chooser, modal, transient),
+        get(FI, display_position, Pos),
+        send(Chooser, open, Pos)
+    ;   send(Chooser, open)
+    ).
+
+user_selection(FI, Font:font) :->
+    "The user selected Font"::
+    send(FI, selection, Font),
     send(FI, forward).
 
 
@@ -265,10 +321,18 @@ selection(FI, Font:font) :->
     send(Fam, selection, Font?family),
     send(Wgt, selection, Font?style),
     send(Pts, selection, Font?points),
+    (   send(Font, instance_of, theme_font)
+    ->  send(FI, show_theme_font, Font)
+    ;   send(FI, show_theme_font, @nil)
+    ),
     send(FI, activate).
 
 selection(FI, Font:font) :<-
     "Get the current font"::
+    get(FI, theme_font, Font),
+    Font \== @nil,
+    !.
+selection(FI, Font:font) :<-
     get(FI, member, family, Fam),
     get(FI, member, weight, Wgt),
     get(FI, member, points, Pts),
@@ -278,6 +342,80 @@ selection(FI, Font:font) :<-
     new(Font, font(Family, Style, Points)).
 
 :- pce_end_class.
+
+
+                 /*******************************
+                 *      THEME FONT CHOOSER      *
+                 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Class theme_font_chooser lists the theme fonts, each shown in its own
+font, and calls its message with the one the user selects.  If a
+family is given, it only lists the theme fonts of this family, e.g.,
+`mono` for an item that edits a mono_font.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+:- pce_begin_class(theme_font_chooser, frame,
+                   "Select a theme font").
+
+variable(message, code*, both, "Called with the selected theme font").
+
+initialise(F, Current:theme_font*, Family:[name], Msg:[code]*) :->
+    "Create from current font, family and message"::
+    send_super(F, initialise, 'Select theme font'),
+    default(Msg, @nil, TheMsg),
+    send(F, message, TheMsg),
+    send(F, append, new(B, browser(size := size(40, 16)))),
+    get(B?font, width, "boldlarge  ", W),
+    send(B?text_image, tab_stops, vector(W)),
+    send(B, open_message, message(F, ok)),
+    send(@theme_fonts, for_all,
+         if(or(Family == @default, @arg1?family == Family),
+            message(F, append_font, @arg1))),
+    send(new(D, dialog), below, B),
+    send(D, append, button(ok)),
+    send(D, append, button(cancel)),
+    (   Current \== @nil
+    ->  get(Current, name, Name),
+        send(B, selection, Name),
+        send(B, normalise, Name)
+    ;   true
+    ).
+
+append_font(F, Font:theme_font) :->
+    "Add an entry for Font, shown in this font"::
+    get(F, member, browser, B),
+    get(Font, name, Name),
+    get(Font, family, Family),
+    get(Font, style, Style),
+    get(Font, points, Points),
+    send(B, style, Name, style(font := Font)),
+    Label = string('%s\t%s %s %s', Name, Family, Style, Points),
+    send(B, append, new(DI, dict_item(Name, Label, Font, Name))),
+    (   get(Font, summary, Summary), Summary \== @nil
+    ->  send(DI, help_message, tag, Summary)
+    ;   true
+    ).
+
+ok(F) :->
+    "Call <-message with the selected font and close"::
+    get(F, member, browser, B),
+    (   get(B, selection, DI), DI \== @nil
+    ->  get(DI, object, Font),
+        get(F, message, Msg),
+        send(F, destroy),
+        (   Msg == @nil
+        ->  true
+        ;   send(Msg, forward, Font)
+        )
+    ;   send(F, report, warning, 'No font selected')
+    ).
+
+cancel(F) :->
+    "Close without selecting"::
+    send(F, destroy).
+
+:- pce_end_class(theme_font_chooser).
 
 
                  /*******************************
@@ -441,6 +579,244 @@ clear(_PI) :->
     true.
 
 :- pce_end_class(pango_families_item).
+
+
+                 /*******************************
+                 *         FONT ALIASES         *
+                 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Class font_aliases_item edits the class variable font.system_fonts, which
+maps the font aliases such as `normal` and `bold` to a font.  The value
+is a chain of `Alias := Font`.  The item shows a font_item per alias:
+the built-in aliases in their built-in order, followed by the aliases
+the value adds.  An alias that the value does not mention uses its
+built-in font.  A font_item has no weight, so an alias keeps its font,
+e.g., `bitt`, which is bold italic, as long as the user does not change
+it.  A sample text in the font follows each font_item.  The tooltip of
+a font_item explains the role of the alias.
+
+Fonts are _related_ if they only differ by their style and weight, such
+as `tt`, `boldtt`, `itt` and `bitt`.  If the switch `same_size` is on,
+changing the size of a font also changes the size of its related fonts.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+:- pce_begin_class(font_aliases_item, label_box,
+                   "Edit the fonts of the font aliases").
+
+initialise(AI, Name:[name], Aliases:chain, Message:[code]*) :->
+    "Create from the aliases and a message"::
+    default(Name, system_fonts, Nm),
+    send_super(AI, initialise, Nm, Message),
+    send(AI, label, 'Font aliases:'),
+    send(AI, alignment, column),
+    alias_fonts(Aliases, Pairs),
+    forall(member(Alias-Font, Pairs),
+           ( new(FI, font_item(Alias, Font, @nil, @default, @off)),
+             send(FI, message, message(AI, forward, FI)),
+             send(FI, label, string(Alias)),    % no capitalisation
+             alias_help(FI, Alias),
+             send(AI, append, FI),
+             send(AI, append, new(L, label(sample, '')), right),
+             send(FI, attribute, sample, L)
+           )),
+    new(G, dialog_group(same_size, group)),
+    send(G, show_label, @off),          % keep the label column narrow
+    send(G, append, new(Same, bool_item(same_size, @on))),
+    send(Same, show_label, @off),
+    send(G, append, label(same_size_label,
+                          'Same size for related fonts'), right),
+    send(Same, help_message, tag,
+         'Changing the size of a font also changes the fonts \c
+          that only differ by style, such as tt, boldtt and itt'),
+    send(AI, append, G),
+    send(AI, selection, Aliases).
+
+sample_text('AaBbCc 0O1lI').
+
+%   alias_help(+FontItem, +Alias)
+%
+%   Explain the role of Alias in a tooltip, using the <-summary of its
+%   theme font.
+
+alias_help(FI, Alias) :-
+    get(@pce, convert, Alias, font, Font),
+    send(Font, instance_of, theme_font),
+    get(Font, summary, Summary),
+    Summary \== @nil,
+    !,
+    send(FI, help_message, tag, Summary).
+alias_help(_, _).
+
+%   show_sample(+FontItem)
+%
+%   Show the sample after FontItem in the font of FontItem.  Also
+%   remember this font as the attribute `shown`, so sync_sizes/2 knows
+%   the size before the user changes it.
+
+show_sample(FI) :-
+    get(FI, attribute, sample, L),
+    alias_font(FI, Font),
+    sample_text(Text),
+    send(L, font, Font),
+    send(L, selection, Text),
+    send(FI, attribute, shown, Font).
+
+%   sync_sizes(+AliasesItem, +FontItem)
+%
+%   The user changed FontItem.  If only its size changed, give the
+%   fonts that were related to it the same size.
+
+sync_sizes(AI, FI) :-
+    get(FI, attribute, shown, Old),
+    alias_font(FI, New),
+    get(Old, family, Family),
+    get(New, family, Family),
+    get(Old, style, Style),
+    get(New, style, Style),
+    get(Old, points, OldPoints),
+    get(New, points, Points),
+    OldPoints =\= Points,
+    !,
+    get(AI?graphicals, find_all,
+        and(message(@arg1, instance_of, font_item),
+            @arg1 \== FI,
+            ?(@arg1, attribute, shown)?family == Family,
+            ?(@arg1, attribute, shown)?points == OldPoints),
+        Related),
+    send(Related, for_all,
+         message(@prolog, set_points, @arg1, Points)).
+sync_sizes(_, _).
+
+set_points(FI, Points) :-
+    get(FI, attribute, shown, Old),
+    get(Old, family, Family),
+    get(Old, style, Style),
+    get(Old, weight, Weight),
+    new(Font, font(Family, Style, Points, Weight)),
+    send(FI, attribute, alias_font, Font),      % keep the weight
+    send(FI, selection, Font).
+
+%   alias_fonts(+Aliases:chain, -Pairs) is det.
+%
+%   Pairs is a list Alias-Font for the built-in aliases, followed by the
+%   aliases Aliases adds.
+
+alias_fonts(Aliases, Pairs) :-
+    builtin_aliases(Builtin),
+    chain_bindings(Aliases, Bindings),
+    findall(Alias-Font,
+            ( member(Alias-Font0, Builtin),
+              (   memberchk(Alias-Font1, Bindings)
+              ->  Font = Font1
+              ;   Font = Font0
+              )
+            ; member(Alias-Font, Bindings),
+              \+ memberchk(Alias-_, Builtin)
+            ),
+            Pairs).
+
+builtin_aliases(Pairs) :-
+    get(@font_class, class_variable, system_fonts, CV),
+    get(CV, default, Default),
+    get(CV, convert_string, Default, Chain),
+    chain_bindings(Chain, Pairs).
+
+chain_bindings(Chain, Pairs) :-
+    chain_list(Chain, Bindings),
+    findall(Alias-Font,
+            ( member(B, Bindings),
+              get(B, name, Alias),
+              get(B, value, Font0),
+              get(@pce, convert, Font0, font, Font)
+            ),
+            Pairs).
+
+selection(AI, Aliases:chain) :<-
+    "New chain of Alias := Font"::
+    get(AI, graphicals, Items),
+    chain_list(Items, List),
+    findall(Alias := Font,
+            ( member(FI, List),
+              send(FI, instance_of, font_item),
+              get(FI, name, Alias),
+              alias_font(FI, Font)
+            ),
+            Bindings),
+    new(Aliases, chain),
+    forall(member(Binding, Bindings),
+           ( new(B, Binding),
+             send(Aliases, append, B)
+           )).
+
+%   alias_font(+FontItem, -Font)
+%
+%   Font is the font shown by FontItem, or the font of the alias if it
+%   is the same, so we keep its weight.
+
+alias_font(FI, Font) :-
+    get(FI, selection, Font0),
+    (   get(FI, attribute, alias_font, Font1),
+        same_font(Font0, Font1)
+    ->  Font = Font1
+    ;   Font = Font0
+    ).
+
+same_font(F1, F2) :-
+    get(F1, family, Family), get(F2, family, Family),
+    get(F1, style, Style),   get(F2, style, Style),
+    get(F1, points, P1),     get(F2, points, P2),
+    P1 =:= P2.
+
+selection(AI, Aliases:chain) :->
+    "Show the fonts of the aliases"::
+    alias_fonts(Aliases, Pairs),
+    forall(( member(Alias-Font, Pairs),
+             get(AI, member, Alias, FI)
+           ),
+           ( send(FI, attribute, alias_font, Font),
+             send(FI, selection, Font),
+             show_sample(FI)
+           )),
+    send(AI, modified, @off).
+
+same_size(AI, Same:bool) :->
+    "Whether changing a size also changes the related fonts"::
+    get(AI, member, same_size, G),
+    get(G, member, same_size, BI),
+    send(BI, selection, Same).
+same_size(AI, Same:bool) :<-
+    "Whether changing a size also changes the related fonts"::
+    get(AI, member, same_size, G),
+    get(G, member, same_size, BI),
+    get(BI, selection, Same).
+
+modified_item(_AI, _Gr:graphical, _Modified:bool) :->
+    "Our fields call ->forward"::
+    fail.
+
+forward(AI, Changed:[font_item]) :->
+    "A font changed"::
+    (   Changed \== @default,
+        get(AI, same_size, @on)
+    ->  sync_sizes(AI, Changed)
+    ;   true
+    ),
+    send(AI?graphicals, for_all,
+         if(message(@arg1, instance_of, font_item),
+            message(@prolog, show_sample, @arg1))),
+    send(AI, modified, @on),
+    (   get(AI, device, Dev),
+        Dev \== @nil,
+        send(Dev, modified_item, AI, @on)
+    ->  true
+    ;   ignore(send(AI, apply))
+    ).
+
+clear(_AI) :->
+    true.
+
+:- pce_end_class(font_aliases_item).
 
 %   installed_families(+Monospace, -Families:chain)
 %

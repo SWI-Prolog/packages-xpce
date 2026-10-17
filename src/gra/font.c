@@ -474,6 +474,46 @@ getBuiltinChainFont(Name cv)
 }
 
 
+/* Role of the built-in font aliases.  This is the <-summary of their
+ * theme font, which the font editors show as a tooltip.
+ */
+
+static const struct
+{ const char *name;
+  const char *summary;
+} alias_summaries[] =
+{ { "normal",	 "Default font for text, menus, buttons and the values "
+		 "of dialog items" },
+  { "bold",	 "Labels of dialog items and groups, headers and "
+		 "emphasis" },
+  { "italic",	 "Emphasis and secondary information" },
+  { "small",	 "Small print, such as the accelerator keys in menus.  "
+		 "Avoid it for long texts" },
+  { "large",	 "Slightly larger text" },
+  { "boldlarge", "Subsection headings and titles of demos" },
+  { "huge",	 "Large text, such as titles" },
+  { "boldhuge",	 "Main titles and section headings, e.g., in help "
+		 "pages" },
+  { "tt",	 "Code editors such as PceEmacs, terminals and code "
+		 "examples.  Old name: fixed" },
+  { "boldtt",	 "Bold text in terminals" },
+  { "itt",	 "Italic text in terminals" },
+  { "bitt",	 "Bold italic text in terminals" },
+  { NULL,	 NULL }
+};
+
+
+static StringObj
+aliasSummary(Name name)
+{ for(int i=0; alias_summaries[i].name; i++)
+  { if ( streq(strName(name), alias_summaries[i].name) )
+      return CtoString(alias_summaries[i].summary);
+  }
+
+  return (StringObj)DEFAULT;
+}
+
+
 /* Make `name' an alias for `font'.  An alias is a theme font, so we
  * can change the font of an existing alias and all its users follow.
  */
@@ -494,7 +534,8 @@ fontAlias(Name name, FontObj font, Chain seen)
   if ( old && instanceOfObject(old, ClassThemeFont) )
     return send(old, NAME_derivedFrom, font, EAV);
 
-  return newObject(ClassThemeFont, name, font, EAV) ? SUCCEED : FAIL;
+  return newObject(ClassThemeFont, name, font, aliasSummary(name), EAV)
+	   ? SUCCEED : FAIL;
 }
 
 

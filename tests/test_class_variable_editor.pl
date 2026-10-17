@@ -549,6 +549,194 @@ test(pango_selection_in_own_font, Font == Preview) :-
     get(Menu, member, 'Not Installed,sans', MI),
     get(MI, font, Font),
     get(MI, attribute, preview_font, Preview).
+
+%   The font aliases (font.system_fonts) are edited using
+%   font_aliases_item, which has a font_item per alias.  The unchanged
+%   item gives the program default, so there is no revert link.
+
+aliases_item(Value, AI) :-
+    new(AI, font_aliases_item(system_fonts, Value)).
+
+alias_fields(AI, Fields) :-
+    get(AI?graphicals, find_all,
+        message(@arg1, instance_of, font_item), Items),
+    get(Items, map, @arg1?name, Names),
+    chain_list(Names, Fields).
+
+alias_text(AI, Alias, Text) :-
+    get(AI, selection, Chain),
+    get(Chain, find, @arg1?name == Alias, B),
+    get(B, value, Font),
+    pce_class_variable_editor:value_to_defaults_text(Font, Text).
+
+test(font_aliases_item, [Class-Revert == font_aliases_item-(@off)]) :-
+    new(Row, pce_class_variable_editor:cv_row(class(font), class(font),
+                                              system_fonts)),
+    get(Row?item, class_name, Class),
+    revert_shown(Row, Revert).
+test(font_aliases_builtin_order, Fields == [ normal, bold, italic, small,
+                                             large, boldlarge, huge,
+                                             boldhuge, fixed, tt, boldtt,
+                                             itt, bitt ]) :-
+    aliases_item(new(chain), AI),
+    alias_fields(AI, Fields).
+test(font_aliases_partial, Texts == ["font(serif, normal, 20)",
+                                     "font(sans, bold, 12)"]) :-
+    aliases_item(chain(normal := font(serif, normal, 20)), AI),
+    alias_text(AI, normal, T1),
+    alias_text(AI, bold, T2),
+    Texts = [T1, T2].
+test(font_aliases_added, Last == myown) :-
+    aliases_item(chain(myown := font(serif, italic, 11)), AI),
+    alias_fields(AI, Fields),
+    last(Fields, Last).
+test(font_aliases_keep_weight, Text == "font(mono, italic, 14, bold)") :-
+    aliases_item(new(chain), AI),
+    alias_text(AI, bitt, Text).
+test(font_aliases_edit, Text == "font(sans, normal, 16)") :-
+    aliases_item(new(chain), AI),
+    get(AI, member, normal, FI),
+    get(FI, member, points, Pts),
+    send(Pts, selection, 16),
+    alias_text(AI, normal, Text).
+test(font_aliases_edit_drops_weight, Text == "font(mono, italic, 15)") :-
+    aliases_item(new(chain), AI),
+    get(AI, member, bitt, FI),
+    get(FI, member, points, Pts),
+    send(Pts, selection, 15),
+    alias_text(AI, bitt, Text).
+test(font_aliases_help, Help == "Bold text in terminals") :-
+    aliases_item(new(chain), AI),
+    get(AI, member, boldtt, FI),
+    get(FI, help_message, tag, Help0),
+    get(Help0, value, Help1),
+    atom_string(Help1, Help).
+test(font_aliases_help_all, Missing == []) :-
+    aliases_item(new(chain), AI),
+    get(AI?graphicals, find_all,
+        and(message(@arg1, instance_of, font_item),
+            not(?(@arg1, help_message, tag))),
+        Ch),
+    get(Ch, map, @arg1?name, Names),
+    chain_list(Names, Missing).
+test(font_aliases_sample, Texts == ["font(mono, italic, 14, bold)",
+                                    "font(sans, normal, 16)"]) :-
+    aliases_item(new(chain), AI),
+    get(AI, member, bitt, BITT),
+    sample_font_text(BITT, T1),
+    get(AI, member, normal, FI),
+    get(FI, member, points, Pts),
+    send(Pts, selection, 16),
+    ignore(send(FI, points, 16)),
+    sample_font_text(FI, T2),
+    Texts = [T1, T2].
+
+test(font_aliases_same_size,
+     Texts == [ "font(mono, normal, 16)", "font(mono, bold, 16)",
+                "font(mono, italic, 16)", "font(mono, italic, 16, bold)",
+                "font(sans, normal, 12)", "font(sans, normal, 14)"
+              ]) :-
+    aliases_item(new(chain), AI),
+    user_set_points(AI, tt, 16),
+    maplist(alias_text(AI), [tt, boldtt, itt, bitt, normal, large], Texts).
+test(font_aliases_own_size,
+     Texts == [ "font(mono, normal, 16)", "font(mono, bold, 14)" ]) :-
+    aliases_item(new(chain), AI),
+    send(AI, same_size, @off),
+    user_set_points(AI, tt, 16),
+    maplist(alias_text(AI), [tt, boldtt], Texts).
+
+%   user_set_points(+AliasesItem, +Alias, +Points)
+%
+%   Act as if the user changed the size of Alias to Points.
+
+user_set_points(AI, Alias, Points) :-
+    get(AI, member, Alias, FI),
+    get(FI, member, points, Pts),
+    send(Pts, selection, Points),
+    ignore(send(FI, points, Points)).
+
+sample_font_text(FI, Text) :-
+    get(FI, attribute, sample, Label),
+    get(Label, font, Font),
+    defaults_text(Font, Text).
+
+test(font_aliases_apply, [ Props == font(serif, normal, 20),
+                           cleanup(( send(@font_class, class_variable_value,
+                                          system_fonts, Old),
+                                     send(@display_manager, fonts_changed) ))
+                         ]) :-
+    get(@font_class, class_variable, system_fonts, CV),
+    get(CV, value, Old),
+    new(Row, pce_class_variable_editor:cv_row(class(font), class(font),
+                                              system_fonts)),
+    get(Row?item, member, normal, FI),
+    send(FI, selection, font(serif, normal, 20)),
+    send(Row, item_changed),
+    get(@pce, convert, normal, font, F),
+    get(F, family, Family), get(F, style, Style), get(F, points, Points),
+    Props = font(Family, Style, Points).
+test(font_aliases_in_text_tab, Names == [scale, system_fonts, pango_families]) :-
+    pce_preferences:general(text, Spec),
+    memberchk(font - Names, Spec).
+
+%   A font_item has a button to select a theme font.  Its selection is
+%   then the theme font, until the user changes a property.
+
+font_item_state(FI, Selection-Name) :-
+    get(FI, selection, Font),
+    defaults_text(Font, Selection),
+    get(FI, member, theme_name, Label),
+    get(Label, selection, Name0),
+    atom_string(Name0, Name).
+
+defaults_text(Value, Text) :-
+    pce_class_variable_editor:value_to_defaults_text(Value, Text).
+
+test(font_item_theme_font, State == "normal"-"normal") :-
+    new(FI, font_item(f, normal)),
+    font_item_state(FI, State).
+test(font_item_plain_font, State == "font(sans, normal, 12)"-"") :-
+    new(FI, font_item(f, font(sans, normal, 12))),
+    font_item_state(FI, State).
+test(font_item_changed_theme_font, State == "font(sans, normal, 14)"-"") :-
+    new(FI, font_item(f, normal)),
+    get(FI, member, points, Pts),
+    send(Pts, selection, 14),
+    ignore(send(FI, points, 14)),       % ->forward fails without message
+    font_item_state(FI, State).
+test(font_item_select_theme_font, State == "tt"-"tt") :-
+    new(FI, font_item(f, font(sans, normal, 12))),
+    get(@pce, convert, tt, font, TT),
+    ignore(send(FI, user_selection, TT)),
+    font_item_state(FI, State).
+test(theme_font_chooser_all, Names == [ normal, bold, italic, small, large,
+                                        boldlarge, huge, boldhuge, fixed,
+                                        tt, boldtt, itt, bitt ]) :-
+    chooser_names(@default, Names).
+test(theme_font_chooser_mono, Names == [fixed, tt, boldtt, itt, bitt]) :-
+    chooser_names(mono, Names).
+test(font_aliases_no_theme_button, Buttons == []) :-
+    aliases_item(new(chain), AI),
+    get(AI, member, normal, FI),
+    get(FI?graphicals, find_all, message(@arg1, instance_of, button), Ch),
+    chain_list(Ch, Buttons).
+test(font_row_theme_font, [S-T == (@off)-"large"]) :-
+    new(Row, pce_class_variable_editor:cv_row(class(tcve_item),
+                                              class(tcve_item), f)),
+    revert_shown(Row, S),               % `normal` is the default
+    get(@pce, convert, large, font, Large),
+    ignore(send(Row?item, user_selection, Large)),
+    get(Row, value, Value),
+    defaults_text(Value, T).
+
+chooser_names(Family, Names) :-
+    new(C, theme_font_chooser(@nil, Family)),
+    get(C, member, browser, B),
+    get(B?dict?members, map, @arg1?key, Keys),
+    chain_list(Keys, Names),
+    send(C, destroy).
+
 test(font_scale_slider, Class == slider) :-
     new(Row, pce_class_variable_editor:cv_row(class(font), class(font),
                                               scale)),

@@ -52,6 +52,7 @@
 :- pce_autoload(man_html_card, library(pce_html_manual)).
 :- pce_autoload(ansi_colours_item, library(pce_colour_item)).
 :- pce_autoload(pango_families_item, library(pce_font_item)).
+:- pce_autoload(font_aliases_item, library(pce_font_item)).
 :- pce_autoload(theme_item, library(pce_colour_item)).
 :- autoload(library(pce_theme), [select_theme/1]).
 :- autoload(library(pce_class_doc), [xpce_doc_comment/5]).
@@ -340,6 +341,10 @@ dedicated_item(Class, Name, Value, Item) :-
     get(Class, name, ClassName),
     pce_preferences:edit_item(ClassName, Name, Value, Item),
     !.
+dedicated_item(Class, system_fonts, Value, Item) :-
+    send(Class, is_a, font),
+    \+ special_value(_, Value),
+    new(Item, font_aliases_item(system_fonts, Value)).
 dedicated_item(Class, pango_families, Value, Item) :-
     send(Class, is_a, font),
     \+ special_value(_, Value),
@@ -467,6 +472,17 @@ defaults_term(Obj, Name) :-
     !,
     get(Obj, name, Name).
 defaults_term(Obj, Term) :-
+    send(Obj, instance_of, font),
+    !,
+    get(Obj, family, Family),
+    get(Obj, style, Style),
+    get(Obj, points, Points),
+    get(Obj, weight, Weight),
+    (   implied_weight(Style, Weight)
+    ->  Term = font(Family, Style, Points)
+    ;   Term = font(Family, Style, Points, Weight)
+    ).
+defaults_term(Obj, Term) :-
     send(Obj, instance_of, style),
     !,
     style_term(Obj, Term0),
@@ -503,6 +519,15 @@ defaults_term(Obj, Term) :-
     ;   Args = Args2
     ),
     Term =.. [Name|Args].
+
+%   A font without weight has weight bold if its style is bold and
+%   normal otherwise.
+
+implied_weight(Style, Weight) :-
+    (   Style == bold
+    ->  Weight == bold
+    ;   Weight == normal
+    ).
 
 %   Coordinates are often the result of a computation, e.g., from
 %   millimeters, which results in many digits.  We round them to one

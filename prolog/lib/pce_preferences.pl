@@ -199,7 +199,7 @@ general_tab(ide,    'IDE',    30).
 %   adds its preferences to the tab `ide`.
 
 general(text,
-        [ font        - [ scale, pango_families ],
+        [ font        - [ scale, system_fonts, pango_families ],
           *(editor)   - [ selection_style ],
           text_cursor - [ fixed_font_style, proportional_font_style,
                           blink, colour, inactive_colour

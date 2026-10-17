@@ -98,15 +98,18 @@ created at boot time.  Its responsibilities are:
 
 - display_manager->fonts_changed
     Reload all fonts and recompute and redraw all windows of all frames.
-    Send this after changing `font.scale` or `font.pango_families` at
-    runtime.  Font objects keep their identity: only their size and
-    Pango family change, so all their users see the change.
+    Send this after changing `font.scale`, `font.pango_families` or
+    `font.system_fonts` at runtime, or after changing a `theme_font`.
+    Font objects keep their identity: only their size and Pango family
+    change, so all their users see the change.  If `font.system_fonts`
+    or `font.user_fonts` changed, the font aliases are updated.
 
     Everything that shows text is recomputed, dialogs are laid out
     again and frames resize their windows.  A frame or graphical whose
     class defines `->fonts_changed` is sent this message, so it can drop
     what it computed from the font metrics.  A graphical gets this after
-    its contents were recomputed.  Classes editor and menu_bar define it.
+    its contents were recomputed.  Classes editor, menu_bar, text and tab
+    define it.
 
 - display_manager->colours_changed
     Redraw all windows of all frames, including windows inside other

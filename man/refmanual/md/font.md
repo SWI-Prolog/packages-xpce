@@ -30,6 +30,13 @@ a `Defaults` file that overrules `font.system_fonts` only needs to
 mention the aliases it wants to change.  See `<-convert` for the
 accepted name forms.
 
+An alias is a `theme_font`: a font that takes its properties from the
+font it is derived from.  Unlike other fonts, it is not shared with
+the fonts that have the same properties, so `normal` and
+`font(sans, normal, 12)` are different objects.  Changing the font of
+an alias changes the alias in place, so everything that uses the alias
+follows.
+
 The xpce `<-family` slot is translated to a Pango family by looking
 the name up in the `@font_families` hash table (seeded from
 `font.pango_families`).  That table maps the generic family names
@@ -73,27 +80,101 @@ default fonts for their role.
 ## Class variables {#class-font-classvars}
 
 - font.scale: num = 1.0
-    Multiplication factor applied to every font's `<-points` before
-    Pango is asked to render, making all text larger or smaller.  After changing
-    it at runtime, send `display_manager ->fonts_changed` to apply it to
-    the existing fonts and windows.
+    Make all text larger or smaller.  The size of every font is
+    multiplied by this factor, so a value of 1.2 makes all text 20%
+    larger, whatever font it uses.  This is the simplest way to adapt
+    the user interface to the resolution of your screen and your
+    eyes.  Use `font.system_fonts` to change the size of specific
+    kinds of text.
+
+    For example, to make all text 25% larger, add this line to your
+    `Defaults` file:
+
+    	font.scale: 1.25
+
+    The scale also applies to fonts that are not named by an alias.
+    After changing it at runtime, send `display_manager
+    ->fonts_changed` to apply it to the existing fonts and windows.
+    The preferences editor (_Settings/Edit GUI preferences_ in the IDE)
+    does this for you.
 
 - font.system_fonts: chain
-    Seed for `@font_aliases`: pairs of alias name → font object
-    (`normal := font(sans, normal, 12)`, `tt := font(mono, normal,
-    14)`, ...).  The default list defines `normal`, `bold`,
-    `italic`, `small`, `large`, `boldlarge`, `huge`, `boldhuge`,
-    `fixed`, `tt`, `boldtt`, `itt` and `bitt`; aliases omitted from
-    an overruling definition keep their built-in value.
+    Define the font aliases.  The user interface does not name fonts
+    by their family, style and size, but by an _alias_ that describes
+    their role: `normal` for most text, `bold` for labels, `fixed` for
+    the text of editors and terminals, etc.  This setting defines the
+    font of each alias as a list of `Alias := Font`.  The
+    built-in value is
+
+    	[ normal    := font(sans, normal, 12),
+    	  bold      := font(sans, bold,   12),
+    	  italic    := font(sans, italic, 12),
+    	  small     := font(sans, normal, 10),
+    	  large     := font(sans, normal, 14),
+    	  boldlarge := font(sans, bold,   14),
+    	  huge      := font(sans, normal, 18),
+    	  boldhuge  := font(sans, bold,   18),
+    	  fixed     := font(mono, normal, 14),
+    	  tt        := font(mono, normal, 14),
+    	  boldtt    := font(mono, bold,   14),
+    	  itt       := font(mono, italic, 14),
+    	  bitt      := font(mono, italic, 14, bold)
+    	]
+
+    A font is font(Family, Style, Points) or font(Family, Style,
+    Points, Weight).  The families `sans`, `serif` and `mono` are
+    _generic_: `font.pango_families` decides which installed font they
+    use.  Style is one of `normal`, `bold`, `italic` or `oblique`.  An
+    alias that you leave out keeps its built-in font, so you only need
+    to list the aliases you want to change.  For example, to use a
+    larger font for editors and terminals:
+
+    	font.system_fonts: [ fixed := font(mono, normal, 16), \
+    	                     tt    := font(mono, normal, 16)  \
+    	                   ]
+
+    Use `font.scale` to make all text larger or smaller.  Note that
+    changing an alias changes all text that uses it, while a setting
+    such as `editor.font` changes only the font of one kind of
+    object.  The value may also define new aliases, which
+    applications can use as fonts.
+
+    The Text tab of the preferences editor, which is
+    _Settings/Edit GUI preferences_ in the IDE, shows each alias with
+    its family, style and size, followed by a sample text in this
+    font.  Changes apply immediately.  When saved, the `Defaults` file
+    holds all aliases.  If _Same size for related fonts_ is on, which
+    is the default, changing the size of an alias also changes the
+    size of the aliases that have the same family and size and only
+    differ by style or weight.  For example, changing `tt` to 16
+    points also changes `boldtt`, `itt` and `bitt`.
+
+    @see class theme_font
 
 - font.pango_families: chain
-    Seed for `@font_families`: pairs that map an xpce generic
-    family name (`mono`, `sans`, `serif`) to a Pango family name (or a
-    comma-separated list of fallbacks).  The legacy names `screen`,
-    `helvetica` and `times` follow `mono`, `sans` and `serif`.  As
-    with `font.system_fonts`, families omitted from an overruling
-    definition keep their built-in value.  After changing it at
-    runtime, send `display_manager ->fonts_changed`.
+    Define the installed font used for the generic families `mono`,
+    `sans` and `serif`.  xpce fonts name a generic family rather than
+    an installed font, such that applications look reasonable on any
+    system.  This setting maps each generic family to a family
+    known to Pango, the library xpce uses to render text.  The value is
+    a list of `Generic := Family`, where Family is the name of an
+    installed font family or a comma-separated list of families that
+    are tried in order.  For example, to use _Fira Code_ for all
+    monospaced text if it is installed:
+
+    	font.pango_families: [ mono := 'Fira Code,monospace' ]
+
+    A family that you leave out keeps its built-in value, which
+    depends on the operating system.  The legacy names `screen`,
+    `helvetica` and `times` follow `mono`, `sans` and `serif`.
+    Characters that the selected family does not provide, such as
+    emoji or other scripts, are taken from other installed fonts.
+
+    The Text tab of the preferences editor, which is
+    _Settings/Edit GUI preferences_ in the IDE, offers the installed
+    families, each shown in its own font.  After changing it at runtime, send
+    `display_manager ->fonts_changed`; the preferences editor does this
+    for you.
 
 - font.no_font: font = normal
     Substitute used when an explicitly-requested font cannot be
