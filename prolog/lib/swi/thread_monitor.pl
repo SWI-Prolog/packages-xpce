@@ -453,7 +453,7 @@ icon_styles(TB) :->
     get(Font, height, Height),
     get(Font, descent, Descent),
     Ascent is round(Height*0.8),
-    H is Ascent+Descent,
+    H is Ascent+ceiling(Descent),
     send(TB, slot, cpu_height, H),
     forall(thread_icon(Style, Resource),
            ( status_icon(Resource, H, Ascent, Icon),
