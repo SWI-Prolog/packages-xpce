@@ -1554,7 +1554,8 @@ class_variable_help(Class0, Name, TransientFor) :-
     new(W, class_variable_help_window(Title, Entry)),
     (   TransientFor == @nil
     ->  true
-    ;   send(W, transient_for, TransientFor)
+    ;   send(W, transient_for, TransientFor),
+        send(W, can_resize, @on)        % a transient cannot by default
     ),
     send(W, open).
 

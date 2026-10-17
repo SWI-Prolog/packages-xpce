@@ -1318,6 +1318,22 @@ test(entry_instance_variable, [Class, Context] == [variable, editor]) :-
 test(entry_super_class, [Class, Context] == [variable, graphical]) :-
     entry(circle, colour, Class, Context).
 
+%   A frame that is ->transient_for another cannot be resized by
+%   default.  The help window can.
+
+test(help_window_resizable, CanResize == @on) :-
+    new(Owner, frame(owner)),
+    send(Owner, append, new(dialog)),
+    setup_call_cleanup(
+        ( send(Owner, open),
+          class_variable_help(font, scale, Owner)
+        ),
+        ( get(Owner, transients, Transients),
+          get(Transients, head, Help),
+          get(Help, can_resize, CanResize)
+        ),
+        send(Owner, destroy)).
+
 %   The help window must also work if the editor runs without the IDE,
 %   which loads library(toolbar).  As the other tests may load it, we run
 %   this test in a separate process.
