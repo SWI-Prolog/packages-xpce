@@ -39,10 +39,15 @@
 static Int	getPointsFont(FontObj f);
 static status	loadFontFamilies(void);
 static status	loadFontFamilyChain(Chain ch);
-static status	loadFontAliases(Name res);
-static status	loadFontAliasChain(Chain ch);
+static status	loadFontAliases(Name res, Chain seen);
+static status	loadFontAliasChain(Chain ch, Chain seen);
 static Chain	getBuiltinChainFont(Name cv);
-static status	fontAlias(Name name, FontObj font, BoolObj force);
+static status	fontAlias(Name name, FontObj font, Chain seen);
+static void	resetFont(FontObj f);
+
+static Chain	ThemeFonts;		/* All theme fonts */
+static Any	LoadedSystemFonts;	/* font.system_fonts we loaded */
+static Any	LoadedUserFonts;	/* font.user_fonts we loaded */
 
 static Name
 fontName(Name family, Name style, Int points, Name weight)
@@ -151,7 +156,7 @@ getConvertFont(Class class, Name name)
 
 FontObj
 getCopyFont(FontObj f)
-{ Class class = classOfObject(f);
+{ Class class = ClassFont;		/* also for a theme font */
   FontObj copy = allocObject(class, FALSE);
 
   ws_create_font(f);
@@ -172,7 +177,7 @@ static FontObj
 getRescaleFont(FontObj f, Num scale)
 { double pts = valNum(f->points)*valNum(scale);
 
-  return answerObject(getClassObject(f),
+  return answerObject(ClassFont,
 		      f->family, f->style, toNum(pts), f->weight, EAV);
 }
 
@@ -214,10 +219,10 @@ makeBuiltinFonts(void)
   done = true;
 
   if ( loadFontFamilies() &&	/* Family -> Pango Family */
-       loadFontAliases(NAME_systemFonts) )
+       loadFontAliases(NAME_systemFonts, NULL) )
   { Chain ch;
 
-    loadFontAliases(NAME_userFonts);
+    loadFontAliases(NAME_userFonts, NULL);
 					/* Complete both tables from the
 					   built-in class variable values,
 					   so a user that overrules them
@@ -226,7 +231,7 @@ makeBuiltinFonts(void)
     if ( (ch=getBuiltinChainFont(NAME_pangoFamilies)) )
       loadFontFamilyChain(ch);
     if ( (ch=getBuiltinChainFont(NAME_systemFonts)) )
-      loadFontAliasChain(ch);
+      loadFontAliasChain(ch, NULL);
 
     succeed;
   }
@@ -389,8 +394,15 @@ getPair(Any obj, Any *key, Any *value)
 }
 
 
+/* Define the aliases of a chain of Alias := Font.  If `seen' is NULL,
+ * an alias that is already defined is left alone.  Otherwise the
+ * aliases in `seen' are left alone and the others are (re)defined and
+ * added to `seen'.  This allows reloading the tables in the same order
+ * as makeBuiltinFonts() loaded them.
+ */
+
 static status
-loadFontAliasChain(Chain ch)
+loadFontAliasChain(Chain ch, Chain seen)
 { Cell cell;
   Type type_font = nameToType(NAME_font);
 
@@ -406,19 +418,38 @@ loadFontAliasChain(Chain ch)
 	 !(font = checkType(f, type_font, ClassFont)) )
       errorPce(ClassFont, NAME_badFontAlias, n, f);
     else
-      fontAlias(name, font, OFF);
+      fontAlias(name, font, seen);
   }
 
   succeed;
 }
 
 
+/* Remember the value of a class variable we loaded the aliases from.
+ * We keep a reference, so a new value cannot be at the same address.
+ */
+
+static void
+setLoadedFonts(Any *loaded, Any value)
+{ if ( *loaded != value )
+  { if ( value && isObject(value) )
+      addCodeReference(value);
+    if ( *loaded && isObject(*loaded) )
+      delCodeReference(*loaded);
+    *loaded = value;
+  }
+}
+
+
 static status
-loadFontAliases(Name res)
+loadFontAliases(Name res, Chain seen)
 { Chain ch = getClassVariableValueClass(ClassFont, res);
 
+  setLoadedFonts(res == NAME_systemFonts ? &LoadedSystemFonts
+				       : &LoadedUserFonts, ch);
+
   if ( ch )
-    return loadFontAliasChain(ch);
+    return loadFontAliasChain(ch, seen);
 
   fail;
 }
@@ -443,12 +474,27 @@ getBuiltinChainFont(Name cv)
 }
 
 
-static status
-fontAlias(Name name, FontObj font, BoolObj force)
-{ if ( force == ON || !getMemberHashTable(FontAliasTable, name) )
-    appendHashTable(FontAliasTable, name, font);
+/* Make `name' an alias for `font'.  An alias is a theme font, so we
+ * can change the font of an existing alias and all its users follow.
+ */
 
-  succeed;
+static status
+fontAlias(Name name, FontObj font, Chain seen)
+{ Any old = getMemberHashTable(FontAliasTable, name);
+
+  if ( seen )
+  { if ( memberChain(seen, name) )
+      succeed;
+    appendChain(seen, name);
+  } else if ( old )
+  { succeed;
+  }
+
+  realiseClass(ClassThemeFont);	/* creates ThemeFonts */
+  if ( old && instanceOfObject(old, ClassThemeFont) )
+    return send(old, NAME_derivedFrom, font, EAV);
+
+  return newObject(ClassThemeFont, name, font, EAV) ? SUCCEED : FAIL;
 }
 
 
@@ -498,24 +544,56 @@ loadFontFamilies(void)
 status
 reloadFonts(void)
 { Chain ch;
+  Chain seen = answerObject(ClassChain, EAV);
 
   clearHashTable(FontFamilyTable);
   loadFontFamilies();
   if ( (ch=getBuiltinChainFont(NAME_pangoFamilies)) )
     loadFontFamilyChain(ch);
   ws_reset_font_scale();
+					/* font aliases, as makeBuiltinFonts(), */
+					/* if their class variables changed */
+  if ( ( getClassVariableValueClass(ClassFont, NAME_systemFonts) !=
+	   LoadedSystemFonts ||
+	 getClassVariableValueClass(ClassFont, NAME_userFonts) !=
+	   LoadedUserFonts ) &&
+       loadFontAliases(NAME_systemFonts, seen) )
+  { loadFontAliases(NAME_userFonts, seen);
+    if ( (ch=getBuiltinChainFont(NAME_systemFonts)) )
+      loadFontAliasChain(ch, seen);
+  }
 
   for_hash_table(FontTable, s,
 		 { FontObj f = s->value;
 
-		   assign(f, avg_char_width, NIL); /* computed lazily */
 		   if ( f->ws_ref )
-		   { ws_destroy_font(f);
+		   { resetFont(f);
 		     ws_create_font(f);
 		   }
 		 });
+  if ( ThemeFonts )
+  { Cell cell;
+
+    for_cell(cell, ThemeFonts)
+      resetFont(cell->value);		/* created lazily */
+  }
 
   succeed;
+}
+
+
+/* Forget the window system font and the metrics derived from it, such
+ * that they are computed again from the font's properties.
+ */
+
+static void
+resetFont(FontObj f)
+{ ws_destroy_font(f);
+  assign(f, ascent,	    DEFAULT);
+  assign(f, descent,	    DEFAULT);
+  assign(f, ex,		    NIL);
+  assign(f, avg_char_width, NIL);
+  assign(f, fixed_width,    DEFAULT);
 }
 
 
@@ -553,6 +631,140 @@ static Sheet
 getFontFamilies(Class class, BoolObj mono, CharArray covers)
 { answer(ws_font_families(mono, covers));
 }
+
+		 /*******************************
+		 *	     THEME FONTS	*
+		 *******************************/
+
+/* A theme font is a font whose name describes its role, such as the
+ * font aliases `normal' and `bold'.  It is derived from a font and
+ * copies its family, style, weight and points.  Unlike a normal font it
+ * is not unique for these properties, so `normal' and
+ * font(sans,normal,12) are different objects.  Changing the font a
+ * theme font is derived from changes the theme font itself, so all its
+ * users follow.  They must recompute their layout, see `display_manager
+ * ->fonts_changed'.  If a theme font is derived from another theme
+ * font, it takes the font that one is derived from at that moment.
+ */
+
+static void
+copyThemeFont(ThemeFont tf, FontObj from)
+{ assign(tf, derived_from, from);
+  assign(tf, family,	   from->family);
+  assign(tf, style,	   from->style);
+  assign(tf, weight,	   from->weight);
+  assign(tf, points,	   from->points);
+  resetFont((FontObj)tf);
+}
+
+
+static FontObj
+themeFontSource(FontObj from)
+{ while( instanceOfObject(from, ClassThemeFont) )
+    from = ((ThemeFont)from)->derived_from;
+
+  return from;
+}
+
+
+static status
+initialiseThemeFont(ThemeFont tf, Name name, FontObj from, StringObj summary)
+{ assign(tf, name,    name);
+  assign(tf, summary, isDefault(summary) ? NIL : summary);
+  copyThemeFont(tf, themeFontSource(from));
+
+  appendHashTable(FontAliasTable, name, tf);
+  appendChain(ThemeFonts, tf);
+  protectObject(tf);
+
+  succeed;
+}
+
+
+static status
+unlinkThemeFont(ThemeFont tf)
+{ deleteChain(ThemeFonts, tf);
+  if ( getMemberHashTable(FontAliasTable, tf->name) == tf )
+    deleteHashTable(FontAliasTable, tf->name);
+
+  return unlinkFont((FontObj)tf);
+}
+
+
+static status
+derivedFromThemeFont(ThemeFont tf, FontObj from)
+{ from = themeFontSource(from);
+
+  if ( tf->derived_from != from )
+    copyThemeFont(tf, from);
+
+  succeed;
+}
+
+
+/* Creating a theme font that already exists changes the font it is
+ * derived from and returns the existing object.
+ */
+
+static ThemeFont
+getLookupThemeFont(Class class, Name name, FontObj from, StringObj summary)
+{ Any f = getMemberHashTable(FontAliasTable, name);
+
+  if ( f && instanceOfObject(f, ClassThemeFont) )
+  { ThemeFont tf = f;
+
+    derivedFromThemeFont(tf, from);
+    if ( notDefault(summary) )
+      assign(tf, summary, summary);
+    answer(tf);
+  }
+
+  fail;
+}
+
+
+static char *T_themeFont[] =
+	{ "name=name", "derived_from=font", "summary=[string]*" };
+
+static vardecl var_themeFont[] =
+{ IV(NAME_name, "name", IV_GET,
+     NAME_name, "Name of the font, e.g., `normal'"),
+  IV(NAME_derivedFrom, "font", IV_GET,
+     NAME_font, "Font this font is derived from"),
+  IV(NAME_summary, "string*", IV_BOTH,
+     NAME_manual, "Description of the role of this font")
+};
+
+static senddecl send_themeFont[] =
+{ SM(NAME_initialise, 3, T_themeFont, initialiseThemeFont,
+     DEFAULT, "Create from name and font it is derived from"),
+  SM(NAME_unlink, 0, NULL, unlinkThemeFont,
+     DEFAULT, "Remove from the theme fonts"),
+  SM(NAME_derivedFrom, 1, "font", derivedFromThemeFont,
+     NAME_font, "Change the font this font is derived from")
+};
+
+static getdecl get_themeFont[] =
+{ GM(NAME_lookup, 3, "theme_font", T_themeFont, getLookupThemeFont,
+     NAME_oms, "Existing theme font with this name")
+};
+
+static Name themeFont_termnames[] = { NAME_name, NAME_derivedFrom };
+
+ClassDecl(themeFont_decls,
+	  var_themeFont, send_themeFont, get_themeFont, NULL,
+	  2, themeFont_termnames);
+
+
+status
+makeClassThemeFont(Class class)
+{ declareClass(class, &themeFont_decls);
+
+  ThemeFonts = globalObject(NAME_themeFonts, ClassChain, EAV);
+
+  succeed;
+}
+
 
 		 /*******************************
 		 *	 CLASS DECLARATION	*

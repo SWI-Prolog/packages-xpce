@@ -125,6 +125,7 @@ COMMON(Int)	getAscentFont(FontObj f);
 COMMON(Int)	getDescentFont(FontObj f);
 COMMON(BoolObj)	getFixedWidthFont(FontObj f);
 COMMON(status)	makeClassFont(Class class);
+COMMON(status)	makeClassThemeFont(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/format.c */
 COMMON(status)	makeClassFormat(Class class);

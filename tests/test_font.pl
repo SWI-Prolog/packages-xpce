@@ -52,7 +52,7 @@ setup_headless :-
 
 test_font :-
     run_tests([font_member, font_domain, font_fixed_width, mono_font,
-               font_reload, terminal_variant_fonts]).
+               font_reload, theme_font, terminal_variant_fonts]).
 
 emoji(0x1F600).                         % 😀
 
@@ -206,6 +206,91 @@ test(old_families, Same == [true, true, true]) :-
             Same).
 
 :- end_tests(font_reload).
+
+
+%   Font aliases are theme fonts: fonts whose properties are those of
+%   the font they are derived from.  Changing that font changes the
+%   theme font in place, so all its users follow.
+
+alias(Name, Font) :-
+    get(@pce, convert, Name, font, Font).
+
+font_props(Font, font(Family, Style, Points)) :-
+    get(Font, family, Family),
+    get(Font, style, Style),
+    get(Font, points, Points).
+
+restore_alias(Name, From) :-
+    alias(Name, F),
+    send(F, derived_from, From),
+    send(@display_manager, fonts_changed).
+
+:- begin_tests(theme_font).
+
+test(alias_is_theme_font, Props == font(sans, normal, 12)) :-
+    alias(normal, F),
+    send(F, instance_of, theme_font),
+    get(F, name, normal),
+    font_props(F, Props).
+test(differs_from_its_font, true(F \== P)) :-
+    alias(normal, F),
+    new(P, font(sans, normal, 12)),
+    get(F, derived_from, P).
+test(derived_from_in_place, [ Props == font(serif, bold, 20), F == F2,
+                              true(H1 > H0),
+                              cleanup(restore_alias(normal, Old)) ]) :-
+    alias(normal, F),
+    get(F, derived_from, Old),
+    get(F, height, H0),
+    send(F, derived_from, font(serif, bold, 20)),
+    alias(normal, F2),
+    font_props(F, Props),
+    get(F, height, H1).
+test(new_returns_existing, [ Props == font(mono, normal, 16), F == F2,
+                             cleanup(restore_alias(bold, Old)) ]) :-
+    alias(bold, F),
+    get(F, derived_from, Old),
+    new(F2, theme_font(bold, font(mono, normal, 16))),
+    font_props(F, Props).
+test(derived_from_theme_font, [ Props == font(mono, italic, 14),
+                                cleanup(free(F)) ]) :-
+    alias(itt, ITT),
+    new(F, theme_font(test_theme_font, ITT)),
+    get(F, derived_from, From),
+    \+ send(From, instance_of, theme_font),
+    font_props(F, Props).
+test(new_alias, F == F2, [cleanup(free(F))]) :-
+    new(F, theme_font(test_theme_font, font(serif, normal, 9))),
+    alias(test_theme_font, F2).
+test(rescale_is_plain_font, Props == font(sans, normal, 24)) :-
+    alias(normal, F),
+    get(F, rescale, 2, R),
+    \+ send(R, instance_of, theme_font),
+    font_props(R, Props).
+test(class_variable, [ Props == font(serif, normal, 20)-font(sans, bold, 12),
+                       F == F2,
+                       cleanup(set_font_cv(system_fonts, Old, _)) ]) :-
+    alias(normal, F),
+    set_font_cv(system_fonts, chain(normal := font(serif, normal, 20)), Old),
+    alias(normal, F2),
+    alias(bold, B),                     % omitted: built-in value
+    font_props(F, P1),
+    font_props(B, P2),
+    Props = P1-P2.
+test(text_follows, [ true(W1 > W0),
+                     cleanup(( restore_alias(normal, Old), free(Fr) )) ]) :-
+    alias(normal, F),
+    get(F, derived_from, Old),
+    new(Fr, frame),
+    send(Fr, append, new(P, picture)),
+    send(P, display, new(T, text(hello, left, normal))),
+    send(Fr, wait),
+    get(T, width, W0),
+    send(F, derived_from, font(sans, normal, 24)),
+    send(@display_manager, fonts_changed),
+    get(T, width, W1).
+
+:- end_tests(theme_font).
 
 
 %   A terminal paints bold and italic text in variants of its <-font that

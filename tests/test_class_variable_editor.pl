@@ -194,8 +194,13 @@ test(bool, T == "@on") :-
     round_trip(b, T).
 test(name, T == "left") :-
     round_trip(e, T).
-test(font, T == "font(sans, normal, 12)") :-
+test(font_alias, T == "normal") :-
     round_trip(f, T).
+test(mono_font_alias, T == "fixed") :-
+    round_trip(m, T).
+test(font, T == "font(serif, bold, 14)") :-
+    new(F, font(serif, bold, 14)),
+    pce_class_variable_editor:value_to_defaults_text(F, T).
 test(colour, T == "colour(red)") :-
     round_trip(c, T).
 test(theme_colour, T == "ui_accent") :-

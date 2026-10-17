@@ -461,7 +461,9 @@ defaults_term(Value, Value) :-
     atom(Value),
     !.
 defaults_term(Obj, Name) :-
-    send(Obj, instance_of, theme_colour),
+    (   send(Obj, instance_of, theme_colour)
+    ;   send(Obj, instance_of, theme_font)
+    ),
     !,
     get(Obj, name, Name).
 defaults_term(Obj, Term) :-

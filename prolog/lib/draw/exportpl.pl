@@ -196,6 +196,10 @@ object_to_term(Atomic, _, Atomic) :-
     atomic(Atomic),
     \+ is_object_reference(Atomic),  % which is atomic as well
     !.
+object_to_term(Font, _, Alias) :-       % font alias
+    send(Font, instance_of, theme_font),
+    !,
+    get(Font, name, Alias).
 object_to_term(Font, _, Alias) :-       % replace font by alias
     send(Font, instance_of, font),
     get(@display?font_table, find_key,

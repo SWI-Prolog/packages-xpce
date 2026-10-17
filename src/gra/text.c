@@ -845,6 +845,16 @@ getTransparentText(TextObj t)
 
 
 
+/* The font changed in place: see `display_manager ->fonts_changed`.
+ * Recompute our area from the new metrics.
+ */
+
+static status
+fontsChangedText(TextObj t)
+{ return recomputeText(t, NAME_area);
+}
+
+
 status
 fontText(TextObj t, FontObj font)
 { Style s = text_style(t);
@@ -1904,7 +1914,9 @@ static senddecl send_text[] =
 { SM(NAME_colour, 1, "[colour]", colourText,
      NAME_appearance, "Set colour, of <-style if we have one"),
   SM(NAME_styleChanged, 0, NULL, styleChangedText,
-     NAME_appearance, "Update after <-style was changed"), SM(NAME_event, 1, "event", eventText,
+     NAME_appearance, "Update after <-style was changed"),
+  SM(NAME_fontsChanged, 0, NULL, fontsChangedText,
+     NAME_appearance, "Recompute the area after the font changed in place"), SM(NAME_event, 1, "event", eventText,
      DEFAULT, "Handle focus and keyboard events"),
   SM(NAME_geometry, 4, T_geometry, geometryText,
      DEFAULT, "Only move text"),

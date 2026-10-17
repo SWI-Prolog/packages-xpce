@@ -218,6 +218,9 @@ static struct class_definition classdefs[] =
   { NAME_font, NAME_object, makeClassFont,
     &ClassFont, "Text font" },
 
+  { NAME_themeFont, NAME_font, makeClassThemeFont,
+    &ClassThemeFont, "Font whose value follows the theme" },
+
   { NAME_format, NAME_object, makeClassFormat,
     &ClassFormat, "Table specification for device" },
 
