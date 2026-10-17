@@ -78,6 +78,7 @@ initialiseMenu(Menu m, Name name, Name kind, Code msg)
   assign(m, focus_item,		NIL);
 
   assign(m, columns,            ONE);
+  assign(m, max_value_width,	NIL);
 
   assign(m, left_offset,	ZERO);
   assign(m, right_offset,	ZERO);
@@ -310,6 +311,8 @@ computeItemsMenu(Menu m)
   }
 
   w += lm + rm;
+  if ( is_cycle_menu(m) && notNil(m->max_value_width) )
+    w = max(lm+rm, min(w, valInt(m->max_value_width)));
 
   assign(m->item_size, w, toInt(w));
   assign(m->item_size, h, toInt(h));
@@ -665,6 +668,69 @@ draw_separator(Menu m, int x1, int y1, int x2, int y2)
 }
 
 
+/* A cycle menu may be narrower than its labels, see ->max_value_width.
+ * label_fit() returns the number of characters of `s' that fit in `w'
+ * pixels if they are followed by an ellipsis, or -1 if `s' fits as a
+ * whole.
+ */
+
+#define ELLIPSIS 0x2026			/* … */
+
+static int
+label_fit(PceString s, FontObj f, int w)
+{ if ( str_width(s, 0, s->s_size, f) <= w )
+    return -1;
+
+  LocalString(ell, true, 1);
+  str_store(ell, 0, ELLIPSIS);
+  double room = w - str_width(ell, 0, 1, f);
+  int lo = 0, hi = s->s_size;		/* lo fits, hi does not */
+
+  while( hi - lo > 1 )
+  { int n = (lo+hi)/2;
+
+    if ( str_width(s, 0, n, f) <= room )
+      lo = n;
+    else
+      hi = n;
+  }
+  while( lo > 0 && str_fetch(s, lo-1) == ' ' )
+    lo--;
+
+  return lo;
+}
+
+
+/* The width available for the label of an item */
+
+static int
+label_room(Menu m, MenuItem mi, int w)
+{ FontObj f = getFontMenuItemMenu(m, mi);
+  int b = valInt(m->border);
+
+  return w - (valInt(m->left_offset) + valInt(m->right_offset)) - 2*b
+	   - valInt(getAvgCharWidthFont(f));
+}
+
+
+/* The number of characters of the label of `mi' we show, or -1 if we
+ * show all of it.
+ */
+
+static int
+label_shown(Menu m, MenuItem mi)
+{ if ( is_cycle_menu(m) && notNil(m->max_value_width) &&
+       instanceOfObject(mi->label, ClassCharArray) )
+  { PceString s = &((CharArray)mi->label)->data;
+
+    return label_fit(s, getFontMenuItemMenu(m, mi),
+		     label_room(m, mi, valInt(m->item_size->w)));
+  }
+
+  return -1;
+}
+
+
 static status
 RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h)
 { int b = valInt(m->border);
@@ -818,8 +884,19 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h)
   if ( instanceOfObject(mi->label, ClassCharArray) )
   { FontObj f = getFontMenuItemMenu(m, mi);
     int fw = valInt(getAvgCharWidthFont(f));
+    PceString s = &((Name) mi->label)->data;
+    int n = label_shown(m, mi);
 
-    str_label(&((Name) mi->label)->data,
+    if ( n >= 0 )			/* label followed by an ellipsis */
+    { LocalString(buf, true, n+1);
+
+      str_ncpy(buf, 0, s, 0, n);
+      str_store(buf, n, ELLIPSIS);
+      buf->s_size = n+1;
+      s = buf;
+    }
+
+    str_label(s,
 	      ( instanceOfObject(m, ClassPopup) &&
 		getAttributeObject(m, NAME_keyboard) )
 		? accelerator_key(mi->mnemonic)
@@ -1435,6 +1512,34 @@ keyboardQuitMenu(Menu m)
 { quitCompleterDialogItem(m);
 
   succeed;
+}
+
+
+/* Width of the list of a cycle menu that is opened as a combo box.  If
+ * ->max_value_width makes the menu narrower than its labels, the list
+ * is as wide as the widest label, so it shows them in full.
+ */
+
+int
+combo_box_width_menu(Menu m, int w)
+{ if ( is_cycle_menu(m) && notNil(m->max_value_width) )
+  { Cell cell;
+    int lw = 0;
+
+    for_cell(cell, m->members)
+    { MenuItem mi = cell->value;
+      int iw, ih;
+
+      size_menu_item(m, mi, &iw, &ih);
+      lw = max(lw, iw);
+    }
+    lw += valInt(m->left_offset) + valInt(m->right_offset) +
+	  2*valInt(m->border);
+
+    w = max(w, lw);
+  }
+
+  return w;
 }
 
 
@@ -2253,6 +2358,28 @@ getValueWidthMenu(Menu m)
 
 
 static status
+maxValueWidthMenu(Menu m, Int w)
+{ return assignGraphical(m, NAME_maxValueWidth, w);
+}
+
+
+/* Full label of the selection if a cycle menu shows it with an
+ * ellipsis, so it can be used as a tooltip.
+ */
+
+static CharArray
+getEllipsizedLabelMenu(Menu m)
+{ MenuItem mi;
+
+  ComputeGraphical(m);
+  if ( (mi = getItemSelectionMenu(m)) && label_shown(m, mi) >= 0 )
+    answer(mi->label);
+
+  fail;
+}
+
+
+static status
 showLabelMenu(Menu m, BoolObj val)
 { return assignGraphical(m, NAME_showLabel, val);
 }
@@ -2583,6 +2710,8 @@ static vardecl var_menu[] =
      NAME_appearance, "Font for value"),
   SV(NAME_valueWidth, "width=0..", IV_GET|IV_STORE, valueWidthMenu,
      NAME_layout, "Minimum width for values"),
+  SV(NAME_maxValueWidth, "width=0..*", IV_GET|IV_STORE, maxValueWidthMenu,
+     NAME_layout, "Maximum width of a cycle menu; longer values are ellipsized"),
   SV(NAME_layout, "orientation={horizontal,vertical}", IV_GET|IV_STORE, layoutMenu,
      NAME_appearance, "Horizontal or vertical layout"),
   SV(NAME_columns, "number=1..", IV_GET|IV_STORE, columnsMenu,
@@ -2725,6 +2854,8 @@ static getdecl get_menu[] =
      NAME_layout, "Minimum width for label in pixels"),
   GM(NAME_valueWidth, 0, "width=int", NULL, getValueWidthMenu,
      NAME_layout, "Minimum width for value in pixels"),
+  GM(NAME_ellipsizedLabel, 0, "char_array", NULL, getEllipsizedLabelMenu,
+     NAME_layout, "Full label of the selection if shown with an ellipsis"),
   GM(NAME_selected, 1, "selected=bool", "item=member:menu_item", getSelectedMenu,
      NAME_selection, "Find out if menu_item or value is selected"),
   GM(NAME_menuBar, 0, "menu_bar", NULL, getMenuBarMenu,

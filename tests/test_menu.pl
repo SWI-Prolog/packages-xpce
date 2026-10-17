@@ -47,7 +47,7 @@ Run with:
 test_menu :-
     run_tests([menu_kind, menu_solo, menu_keyboard, menu_accelerator,
                menu_mnemonic,
-               menu_layout]).
+               menu_layout, menu_max_value_width]).
 
 %   toggle_menu(-Dialog, -Menu, -Log)
 %
@@ -384,3 +384,41 @@ test(horizontal_label_aligned, X1 == X2) :-
     send(D, destroy).
 
 :- end_tests(menu_layout).
+
+%   long_cycle(-Menu)
+%
+%   A cycle menu without label that selects a long value.
+
+long_cycle(M) :-
+    new(M, menu(m, cycle)),
+    send(M, show_label, @off),
+    send_list(M, append, [short, 'A rather long value that will not fit']),
+    send(M, selection, 'A rather long value that will not fit').
+
+:- begin_tests(menu_max_value_width).
+
+test(capped, [W1 == 100, true(W0 > 100)]) :-
+    long_cycle(M),
+    get(M, value_width, W0),
+    send(M, max_value_width, 100),
+    get(M, value_width, W1).
+test(fits_not_capped, W1 == W0) :-
+    new(M, menu(m, cycle)),
+    send_list(M, append, [a, b]),
+    get(M, value_width, W0),
+    send(M, max_value_width, 300),
+    get(M, value_width, W1).
+test(ellipsized_label, L == 'A rather long value that will not fit') :-
+    long_cycle(M),
+    send(M, max_value_width, 100),
+    get(M, ellipsized_label, L).
+test(not_ellipsized, fail) :-
+    long_cycle(M),
+    get(M, ellipsized_label, _).
+test(short_selection_not_ellipsized, fail) :-
+    long_cycle(M),
+    send(M, max_value_width, 100),
+    send(M, selection, short),
+    get(M, ellipsized_label, _).
+
+:- end_tests(menu_max_value_width).

@@ -47,6 +47,7 @@ COMMON(status)	makeClassLabel(Class class);
 COMMON(status)	initialiseMenu(Menu m, Name name, Name kind, Code msg);
 COMMON(void)	area_menu_item(Menu m, MenuItem mi, int *x, int *y, int *w, int *h);
 COMMON(int)	popup_indicator_width(Menu m, MenuItem mi);
+COMMON(int)	combo_box_width_menu(Menu m, int w);
 COMMON(Int)	getCenterYMenuItemMenu(Menu m, Any obj);
 COMMON(MenuItem) getItemFromEventMenu(Menu m, EventObj ev);
 COMMON(status)	forwardMenu(Menu m, Code msg, EventObj ev);

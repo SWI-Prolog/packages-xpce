@@ -226,6 +226,10 @@ help_message(Gr, What:{tag,summary}, Ev:[event], Msg:string) :<-
         get(Item, help_message, What, Msg)
     ->  true
     ;   get(Gr, get_super, help_message, What, Ev, Msg)
+    ->  true
+    ;   What == tag,                    % a cycle menu that is too narrow
+        get(Gr, ellipsized_label, Label),
+        new(Msg, string('%s', Label))
     ).
 
 :- pce_end_class.

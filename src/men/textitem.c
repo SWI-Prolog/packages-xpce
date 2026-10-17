@@ -530,6 +530,8 @@ selectCompletionDialogItem(Any item, Chain matches,
   else
     lw = valInt(di->label_width);
   fw = valInt(di->area->w) - lw;
+  if ( instanceOfObject(di, ClassMenu) )
+    fw = combo_box_width_menu((Menu)di, fw);
   fw = max(fw, 50);
 
   if ( isDefault(searchstring) )

@@ -219,6 +219,17 @@ defines the white space between the item and the box around it.
     space for the radio buttons, check boxes or images of a `marked`
     menu and for the padding of the segments of a `choice` menu.
 
+- menu<-max_value_width: width=0..*
+    Maximum width of a `cycle` menu, or @nil (default) for no maximum.
+    If the selected value does not fit, it ends in an ellipsis (…) and
+    `menu <-ellipsized_label` returns the full label, which
+    library(help_message) shows as tooltip.  The list that opens when
+    clicking the menu shows the values in full.  This allows for a menu
+    with many long values, such as font families, without making the
+    dialog very wide.
+
+    @see menu<-value_width
+
 - menu<-members: items=chain
     Chain of menu-items that are part of the menu.
 
@@ -583,6 +594,10 @@ defines the white space between the item and the box around it.
 
 
 ## Get methods {#class-menu-get}
+
+- menu<-ellipsized_label: -> char_array
+    Full label of the selection if `menu <-max_value_width` makes a
+    `cycle` menu show it with an ellipsis.  Fails otherwise.
 
 - menu<-active_item: item=member:menu_item -> active=bool
     Returns a boolean, indicating the active status of the referred to

@@ -498,6 +498,7 @@ End;
   BoolObj    show_label;		/* Show label of menu? */ \
   FontObj    value_font;		/* Font of the value */ \
   Int	     value_width;		/* Minimum width for a value */ \
+  Int	     max_value_width;		/* Maximum width of a cycle or @nil */ \
   Name	     layout;			/* Horizontal or vertical */ \
   Int	     columns;			/* Number of columns */ \
   Name	     format;			/* {left,center,right} */ \
