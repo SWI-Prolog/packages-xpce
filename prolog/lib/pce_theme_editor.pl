@@ -976,10 +976,10 @@ display_segment(S, s(Text)) :-
     send(S, display, new(Bg, box)),
     send(Bg, pen, 0),
     send(Bg, name, look_background),
-    send(S, display, new(T, text(Text, left, fixed))),
+    send(S, display, new(T, text(Text, left, tt))),
     send(T, name, look_text).
 display_segment(S, Text) :-
-    send(S, display, new(T, text(Text, left, fixed))),
+    send(S, display, new(T, text(Text, left, tt))),
     send(T, name, plain_text),
     send(T, colour, ui_window_foreground).
 
@@ -993,7 +993,7 @@ look(S, Attrs:prolog) :->
     ->  Style = italic
     ;   Style = normal
     ),
-    get(@pce, convert, fixed, font, Fixed),
+    get(@pce, convert, tt, font, Fixed),
     get(Fixed, family, Family),
     get(Fixed, points, Points),
     new(Font, font(Family, Style, Points)),

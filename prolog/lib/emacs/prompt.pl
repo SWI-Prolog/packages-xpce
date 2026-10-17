@@ -341,7 +341,7 @@ fill(D, Mode:emacs_mode, Impl:any, Argv:vector) :->
         make_item(Mode, ArgName, Default, ArgType, @default, Item),
         (   send(Item, instance_of, text_item)
         ->  send(Item, recogniser, @emacs_prompt_dialog_recogniser),
-            send(Item, value_font, fixed)
+            send(Item, value_font, tt)
         ;   true
         ),
         send(Item, attribute, argn, ArgN),

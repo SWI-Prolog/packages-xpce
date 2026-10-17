@@ -5842,7 +5842,7 @@ static classvardecl rc_editor[] =
      "If @on, auto-fill"),
   RC(NAME_autoFillRegex, "regex*", "regex('[^\n]*\t *')",
      "If not @nil, skip this"),
-  RC(NAME_font, "font", "fixed",
+  RC(NAME_font, "font", "tt",
      "Default font"),
   RC(NAME_labelFont, "font", "bold",
      "Font used to display the label"),

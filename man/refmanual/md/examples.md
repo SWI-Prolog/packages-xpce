@@ -293,7 +293,7 @@ convert the selection into a code fragment.
 make_code_view :-
 	new(V, view('Code Editor Demo')),
 	send(V, font, normal),
-	send(V, style, code, style(font := fixed)),
+	send(V, style, code, style(font := tt)),
 	send(V, key_binding, '\\C-c', prefix),
 	send(V, key_binding, '\\C-c\\C-c',
 	        message(@prolog, make_fragment, V, code)),

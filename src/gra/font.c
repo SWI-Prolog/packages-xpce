@@ -128,6 +128,16 @@ getLookupFont(Class class, Name family, Name style, Int points, Name weight)
 }
 
 
+/* `fixed' is an old name for the alias `tt'.  It is not a separate
+ * alias, so it always uses the same font as `tt'.
+ */
+
+static Name
+aliasName(Name name)
+{ return name == NAME_fixed ? NAME_tt : name;
+}
+
+
 static FontObj
 getConvertFont(Class class, Name name)
 { char *s = strName(name);
@@ -144,7 +154,7 @@ getConvertFont(Class class, Name name)
     answer(getMemberHashTable(FontTable, ref_name));
   } else
   { FontObj f;
-    Name fn = (syntax.uppercase ? CtoKeyword(s) : name);
+    Name fn = aliasName(syntax.uppercase ? CtoKeyword(s) : name);
 
     if ( (f=getMemberHashTable(FontAliasTable, fn)) )
     { answer(f);
@@ -520,7 +530,10 @@ aliasSummary(Name name)
 
 static status
 fontAlias(Name name, FontObj font, Chain seen)
-{ Any old = getMemberHashTable(FontAliasTable, name);
+{ Any old;
+
+  name = aliasName(name);
+  old  = getMemberHashTable(FontAliasTable, name);
 
   if ( seen )
   { if ( memberChain(seen, name) )
@@ -909,7 +922,6 @@ static classvardecl rc_font[] =
      "  boldlarge := font(sans, bold,   14),\n"
      "  huge      := font(sans, normal, 18),\n"
      "  boldhuge  := font(sans, bold,   18),\n"
-     "  fixed     := font(mono, normal, 14),\n"
      "  tt        := font(mono, normal, 14),\n"
      "  boldtt    := font(mono, bold,   14),\n"
      "  itt       := font(mono, italic, 14),\n"

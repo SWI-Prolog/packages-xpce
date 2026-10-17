@@ -78,7 +78,7 @@ class_variable(n,      'int*',    @nil).
 class_variable(b,      bool,      @on).
 class_variable(e,      '{left,right}', left).
 class_variable(f,      font,      normal).
-class_variable(m,      mono_font, fixed).
+class_variable(m,      mono_font, tt).
 class_variable(c,      colour,    red).
 class_variable(t,      colour,    ui_accent).
 class_variable(u,      cursor,    hand2).
@@ -197,7 +197,7 @@ test(name, T == "left") :-
     round_trip(e, T).
 test(font_alias, T == "normal") :-
     round_trip(f, T).
-test(mono_font_alias, T == "fixed") :-
+test(mono_font_alias, T == "tt") :-
     round_trip(m, T).
 test(font, T == "font(serif, bold, 14)") :-
     new(F, font(serif, bold, 14)),
@@ -577,7 +577,7 @@ test(font_aliases_item, [Class-Revert == font_aliases_item-(@off)]) :-
     revert_shown(Row, Revert).
 test(font_aliases_builtin_order, Fields == [ normal, bold, italic, small,
                                              large, boldlarge, huge,
-                                             boldhuge, fixed, tt, boldtt,
+                                             boldhuge, tt, boldtt,
                                              itt, bitt ]) :-
     aliases_item(new(chain), AI),
     alias_fields(AI, Fields).
@@ -712,10 +712,10 @@ test(font_item_select_theme_font, State == "tt"-"tt") :-
     ignore(send(FI, user_selection, TT)),
     font_item_state(FI, State).
 test(theme_font_chooser_all, Names == [ normal, bold, italic, small, large,
-                                        boldlarge, huge, boldhuge, fixed,
-                                        tt, boldtt, itt, bitt ]) :-
+                                        boldlarge, huge, boldhuge, tt,
+                                        boldtt, itt, bitt ]) :-
     chooser_names(@default, Names).
-test(theme_font_chooser_mono, Names == [fixed, tt, boldtt, itt, bitt]) :-
+test(theme_font_chooser_mono, Names == [tt, boldtt, itt, bitt]) :-
     chooser_names(mono, Names).
 test(font_aliases_no_theme_button, Buttons == []) :-
     aliases_item(new(chain), AI),

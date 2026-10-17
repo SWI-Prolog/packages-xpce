@@ -1173,7 +1173,7 @@ resize_font(M, Factor:int) :->
     get(Font, rescale, Factor, NewFont),
     send(M, font, NewFont),
     get(NewFont, points, Points),
-    get(@pce, convert, fixed, font, Default),
+    get(@pce, convert, tt, font, Default),
     get(Default, points, DefPoints),
     Perc is round(Points*100/DefPoints),
     send(M, report, status, 'Resized to %d percent', Perc).
@@ -1189,7 +1189,7 @@ font_reduce(M) :->
 
 font_default(M) :->
     "Use default font (size)"::
-    send(M, font, fixed),
+    send(M, font, tt),
     send(M, report, status, 'Resized to 100 percent').
 
 

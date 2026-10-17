@@ -277,7 +277,7 @@ show_font(FB, Font:font, Chart:name) :->
         I is Y*16+From,
         has_chars_in_row(Font, I),
         send(P, display,
-             text(string('0x%02x/%03d:', I, I), left, fixed)),
+             text(string('0x%02x/%03d:', I, I), left, tt)),
         new(S, string),
         (   between(0, 15, X),
             C is I+X,

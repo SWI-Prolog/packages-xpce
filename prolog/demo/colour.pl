@@ -58,7 +58,7 @@ make_colour_browser(CB, DataBase) :-
     send_list(M, append, [foreground, background]),
     send(M, selection, background),
     send(new(CB, browser('XPCE (CSS) named colours')), below, D),
-    send(CB, font, fixed),
+    send(CB, font, tt),
     get(CB?font, width, "medium_sea_green  255 255 255 #ffffff", Width),
 
     % get a private version of the binding table

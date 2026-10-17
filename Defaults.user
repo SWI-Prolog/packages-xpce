@@ -235,7 +235,6 @@
 !			  boldlarge := font(sans, bold,   14), \
 !			  huge      := font(sans, normal, 18), \
 !			  boldhuge  := font(sans, bold,   18), \
-!			  fixed     := font(mono, normal, 14), \
 !			  tt        := font(mono, normal, 14), \
 !			  boldtt    := font(mono, bold,   14), \
 !			  itt       := font(mono, italic, 14), \

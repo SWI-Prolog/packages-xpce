@@ -101,7 +101,7 @@ default fonts for their role.
 - font.system_fonts: chain
     Define the font aliases.  The user interface does not name fonts
     by their family, style and size, but by an _alias_ that describes
-    their role: `normal` for most text, `bold` for labels, `fixed` for
+    their role: `normal` for most text, `bold` for labels, `tt` for
     the text of editors and terminals, etc.  This setting defines the
     font of each alias as a list of `Alias := Font`.  The
     built-in value is
@@ -114,7 +114,6 @@ default fonts for their role.
     	  boldlarge := font(sans, bold,   14),
     	  huge      := font(sans, normal, 18),
     	  boldhuge  := font(sans, bold,   18),
-    	  fixed     := font(mono, normal, 14),
     	  tt        := font(mono, normal, 14),
     	  boldtt    := font(mono, bold,   14),
     	  itt       := font(mono, italic, 14),
@@ -129,15 +128,14 @@ default fonts for their role.
     to list the aliases you want to change.  For example, to use a
     larger font for editors and terminals:
 
-    	font.system_fonts: [ fixed := font(mono, normal, 16), \
-    	                     tt    := font(mono, normal, 16)  \
-    	                   ]
+    	font.system_fonts: [ tt := font(mono, normal, 16) ]
 
     Use `font.scale` to make all text larger or smaller.  Note that
     changing an alias changes all text that uses it, while a setting
     such as `editor.font` changes only the font of one kind of
     object.  The value may also define new aliases, which
-    applications can use as fonts.
+    applications can use as fonts.  The name `fixed` is an old name
+    for `tt`.  It always uses the font of `tt`.
 
     The Text tab of the preferences editor, which is
     _Settings/Edit GUI preferences_ in the IDE, shows each alias with

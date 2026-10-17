@@ -1228,7 +1228,7 @@ prompt_in_status_dialog(F, SD:pane_status_dialog,
     send(Item, message, message(F, return, ok)),
     (   send(Item, instance_of, text_item)
     ->  send(Item, recogniser, @pane_prompt_recogniser),
-        send(Item, value_font, fixed)
+        send(Item, value_font, tt)
     ;   true
     ),
     send(F, keyboard_focus, SD),

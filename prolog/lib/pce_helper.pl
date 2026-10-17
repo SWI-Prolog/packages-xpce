@@ -289,7 +289,7 @@ class_variable(section_font,          font,  boldhuge).
 class_variable(subsection_font,       font,  boldlarge).
 class_variable(subsubsection_font,    font,  bold).
 class_variable(subsubsubsection_font, font,  bold).
-class_variable(example_font,          font,  fixed).
+class_variable(example_font,          font,  tt).
 class_variable(text_font,             font,  normal).
 class_variable(bold_font,             font,  bold).
 class_variable(emphasize_font,        font,  italic).

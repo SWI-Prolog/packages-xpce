@@ -1,7 +1,7 @@
 # class theme_font {#class-theme_font}
 
 A `theme_font` is a font whose name describes its role rather than its
-appearance.  The font aliases, such as `normal`, `bold` and `fixed`,
+appearance.  The font aliases, such as `normal`, `bold` and `tt`,
 are theme fonts.  A theme font is derived from another font and copies
 its family, style, weight and points.  Unlike other fonts, a theme
 font is not shared with the fonts that have the same properties:

@@ -65,12 +65,14 @@ test_font_alias :-
 %!  partial_defaults(-Text) is det.
 %
 %   Defaults file that defines one new entry and redefines one existing
-%   entry for both font class variables, leaving all others out.
+%   entry for both font class variables, leaving all others out.  It
+%   also defines `fixed`, the old name of `tt`.
 
 partial_defaults(Text) :-
     atomic_list_concat(
         [ 'font.system_fonts:   [ normal := font(serif, normal, 20), \\',
-          '                       myown  := font(serif, italic, 11)  \\',
+          '                       myown  := font(serif, italic, 11), \\',
+          '                       fixed  := font(mono,  normal, 16)  \\',
           '                     ]',
           'font.pango_families: [ sans  := \'My Sans\', \\',
           '                       myown := \'My Own\'  \\',
@@ -163,7 +165,6 @@ builtin_alias(large).
 builtin_alias(boldlarge).
 builtin_alias(huge).
 builtin_alias(boldhuge).
-builtin_alias(fixed).
 builtin_alias(tt).
 builtin_alias(boldtt).
 builtin_alias(itt).
@@ -177,10 +178,19 @@ test(all_builtin_aliases_defined, Missing == []) :-
                  \+ memberchk(alias(A,_,_,_), Terms)
                ), Missing).
 
-test(omitted_alias_uses_builtin, Alias == alias(tt, mono, normal, 14)) :-
+test(omitted_alias_uses_builtin, Alias == alias(itt, mono, italic, 14)) :-
+    font_tables(Terms),
+    memberchk(alias(itt, Family, Style, Points), Terms),
+    Alias = alias(itt, Family, Style, Points).
+
+test(old_name_fixed_defines_tt, Alias == alias(tt, mono, normal, 16)) :-
     font_tables(Terms),
     memberchk(alias(tt, Family, Style, Points), Terms),
     Alias = alias(tt, Family, Style, Points).
+
+test(no_alias_fixed) :-
+    font_tables(Terms),
+    \+ memberchk(alias(fixed, _, _, _), Terms).
 
 test(redefined_alias_wins, Alias == alias(normal, serif, normal, 20)) :-
     font_tables(Terms),

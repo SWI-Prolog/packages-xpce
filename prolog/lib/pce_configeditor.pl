@@ -385,7 +385,7 @@ make_item({}(Names), Label, Value, Item) :-
 make_item(mono_font, Label, Value, Item) :-
     !,
     (   Value == @default
-    ->  new(Item, font_item(Label, fixed))
+    ->  new(Item, font_item(Label, tt))
     ;   new(Item, font_item(Label, Value))
     ),
     send(Item, families, chain(mono)).  % see font.pango_families

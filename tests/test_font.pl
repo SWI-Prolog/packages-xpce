@@ -145,7 +145,10 @@ mono(Spec) :-
 test(mono_font) :-
     mono(font(mono, normal, 12)).
 test(alias) :-
-    mono(fixed).
+    mono(tt).
+test(old_alias_name, Fixed == TT) :-
+    get(@pce, convert, fixed, font, Fixed),
+    get(@pce, convert, tt, font, TT).
 test(proportional, [fail]) :-
     mono(font(sans, normal, 12)).
 test(proportional_alias, [fail]) :-

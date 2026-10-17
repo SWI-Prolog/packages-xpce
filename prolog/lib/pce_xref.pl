@@ -1856,7 +1856,7 @@ edit(PI) :->
 
 initialise(V) :->
     send_super(V, initialise),
-    send(V, font, fixed).
+    send(V, font, tt).
 
 update(_) :->
     true.                           % or ->clear?  ->destroy?

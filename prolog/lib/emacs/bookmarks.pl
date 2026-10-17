@@ -852,12 +852,12 @@ class_variable(style_line, style,
                style(background := grey90,
                      colour := grey20)).
 class_variable(style_title, style,
-               style(font := fixed)).
+               style(font := tt)).
 class_variable(style_hit, style,
-               style(font := fixed,
+               style(font := tt,
                      background := emacs_bookmark_hit)).
 class_variable(style_filter, style,
-               style(font := fixed,
+               style(font := tt,
                      background := emacs_bookmark_filter)).
 
 initialise(F, BM:emacs_bookmark) :->

@@ -65,11 +65,9 @@ Bold version of large.
 Even larger font.  To be used for titles, etc.
     \fontalias{boldhuge}{font(sans, bold, 18)}
 Bold version of huge.
-    \fontalias{fixed}{font(mono, normal, 14)}
-Terminal font. To be used for code fragments, code editors, etc. Should
-be easy to read.
     \fontalias{tt}{font(mono, normal, 14)}
-Same as \const{fixed}.
+Terminal font. To be used for code fragments, code editors, etc. Should
+be easy to read.  The old name \const{fixed} refers to the same font.
     \fontalias{boldtt}{font(mono, bold, 14)}
 Bold terminal font.
     \fontalias{itt}{font(mono, italic, 14)}
