@@ -228,22 +228,38 @@ label(Key, Label) :-
     get(@pce, convert, editor, key_binding, KB),
     get(KB, key_label, Key, Label).
 
-test(modifiers_joined, Label == 'Ctrl-Shift-A') :-
+%   expected(+Other, +Apple, -Expected)
+%
+%   On macOS, key labels use the Apple modifier and key symbols.
+
+:- if(current_prolog_flag(apple, true)).
+expected(_Other, Apple, Apple).
+:- else.
+expected(Other, _Apple, Other).
+:- endif.
+
+test(modifiers_joined, Label == Expected) :-
+    expected('Ctrl-Shift-A', '⌃⇧A', Expected),
     label('\\C-\\S-a', Label).
-test(sequence, Label == 'Ctrl-X Ctrl-S') :-
+test(sequence, Label == Expected) :-
+    expected('Ctrl-X Ctrl-S', '⌃X ⌃S', Expected),
     label('\\C-x\\C-s', Label).
-test(plain_keys_after_prefix, Label == 'Ctrl-X 4 f') :-
+test(plain_keys_after_prefix, Label == Expected) :-
+    expected('Ctrl-X 4 f', '⌃X 4 f', Expected),
     label('\\C-x4f', Label).
-test(named_key_after_prefix, Label == 'Ctrl-X Return') :-
+test(named_key_after_prefix, Label == Expected) :-
+    expected('Ctrl-X Return', '⌃X ↩', Expected),
     label('\\C-xRET', Label).
-test(escape, Label == 'Esc') :-
+test(escape, Label == Expected) :-
+    expected('Esc', '⎋', Expected),
     label('\\e', Label).
-test(meta, Label == 'Alt-F') :-
+test(meta, Label == Expected) :-
+    expected('Alt-F', '⌥F', Expected),
     label('\\ef', Label).
 test(function_key, Label == 'F1') :-
     label('<f1>', Label).
-test(page_down, [condition(\+ current_prolog_flag(apple, true)),
-                Label == 'Ctrl-Shift-PgDn']) :-
+test(page_down, Label == Expected) :-
+    expected('Ctrl-Shift-PgDn', '⌃⇧⇟', Expected),
     label('\\C-\\S-<page_down>', Label).
 
 :- end_tests(key_label).
