@@ -90,4 +90,20 @@ test(group_has_no_label_room, true(IY - GY < 3)) :-
     get(I, absolute_position, D, point(_, IY)),
     send(D, destroy).
 
+%   A label may be a markup.  It is measured without the tags.
+
+label_width(Label, W) :-
+    new(TI, text_item(x)),
+    send(TI, label, Label),
+    get(TI, label_width, W).
+
+test(markup_item_label, true((WM >= WP, WM < WN))) :-
+    label_width(markup('<b>Wide</b>'), WM),
+    label_width('Wide', WP),
+    label_width('<b>Wide</b>', WN).
+test(markup_group_label, Class == markup) :-
+    new(G, dialog_group(g, box)),
+    send(G, label, markup('<b>Group</b>')),
+    get(G?label, class_name, Class).
+
 :- end_tests(dialog_group).

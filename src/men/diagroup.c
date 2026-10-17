@@ -78,9 +78,7 @@ compute_label_size_dialog_group(DialogGroup g, int *w, int *h)
     *h = valInt(i->size->h);
   } else
   { if ( instanceOfObject(g->label, ClassCharArray) )
-    { CharArray ca = g->label;
-
-      str_size(&ca->data, g->label_font, w, h);
+    { dia_text_label_size(g->label, g->label_font, w, h);
     } else
     { *w = *h = 0;
     }
@@ -451,11 +449,8 @@ RedrawLabelDialogGroup(DialogGroup g, int acc,
 
     r_image(i, 0, 0, ix, iy, iw, ih);
   } else if ( instanceOfObject(g->label, ClassCharArray) )
-  { CharArray label = g->label;
-
-    str_label(&label->data, acc, g->label_font,
-	      x, y, w, h,
-	      hadjust, vadjust, flags);
+  { dia_draw_text_label(g->label, acc, g->label_font,
+			x, y, w, h, hadjust, vadjust, flags);
   }
 
   succeed;
@@ -682,7 +677,7 @@ static char *T_modifiedItem[] =
 /* Instance Variables */
 
 static vardecl var_diagroup[] =
-{ IV(NAME_label, "[name|image]*", IV_GET,
+{ IV(NAME_label, "[name|image|markup]*", IV_GET,
      NAME_label, "Displayed label"),
   SV(NAME_labelFont, "font", IV_GET|IV_STORE, labelFontDialogGroup,
      NAME_appearance, "Font used to display textual label"),
@@ -722,7 +717,7 @@ static senddecl send_diagroup[] =
      NAME_area, "Size, @default implies minimal size"),
   SM(NAME_layoutDialog, 0, NULL, layoutDialogDialogGroup,
      NAME_layout, "(Re)compute layout of dialog_items"),
-  SM(NAME_label, 1, "name|image", labelDialogGroup,
+  SM(NAME_label, 1, "name|image|markup", labelDialogGroup,
      NAME_name, "Change visual label"),
   SM(NAME_name, 1, "name", nameDialogGroup,
      NAME_name, "Change <-name, update <-label"),

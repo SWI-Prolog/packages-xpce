@@ -47,7 +47,7 @@ Run with:
 test_menu :-
     run_tests([menu_kind, menu_solo, menu_keyboard, menu_accelerator,
                menu_mnemonic,
-               menu_layout, menu_max_value_width]).
+               menu_layout, menu_max_value_width, menu_markup]).
 
 %   toggle_menu(-Dialog, -Menu, -Log)
 %
@@ -345,6 +345,9 @@ test(dialog_menu_items_have_none, M == @nil) :-
     get(Menu?members?head, mnemonic, M),
     send(D, destroy).
 
+test(markup_label, M == '\\eg') :-            % not b from <b>
+    mnemonics([menu_item(x, @default, markup('<b>go</b>'))], [x-M]).
+
 :- end_tests(menu_mnemonic).
 
 %   layout_dialog(-Dialog, -Marked, -Other, +Kind, +Layout)
@@ -422,3 +425,37 @@ test(short_selection_not_ellipsized, fail) :-
     get(M, ellipsized_label, _).
 
 :- end_tests(menu_max_value_width).
+
+%   cycle_width(+Label, -Width)
+%
+%   Width of the value of a cycle menu without label that shows Label.
+
+cycle_width(Label, W) :-
+    new(M, menu(m, cycle)),
+    send(M, show_label, @off),
+    send(M, append, menu_item(v, @default, Label)),
+    get(M, value_width, W).
+
+:- begin_tests(menu_markup).
+
+test(markup_label_kept, Classes == [markup, name]) :-
+    new(MI1, menu_item(a, @default, markup('<b>Bold</b>'))),
+    new(MI2, menu_item(b, @default, 'A name')),
+    get(MI1?label, class_name, C1),
+    get(MI2?label, class_name, C2),
+    Classes = [C1, C2].
+test(markup_measured_without_tags, true((WM >= WP, WM < WN))) :-
+    cycle_width(markup('<b>Wide</b>'), WM),
+    cycle_width('Wide', WP),
+    cycle_width('<b>Wide</b>', WN).
+test(markup_ellipsized_label, Text == "Bold and italic text") :-
+    new(M, menu(m, cycle)),
+    send(M, show_label, @off),
+    send(M, append,
+         menu_item(v, @default, markup('<b>Bold</b> and <i>italic</i> text'))),
+    send(M, max_value_width, 50),
+    get(M, ellipsized_label, L),
+    get(L, value, Value),
+    atom_string(Value, Text).
+
+:- end_tests(menu_markup).

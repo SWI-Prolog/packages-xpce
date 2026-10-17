@@ -219,6 +219,39 @@ computeLabelMenu(Menu m)
 }
 
 
+/* A label that is a markup object is laid out by Pango, see class
+ * markup and r_markup().  If `width' > 0, a longer label ends in an
+ * ellipsis.
+ */
+
+#define is_markup_label(mi) instanceOfObject((mi)->label, ClassMarkup)
+
+static void
+markup_spec_menu_item(Menu m, MenuItem mi, markup_spec *s, double width)
+{ s->markup	  = (CharArray)mi->label;
+  s->font	  = getFontMenuItemMenu(m, mi);
+  s->width	  = width;
+  s->alignment	  = NAME_left;
+  s->justify	  = false;
+  s->ellipsize	  = (width > 0.0 ? NAME_end : NAME_none);
+  s->line_spacing = 0.0;
+  s->inactive	  = !(mi->active == ON && m->active == ON);
+  s->accelerator  = 0;
+}
+
+
+static void
+markup_size_menu_item(Menu m, MenuItem mi, int *w, int *h)
+{ markup_spec s;
+  double mw = 0.0, mh = 0.0;
+
+  markup_spec_menu_item(m, mi, &s, 0.0);
+  r_markup_extents(&s, &mw, &mh);
+  *w = (int)(mw+0.999);
+  *h = (int)(mh+0.999);
+}
+
+
 static void
 size_menu_item(Menu m, MenuItem mi, int *w, int *h)
 { if ( instanceOfObject(mi->label, ClassImage) )
@@ -226,6 +259,11 @@ size_menu_item(Menu m, MenuItem mi, int *w, int *h)
 
     *w = valInt(image->size->w);
     *h = valInt(image->size->h);
+  } else if ( is_markup_label(mi) )
+  { FontObj f = getFontMenuItemMenu(m, mi);
+
+    markup_size_menu_item(m, mi, w, h);
+    *w += valInt(getAvgCharWidthFont(f));
   } else if ( isName(mi->label) )
   { FontObj f = getFontMenuItemMenu(m, mi);
     int fw = valInt(getAvgCharWidthFont(f));
@@ -412,7 +450,10 @@ getReferenceMenu(Menu m)
 	int vy;
 	int ih = valInt(m->item_size->h);
 
-	str_size(&((Name) mi->label)->data, f, &vw, &vh);
+	if ( is_markup_label(mi) )
+	  markup_size_menu_item(m, mi, &vw, &vh);
+	else
+	  str_size(&((Name) mi->label)->data, f, &vw, &vh);
 	vy = (m->vertical_format == NAME_top    ? 0 :
 	      m->vertical_format == NAME_center ? (ih-vh)/2 :
 						  ih - vh);
@@ -720,6 +761,13 @@ label_room(Menu m, MenuItem mi, int w)
 static int
 label_shown(Menu m, MenuItem mi)
 { if ( is_cycle_menu(m) && notNil(m->max_value_width) &&
+       is_markup_label(mi) )		/* Pango adds the ellipsis */
+  { int w, h;
+
+    markup_size_menu_item(m, mi, &w, &h);
+    return w > label_room(m, mi, valInt(m->item_size->w)) ? 0 : -1;
+  }
+  if ( is_cycle_menu(m) && notNil(m->max_value_width) &&
        instanceOfObject(mi->label, ClassCharArray) )
   { PceString s = &((CharArray)mi->label)->data;
 
@@ -881,7 +929,28 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h)
   iw -= 2*b;
   ih -= 2*b;
 
-  if ( instanceOfObject(mi->label, ClassCharArray) )
+  if ( is_markup_label(mi) )
+  { FontObj f = getFontMenuItemMenu(m, mi);
+    int fw = valInt(getAvgCharWidthFont(f));
+    int room = iw-fw;
+    int mw, mh, mx, my;
+    markup_spec s;
+
+    markup_size_menu_item(m, mi, &mw, &mh);
+    markup_spec_menu_item(m, mi, &s, mw > room ? (double)room : 0.0);
+    s.accelerator = ( instanceOfObject(m, ClassPopup) &&
+		      getAttributeObject(m, NAME_keyboard) )
+		      ? accelerator_key(mi->mnemonic)
+		      : accelerator_code(mi->mnemonic);
+    if ( mw > room )
+      mw = room;
+    mx = ix+fw/2 + (m->format == NAME_center ? (room-mw)/2 :
+		    m->format == NAME_right  ? room-mw : 0);
+    my = iy + (m->vertical_format == NAME_top    ? 0 :
+	       m->vertical_format == NAME_center ? (ih-mh)/2 :
+						   ih-mh);
+    r_markup(&s, mx, my);
+  } else if ( instanceOfObject(mi->label, ClassCharArray) )
   { FontObj f = getFontMenuItemMenu(m, mi);
     int fw = valInt(getAvgCharWidthFont(f));
     PceString s = &((Name) mi->label)->data;
@@ -2375,7 +2444,10 @@ getEllipsizedLabelMenu(Menu m)
 
   ComputeGraphical(m);
   if ( (mi = getItemSelectionMenu(m)) && label_shown(m, mi) >= 0 )
+  { if ( is_markup_label(mi) )
+      return get(mi->label, NAME_text, EAV);
     answer(mi->label);
+  }
 
   fail;
 }

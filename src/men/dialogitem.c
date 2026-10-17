@@ -76,6 +76,48 @@ unlinkDialogItem(DialogItem di)
 }
 
 
+/* Size and draw a label that is text.  A markup label is laid out by
+ * Pango, see class markup and r_markup().  `acc' is the letter to
+ * underline or 0.
+ */
+
+void
+dia_text_label_size(CharArray label, FontObj font, int *w, int *h)
+{ if ( instanceOfObject(label, ClassMarkup) )
+  { markup_spec m = { .markup = label, .font = font,
+		      .alignment = NAME_left, .ellipsize = NAME_none };
+    double mw = 0.0, mh = 0.0;
+
+    r_markup_extents(&m, &mw, &mh);
+    *w = (int)(mw+0.999);
+    *h = (int)(mh+0.999);
+  } else
+    str_size(&label->data, font, w, h);
+}
+
+
+void
+dia_draw_text_label(CharArray label, int acc, FontObj font,
+		    int x, int y, int w, int h,
+		    Name hadjust, Name vadjust, int flags)
+{ if ( instanceOfObject(label, ClassMarkup) )
+  { markup_spec m = { .markup = label, .font = font,
+		      .alignment = NAME_left, .ellipsize = NAME_none,
+		      .inactive = (flags & LABEL_INACTIVE) != 0,
+		      .accelerator = acc };
+    int mw, mh;
+
+    dia_text_label_size(label, font, &mw, &mh);
+    x += ( hadjust == NAME_center ? (w-mw)/2 :
+	   hadjust == NAME_right  ? w-mw : 0 );
+    y += ( vadjust == NAME_center ? (h-mh)/2 :
+	   vadjust == NAME_bottom ? h-mh : 0 );
+    r_markup(&m, x, y);
+  } else
+    str_label(&label->data, acc, font, x, y, w, h, hadjust, vadjust, flags);
+}
+
+
 status
 RedrawLabelDialogItem(Any obj, int acc,
 		      int x, int y, int w, int h,
@@ -104,11 +146,8 @@ RedrawLabelDialogItem(Any obj, int acc,
 
     r_image(i, 0, 0, ix, iy, iw, ih);
   } else if ( instanceOfObject(di->label, ClassCharArray) )
-  { CharArray label = di->label;
-
-    str_label(&label->data, acc, di->label_font,
-	      x, y, w, h,
-	      hadjust, vadjust, flags);
+  { dia_draw_text_label(di->label, acc, di->label_font,
+			x, y, w, h, hadjust, vadjust, flags);
   }
 
   succeed;
@@ -131,9 +170,7 @@ dia_label_size(Any obj, int *w, int *h, int *isimage)
       *isimage = FALSE;
 
     if ( instanceOfObject(di->label, ClassCharArray) )
-    { CharArray ca = di->label;
-
-      str_size(&ca->data, di->label_font, w, h);
+    { dia_text_label_size(di->label, di->label_font, w, h);
     } else
     { *w = *h = 0;
     }
@@ -715,6 +752,8 @@ accelerator_label(Any obj, Name label_method)
 
   if ( hasGetMethodObject(obj, label_method) &&
        (lbl = get(obj, label_method, EAV)) &&
+       ( !instanceOfObject(lbl, ClassMarkup) ||	/* use the plain text */
+	 (lbl = get(lbl, NAME_text, EAV)) ) &&
        ( !instanceOfObject(lbl, ClassCharArray) ||
 	 !((CharArray)lbl)->data.s_iswide ) )
     return toCharp(lbl);

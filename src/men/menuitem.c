@@ -350,9 +350,9 @@ getContainedInMenuItem(MenuItem mi)
 /* Type declarations */
 
 static char *T_value[] =
-        { "value=any", "label=[name|image]" };
+        { "value=any", "label=[name|image|markup]" };
 static char *T_initialise[] =
-        { "value=any", "message=[code]*", "label=[name|image]", "end_group=[bool]", "condition=[code]*", "accelerator=[name]*", "mnemonic=[name]*" };
+        { "value=any", "message=[code]*", "label=[name|image|markup]", "end_group=[bool]", "condition=[code]*", "accelerator=[name]*", "mnemonic=[name]*" };
 
 /* Instance Variables */
 
@@ -363,7 +363,7 @@ static vardecl var_menuItem[] =
      NAME_value, "Value of the item"),
   SV(NAME_message, "[code]*", IV_BOTH|IV_STORE, messageMenuItem,
      NAME_action, "Message sent when selected"),
-  SV(NAME_label, "[name|image]", IV_GET|IV_STORE, labelMenuItem,
+  SV(NAME_label, "[name|image|markup]", IV_GET|IV_STORE, labelMenuItem,
      NAME_appearance, "Image or string displayed"),
   SV(NAME_font, "[font]", IV_GET|IV_STORE, fontMenuItem,
      NAME_appearance, "Font for label"),

@@ -104,6 +104,7 @@ typedef struct markup_spec
   Name		ellipsize;		/* none, start, middle, end */
   double	line_spacing;		/* Factor; 0: the font's */
   bool		inactive;		/* Greyed out: no foreground colours */
+  int		accelerator;		/* Underline this letter; 0: none */
 } markup_spec;
 
 bool r_markup_extents(const markup_spec *m, double *w, double *h);

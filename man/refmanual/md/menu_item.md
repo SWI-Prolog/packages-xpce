@@ -10,7 +10,7 @@ also takes care of handling the user-interaction.
 
 The <->value of a menu_item is used to address it in the menu.  The
 <->label determines what is shown on the display, It can either
-be a string or a bitmap.  The <->message what happens if the
+be a string, a markup or a bitmap.  The <->message what happens if the
 user selects this menu_item.  The message may be @default, in which case
 the message associated with the menu is used.  <->end_group
 tells the menu this is the last entry of a logical group.  Used by
@@ -100,10 +100,18 @@ bundle menu items.
     @see menu_item-label
     @see menu_item-colour
 
-- menu_item<-label: [name|image]
+- menu_item<-label: [name|image|markup]
     When a name, the menu will display this text in the <-colour and <-font
     specified with this item.  When is is an image, the menu will display
-    this image in <-colour.
+    this image in <-colour.  When it is a markup object, the menu displays
+    the text with the fonts, colours, etc. of the markup, on top of
+    <-colour and <-font.  For example:
+
+    	menu_item(save, @default, markup('<b>Save</b> all'))
+
+    The mnemonic is chosen from the text without the markup and
+    underlined.  The list that opens from a `cycle` menu shows the
+    markup as well.
 
     The initial value is normally computed by <-default_label from the
     <-value by ->initialise.
@@ -183,7 +191,7 @@ bundle menu items.
 - menu_item->font: [font]
     @see menu-value_font
 
-- menu_item->initialise: value=any, message=[code]*, label=[name|image], end_group=[bool], condition=[code]*, accelerator=[name]*, mnemonic=[name]*
+- menu_item->initialise: value=any, message=[code]*, label=[name|image|markup], end_group=[bool], condition=[code]*, accelerator=[name]*, mnemonic=[name]*
     Create a menu_item from
 
     1. <->value (any)
@@ -193,7 +201,7 @@ bundle menu items.
     	Message sent when item is activated.  @default uses the
     	`menu <->message`.
 
-    3. <->label [name|image]
+    3. <->label [name|image|markup]
     	Visual appearance: text or image.  When @default, this is
     	computed using `menu_item <-default_label` from the value.
 
@@ -231,7 +239,7 @@ bundle menu items.
 - menu_item->popup: popup*
     Associated popup (pull-right).
 
-- menu_item->value: value=any, label=[name|image]
+- menu_item->value: value=any, label=[name|image|markup]
     Set the -value and recompute the label similar to ->initialise.
 
 

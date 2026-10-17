@@ -41,10 +41,12 @@ Here is a small example:
     `device ->layout_dialog` for a description of the layout
     algorithm
 
-- dialog_group<-label: [name|image]*
+- dialog_group<-label: [name|image|markup]*
     Text displayed to lable the dialog group.  If the label is the
     empty name object (''), the label is not displayed.  See also
-    ->name and <-label_font.
+    ->name and <-label_font.  A markup label is displayed with the
+    fonts, colours, etc. of the markup.  This also applies to the
+    label of a tab.
 
 - dialog_group<-label_font: font
     Font used for displaying the <-label.

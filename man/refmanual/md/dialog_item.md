@@ -104,7 +104,13 @@ is achieved using `device ->append_dialog_item` and `device
 
 - dialog_item<-label: char_array|image*
     Label of the item.  For most items, the label is displayed in the
-    `label_font` and indicates the function of the item.
+    `label_font` and indicates the function of the item.  If the label
+    is a markup object, it is displayed with the fonts, colours, etc.
+    of the markup on top of the `label_font`.  The accelerator is
+    chosen from the text without the markup and underlined.  For
+    example:
+
+    	send(Button, label, markup('<b>Save</b> all'))
 
     **Defaults**:
     The provided name (first initialisation argument) is capitalised to

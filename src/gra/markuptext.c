@@ -54,6 +54,7 @@ markup_spec_text(MarkupText t, markup_spec *m)
   m->ellipsize	  = t->ellipsize;
   m->line_spacing = valNum(t->line_spacing);
   m->inactive	  = false;
+  m->accelerator  = 0;
 }
 
 

@@ -54,6 +54,7 @@ markup_spec_label(Label lb, markup_spec *m, CharArray markup)
   m->ellipsize	  = NAME_none;
   m->line_spacing = 0.0;
   m->inactive	  = (lb->active != ON);
+  m->accelerator  = 0;
 }
 
 

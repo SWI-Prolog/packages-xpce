@@ -130,6 +130,13 @@ test(menu_bar_letters_reserved, true(Acc \== '\\ef')) :-
     send(D, layout),
     acc(F, Acc),
     send(D, destroy).
+test(markup_label, Acc == '\\eg') :-          % not b from <b>
+    new(D, dialog),
+    send(D, append, new(B, button(x))),
+    send(B, label, markup('<b>go</b>')),
+    send(D, layout),
+    acc(B, Acc),
+    send(D, destroy).
 test(no_accelerator_for_label, Acc == @nil) :-
     new(D, dialog),
     send(D, append, new(L, label(name, 'Some text'))),

@@ -13,6 +13,8 @@ COMMON(status)	makeClassButton(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/men/dialogitem.c */
 COMMON(status)	createDialogItem(Any obj, Name name);
 COMMON(status)	unlinkDialogItem(DialogItem di);
+COMMON(void)	dia_text_label_size(CharArray label, FontObj font, int *w, int *h);
+COMMON(void)	dia_draw_text_label(CharArray label, int acc, FontObj font, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags);
 COMMON(status)	RedrawLabelDialogItem(Any obj, int acc, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags);
 COMMON(status)	dia_label_size(Any obj, int *w, int *h, int *isimage);
 COMMON(status)	labelDialogItem(DialogItem di, Any label);

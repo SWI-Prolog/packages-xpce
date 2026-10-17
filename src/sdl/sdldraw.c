@@ -3836,6 +3836,48 @@ is_foreground_attribute(PangoAttribute *a, gpointer data)
 }
 
 
+/* Underline the letter `acc' in the text of `layout', choosing the
+ * occurrence as accelerator_index() does: at the start of a word, else
+ * the first upper case one, else the first.
+ */
+
+static void
+underline_accelerator(PangoLayout *layout, int acc)
+{ const char *text = pango_layout_get_text(layout);
+  const char *upper = NULL, *any = NULL, *word = NULL;
+  gunichar prev = ' ';
+
+  for(const char *s = text; *s; s = g_utf8_next_char(s))
+  { gunichar c = g_utf8_get_char(s);
+
+    if ( (int)g_unichar_tolower(c) == acc )
+    { if ( g_unichar_isspace(prev) )
+      { word = s;
+	break;
+      }
+      if ( !upper && g_unichar_isupper(c) )
+	upper = s;
+      if ( !any )
+	any = s;
+    }
+    prev = c;
+  }
+
+  const char *at = word ? word : upper ? upper : any;
+  if ( at )
+  { PangoAttrList *attrs = pango_layout_get_attributes(layout);
+    PangoAttribute *u = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+
+    attrs = attrs ? pango_attr_list_copy(attrs) : pango_attr_list_new();
+    u->start_index = (guint)(at-text);
+    u->end_index   = (guint)(g_utf8_next_char(at)-text);
+    pango_attr_list_insert(attrs, u);
+    pango_layout_set_attributes(layout, attrs);
+    pango_attr_list_unref(attrs);
+  }
+}
+
+
 /* Create a layout for `m' for drawing on `cr'.  Markup that is not
  * valid is shown as is.  The caller must g_object_unref() the layout.
  */
@@ -3853,6 +3895,8 @@ markup_layout(cairo_t *cr, const markup_spec *m)
   else
     pango_layout_set_text(layout, s, -1);
   g_free(buf);
+  if ( m->accelerator )
+    underline_accelerator(layout, m->accelerator);
 
   if ( m->width > 0.0 )
   { pango_layout_set_width(layout, (int)(m->width*PANGO_SCALE));
