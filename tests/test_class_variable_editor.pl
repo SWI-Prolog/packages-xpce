@@ -57,6 +57,7 @@ Run with:
 :- initialization(remove_sandbox_at_exit, now).
 :- use_module(library(plunit)).
 :- use_module(library(readutil)).
+:- use_module(library(process)).
 :- use_module(library(pce_class_variable_editor)).
 
 test_class_variable_editor :-
@@ -1316,6 +1317,24 @@ test(entry_instance_variable, [Class, Context] == [variable, editor]) :-
     entry(editor, exact_case, Class, Context).
 test(entry_super_class, [Class, Context] == [variable, graphical]) :-
     entry(circle, colour, Class, Context).
+
+%   The help window must also work if the editor runs without the IDE,
+%   which loads library(toolbar).  As the other tests may load it, we run
+%   this test in a separate process.
+
+test(help_window_standalone, Status == exit(0)) :-
+    current_prolog_flag(executable, Exe),
+    process_create(Exe,
+                   [ '-q', '-f', none, '-Dxpce_defaults=none',
+                     '-g', 'use_module(library(pce_class_variable_editor))',
+                     '-g', 'class_variable_help(font, scale, \'@\'(nil))',
+                     '-t', halt
+                   ],
+                   [ stdout(null), stderr(null),
+                     environment(['SDL_VIDEODRIVER'=dummy]),
+                     process(PID)
+                   ]),
+    process_wait(PID, Status).
 
 entry(Class, Name, EntryClass, Context) :-
     pce_class_variable_editor:class_variable_entry(class(Class), Name,

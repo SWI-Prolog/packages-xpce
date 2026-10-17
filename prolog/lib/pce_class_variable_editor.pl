@@ -54,6 +54,7 @@
 :- pce_autoload(pango_families_item, library(pce_font_item)).
 :- pce_autoload(font_aliases_item, library(pce_font_item)).
 :- pce_autoload(theme_item, library(pce_colour_item)).
+:- pce_autoload(tool_bar, library(toolbar)).
 :- autoload(library(pce_theme), [select_theme/1]).
 :- autoload(library(pce_class_doc), [xpce_doc_comment/5]).
 :- use_module(library(persistent_frame)).
