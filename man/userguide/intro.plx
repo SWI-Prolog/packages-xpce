@@ -236,6 +236,11 @@ without explaining them. The online manual tool can be used to find the
 definitions of these constructs quickly. The \chapref{graphics} and
 \chapref{controller}, ``Dialog (controller) windows'' and ``Simple
 Graphics'' introduce the various controller and graphical primitives.
+\Chapref{drawing}, ``Paths, paint and text'' describes the drawing
+facilities based on Cairo and Pango and \chapref{devices}, ``Input
+devices and media'' describes input from pens, touch screens and game
+controllers as well as sound, video, the clipboard and the system
+tray.
 
 With the material of the above described chapters, the user is
 sufficiently informed to create simple GUI's from predefined \product{}

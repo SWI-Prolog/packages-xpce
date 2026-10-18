@@ -49,3 +49,13 @@ display beyond windows owned by the application and restricts grabbing
 the mouse and keyboard focus. While \product{} works with both drivers,
 SDL may not honour various requests on Wayland.
 
+\index{audio,driver}\index{camera,driver}%
+SDL also uses drivers for audio and cameras (see \chapref{devices}).
+These are selected using the environment variables
+\const{SDL_AUDIO_DRIVER} and \const{SDL_CAMERA_DRIVER}.  The
+\const{dummy} drivers provide no devices.  The \const{disk} audio
+driver plays to and records from files, which is useful for testing.
+Note that SDL copies the environment when it is initialised, i.e.,
+when \pllib{pce} is loaded, so these variables must be set before
+that.
+

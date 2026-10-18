@@ -456,4 +456,6 @@ or a PDF document.  `window ->svg' and `window ->pdf' save the full
 contents of a window.  As \product{} draws using Cairo for the screen as
 well as for these files, they look the same as the screen and hold
 vectors, so they can be scaled without loss.  See also
-\secref{printing}.
+\secref{printing}.  `display ->copy' puts a graphical on the clipboard
+as SVG and PNG, so it can be pasted into other applications (see
+\secref{clipboard}).

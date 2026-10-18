@@ -21,6 +21,7 @@
 \include{dialog}
 \include{graphics}
 \include{drawing}
+\include{devices}
 \include{pceprolog}
 \include{udc}
 \include{threads}

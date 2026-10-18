@@ -8,7 +8,9 @@ accuracy or provide alternatives for different screen properties.
 \product{} loads images using the SDL_image library and draws them using
 Cairo.  As a result, the same image formats are supported on all
 platforms, including the scalable SVG format.  See
-\secref{imageformats}.
+\secref{imageformats}.  Images can also be copied to and pasted from
+the clipboard (\secref{clipboard}) and a \class{camera} delivers its
+video as an image (\secref{camera}).
 
 
 \subsection{Colour handling}			\label{sec:colour}

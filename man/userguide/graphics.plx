@@ -330,6 +330,10 @@ print 'hello' in the Prolog window.
 The predefined recogniser classes are summarised in
 \tabref{recognisers}.  Besides the built-in recognisers, the \productpl{}
 library defines various additional ones.  See also \secref{dragdrop}.
+A pen or a finger on a touch screen generates the same mouse events
+as the mouse, so these gestures also work with a pen or touch screen.
+\Chapref{devices} describes how to use the additional information of
+these devices, such as the pressure of a pen.
 
 \begin{table}
 \begin{center}
