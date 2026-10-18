@@ -195,13 +195,17 @@ See `display_manager <-current`.
     Succeeds if there are events waiting in the OS queue for this
     display.  Does not handle them.
 
-- display->copy: char_array
+- display->copy: char_array|image|graphical
     Place the argument on both the primary selection and the system
-    clipboard.
+    clipboard.  An image or graphical is only placed on the clipboard.
+    See ->selection.
 
-- display->selection: which=[name], value=char_array
+- display->selection: which=[name], value=char_array|image|graphical
     Become owner of the selection (`primary` or `clipboard`) with the
-    given textual value.
+    given value.  An image or graphical can only be placed on the
+    clipboard.  An image is offered as PNG (`image/png`); a graphical
+    is offered as SVG (`image/svg+xml`, see `graphical->svg`) and PNG,
+    so other applications can paste the format they prefer.
 
 - display->screen_saver: bool
     Activate (`@on`) or inhibit (`@off`) the OS screensaver while
@@ -281,10 +285,22 @@ See `display_manager <-current`.
     Query the value of a system selection.  `which` defaults to
     `primary`; common alternatives are `clipboard` and `secondary`.
     `target` is the requested MIME-like type (default `text`;
-    `utf8_string` for explicit UTF-8).  `type` is the xpce type the
-    returned value should be coerced to via `type <-check`.
+    `utf8_string` for explicit UTF-8).  For the `clipboard`, `target`
+    may also be `image`, returning an image from PNG, JPEG or another
+    image format on the clipboard, or `svg`, returning the SVG
+    document as a string.  `type` is the xpce type the returned value
+    should be coerced to via `type <-check`.  It defaults to `image`
+    for the target `image` and `string` otherwise.
+
+    @see display<-selection_targets
 
     @see display<-paste
+
+- display<-selection_targets: which=[{primary,clipboard}] -> chain
+    New chain with the MIME types of the data in the selection
+    (default `clipboard`), e.g., `'text/plain;charset=utf-8'` or
+    `'image/png'`.  This allows a paste command to decide what to
+    paste.
 
 - display<-has_screen_keyboard_support: -> bool
     `@on` when SDL reports the platform has an on-screen keyboard.

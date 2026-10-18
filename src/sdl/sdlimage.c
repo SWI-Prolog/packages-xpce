@@ -233,6 +233,51 @@ sdl_surface_to_image(Image image, SDL_Surface *surf0)
 }
 
 /**
+ * Encode `image` as PNG into a malloc()ed buffer.
+ */
+bool
+ws_image_to_png(Image image, void **data, size_t *size)
+{ SDL_Surface *surf = pceImage2SDL_Surface(image);
+  bool rc = false;
+
+  if ( !surf )
+    return false;
+
+  SDL_IOStream *io = SDL_IOFromDynamicMem();
+  if ( io && IMG_SavePNG_IO(surf, io, false) )
+  { Sint64 n = SDL_GetIOSize(io);
+    void *mem = SDL_GetPointerProperty(SDL_GetIOProperties(io),
+				       SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER,
+				       NULL);
+    if ( n > 0 && mem && (*data = malloc((size_t)n)) )
+    { memcpy(*data, mem, (size_t)n);
+      *size = (size_t)n;
+      rc = true;
+    }
+  }
+  if ( io )
+    SDL_CloseIO(io);
+  SDL_DestroySurface(surf);
+
+  return rc;
+}
+
+/**
+ * Load `image` from encoded data in any format SDL_image supports.
+ */
+status
+ws_image_from_data(Image image, const void *data, size_t size)
+{ SDL_IOStream *io = SDL_IOFromConstMem(data, size);
+  SDL_Surface *surf = io ? IMG_Load_IO(io, true) : NULL;
+
+  if ( !surf )
+    fail;
+
+  ws_destroy_image(image);
+  return sdl_surface_to_image(image, surf);	/* consumes surf */
+}
+
+/**
  * Replace the pixels of `image` by those of `surf`, which may have any
  * format, e.g., the YUV format of a camera.  The cairo surface of the
  * image is reused if it has the right size.

@@ -251,7 +251,8 @@ getSelectionDisplay(DisplayObj d, Name which, Name target, Type type)
 
   if ( isDefault(which) )  which  = NAME_primary;
   if ( isDefault(target) ) target = NAME_text;
-  if ( isDefault(type) )   type   = nameToType(NAME_string);
+  if ( isDefault(type) )
+    type = nameToType(target == NAME_image ? NAME_image : NAME_string);
 
   if ( (sel = ws_get_selection(d, which, target)) )
     answer(checkType(sel, type, NIL));
@@ -263,18 +264,38 @@ getSelectionDisplay(DisplayObj d, Name which, Name target, Type type)
 		 *  SIMPLE SELECTION INTERFACE	*
 		 *******************************/
 
+/* Text may be put in the primary selection and the clipboard.  An
+ * image or graphical only in the clipboard.
+ */
+
 static status
-selectionDisplay(DisplayObj d, Name which, StringObj data)
-{ return ws_selection_display(d, which, data);
+selectionDisplay(DisplayObj d, Name which, Any data)
+{ if ( isDefault(which) )
+    which = NAME_primary;
+
+  if ( instanceOfObject(data, ClassCharArray) )
+    return ws_selection_display(d, which, data);
+
+  return ws_selection_object_display(d, which, data);
 }
 
 
 static status
-copyDisplay(DisplayObj d, StringObj data)
-{ status rc1 = send(d, NAME_selection, NAME_primary, data, EAV);
+copyDisplay(DisplayObj d, Any data)
+{ status rc1 = FAIL;
+
+  if ( instanceOfObject(data, ClassCharArray) )
+    rc1 = send(d, NAME_selection, NAME_primary, data, EAV);
   status rc2 = send(d, NAME_selection, NAME_clipboard, data, EAV);
 
   return rc1 || rc2;
+}
+
+
+static Chain
+getSelectionTargetsDisplay(DisplayObj d, Name which)
+{ return ws_selection_targets_display(d, isDefault(which) ? NAME_clipboard
+							   : which);
 }
 
 
@@ -579,7 +600,7 @@ static char *T_inform[] =
 static char *T_getSelection[] =
         { "which=[name]", "target=[name]", "type=[type]" };
 static char *T_selection[] =
-        { "which=[name]", "value=char_array" };
+        { "which=[name]", "value=char_array|image|graphical" };
 
 /* Instance Variables */
 
@@ -651,8 +672,8 @@ static senddecl send_display[] =
   SM(NAME_report, 3, T_report, reportDisplay,
      NAME_report, "Report message using ->inform"),
   SM(NAME_selection, 2, T_selection, selectionDisplay,
-     NAME_selection, "Set the (textual) selection"),
-  SM(NAME_copy, 1, "char_array", copyDisplay,
+     NAME_selection, "Set the selection to text, an image or a graphical"),
+  SM(NAME_copy, 1, "char_array|image|graphical", copyDisplay,
      NAME_selection, "Copy to selection and cut_buffer"),
   SM(NAME_screenSaver, 1, "bool", screenSaverDisplay,
      NAME_power, "Activate (@on) or deactivate (@off) screensaver"),
@@ -688,6 +709,9 @@ static getdecl get_display[] =
      NAME_dimension, "Width of the display in pixels"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,
      NAME_selection, "Query value of the primary selection or clipboard"),
+  GM(NAME_selectionTargets, 1, "chain", "which=[{primary,clipboard}]",
+     getSelectionTargetsDisplay,
+     NAME_selection, "MIME types of the data in the selection"),
   GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
      NAME_selection, "Simple interface to get clipboard value"),
   GM(NAME_hasScreenKeyboardSupport, 0, "bool", NULL,

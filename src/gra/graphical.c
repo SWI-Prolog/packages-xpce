@@ -3486,6 +3486,17 @@ getSolidGraphical(Graphical gr)
  * d_pdf() or d_svg().
  */
 
+/* Draw `gr` on a document that was opened by d_pdf(), d_svg() or
+ * d_svg_buffer() and finish the document.
+ */
+
+static void
+drawDocumentGraphical(Graphical gr)
+{ d_offset(-valInt(gr->area->x), -valInt(gr->area->y));
+  send(gr, NAME_RedrawArea, gr->area, EAV);
+  d_done();
+}
+
 static status
 saveGraphical(Graphical gr, FileObj dest, Int scale,
 	      status (*open)(const char *file, int w, int h, double scale))
@@ -3499,10 +3510,22 @@ saveGraphical(Graphical gr, FileObj dest, Int scale,
   if ( fn && (*open)(nameToFN(fn),
 		     valInt(gr->area->w), valInt(gr->area->h),
 		     valNum(scale)) )
-  { d_offset(-valInt(gr->area->x), -valInt(gr->area->y));
-    send(gr, NAME_RedrawArea, gr->area, EAV);
-    d_done();
+  { drawDocumentGraphical(gr);
+    succeed;
+  }
 
+  fail;
+}
+
+/* Write `gr` as SVG document into `buf`, e.g., for the clipboard */
+
+status
+svgBufferGraphical(Graphical gr, struct d_buffer *buf)
+{ if ( hasSendMethodObject(gr, NAME_compute) )
+    TRY(send(gr, NAME_compute, EAV));
+
+  if ( d_svg_buffer(buf, valInt(gr->area->w), valInt(gr->area->h), 1.0) )
+  { drawDocumentGraphical(gr);
     succeed;
   }
 

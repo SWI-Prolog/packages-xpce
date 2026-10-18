@@ -515,6 +515,187 @@ ws_selection_display(DisplayObj d, Name which, StringObj data)
   return rc;
 }
 
+		 /*******************************
+		 *	  CLIPBOARD DATA	*
+		 *******************************/
+
+/* Put an image or a graphical on the clipboard.  We prepare all formats
+ * now, as SDL may ask for them later, while processing events.  A
+ * graphical is offered as SVG and PNG, an image as PNG.
+ */
+
+#define MAX_CLIP_ITEMS 2
+
+typedef struct clip_item
+{ const char   *mime;
+  void	       *data;			/* malloc()ed */
+  size_t	size;
+} clip_item;
+
+typedef struct clip_data
+{ int		count;
+  clip_item	items[MAX_CLIP_ITEMS];
+} clip_data;
+
+static const void * SDLCALL
+clip_provide(void *userdata, const char *mime, size_t *size)
+{ clip_data *cd = userdata;
+
+  for(int i=0; i<cd->count; i++)
+  { if ( streq(cd->items[i].mime, mime) )
+    { *size = cd->items[i].size;
+      return cd->items[i].data;
+    }
+  }
+
+  *size = 0;
+  return NULL;
+}
+
+static void SDLCALL
+clip_cleanup(void *userdata)
+{ clip_data *cd = userdata;
+
+  for(int i=0; i<cd->count; i++)
+    free(cd->items[i].data);
+  free(cd);
+}
+
+static Image
+graphical_image(Graphical gr)
+{ ComputeGraphical(gr);
+  Image img = newObject(ClassImage, NIL, gr->area->w, gr->area->h,
+			NAME_pixmap, EAV);
+
+  if ( img && send(img, NAME_drawIn, gr, answerObject(ClassPoint, EAV), EAV) )
+    return img;
+
+  return NULL;
+}
+
+status
+ws_selection_object_display(DisplayObj d, Name which, Any obj)
+{ ASSERT_SDL_MAIN();
+  clip_data *cd;
+  Image img = NULL;
+
+  if ( which != NAME_clipboard )	/* SDL: primary is only text */
+    fail;
+  if ( !(cd = calloc(1, sizeof(*cd))) )
+    fail;
+
+  if ( instanceOfObject(obj, ClassImage) )
+  { img = obj;
+  } else
+  { d_buffer svg = {0};
+
+    if ( svgBufferGraphical(obj, &svg) )
+    { clip_item *ci = &cd->items[cd->count++];
+      ci->mime = "image/svg+xml";
+      ci->data = svg.data;
+      ci->size = svg.size;
+    } else
+      free(svg.data);
+    img = graphical_image(obj);
+  }
+
+  if ( img )
+  { clip_item *ci = &cd->items[cd->count];
+
+    if ( ws_image_to_png(img, &ci->data, &ci->size) )
+    { ci->mime = "image/png";
+      cd->count++;
+    }
+    if ( img != obj )
+      doneObject(img);
+  }
+
+  if ( cd->count == 0 )
+  { free(cd);
+    fail;
+  }
+
+  const char *mimes[MAX_CLIP_ITEMS];
+  for(int i=0; i<cd->count; i++)
+    mimes[i] = cd->items[i].mime;
+
+  return SDL_SetClipboardData(clip_provide, clip_cleanup, cd,
+			      mimes, (size_t)cd->count);
+}
+
+
+Chain
+ws_selection_targets_display(DisplayObj d, Name which)
+{ ASSERT_SDL_MAIN();
+  Chain ch = answerObject(ClassChain, EAV);
+
+  if ( which == NAME_clipboard )
+  { size_t count = 0;
+    char **types = SDL_GetClipboardMimeTypes(&count);
+
+    if ( types )
+    { for(size_t i=0; i<count; i++)
+	appendChain(ch, CtoName(types[i]));
+      SDL_free(types);
+    }
+  } else if ( which == NAME_primary && SDL_HasPrimarySelectionText() )
+    appendChain(ch, CtoName("text/plain;charset=utf-8"));
+
+  return ch;
+}
+
+
+/* Get an image from the clipboard: PNG or any other image format of
+ * SDL_image the clipboard holds.
+ */
+
+static Image
+clipboard_image(void)
+{ static const char *mimes[] =
+    { "image/png", "image/jpeg", "image/bmp", "image/gif", "image/webp",
+      NULL };
+
+  for(const char **m = mimes; *m; m++)
+  { size_t size;
+    void *data;
+
+    if ( SDL_HasClipboardData(*m) &&
+	 (data = SDL_GetClipboardData(*m, &size)) )
+    { Image img = answerObject(ClassImage, NIL, EAV);
+      status rc = ws_image_from_data(img, data, size);
+
+      SDL_free(data);
+      if ( rc )
+	return img;
+    }
+  }
+
+  return NULL;
+}
+
+static StringObj
+clipboard_svg(void)
+{ size_t size;
+  char *data;
+
+  if ( SDL_HasClipboardData("image/svg+xml") &&
+       (data = SDL_GetClipboardData("image/svg+xml", &size)) )
+  { char *s = SDL_malloc(size+1);	/* not 0-terminated */
+    StringObj str = NULL;
+
+    if ( s )
+    { memcpy(s, data, size);
+      s[size] = 0;
+      str = UTF8ToString(s);
+      SDL_free(s);
+    }
+    SDL_free(data);
+    return str;
+  }
+
+  return NULL;
+}
+
 /**
  * Retrieve the current selection for the specified type and target.
  *
@@ -528,6 +709,20 @@ ws_selection_display(DisplayObj d, Name which, StringObj data)
 Any
 ws_get_selection(DisplayObj d, Name which, Name target)
 { ASSERT_SDL_MAIN();
+  if ( which == NAME_clipboard && target == NAME_image )
+  { Image img = clipboard_image();
+
+    if ( img )
+      answer(img);
+    fail;
+  }
+  if ( which == NAME_clipboard && target == NAME_svg )
+  { StringObj svg = clipboard_svg();
+
+    if ( svg )
+      answer(svg);
+    fail;
+  }
   if ( target == NAME_text || target == NAME_utf8_string )
   { char *text = NULL;
 

@@ -22,6 +22,8 @@ COMMON(status)	makeClassCircle(Class class);
 COMMON(Int)	getRedColour(Colour c);
 COMMON(status)	makeClassSound(Class class);
 COMMON(status)	makeClassCamera(Class class);
+struct d_buffer;
+COMMON(status)	svgBufferGraphical(Graphical gr, struct d_buffer *buf);
 COMMON(status)	pixelsChangedImage(Image image, int w, int h);
 COMMON(status)	makeClassAudioRecorder(Class class);
 COMMON(Int)	getGreenColour(Colour c);

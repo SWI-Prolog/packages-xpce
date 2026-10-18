@@ -531,6 +531,49 @@ d_svg(const char *file, int w, int h, double scale)
 #endif
 }
 
+#ifdef CAIRO_HAS_SVG_SURFACE
+static cairo_status_t
+buffer_write(void *closure, const unsigned char *data, unsigned int len)
+{ d_buffer *b = closure;
+
+  if ( b->size + len > b->allocated )
+  { size_t size = b->allocated ? b->allocated*2 : 4096;
+    char *new;
+
+    while( size < b->size + len )
+      size *= 2;
+    if ( !(new = realloc(b->data, size)) )
+      return CAIRO_STATUS_NO_MEMORY;
+    b->data = new;
+    b->allocated = size;
+  }
+  memcpy(b->data+b->size, data, len);
+  b->size += len;
+
+  return CAIRO_STATUS_SUCCESS;
+}
+#endif
+
+/* As d_svg(), writing the SVG document to `buf`.  The caller must
+ * free buf->data.
+ */
+
+status
+d_svg_buffer(d_buffer *buf, int w, int h, double scale)
+{
+#ifdef CAIRO_HAS_SVG_SURFACE
+  cairo_surface_t *s = cairo_svg_surface_create_for_stream(
+    buffer_write, buf, w*scale, h*scale);
+
+#if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 16, 0)
+  cairo_svg_surface_set_document_unit(s, CAIRO_SVG_UNIT_PX);
+#endif
+  return d_file("<buffer>", s, scale);
+#else
+  return errorPce(NIL, NAME_notSupported, CtoName("SVG"));
+#endif
+}
+
 static void
 d_done_file(void)
 { cairo_show_page(context.cr);

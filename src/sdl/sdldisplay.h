@@ -67,4 +67,7 @@ status ws_events_queued_display(DisplayObj d);
 status ws_selection_display(DisplayObj d, Name which, StringObj data);
 Any ws_get_selection(DisplayObj d, Name which, Name target);
 
+status	ws_selection_object_display(DisplayObj d, Name which, Any obj);
+Chain	ws_selection_targets_display(DisplayObj d, Name which);
+
 #endif /* RAYDISPLAY_H */
