@@ -69,6 +69,7 @@ test_libs(subpixel_events      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(input_device         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(smooth_scroll        OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(sdl_input            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(gamepad              OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(prolog_mode          OPTIONS ${XPCE_TEST_OPTIONS})
 if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -159,6 +160,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:input_device
                      xpce:smooth_scroll
                      xpce:sdl_input
+                     xpce:gamepad
                      xpce:prolog_mode
                      xpce:no_display
                      xpce:display_function
@@ -181,6 +183,12 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:terminal_rows
                      xpce:redraw_reentrance
                      xpce:profiler)
+
+# Gamepad input is only delivered while one of our windows has the
+# keyboard focus.  Where the tests use a real display, as on Windows and
+# Wine, the windows of tests running in parallel take it away.
+
+set_tests_properties(xpce:gamepad PROPERTIES RUN_SERIAL TRUE)
 
 # process_encoding checks the bytes on the wire using od and iconv
 

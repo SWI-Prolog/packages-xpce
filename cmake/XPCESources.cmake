@@ -72,6 +72,7 @@ set(WIN_SRC	browser.c decorate.c dialog.c display.c
 set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c
+		sdlgamepad.c
 		sdlmenubar.c)
 if(APPLE)
   # The Cocoa halves of the native menu bar and the system colours.

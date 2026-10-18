@@ -132,6 +132,8 @@ scope('C.format', basic).
 scope('C.fragment', basic).
 scope('C.frame', basic).
 scope('C.function', basic).
+scope('C.gamepad', basic).
+scope('C.gamepad_input', basic).
 scope('C.gesture', basic).
 scope('C.get_method', basic).
 scope('C.gradient', basic).

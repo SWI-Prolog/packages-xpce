@@ -90,13 +90,33 @@ findInputDevice(Name kind, intptr_t id, const char *name)
       return d;
   }
 
-  InputDevice d = newObject(ClassInputDevice, kind, iid,
+  InputDevice d = newObject(kind == NAME_gamepad ? ClassGamepad
+						  : ClassInputDevice,
+			    kind, iid,
 			    name ? (Name)UTF8ToName(name) : (Name)DEFAULT,
 			    EAV);
   if ( d )
     appendChain(InputDevices, d);
 
   return d;
+}
+
+
+/**
+ * The window system reported that `d` was removed.  Remove it from the
+ * registry.  The object remains valid for as long as it is referenced,
+ * e.g., by an event, but no longer generates events.
+ */
+
+void
+removeInputDevice(InputDevice d)
+{ init_input_devices();
+
+  addCodeReference(d);
+  deleteChain(InputDevices, d);
+  freePointerStateDevice(d);
+  ws_input_device_removed(d);
+  delCodeReference(d);
 }
 
 
@@ -553,6 +573,223 @@ ClassDecl(pinch_data_decls,
 status
 makeClassPinchData(Class class)
 { declareClass(class, &pinch_data_decls);
+
+  succeed;
+}
+
+
+		 /*******************************
+		 *	      GAMEPAD		*
+		 *******************************/
+
+/* A gamepad (game controller).  Its buttons and axes generate the
+ * gamepad_* events, delivered to the window with the keyboard focus.
+ * It can also be polled, e.g., in a game loop, and it may be able to
+ * rumble or show a colour.  The names of the controls follow the
+ * position of the buttons rather than their label: `south` is the
+ * bottom face button (A on an Xbox controller and the cross on a
+ * PlayStation controller).
+ */
+
+static status
+initialiseGamepad(Gamepad g, Name kind, Int id, Name name)
+{ TRY(initialiseInputDevice((InputDevice)g, kind, id, name));
+  g->ws_ref = NULL;
+
+  succeed;
+}
+
+
+static BoolObj
+getConnectedGamepad(Gamepad g)
+{ answer(g->ws_ref ? ON : OFF);
+}
+
+
+static BoolObj
+getButtonGamepad(Gamepad g, Name button)
+{ bool down;
+
+  if ( ws_gamepad_button(g, button, &down) )
+    answer(down ? ON : OFF);
+
+  fail;
+}
+
+
+static Int
+getAxisGamepad(Gamepad g, Name axis)
+{ double value;
+
+  if ( ws_gamepad_axis(g, axis, &value) )
+    answer(toNum(value));
+
+  fail;
+}
+
+
+static Name
+getTypeGamepad(Gamepad g)
+{ answer(ws_gamepad_type(g));
+}
+
+
+static Int
+getPlayerIndexGamepad(Gamepad g)
+{ int i = ws_gamepad_player_index(g);
+
+  if ( i >= 0 )
+    answer(toInt(i));
+
+  fail;
+}
+
+
+static status
+rumbleGamepad(Gamepad g, Int low, Int high, Int ms)
+{ return ws_gamepad_rumble(g, valNum(low), valNum(high), valInt(ms));
+}
+
+
+static status
+rumbleTriggersGamepad(Gamepad g, Int left, Int right, Int ms)
+{ return ws_gamepad_rumble_triggers(g, valNum(left), valNum(right),
+				    valInt(ms));
+}
+
+
+static status
+ledGamepad(Gamepad g, Colour c)
+{ return ws_gamepad_led(g,
+			valInt(getRedColour(c)),
+			valInt(getGreenColour(c)),
+			valInt(getBlueColour(c)));
+}
+
+
+/* Type declarations */
+
+static char *T_rumble[] =
+        { "low=0.0..1.0", "high=0.0..1.0", "milliseconds=int" };
+static char *T_rumbleTriggers[] =
+        { "left=0.0..1.0", "right=0.0..1.0", "milliseconds=int" };
+
+/* Instance Variables */
+
+static vardecl var_gamepad[] =
+{ IV(NAME_wsRef, "alien:WsRef", IV_NONE,
+     NAME_internal, "SDL_Gamepad handle")
+};
+
+/* Send Methods */
+
+static senddecl send_gamepad[] =
+{ SM(NAME_initialise, 3, T_initialise, initialiseGamepad,
+     DEFAULT, "Create from kind, id and name"),
+  SM(NAME_rumble, 3, T_rumble, rumbleGamepad,
+     NAME_output, "Rumble the low and high frequency motors"),
+  SM(NAME_rumbleTriggers, 3, T_rumbleTriggers, rumbleTriggersGamepad,
+     NAME_output, "Rumble the motors in the triggers"),
+  SM(NAME_led, 1, "colour", ledGamepad,
+     NAME_output, "Set the colour of the LED")
+};
+
+/* Get Methods */
+
+static getdecl get_gamepad[] =
+{ GM(NAME_connected, 0, "bool", NULL, getConnectedGamepad,
+     NAME_status, "@off if the gamepad was removed"),
+  GM(NAME_button, 1, "bool", "name", getButtonGamepad,
+     NAME_poll, "@on if the named button is down"),
+  GM(NAME_axis, 1, "num", "name", getAxisGamepad,
+     NAME_poll, "Position of the named axis, -1..1 or 0..1 (trigger)"),
+  GM(NAME_type, 0, "name", NULL, getTypeGamepad,
+     NAME_name, "Type of controller, e.g., xbox360, ps5"),
+  GM(NAME_playerIndex, 0, "int", NULL, getPlayerIndexGamepad,
+     NAME_name, "Player index or fail if not set")
+};
+
+/* Class Declaration */
+
+ClassDecl(gamepad_decls,
+          var_gamepad, send_gamepad, get_gamepad, NULL,
+          3, input_device_termnames);
+
+status
+makeClassGamepad(Class class)
+{ declareClass(class, &gamepad_decls);
+
+  succeed;
+}
+
+
+Chain
+getGamepadsDisplay(DisplayObj d)
+{ Chain ch = answerObject(ClassChain, EAV);
+  Cell cell;
+
+  init_input_devices();
+  ws_init_gamepads();
+  for_cell(cell, InputDevices)
+  { InputDevice dev = cell->value;
+
+    if ( dev->kind == NAME_gamepad )
+      appendChain(ch, dev);
+  }
+
+  answer(ch);
+}
+
+
+		 /*******************************
+		 *	   GAMEPAD INPUT	*
+		 *******************************/
+
+/* Data of the gamepad_* events: the name of the button or axis and its
+ * value: 1 or 0 for a button and the position for an axis.
+ */
+
+static status
+initialiseGamepadInput(GamepadInput gi, Name control, Int value)
+{ assign(gi, control, control);
+  assign(gi, value,   value);
+
+  succeed;
+}
+
+
+/* Type declarations */
+
+static char *T_initialiseGamepadInput[] =
+        { "control=name", "value=num" };
+
+/* Instance Variables */
+
+static vardecl var_gamepad_input[] =
+{ IV(NAME_control, "name", IV_GET,
+     NAME_gamepad, "Name of the button or axis"),
+  IV(NAME_value, "num", IV_GET,
+     NAME_gamepad, "1 or 0 for a button, the position of an axis")
+};
+
+/* Send Methods */
+
+static senddecl send_gamepad_input[] =
+{ SM(NAME_initialise, 2, T_initialiseGamepadInput, initialiseGamepadInput,
+     DEFAULT, "Create from control and value")
+};
+
+/* Class Declaration */
+
+static Name gamepad_input_termnames[] = { NAME_control, NAME_value };
+
+ClassDecl(gamepad_input_decls,
+          var_gamepad_input, send_gamepad_input, NULL, NULL,
+          2, gamepad_input_termnames);
+
+status
+makeClassGamepadInput(Class class)
+{ declareClass(class, &gamepad_input_decls);
 
   succeed;
 }

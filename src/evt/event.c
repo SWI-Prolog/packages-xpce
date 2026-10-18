@@ -86,12 +86,13 @@ lastPointerDevice(void)
 }
 
 
-/* The state of `d' or, for the keyboard, that of the last pointer.
+/* The state of `d' or, for a device without a position such as the
+ * keyboard or a gamepad, that of the last pointer.
  */
 
 static PointerState
 pointerState(InputDevice d)
-{ if ( d->kind == NAME_keyboard )
+{ if ( !isPointerDevice(d) )
     d = lastPointerDevice();
 
   if ( !d->pointer )
@@ -190,7 +191,7 @@ initialiseEvent(EventObj e, Name id, Any window,
   ps->buttons    = bts;			/* save these values */
   ps->x          = x;
   ps->y          = y;
-  if ( device->kind != NAME_keyboard )
+  if ( isPointerDevice(device) )
     last_pointer = device;
 
   FrameObj fr;
@@ -1493,6 +1494,16 @@ static struct namepair
   { NAME_touchMotion,	NAME_touch },
   { NAME_touchUp,	NAME_touch },
   { NAME_touchCancel,	NAME_touch },
+					/* Gamepads */
+  { NAME_gamepad,	NAME_any },
+  { NAME_gamepadButtonDown,	NAME_gamepad },
+  { NAME_gamepadButtonUp,	NAME_gamepad },
+  { NAME_gamepadAxis,	NAME_gamepad },
+					/* Hot-plug: event<-device was
+					   added or removed */
+  { NAME_device,	NAME_any },
+  { NAME_deviceAdded,	NAME_device },
+  { NAME_deviceRemoved,	NAME_device },
   { NAME_msLeft,	NAME_button },
   { NAME_msMiddle,	NAME_button },
   { NAME_msRight,	NAME_button },

@@ -985,12 +985,24 @@ NewClass(frameobj)
 End;
 
 
-NewClass(input_device)
-  Name		kind;			/* mouse, pen, touch, ... */
-  Int		id;			/* Window system id */
-  Name		name;			/* Human readable name */
+#define ABSTRACT_INPUT_DEVICE \
+  Name		kind;			/* mouse, pen, touch, ... */ \
+  Int		id;			/* Window system id */ \
+  Name		name;			/* Human readable name */ \
   PointerState	pointer;		/* State for events (event.c) */
+
+NewClass(input_device)
+  ABSTRACT_INPUT_DEVICE
 End;
+
+NewClass(gamepad)
+  ABSTRACT_INPUT_DEVICE
+  WsRef		ws_ref;			/* SDL_Gamepad, NULL if removed */
+End;
+
+#define isPointerDevice(d) \
+	((d)->kind == NAME_mouse || (d)->kind == NAME_pen || \
+	 (d)->kind == NAME_touch)
 
 NewClass(event_detail)
 End;
@@ -1016,6 +1028,11 @@ End;
 
 NewClass(pinch_data)
   Int		scale;			/* Change since last update */
+End;
+
+NewClass(gamepad_input)
+  Name		control;		/* Button or axis */
+  Int		value;			/* 0/1 (button), -1..1 (axis) */
 End;
 
 NewClass(wheel_data)

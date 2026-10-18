@@ -206,6 +206,9 @@ static struct class_definition classdefs[] =
   { NAME_eventDetail, NAME_object, makeClassEventDetail,
     &ClassEventDetail, "Device specific data of an event" },
 
+  { NAME_gamepad, NAME_inputDevice, makeClassGamepad,
+    &ClassGamepad, "Game controller" },
+
   { NAME_dropData, NAME_eventDetail, makeClassDropData,
     &ClassDropData, "Data of a drop_* event" },
 
@@ -220,6 +223,9 @@ static struct class_definition classdefs[] =
 
   { NAME_pinchData, NAME_eventDetail, makeClassPinchData,
     &ClassPinchData, "Scale of a pinch gesture" },
+
+  { NAME_gamepadInput, NAME_eventDetail, makeClassGamepadInput,
+    &ClassGamepadInput, "Button or axis of a gamepad event" },
 
   { NAME_event, NAME_object, makeClassEvent,
     &ClassEvent, "PCE's notion of a user event" },

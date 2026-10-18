@@ -368,7 +368,7 @@ static int sdl_pointer_allocated = 0;
 
 static sdl_pointer *
 sdl_pointer_state(InputDevice d)
-{ if ( d->kind == NAME_keyboard )
+{ if ( !isPointerDevice(d) )
     d = lastPointerDevice();
 
   for(int i=0; i<sdl_pointer_count; i++)
@@ -393,6 +393,24 @@ sdl_pointer_state(InputDevice d)
 }
 
 static void	set_pointer_window(sdl_pointer *sp, Any window);
+
+/* Called if `d` was removed */
+
+void
+ws_forget_pointer(InputDevice d)
+{ for(int i=0; i<sdl_pointer_count; i++)
+  { sdl_pointer *sp = sdl_pointers[i];
+
+    if ( sp->device == d )
+    { set_pointer_window(sp, NIL);
+      if ( notNil(sp->tracking_window) )
+	delCodeReference(sp->tracking_window);
+      sdl_pointers[i] = sdl_pointers[--sdl_pointer_count];
+      pceFree(sp);
+      return;
+    }
+  }
+}
 
 static Uint32
 tm_keyboard_timeout(void *udata, SDL_TimerID id, Uint32 interval)
@@ -875,6 +893,8 @@ CtoEvent(SDL_Event *event)
     fail;
   if ( sdl_display_event(event) ) /* display events (add/delete/change) */
     fail;
+  if ( sdl_gamepad_hotplug_event(event) ) /* gamepad added/removed */
+    fail;
   if ( sdl_frame_event(event) )	/* window events (close/open/size/...) */
     fail;
   if ( sdl_timer_event(event) )	/* Timer event */
@@ -913,6 +933,17 @@ CtoEvent(SDL_Event *event)
 	fail;
       device = DEVICE_mouse;
       break;
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+    { SDL_Window *focus = SDL_GetKeyboardFocus();
+
+      if ( !focus ||			/* we are not in the foreground */
+	   !sdl_gamepad_input_event(event, &device, &name, &detail, &time) )
+	fail;
+      wid = SDL_GetWindowID(focus);
+      break;
+    }
 #if SDL_VERSION_ATLEAST(3, 4, 0)
     case SDL_EVENT_PINCH_BEGIN:		/* a trackpad gesture */
     case SDL_EVENT_PINCH_UPDATE:
@@ -1212,6 +1243,10 @@ CtoEvent(SDL_Event *event)
 			    toNum(dx), toNum(dy), EAV);
       break;
     }
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:	/* see the device switch */
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+      break;
 #if SDL_VERSION_ATLEAST(3, 4, 0)
       /* https://wiki.libsdl.org/SDL3/SDL_PinchFingerEvent.  This has no
 	 position.  Use that of the last mouse event in this window, or
@@ -1507,6 +1542,22 @@ CtoEvent(SDL_Event *event)
        !wheel_event(event, sp, window, &name, &rotation, &detail) )
     fail;
 
+  if ( notDefault(device) &&		/* like keys, gamepad input goes */
+       ((InputDevice)device)->kind == NAME_gamepad ) /* to the focus */
+  { PceWindow sw = getKeyboardFocusFrame(frame);
+    float ox = 0, oy = 0;
+
+    if ( sw && ws_window_frame_position(sw, frame, &ox, &oy) )
+    { window = sw;
+      x = frame_x - ox;
+      y = frame_y - oy;
+    } else
+    { window = frame;
+      x = frame_x;
+      y = frame_y;
+    }
+  }
+
   if ( event->type == SDL_EVENT_DROP_POSITION )
     update_drop_tracking_window(window, x, y);
 
@@ -1575,6 +1626,40 @@ dispatch_event(EventObj ev)
 	      });
 
   return rc;
+}
+
+
+/* Tell the application that device `d` was added or removed.  Post a
+ * `id` event to the window with the keyboard focus of each frame.
+ */
+
+void
+sdl_post_device_event(Name id, InputDevice d)
+{ DisplayManager dm = TheDisplayManager();
+  Cell dcell, fcell;
+
+  for_cell(dcell, dm->members)
+  { DisplayObj dsp = dcell->value;
+
+    for_cell(fcell, dsp->frames)
+    { FrameObj fr = fcell->value;
+
+      if ( onFlag(fr, F_FREED|F_FREEING) || !ws_created_frame(fr) )
+	continue;
+
+      Any target = getKeyboardFocusFrame(fr);
+      AnswerMark mark;
+      EventObj ev;
+
+      if ( !target )
+	target = fr;
+      markAnswerStack(mark);
+      if ( (ev=answerObject(ClassEvent, id, target, DEFAULT, DEFAULT,
+			    DEFAULT, DEFAULT, d, EAV)) )
+	dispatch_event(ev);
+      rewindAnswerStack(mark, NIL);
+    }
+  }
 }
 
 
@@ -1666,6 +1751,9 @@ hold_user_input(const SDL_Event *ev)
     case SDL_EVENT_DROP_TEXT:
     case SDL_EVENT_DROP_POSITION:
     case SDL_EVENT_DROP_COMPLETE:
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
       return true;
     default:
       return false;

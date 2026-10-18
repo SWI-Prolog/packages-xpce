@@ -614,6 +614,10 @@ static vardecl var_display[] =
 
 /* Send Methods */
 
+static char *T_sdlTestGamepad[] =
+        { "action={attach,detach,button,axis}", "control=[name]",
+	  "value=[num]" };
+
 static senddecl send_display[] =
 { SM(NAME_initialise, 2, T_initialise, initialiseDisplay,
      DEFAULT, "Create from name and area"),
@@ -649,6 +653,8 @@ static senddecl send_display[] =
      NAME_power, "Activate (@on) or deactivate (@off) screensaver"),
   SM(NAME_screenKeyboard, 1, "[{auto,on,off}]", screenKeyboardDisplay,
      NAME_event, "Policy for the on-screen keyboard on text-input focus"),
+  SM(NAME_sdlTestGamepad, 3, T_sdlTestGamepad, ws_test_gamepad,
+     NAME_test, "Drive a virtual gamepad (testing)"),
   SM(NAME_hasVisibleFrames, 1, "keep_alive=[bool]", hasVisibleFramesDisplay,
      NAME_organisation, "True if there is a visible (keep_alive) frame")
 };
@@ -687,6 +693,11 @@ static getdecl get_display[] =
      NAME_event, "@on if the on-screen keyboard is currently shown"),
   GM(NAME_inputDevices, 0, "chain", NULL, getInputDevicesDisplay,
      NAME_event, "Chain of known input devices"),
+  GM(NAME_sdlTestGamepad, 1, "num", "{rumble_low,rumble_high,red,green,blue}",
+     ws_test_gamepad_output,
+     NAME_test, "Output sent to the virtual gamepad (testing)"),
+  GM(NAME_gamepads, 0, "chain", NULL, getGamepadsDisplay,
+     NAME_event, "Connected gamepads; enables gamepad events"),
 };
 
 /* Resources */

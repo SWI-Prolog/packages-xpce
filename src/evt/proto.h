@@ -78,6 +78,10 @@ COMMON(status)	makeClassWheelData(Class class);
 COMMON(status)	makeClassPenState(Class class);
 COMMON(status)	makeClassTouchPoint(Class class);
 COMMON(status)	makeClassPinchData(Class class);
+COMMON(status)	makeClassGamepad(Class class);
+COMMON(status)	makeClassGamepadInput(Class class);
+COMMON(void)	removeInputDevice(InputDevice d);
+COMMON(Chain)	getGamepadsDisplay(DisplayObj d);
 
 /* /staff/jan/src/pl/packages/xpce/src/evt/modifier.c */
 COMMON(status)	makeClassModifier(Class class);

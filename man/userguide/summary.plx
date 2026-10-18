@@ -812,6 +812,18 @@ send(F, open).
 A \class{function} is a \class{code} object that yields a value when
 executed.  See \secref{function}.
 
+#class gamepad "gamepad(kind, id, name)"
+A \class{gamepad} is the \class{input_device} of a game controller.
+`display <-gamepads' enables gamepads and returns the connected ones.
+Their buttons and axes generate gamepad_* events for the window with
+the keyboard focus.  A gamepad can also be polled using <-button and
+<-axis, and may rumble (->rumble) and show a colour (->led).
+
+#class gamepad_input "gamepad_input(control, value)"
+The `event <-detail' of gamepad events: the name of the button or axis
+and its value.  The event delegates to it, so `event <-control' gives
+the name of the button.
+
 #class gesture "gesture(button, modifier)"
 Class \class{gesture} is the super-class for the \class{recogniser}
 classes that deal with the sequence mouse-button-down \ldots dragging

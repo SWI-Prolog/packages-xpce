@@ -227,6 +227,11 @@ See `display_manager <-current`.
     @see frame<-keep_alive
 
 
+- display->sdl_test_gamepad: action={attach,detach,button,axis}, control=[name], value=[num]
+    For testing only.  Attach or detach a virtual gamepad, for which
+    SDL generates the same events as for a real one, or set the state
+    of a button (`value` 1 or 0) or axis (-1..1) of it.
+
 ## Get methods {#class-display-get}
 
 - display<-contained_in: -> display_manager
@@ -291,3 +296,21 @@ See `display_manager <-current`.
     Chain of input_device objects known to xpce.  It holds at least
     @mouse_device and @keyboard_device.  Other devices are added when
     the window system reports them.  The chain should not be modified.
+
+    When a device is added or removed, e.g., a gamepad is plugged in,
+    the window with the keyboard focus of each frame receives a
+    device_added or device_removed event, whose `event<-device` is the
+    device.
+
+- display<-gamepads: -> chain
+    New chain holding the connected gamepads.  The first call starts
+    the support for gamepads: as this may be slow and, on some
+    systems, asks the user for permission, xpce only does so if the
+    application asks for gamepads.  Without this call there are no
+    gamepad events.
+
+    @see class gamepad
+
+- display<-sdl_test_gamepad: {rumble_low,rumble_high,red,green,blue} -> num
+    For testing only.  The last rumble (0..1) or LED colour (0..255)
+    sent to the virtual gamepad of ->sdl_test_gamepad.

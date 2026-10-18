@@ -41,6 +41,8 @@ void ev_event_grab_window(Any window);
 void ws_event_destroyed_target(Any window);
 void ws_pointer_left_frame(FrameObj fr);
 status ws_test_event(FrameObj fr, Name type, Sheet fields);
+void ws_forget_pointer(InputDevice d);
+void sdl_post_device_event(Name id, InputDevice d);
 PceWindow ws_grabbing_window(void);
 PceWindow ws_pointer_window(void);
 
