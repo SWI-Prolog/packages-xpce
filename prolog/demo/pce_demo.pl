@@ -180,7 +180,7 @@ demo_group('Media and devices',
            [ 'Camera', 'Sound'
            ]).
 demo_group('Games and animation',
-           [ 'Asteroids', 'Kangaroo', 'Juggler'
+           [ 'Asteroids', 'Animated images', 'Kangaroo', 'Juggler'
            ]).
 
 demo('PceDraw',                         % Name
@@ -234,6 +234,11 @@ demo('Sound',
      'Record, replay and load sound (WAV, MP3, Ogg, FLAC, ...)',
      demo(sound_demo),
      sound_demo).
+
+demo('Animated images',
+     'Play animated PNG, GIF and WebP files frame by frame',
+     demo(animation_demo),
+     animation_demo).
 
 demo('Asteroids',
      'A game like Asteroids: keyboard polling, gamepad and sound',
