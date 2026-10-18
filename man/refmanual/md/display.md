@@ -339,6 +339,11 @@ See `display_manager <-current`.
     `sound->load` can load, e.g., `wav`, `mp3`, `ogg` and `flac`.  This
     is only `wav` if xpce is built without SDL3_sound.
 
+- display<-image_save_formats: -> chain
+    New chain with the formats `image->save` can write, e.g., `png`,
+    `jpeg` and `gif`.  Whether `webp` and `avif` are included depends
+    on how SDL_image was built.
+
 - display<-cameras: -> chain
     New chain holding the names of the available cameras.  The first
     call starts the support for cameras, which may ask the user for

@@ -129,11 +129,20 @@ PNG output.
 
     @see pce_image_directory/1
 
-- image->save: in=[file], format=[{png}]
-    Write the image to a file.  PNG is the only format that can be
-    written, so `format` only serves to say so explicitly and may be
-    omitted.  xpce 6 accepted a range of X11-era formats here (`xbm`,
-    `pnm`, `gif`, ...); none of these are written any more.
+- image->save: in=[file], format=[{png,jpeg,webp,avif,gif,bmp,tga,ico,cur}], quality=[0..100]
+    Write the image to a file.  If `format` is omitted, the extension
+    of the file selects it (e.g., `.jpg` or `.jpeg` for JPEG); an
+    extension that is not one of these formats writes PNG.  `quality`
+    is used by the lossy formats JPEG, WebP and AVIF; the default is
+    90.  JPEG and BMP have no transparency.  GIF has 256 colours.
+    Whether WebP and AVIF are available depends on how SDL_image was
+    built (see `display<-image_save_formats`): if not, ->save fails
+    with a message on the console.
+
+    For example:
+
+    	?- send(Image, save, 'photo.jpg'),
+    	   send(Image, save, 'small.webp', webp, 50).
 
     `in` defaults to <-file, the file the image was loaded from.  That
     is a source_sink rather than a file: if it is not something we can

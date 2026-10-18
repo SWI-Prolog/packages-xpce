@@ -773,8 +773,97 @@ pceImage2SDL_Surface(Image image)
  * @param fmt Format name (e.g., "png").
  * @return SUCCEED if saving succeeds; otherwise, FAIL.
  */
+/* The formats image->save writes, with the file name extensions that
+ * select them if the format is not given.
+ */
+
+static const struct save_format
+{ const char *name;			/* as in image->save */
+  const char *extensions;		/* space separated */
+} save_formats[] =
+{ { "png",  "png apng" },
+  { "jpeg", "jpg jpeg jpe jfif" },
+  { "webp", "webp" },
+  { "avif", "avif" },
+  { "gif",  "gif" },
+  { "bmp",  "bmp" },
+  { "tga",  "tga" },
+  { "ico",  "ico" },
+  { "cur",  "cur" },
+  { NULL,   NULL }
+};
+
+/* The format for saving to `file`, as selected by its extension; png
+ * if the extension is unknown.
+ */
+
+static const char *
+save_format_from_file(const char *file)
+{ const char *ext = strrchr(file, '.');
+
+  if ( ext && !strpbrk(ext, "/\\") )
+  { size_t len = strlen(++ext);
+
+    for(const struct save_format *f = save_formats; f->name; f++)
+    { for(const char *e = f->extensions; *e; )
+      { size_t elen = strcspn(e, " ");
+
+	if ( elen == len && strncasecmp(e, ext, len) == 0 )
+	  return f->name;
+	e += elen;
+	if ( *e )
+	  e++;
+      }
+    }
+  }
+
+  return "png";
+}
+
+/* Save `surf` to the file `fname` in `format`.  JPEG, WebP and AVIF
+ * use `quality` (0..100); IMG_SaveTyped_IO() would use 90.
+ */
+
+static bool
+save_surface(SDL_Surface *surf, const char *fname, const char *format,
+	     int quality)
+{ if ( strcmp(format, "jpeg") == 0 )
+    return IMG_SaveJPG(surf, fname, quality);
+  if ( strcmp(format, "webp") == 0 )
+    return IMG_SaveWEBP(surf, fname, (float)quality);
+  if ( strcmp(format, "avif") == 0 )
+    return IMG_SaveAVIF(surf, fname, quality);
+
+  SDL_IOStream *io = SDL_IOFromFile(fname, "wb");
+
+  return io && IMG_SaveTyped_IO(surf, io, true, format);
+}
+
+/**
+ * Chain with the names of the formats image->save can write.  Which
+ * formats SDL_image writes depends on how it was built, which we find
+ * out by saving a 1x1 image in memory.
+ */
+Chain
+ws_image_save_formats(void)
+{ Chain ch = answerObject(ClassChain, EAV);
+  SDL_Surface *surf = SDL_CreateSurface(1, 1, SDL_PIXELFORMAT_ARGB8888);
+
+  if ( surf )
+  { for(const struct save_format *f = save_formats; f->name; f++)
+    { SDL_IOStream *io = SDL_IOFromDynamicMem();
+
+      if ( io && IMG_SaveTyped_IO(surf, io, true, f->name) )
+	appendChain(ch, CtoName(f->name));
+    }
+    SDL_DestroySurface(surf);
+  }
+
+  return ch;
+}
+
 status
-ws_save_image_file(Image image, SourceSink into, Name fmt)
+ws_save_image_file(Image image, SourceSink into, Name fmt, int quality)
 { SDL_Surface *surf = pceImage2SDL_Surface(image);
   status rc = FAIL;
 
@@ -782,12 +871,14 @@ ws_save_image_file(Image image, SourceSink into, Name fmt)
   { if ( instanceOfObject(into, ClassFile) )
     { FileObj file = (FileObj)into;
       if ( file->fd == NULL )
-      { if ( fmt == NAME_png )
-	{ rc = IMG_SavePNG(surf, nameToFN(file->name));
-	} else
-	{ Cprintf("Cannot save %s: format %s is not supported\n",
-		  pp(image), pp(fmt));
-	}
+      { const char *fname = nameToFN(file->name);
+	const char *format = ( isDefault(fmt)
+			       ? save_format_from_file(fname)
+			       : strName(fmt) );
+
+	if ( !(rc = save_surface(surf, fname, format, quality)) )
+	  Cprintf("Cannot save %s as %s to %s: %s\n",
+		  pp(image), format, fname, SDL_GetError());
       } else
       { Cprintf("Cannot save %s to %s: file is open\n",
 		pp(image), pp(file));

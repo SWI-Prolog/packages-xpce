@@ -72,6 +72,7 @@ test_libs(sdl_input            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(gamepad              OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(sound                OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(animation            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(image_save           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_init           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(camera               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(clipboard_media      OPTIONS ${XPCE_TEST_OPTIONS})
@@ -170,6 +171,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:gamepad
                      xpce:sound
                      xpce:animation
+                     xpce:image_save
                      xpce:emacs_init
                      xpce:camera
                      xpce:clipboard_media

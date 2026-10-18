@@ -48,7 +48,8 @@ status loadXImage(Image image, IOSTREAM *fd);
 status loadPNMImage(Image image, IOSTREAM *fd);
 status ws_load_image_file(Image image);
 status ws_create_image_from_xpm_data(Image image, char **data, DisplayObj d);
-status ws_save_image_file(Image image, SourceSink into, Name fmt);
+status ws_save_image_file(Image image, SourceSink into, Name fmt,
+			   int quality);
 status ws_open_image(Image image);
 void ws_close_image(Image image);
 Image ws_scale_image(Image image, int w, int h);
@@ -63,5 +64,6 @@ status	ws_set_image_pixels(Image image, SDL_Surface *surf);
 bool	ws_image_to_png(Image image, void **data, size_t *size);
 status	ws_image_from_data(Image image, const void *data, size_t size);
 status	ws_load_animation(Animation a);
+Chain	ws_image_save_formats(void);
 
 #endif /* RAYIMAGE_H */
