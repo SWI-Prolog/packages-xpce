@@ -135,6 +135,12 @@ attribute objects are used implicitly through the method
 send(Frame, attribute, visualises, bicycle24)
 \end{code}
 
+#class audio_recorder "audio_recorder(level_message)"
+An \class{audio_recorder} records from the default audio input,
+normally the microphone, into its <-sound.  While recording, its
+<-level_message is executed regularly with the input level, e.g., to
+show a level meter.
+
 #class behaviour "behaviour(name, context)"
 Super class of \class{method} and \class{variable}, representing the
 two types of objects that can realise behaviour in classes.  Not useful
@@ -1618,6 +1624,11 @@ On Windows, only TCP/IP sockets are provided.  The \pllib{pce_server}
 provides a good starting point for defining server sockets.  See also
 PceEmacs server mode as defined in \pllib{'emacs/server'}.  Note that
 SWI-Prolog's own socket and HTTP libraries are often a better choice.
+
+#class sound "sound(file)"
+A \class{sound} holds audio, loaded from a WAV file or recorded using an
+\class{audio_recorder}.  `sound ->play' plays it on the default audio
+output; its <-message is executed when the play is finished.
 
 #class source_location "source_location(file_name, line_no)"
 Specifies the location in a source file.  Used by \class{method} objects

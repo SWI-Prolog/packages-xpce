@@ -27,7 +27,7 @@ user) and positive `dx` scrolls right.
     Vertical scroll distance in notches.  Positive is up.
 
 - wheel_data<-flipped: bool
-    @on if the system uses "natural" scrolling, where the content
+    `@on` if the system uses "natural" scrolling, where the content
     follows the fingers.  <-dx and <-dy are as reported by the system;
     negate them to obtain the physical direction of the movement.
 

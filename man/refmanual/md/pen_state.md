@@ -53,7 +53,7 @@ for <-hover_distance and <-barrel_rotation, as an event already has a
     Pressure from squeezing the barrel, from 0 to 1.
 
 - pen_state<-eraser: bool
-    @on if the eraser end of the pen is used.
+    `@on` if the eraser end of the pen is used.
 
 - pen_state<-barrel_buttons: int
     Bit mask of the barrel buttons that are down.  1 is the first

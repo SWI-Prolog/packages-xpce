@@ -209,6 +209,12 @@ static struct class_definition classdefs[] =
   { NAME_gamepad, NAME_inputDevice, makeClassGamepad,
     &ClassGamepad, "Game controller" },
 
+  { NAME_sound, NAME_object, makeClassSound,
+    &ClassSound, "Audio that can be played" },
+
+  { NAME_audioRecorder, NAME_object, makeClassAudioRecorder,
+    &ClassAudioRecorder, "Record audio from the microphone" },
+
   { NAME_dropData, NAME_eventDetail, makeClassDropData,
     &ClassDropData, "Data of a drop_* event" },
 

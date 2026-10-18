@@ -75,6 +75,7 @@ scope('C.area', basic).
 scope('C.arrow', basic).
 scope('C.assign', basic).
 scope('C.attribute', basic).
+scope('C.audio_recorder', basic).
 scope('C.behaviour', basic).
 scope('C.bezier_curve', basic).
 scope('C.binary_condition', basic).
@@ -213,6 +214,7 @@ scope('C.sheet', basic).
 scope('C.size', basic).
 scope('C.slider', basic).
 scope('C.socket', basic).
+scope('C.sound', basic).
 scope('C.source_location', basic).
 scope('C.source_sink', advanced).
 scope('C.spatial', basic).

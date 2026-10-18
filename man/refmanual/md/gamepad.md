@@ -62,10 +62,10 @@ For example:
 ## Get methods {#class-gamepad-get}
 
 - gamepad<-connected: -> bool
-    @off if the gamepad was disconnected.
+    `@off` if the gamepad was disconnected.
 
 - gamepad<-button: name -> bool
-    @on if the named button is down.
+    `@on` if the named button is down.
 
 - gamepad<-axis: name -> num
     The position of the named axis.

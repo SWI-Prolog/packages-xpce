@@ -895,6 +895,8 @@ CtoEvent(SDL_Event *event)
     fail;
   if ( sdl_gamepad_hotplug_event(event) ) /* gamepad added/removed */
     fail;
+  if ( sdl_audio_event(event) )	/* sounds and recorders */
+    fail;
   if ( sdl_frame_event(event) )	/* window events (close/open/size/...) */
     fail;
   if ( sdl_timer_event(event) )	/* Timer event */

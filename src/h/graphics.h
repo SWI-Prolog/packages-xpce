@@ -985,6 +985,22 @@ NewClass(frameobj)
 End;
 
 
+NewClass(sound)
+  FileObj	file;			/* File it was loaded from */
+  Int		frequency;		/* Samples per second */
+  Int		channels;		/* 1: mono, 2: stereo, ... */
+  Int		duration;		/* Length in seconds */
+  Code		message;		/* Executed when a play finished */
+  WsRef		ws_ref;			/* The samples */
+End;
+
+NewClass(audio_recorder)
+  Sound		sound;			/* Recorded sound */
+  Code		level_message;		/* Executed with the input level */
+  BoolObj	recording;		/* Currently recording */
+  WsRef		ws_ref;			/* Recording stream */
+End;
+
 #define ABSTRACT_INPUT_DEVICE \
   Name		kind;			/* mouse, pen, touch, ... */ \
   Int		id;			/* Window system id */ \
