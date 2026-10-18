@@ -495,7 +495,7 @@ post_area_event(Any window, Name id, float x, float y, Any buttons)
 
 		markAnswerStack(mark);	/* before creating the event */
 		if ( (ev=answerObject(ClassEvent, id, window,
-				      toInt(x), toInt(y), buttons, EAV)) )
+				      toNum(x), toNum(y), buttons, EAV)) )
 		{ addCodeReference(ev);
 		  postNamedEvent(ev, window, DEFAULT, NAME_postEvent);
 		  delCodeReference(ev);
@@ -1086,7 +1086,7 @@ CtoEvent(SDL_Event *event)
   EventObj ev = answerObject(ClassEvent,
 			     name,
 			     window,
-			     toInt(x), toInt(y),
+			     toNum(x), toNum(y),
 			     buttons,
 			     EAV);
   if ( ev )

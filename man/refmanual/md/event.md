@@ -138,15 +138,18 @@ example-- type _3_ into _\C-c_.
     @see event-x
     @see event-receiver
 
-- event<-x: pixels=int
+- event<-x: pixels=num
     X-coordinate of the event relative to <-window.  Note that this position
     is *not* in the window's coordinate system, but relative to the top-left
-    corner of the X-widget realising the window.
+    corner of the X-widget realising the window.  The value is the position
+    reported by the window system and may be fractional.  The getters that
+    compute a position relative to an object round it, unless the window
+    has `window <->subpixel_events` @on.
 
     @see event-window
     @see event-y
 
-- event<-y: pixels=int
+- event<-y: pixels=num
     Y-coordinate of the event relative to <-window.   See <-x for details.
 
     @see event-window
@@ -172,7 +175,7 @@ example-- type _3_ into _\C-c_.
     @see modifier<-convert
     @see class modifier
 
-- event->initialise: id=event_id, origin=[window|frame], x=[int], y=[int], button_mask=[int], time=[int]
+- event->initialise: id=event_id, origin=[window|frame], x=[num], y=[num], button_mask=[int], time=[int]
     Create an event from the specified parameters.  Events are
     seldomly generated explicitly by the application code.  All
     optional arguments default to their value of the last processed
@@ -379,9 +382,12 @@ example-- type _3_ into _\C-c_.
 - event<-name: -> event_id
     Synonym for <-id.  Backwards compatibility only.
 
-- event<-x: relative_to=[graphical|frame|display] -> int
+- event<-x: relative_to=[graphical|frame|display] -> num
+    X coordinate relative to the argument.  This is a whole number
+    (rounded down) unless the window has `window <->subpixel_events` @on.
 
-- event<-y: relative_to=[graphical|frame|display] -> int
+- event<-y: relative_to=[graphical|frame|display] -> num
+    Y coordinate relative to the argument.  See <-x.
 
 - event<-position: relative_to=[graphical|frame|display] -> point
     Position of the event relative to the given object.  The argument

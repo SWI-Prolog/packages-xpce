@@ -762,6 +762,7 @@ End;
   EventObj	current_event;		/* Currently processed event */ \
   BoolObj	sensitive;		/* Sensitive to events */ \
   BoolObj	restrict_scroll;	/* Clamp scroll to <-bounding_box */ \
+  BoolObj	subpixel_events;	/* Event positions keep fractions */ \
   Any		background;		/* Background colour of the window */ \
   BoolObj	has_pointer;		/* We own the pointer */ \
   Any		selection_feedback;	/* Feedback for selection */ \

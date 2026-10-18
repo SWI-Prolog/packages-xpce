@@ -205,9 +205,9 @@ restrictAreaEvent(EventObj ev, Graphical gr)
     dy = ah-ey;
 
   if ( dx )
-    assign(ev, x, toInt(valInt(ev->x)+dx));
+    assign(ev, x, toNum(valNum(ev->x)+dx));
   if ( dy )
-    assign(ev, y, toInt(valInt(ev->y)+dy));
+    assign(ev, y, toNum(valNum(ev->y)+dy));
 
   succeed;
 }

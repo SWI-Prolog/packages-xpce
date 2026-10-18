@@ -403,6 +403,14 @@ valInt(Int i)
 { return (intptr_t)valNum(i);
 }
 
+static inline intptr_t			/* floor(), e.g., for pixel positions */
+valFloor(Int i)
+{ double d = valNum(i);
+  intptr_t v = (intptr_t)d;
+
+  return d < (double)v ? v-1 : v;
+}
+
 static inline Int
 toInt(intptr_t i)
 { return toNum((double)i);

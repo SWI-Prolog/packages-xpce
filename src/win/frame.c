@@ -1579,10 +1579,10 @@ tileResizeEvent(EventObj ev)
 		(ev->id == NAME_msLeftDrag || ev->id == NAME_msLeftUp) )
     { TileObj sub = resizingTile;
       if ( sub->super->orientation == NAME_vertical )
-      { int h = valInt(ev->y) - valInt(sub->area->y);
+      { int h = valFloor(ev->y) - valInt(sub->area->y);
 	send(sub, NAME_height, toInt(h), EAV);
       } else
-      { int w = valInt(ev->x) - valInt(sub->area->x);
+      { int w = valFloor(ev->x) - valInt(sub->area->x);
 	send(sub, NAME_width, toInt(w), EAV);
       }
 

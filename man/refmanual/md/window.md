@@ -47,6 +47,9 @@ kinds of windows:
     Default size of a window.  Normally applications have several windows
     and decide on the size and placement of each of these windows itself.
 
+- window.subpixel_events: bool = @off
+    Default for `window <->subpixel_events`.
+
 
 ## Instance variables {#class-window-instvars}
 
@@ -232,6 +235,16 @@ kinds of windows:
     @off, all events are ignored. Rarely used.
 
     @see window->event
+
+- window<->subpixel_events: bool
+    If @on, the position of an event relative to a graphical in this
+    window (`event <-x`, `event <-y`, `event <-position`, etc.)  keeps
+    the fraction reported by the window system, e.g., from a pen,
+    touch screen or HiDPI pointer.  If @off (default), positions are
+    whole pixels, rounded down.  The default comes from the class
+    variable `window.subpixel_events`.
+
+    @see event<-position
 
 - window-tile: tile*
     Tile object associated with this window.  The associated tile

@@ -112,8 +112,8 @@ initialiseEvent(EventObj e, Name id, Any window,
 
   if ( isDownEvent(e) )
   { int clt = CLICK_TYPE_single;
-    int px  = valInt(x);
-    int py  = valInt(y);
+    int px  = valFloor(x);
+    int py  = valFloor(y);
 
     DEBUG(NAME_multiclick, Cprintf("t: %ld (%ld), x: %d (%d), y: %d (%d) --> ",
 				   t, last_down_time, px, last_down_x,
@@ -498,8 +498,8 @@ getClickTimeEvent(EventObj e)
 
 Int
 getClickDisplacementEvent(EventObj e)
-{ int dx = valInt(e->x) - last_down_x;
-  int dy = valInt(e->y) - last_down_y;
+{ int dx = valFloor(e->x) - last_down_x;
+  int dy = valFloor(e->y) - last_down_y;
 
   answer(toInt(isqrt(dx*dx + dy*dy)));
 }
@@ -511,8 +511,8 @@ windowEvent(EventObj ev, PceWindow sw)
   { int x, y;
 
     offset_windows(sw, ev->window, &x, &y);
-    assign(ev, x, toInt(valInt(ev->x) - x));
-    assign(ev, y, toInt(valInt(ev->y) - y));
+    assign(ev, x, toNum(valNum(ev->x) - x));
+    assign(ev, y, toNum(valNum(ev->y) - y));
     assign(ev, window, sw);
   }
 
@@ -536,34 +536,61 @@ functions allow you to find the position relative to:
 			event occurred
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+/* A window with <-subpixel_events @on sees the fractional event
+ * position that the window system reported.  Otherwise positions are
+ * the whole pixels that xpce always used: the stored coordinate is
+ * truncated (as it was before events stored a fraction) and the result
+ * of a transformation is rounded.
+ */
+
+static bool
+subpixel_events_window(Any w)
+{ return ( w && instanceOfObject(w, ClassWindow) &&
+	   ((PceWindow)w)->subpixel_events == ON );
+}
+
+static inline double
+event_coord(Int v, bool sub)
+{ return sub ? valNum(v) : (double)valFloor(v);
+}
+
+static inline double
+whole_pixel(double v, bool sub)
+{ return sub ? v : floor(v + 0.5);
+}
+
+
 static void
-get_xy_event_window(EventObj ev, PceWindow w, BoolObj area, int *rx, int *ry)
+get_xy_event_window(EventObj ev, PceWindow w, BoolObj area, bool sub,
+		    double *rx, double *ry)
 { int x, y;
 
   offset_windows(w, ev->window, &x, &y);
 
   if ( area == ON )
-  { *rx = valInt(ev->x) - x;
-    *ry = valInt(ev->y) - y;
+  { *rx = event_coord(ev->x, sub) - x;
+    *ry = event_coord(ev->y, sub) - y;
   } else
-  { offset_window(w, rx, ry);
-    *rx = valInt(ev->x) - x - *rx;
-    *ry = valInt(ev->y) - y - *ry;
+  { int ox, oy;
+
+    offset_window(w, &ox, &oy);
+    *rx = event_coord(ev->x, sub) - x - ox;
+    *ry = event_coord(ev->y, sub) - y - oy;
   }
 }
 
 
 static void
-get_xy_event_frame(EventObj ev, FrameObj fr, int *rx, int *ry)
+get_xy_event_frame(EventObj ev, FrameObj fr, bool sub, double *rx, double *ry)
 { FrameObj fr2;
   int frx, fry;
 
-  get_xy_event_window(ev, ev->window, ON, rx, ry);
-  DEBUG(NAME_drag, Cprintf("At %d, %d to %s\n", *rx, *ry, pp(ev->window)));
+  get_xy_event_window(ev, ev->window, ON, sub, rx, ry);
+  DEBUG(NAME_drag, Cprintf("At %g, %g to %s\n", *rx, *ry, pp(ev->window)));
   frame_offset_window(ev->window, &fr2, &frx, &fry);
   *rx += frx;
   *ry += fry;
-  DEBUG(NAME_drag, Cprintf("At %d, %d to %s\n", *rx, *ry, pp(fr2)));
+  DEBUG(NAME_drag, Cprintf("At %g, %g to %s\n", *rx, *ry, pp(fr2)));
 
   if ( fr != fr2 )
   { Area a1 = fr->area;			/* target frame area */
@@ -576,7 +603,7 @@ get_xy_event_frame(EventObj ev, FrameObj fr, int *rx, int *ry)
 
 
 static void
-get_xy_event_device(EventObj ev, Device dev, int *rx, int *ry)
+get_xy_event_device(EventObj ev, Device dev, bool sub, double *rx, double *ry)
 { int ox, oy;
   PceWindow sw = getWindowGraphical((Graphical) dev);
 
@@ -585,21 +612,21 @@ get_xy_event_device(EventObj ev, Device dev, int *rx, int *ry)
     return;				/* generate an error? */
   }
 
-  get_xy_event_window(ev, sw, OFF, rx, ry);
+  get_xy_event_window(ev, sw, OFF, sub, rx, ry);
 
   if ( hasTransformInDeviceChain(dev) )
   { double lx, ly;
-    if ( windowToDeviceLocalCoord(dev, (double)*rx, (double)*ry, &lx, &ly) )
-    { *rx = (int)floor(lx + 0.5);
-      *ry = (int)floor(ly + 0.5);
+    if ( windowToDeviceLocalCoord(dev, *rx, *ry, &lx, &ly) )
+    { *rx = whole_pixel(lx, sub);
+      *ry = whole_pixel(ly, sub);
       return;
     }
-    /* singular or detached: fall through to the integer path */
+    /* singular or detached: fall through to the offset path */
   }
 
   offsetDeviceGraphical(dev, &ox, &oy);
-  *rx -= ox + valInt(dev->offset->x);
-  *ry -= oy + valInt(dev->offset->y);
+  *rx -= ox + event_coord(dev->offset->x, sub);
+  *ry -= oy + event_coord(dev->offset->y, sub);
 }
 
 
@@ -628,37 +655,32 @@ in_fixed_layer(Graphical gr)
 
 
 static void
-get_xy_event_graphical(EventObj ev, Graphical gr, int *rx, int *ry)
+get_xy_event_graphical(EventObj ev, Graphical gr, bool sub,
+		       double *rx, double *ry)
 { int ox, oy;
   PceWindow sw = getWindowGraphical(gr);
 
   if ( !sw )
     sw = ev->window;
 
-  get_xy_event_window(ev, sw, in_fixed_layer(gr) ? ON : OFF, rx, ry);
+  get_xy_event_window(ev, sw, in_fixed_layer(gr) ? ON : OFF, sub, rx, ry);
 
   if ( deviceChainHasTransform(gr) )
   { double lx, ly;
-    if ( windowToGraphicalCoord(gr, (double)*rx, (double)*ry, &lx, &ly) )
-    { *rx = (int)floor(lx + 0.5);
-      *ry = (int)floor(ly + 0.5);
+    if ( windowToGraphicalCoord(gr, *rx, *ry, &lx, &ly) )
+    { *rx = whole_pixel(lx, sub);
+      *ry = whole_pixel(ly, sub);
       return;
     }
-    /* singular or detached: fall through to the integer path */
+    /* singular or detached: fall through to the offset path */
   }
 
   offsetDeviceGraphical(gr, &ox, &oy);
-  DEBUG(NAME_inside, Cprintf("At %d,%d: offset %s --> %s is %d,%d\n",
+  DEBUG(NAME_inside, Cprintf("At %g,%g: offset %s --> %s is %d,%d\n",
 			     *rx, *ry,
 			     pp(gr), pp(sw), ox, oy));
-  *rx -= ox + valInt(gr->area->x);
-  *ry -= oy + valInt(gr->area->y);
-}
-
-
-static void
-get_xy_event_node(EventObj ev, Node node, int *rx, int *ry)
-{ get_xy_event_graphical(ev, node->image, rx, ry);
+  *rx -= ox + event_coord(gr->area->x, sub);
+  *ry -= oy + event_coord(gr->area->y, sub);
 }
 
 
@@ -676,11 +698,14 @@ get_xy_event_node(EventObj ev, Node node, int *rx, int *ry)
  *   - If `obj` is displayed on `ev->frame`, the X,Y of `ev` are relative
  *     to `ev->frame`.
  *   - Otherwise, we do not know.
+ *
+ * The result is fractional if the window in which `obj` is displayed
+ * (the event's window for a frame) has <-subpixel_events @on.
  */
 
 status
 get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
-{ int x = 0, y = 0;
+{ double x = 0, y = 0;
 
   if ( isNil(ev->window) || onFlag(ev->window, F_FREEING|F_FREED) )
   { *rx = ev->x;
@@ -696,24 +721,29 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
   }
 
   FrameObj objfr;
+  bool sub;
   if ( instanceOfObject(obj, ClassFrame) )
-    objfr = obj;
-  else
+  { objfr = obj;
+    sub = subpixel_events_window(ev->window);
+  } else
+  { Any gr = instanceOfObject(obj, ClassNode) ? ((Node)obj)->image : obj;
     objfr = getFrameGraphical(obj);
+    sub = subpixel_events_window(getWindowGraphical(gr));
+  }
 
   if ( objfr == ev->frame )
   { if ( instanceOfObject(ev->window, ClassWindow) &&
 	 getFrameWindow(ev->window, OFF) == ev->frame )
     { if ( instanceOfObject(obj, ClassFrame) )
-	get_xy_event_frame(ev, obj, &x, &y);
+	get_xy_event_frame(ev, obj, sub, &x, &y);
       else if ( instanceOfObject(obj, ClassWindow) )
-	get_xy_event_window(ev, obj, area, &x, &y);
+	get_xy_event_window(ev, obj, area, sub, &x, &y);
       else if ( instanceOfObject(obj, ClassDevice) )
-	get_xy_event_device(ev, obj, &x, &y);
+	get_xy_event_device(ev, obj, sub, &x, &y);
       else if ( instanceOfObject(obj, ClassGraphical) )
-	get_xy_event_graphical(ev, obj, &x, &y);
+	get_xy_event_graphical(ev, obj, sub, &x, &y);
       else if ( instanceOfObject(obj, ClassNode) )
-	get_xy_event_node(ev, obj, &x, &y);
+	get_xy_event_graphical(ev, ((Node)obj)->image, sub, &x, &y);
       else
       { *rx = ev->x;
 	*ry = ev->y;
@@ -721,14 +751,18 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
       }
     } else
     { if ( instanceOfObject(obj, ClassFrame) )
-      { x = valInt(ev->x);
-	y = valInt(ev->y);
+      { x = event_coord(ev->x, sub);
+	y = event_coord(ev->y, sub);
       } else
       { PceWindow sw = getWindowGraphical(obj);
 	float ox=0, oy=0;
 	if ( ws_window_frame_position(sw, ev->frame, &ox, &oy) )
-	{ x = valInt(ev->x) - ox;
-	  y = valInt(ev->y) - oy;
+	{ x = event_coord(ev->x, sub) - ox;
+	  y = event_coord(ev->y, sub) - oy;
+	  if ( !sub )
+	  { x = (int)x;
+	    y = (int)y;
+	  }
 	} else
 	{ Cprintf("Could not get event X,Y of %s relative to %s\n",
 		  pp(ev), pp(obj));
@@ -743,14 +777,14 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
 	  { Device dev = obj;
 	    int ox, oy;
 	    offsetDeviceGraphical(obj, &ox, &oy);
-	    x -= ox + valInt(dev->offset->x);
-	    y -= oy + valInt(dev->offset->y);
+	    x -= ox + event_coord(dev->offset->x, sub);
+	    y -= oy + event_coord(dev->offset->y, sub);
 	  } else if ( instanceOfObject(obj, ClassGraphical) )
 	  { Graphical gr = obj;
 	    int ox, oy;
 	    offsetDeviceGraphical(obj, &ox, &oy);
-	    x -= ox + valInt(gr->area->x);
-	    y -= oy + valInt(gr->area->y);
+	    x -= ox + event_coord(gr->area->x, sub);
+	    y -= oy + event_coord(gr->area->y, sub);
 	  } else
 	  { assert(0);
 	  }
@@ -769,12 +803,12 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
        instanceOfObject(obj, ClassDevice) &&
        !instanceOfObject(obj, ClassWindow) )
   { Device dev = (Device) ev->receiver;
-    x -= valInt(dev->area->x) - valInt(dev->offset->x);
-    y -= valInt(dev->area->y) - valInt(dev->offset->y);
+    x -= event_coord(dev->area->x, sub) - event_coord(dev->offset->x, sub);
+    y -= event_coord(dev->area->y, sub) - event_coord(dev->offset->y, sub);
   }
 
-  *rx = toInt(x);
-  *ry = toInt(y);
+  *rx = toNum(x);
+  *ry = toNum(y);
 
   succeed;
 }
@@ -883,8 +917,8 @@ getInsideSubWindow(EventObj ev, Any root)
 Int
 getDistanceEvent(EventObj ev1, EventObj ev2)
 { if ( ev1->window == ev2->window )
-  { int dx = valInt(ev1->x) - valInt(ev2->x);
-    int dy = valInt(ev1->y) - valInt(ev2->y);
+  { int dx = valFloor(ev1->x) - valFloor(ev2->x);
+    int dy = valFloor(ev1->y) - valFloor(ev2->y);
 
     answer(toInt(isqrt(dx * dx + dy * dy)));
   }
@@ -1092,7 +1126,7 @@ mapWheelMouseEvent(EventObj ev, Any rec)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "id=event_id", "origin=[window|frame]", "x=[int]", "y=[int]", "button_mask=[int]", "time=[int]" };
+        { "id=event_id", "origin=[window|frame]", "x=[num]", "y=[num]", "button_mask=[int]", "time=[int]" };
 static char *T_post[] =
         { "to=graphical", "recogniser=[recogniser]" };
 
@@ -1109,10 +1143,10 @@ static vardecl var_event[] =
      NAME_name, "Id of the event (type of event)"),
   IV(NAME_buttons, "mask=int", IV_GET,
      NAME_classify, "Bitmask with status of buttons"),
-  IV(NAME_x, "pixels=int", IV_GET,
-     NAME_position, "X-coordinate, relative to window"),
-  IV(NAME_y, "pixels=int", IV_GET,
-     NAME_position, "Y-coordinate, relative to window"),
+  IV(NAME_x, "pixels=num", IV_GET,
+     NAME_position, "X-coordinate, relative to window; may be fractional"),
+  IV(NAME_y, "pixels=num", IV_GET,
+     NAME_position, "Y-coordinate, relative to window; may be fractional"),
   IV(NAME_rotation, "degrees=int*", IV_GET,
      NAME_classify, "`wheel' and `horizontal_wheel' events: rotation, 15 per notch"),
   IV(NAME_position, "point*", IV_NONE,
@@ -1175,10 +1209,10 @@ static getdecl get_event[] =
      NAME_position, "Frame or window event occurred in"),
   GM(NAME_position, 1, "point", "relative_to=[graphical|frame|display]", getPositionEvent,
      NAME_position, "Position relative to argument"),
-  GM(NAME_x, 1, "int", "relative_to=[graphical|frame|display]", getXEvent,
-     NAME_position, "X coordinate relative to argument"),
-  GM(NAME_y, 1, "int", "relative_to=[graphical|frame|display]", getYEvent,
-     NAME_position, "Y coordinate relative to argument")
+  GM(NAME_x, 1, "num", "relative_to=[graphical|frame|display]", getXEvent,
+     NAME_position, "X coordinate relative to argument (see window<-subpixel_events)"),
+  GM(NAME_y, 1, "num", "relative_to=[graphical|frame|display]", getYEvent,
+     NAME_position, "Y coordinate relative to argument (see window<-subpixel_events)")
 };
 
 /* Resources */

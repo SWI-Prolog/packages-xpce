@@ -1535,8 +1535,8 @@ eventFixedWindow(PceWindow sw, EventObj ev)
     offset_windows(sw, ev->window, &ox, &oy);   /* view coordinates: the
 					   same as get_xy_event_window()
 					   with area == ON */
-    x = valInt(ev->x) - ox;
-    y = valInt(ev->y) - oy;
+    x = valFloor(ev->x) - ox;
+    y = valFloor(ev->y) - oy;
 
     for_cell(cell, sw->fixed_graphicals)
     { Graphical gr = cell->value;
@@ -2833,6 +2833,8 @@ static vardecl var_window[] =
      NAME_event, "Window accepts events"),
   IV(NAME_restrictScroll, "bool", IV_BOTH,
      NAME_scroll, "If @on, clamp scrolling to <-bounding_box"),
+  IV(NAME_subpixelEvents, "bool", IV_BOTH,
+     NAME_event, "If @on, event positions in this window keep fractions"),
   SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundWindow,
      NAME_appearance, "Background colour or pattern"),
   IV(NAME_hasPointer, "bool", IV_BOTH,
@@ -3011,7 +3013,9 @@ static classvardecl rc_window[] =
   RC(NAME_selectionHandles,  RC_REFINE,	      "@nil",			 NULL),
   RC(NAME_size,		 "size",	      "size(200,100)",               NULL),
   RC(NAME_selectionFeedback, NULL,            "colour",                      NULL),
-  RC(NAME_restrictScroll,    "bool",          "@off",                        NULL)
+  RC(NAME_restrictScroll,    "bool",          "@off",                        NULL),
+  RC(NAME_subpixelEvents,    "bool",          "@off",
+     "If @on, event positions in this window keep fractions")
 };
 
 /* Class Declaration */
