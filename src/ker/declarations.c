@@ -218,6 +218,9 @@ static struct class_definition classdefs[] =
   { NAME_camera, NAME_object, makeClassCamera,
     &ClassCamera, "Video from a camera as an image" },
 
+  { NAME_trayIcon, NAME_object, makeClassTrayIcon,
+    &ClassTrayIcon, "Icon with a menu in the system tray" },
+
   { NAME_dropData, NAME_eventDetail, makeClassDropData,
     &ClassDropData, "Data of a drop_* event" },
 

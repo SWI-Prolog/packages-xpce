@@ -247,6 +247,7 @@ scope('C.timer', basic).
 scope('C.tokeniser', basic).
 scope('C.touch_point', basic).
 scope('C.transform', basic).
+scope('C.tray_icon', basic).
 scope('C.tree', basic).
 scope('C.tuple', basic).
 scope('C.type', basic).

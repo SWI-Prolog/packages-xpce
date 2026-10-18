@@ -37,7 +37,7 @@ set(KER_SRC	alloc.c assoc.c behaviour.c class.c conversion.c
 
 set(MEN_SRC	button.c dialogitem.c label.c menu.c menubar.c
 		menuitem.c popup.c slider.c textitem.c tab.c diagroup.c
-		tabstack.c labelbox.c intitem.c boolitem.c)
+		tabstack.c labelbox.c intitem.c boolitem.c trayicon.c)
 
 set(FMT_SRC	layoutmgr.c layoutitf.c
 		table.c tabcell.c tabslice.c)
@@ -73,7 +73,7 @@ set(WIN_SRC	browser.c decorate.c dialog.c display.c
 set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c
-		sdlgamepad.c sdlaudio.c sdlcamera.c
+		sdlgamepad.c sdlaudio.c sdlcamera.c sdltray.c
 		sdlmenubar.c)
 if(APPLE)
   # The Cocoa halves of the native menu bar and the system colours.

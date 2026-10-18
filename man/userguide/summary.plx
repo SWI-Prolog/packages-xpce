@@ -1953,6 +1953,12 @@ See the demo \demo{Transform}.
    send(F, rotate, 30).
 \end{code}
 
+#class tray_icon "tray_icon(image, tooltip, popup)"
+A \class{tray_icon} shows an icon in the system tray (notification
+area), with an optional tooltip and a menu built from a
+\class{popup}.  Selecting an entry executes the popup with the
+\class{tray_icon} as context.
+
 #class tree "tree(root)"
 Trees realise hierarchical layout for \class{graphical} objects. Class
 \class{tree} itself is a subclass of \class{figure}. The hierarchy is

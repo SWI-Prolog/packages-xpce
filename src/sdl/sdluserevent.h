@@ -55,6 +55,7 @@ typedef enum
   MY_EVENT_MENU,		/* Native menu selected; data1 = MenuItem or NULL
 				   for Quit.  See sdlmenubar.c */
   MY_EVENT_MEDIA,		/* Audio/camera tick, see sdlaudio.c */
+  MY_EVENT_TRAY,		/* Tray menu entry clicked, see sdltray.c */
   MY_EVENT_HIGHEST		/* for ws_events_queued_display() */
 } pce_user_events;
 

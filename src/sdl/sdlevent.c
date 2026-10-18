@@ -899,6 +899,8 @@ CtoEvent(SDL_Event *event)
     fail;
   if ( sdl_camera_event(event) ) /* camera permission and removal */
     fail;
+  if ( sdl_tray_event(event) )	/* tray menu entry clicked */
+    fail;
   if ( sdl_frame_event(event) )	/* window events (close/open/size/...) */
     fail;
   if ( sdl_timer_event(event) )	/* Timer event */

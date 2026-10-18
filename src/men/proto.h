@@ -126,3 +126,6 @@ COMMON(status)	makeClassLabelBox(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/intitem.c */
 COMMON(status)	makeClassIntItem(Class class);
+
+/* /staff/jan/src/pl/packages/xpce/src/men/trayicon.c */
+COMMON(status)	makeClassTrayIcon(Class class);

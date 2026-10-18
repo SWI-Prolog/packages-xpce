@@ -994,6 +994,13 @@ NewClass(sound)
   WsRef		ws_ref;			/* The samples */
 End;
 
+NewClass(tray_icon)
+  Image		image;			/* Icon shown in the tray */
+  CharArray	tooltip;		/* Tooltip or @nil */
+  PopupObj	popup;			/* Menu or @nil */
+  WsRef		ws_ref;			/* SDL_Tray and its entries */
+End;
+
 NewClass(camera)
   Name		name;			/* Name of the device or @nil */
   Image		image;			/* The last frame */
