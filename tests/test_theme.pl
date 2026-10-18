@@ -40,6 +40,13 @@
 :- use_module(library(pce_report), []).   % class reporter
 :- use_module(library(plunit)).
 :- use_module(library(ansi_term), []).
+:- use_module(library(apply), [include/3, maplist/3, exclude/3]).
+:- use_module(library(filesex),
+              [ directory_file_path/3,
+                make_directory_path/1,
+                delete_directory_and_contents/1
+              ]).
+:- use_module(library(lists), [member/2]).
 
 /** <module> Test semantic colours and themes
 
@@ -609,7 +616,7 @@ test(not_edited, error(existence_error(edited_theme, test_dark))) :-
 %   only sets console colours, a second theme/dark.pl and a file that
 %   is not a Prolog source, and add it to the library search path.
 
-user_theme_dir(Dir) :-
+user_theme_dir(Dir-Ref) :-
     tmp_file(themes, Dir),
     directory_file_path(Dir, theme, ThemeDir),
     make_directory_path(ThemeDir),
@@ -626,10 +633,10 @@ user_theme_dir(Dir) :-
                                 write(Out, Content),
                                 close(Out))
            )),
-    asserta(user:file_search_path(library, Dir)).
+    asserta(user:file_search_path(library, Dir), Ref).
 
-remove_user_theme_dir(Dir) :-
-    retractall(user:file_search_path(library, Dir)),
+remove_user_theme_dir(Dir-Ref) :-
+    erase(Ref),
     delete_directory_and_contents(Dir).
 
 :- begin_tests(theme_files,

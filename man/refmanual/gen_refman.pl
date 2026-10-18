@@ -37,17 +37,9 @@
             gen_refman_check/1                  % +InDir
           ]).
 
-%   The xpce library directory (sibling of this file) supplies
-%   pldoc_xpce. Make it visible before any use_module so the script is
-%   self-contained when invoked from CMake.
-
-:- prolog_load_context(directory, ThisDir),
-   atomic_list_concat([ThisDir, '/../../prolog/lib'], XpceLib),
-   asserta(user:file_search_path(library, XpceLib)).
-
 :- use_module(library(main)).
 :- use_module(library(pldoc/doc_wiki), [wiki_codes_to_dom/3]).
-:- use_module(library(doc_latex)).
+:- use_module(library(doc_latex), []).          % Module qualified calls
 :- use_module(library(pce), []).
 :- use_module(library(pldoc_xpce),
               [ with_xpce_backend/2,
@@ -56,7 +48,6 @@
               ]).
 :- use_module(library(filesex), [make_directory_path/1, directory_file_path/3]).
 :- use_module(library(lists)).
-:- use_module(library(option)).
 :- use_module(library(apply)).
 :- use_module(library(readutil), [read_file_to_codes/3]).
 

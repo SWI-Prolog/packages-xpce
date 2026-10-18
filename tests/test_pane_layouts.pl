@@ -47,29 +47,14 @@ Run with:
           packages/xpce/tests/test_pane_layouts.pl
 */
 
-:- use_module(library(filesex), [directory_file_path/3,
-                                  delete_directory_and_contents/1]).
-
-%   Loading the debugger migrates the settings of an old
-%   config('Tracer.cnf') to the user's Defaults file and renames it.
-%   Use an empty file of our own, so the tests neither depend on nor
-%   change the settings of the user.
-
-sandbox_tracer_config :-
-    tmp_file(tracer_config, Dir),
-    make_directory(Dir),
-    directory_file_path(Dir, 'Tracer.cnf', File),
-    setup_call_cleanup(open(File, write, Out), true, close(Out)),
-    asserta(user:file_search_path(config, Dir)),
-    at_halt(delete_directory_and_contents(Dir)).
-
-:- initialization(sandbox_tracer_config, now).
-
 :- use_module(library(plunit)).
 :- use_module(library(pane_layouts)).
 :- use_module(library(lists), [member/2]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(readutil), [read_file_to_terms/3]).
+:- use_module(library(debug), [assertion/1]).
+:- use_module(xpce_test_sandbox,
+              [sandbox_tracer_config/1, cleanup_tracer_config/1]).
 
 %       An arrangements file of their own: these must neither read nor
 %       write the arrangements of whoever runs them.
@@ -78,9 +63,16 @@ sandbox_tracer_config :-
 
 pane_layouts:arrangements_file(File) :-
     current_prolog_flag(tmp_dir, Tmp),
-    atom_concat(Tmp, '/test_pane_layouts_store', File).
+    current_prolog_flag(pid, PID),
+    atomic_list_concat([Tmp, '/test_pane_layouts_store_', PID], File).
 
 test_pane_layouts :-
+    setup_call_cleanup(
+        sandbox_tracer_config(Ctx),
+        test_pane_layouts_,
+        cleanup_tracer_config(Ctx)).
+
+test_pane_layouts_ :-
     run_tests([ pane_layouts_kinds,
                 pane_layouts_defaults,
                 pane_layouts_reading,

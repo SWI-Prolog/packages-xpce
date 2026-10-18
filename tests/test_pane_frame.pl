@@ -60,31 +60,15 @@ see the value you chose rather than the one shipped.
 
 :- set_prolog_flag('SDL_VIDEODRIVER', dummy).
 
-:- use_module(library(filesex), [directory_file_path/3,
-                                  delete_directory_and_contents/1]).
-
-%   Loading the debugger migrates the settings of an old
-%   config('Tracer.cnf') to the user's Defaults file and renames it.
-%   Use an empty file of our own, so the tests neither depend on nor
-%   change the settings of the user.
-
-sandbox_tracer_config :-
-    tmp_file(tracer_config, Dir),
-    make_directory(Dir),
-    directory_file_path(Dir, 'Tracer.cnf', File),
-    setup_call_cleanup(open(File, write, Out), true, close(Out)),
-    asserta(user:file_search_path(config, Dir)),
-    at_halt(delete_directory_and_contents(Dir)).
-
-:- initialization(sandbox_tracer_config, now).
-
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
 :- use_module(library(pane_frame)).
 :- use_module(library(pce_util), [chain_list/2, member_chain/2]).
-:- use_module(library(lists), [member/2, memberchk/2, reverse/2, append/2]).
+:- use_module(library(lists), [member/2, reverse/2, append/2]).
 :- use_module(library(apply), [exclude/3, maplist/3]).
 :- use_module(library(pane_layouts), [forget_arrangements/0]).
+:- use_module(xpce_test_sandbox,
+              [sandbox_tracer_config/1, cleanup_tracer_config/1]).
 
 %       An arrangements file of their own: the tests must neither read nor
 %       write the arrangements of whoever runs them.
@@ -93,9 +77,16 @@ sandbox_tracer_config :-
 
 pane_layouts:arrangements_file(File) :-
     current_prolog_flag(tmp_dir, Tmp),
-    atom_concat(Tmp, '/test_pane_frame_store', File).
+    current_prolog_flag(pid, PID),
+    atomic_list_concat([Tmp, '/test_pane_frame_store_', PID], File).
 
 test_pane_frame :-
+    setup_call_cleanup(
+        sandbox_tracer_config(Ctx),
+        test_pane_frame_,
+        cleanup_tracer_config(Ctx)).
+
+test_pane_frame_ :-
     run_tests([ pane_frame_structure,
                 pane_frame_menu_bar,
                 menu_bar_chains,
@@ -951,7 +942,7 @@ test(both_frames_keep_a_sensible_current_pane, true(Names == [one, second])) :-
 
 test(detaching_takes_the_pane_out_of_the_window_it_was_in,
      Names == [one]) :-
-    frame(F, _App, P1),
+    frame(F, _App, _P1),
     pane(second, alpha, P2),
     send(F, append_pane, P2, @default, @on),
     send(P2, detach),

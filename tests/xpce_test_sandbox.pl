@@ -36,13 +36,17 @@
 :- module(xpce_test_sandbox,
           [ sandbox_app_config/1,       % -Dir
             sandbox_dir/2,              % +Prefix, -Dir
-            remove_sandbox_at_exit/0
+            remove_sandbox_at_exit/0,
+            sandbox_tracer_config/1,    % -Context
+            cleanup_tracer_config/1     % +Context
           ]).
-:- use_module(library(filesex), [directory_file_path/3,
-                                  make_directory_path/1,
-                                  delete_directory_and_contents/1]).
-:- use_module(library(lists), [member/2]).
-:- autoload(library(pce), [send/3]).
+:- use_module(library(filesex),
+              [ directory_file_path/3,
+                make_directory_path/1,
+                delete_directory_and_contents/1
+              ]).
+:- autoload(library(pce), [send/3]).       % loading library(pce)
+                                          % initialises xpce
 
 /** <module> Keep tests out of the user's xpce configuration
 
@@ -54,7 +58,8 @@ after loading library(pce).
 */
 
 :- dynamic
-    created_dir/1.
+    created_dir/1,
+    tracer_sandbox/1.
 
 %!  sandbox_app_config(-Dir) is det.
 %
@@ -94,3 +99,32 @@ remove_sandbox_at_exit :-                 % @(...): no pce operators
 remove_dirs :-
     forall(created_dir(Dir),
            catch(delete_directory_and_contents(Dir), _, true)).
+
+%!  sandbox_tracer_config(-Context) is det.
+%!  cleanup_tracer_config(+Context) is det.
+%
+%   Loading   the   debugger   migrates   the   settings   of   an   old
+%   config('Tracer.cnf') to the user's Defaults file and renames it. Use
+%   an empty file of our own, so the  tests neither depend on nor change
+%   the settings of the user.  As the tests may run in the same process,
+%   a second call does nothing and leaves the sandbox to the first.  A
+%   sandbox that is not cleaned up is removed when xpce exits (see
+%   remove_sandbox_at_exit/0).
+
+sandbox_tracer_config(-) :-
+    tracer_sandbox(_),
+    !.
+sandbox_tracer_config(Dir-Ref) :-
+    sandbox_dir(tracer_config, Dir),
+    directory_file_path(Dir, 'Tracer.cnf', File),
+    setup_call_cleanup(open(File, write, Out), true, close(Out)),
+    asserta(user:file_search_path(config, Dir), Ref),
+    asserta(tracer_sandbox(Dir)).
+
+cleanup_tracer_config(-) :-
+    !.
+cleanup_tracer_config(Dir-Ref) :-
+    erase(Ref),
+    retractall(tracer_sandbox(Dir)),
+    retractall(created_dir(Dir)),
+    delete_directory_and_contents(Dir).

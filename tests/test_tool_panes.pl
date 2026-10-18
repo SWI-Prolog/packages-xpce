@@ -57,24 +57,11 @@ Run with:
 
 :- set_prolog_flag('SDL_VIDEODRIVER', dummy).
 
-:- use_module(library(filesex), [directory_file_path/3,
-                                  delete_directory_and_contents/1,
-                                  directory_member/3]).
-
-%   Loading the debugger migrates the settings of an old
-%   config('Tracer.cnf') to the user's Defaults file and renames it.
-%   Use an empty file of our own, so the tests neither depend on nor
-%   change the settings of the user.
-
-sandbox_tracer_config :-
-    tmp_file(tracer_config, Dir),
-    make_directory(Dir),
-    directory_file_path(Dir, 'Tracer.cnf', File),
-    setup_call_cleanup(open(File, write, Out), true, close(Out)),
-    asserta(user:file_search_path(config, Dir)),
-    at_halt(delete_directory_and_contents(Dir)).
-
-:- initialization(sandbox_tracer_config, now).
+:- use_module(library(filesex),
+              [ directory_file_path/3,
+                delete_directory_and_contents/1,
+                directory_member/3
+              ]).
 
 %   Opening PceEmacs and the IDE windows writes the bookmarks, window
 %   arrangements and geometry to the user's xpce configuration.  Use a
@@ -82,6 +69,10 @@ sandbox_tracer_config :-
 
 :- use_module(xpce_test_sandbox).
 :- initialization(sandbox_app_config(_), now).
+
+%   Loading library(trace/trace) below already migrates config('Tracer.cnf').
+
+:- initialization(sandbox_tracer_config(_), now).
 
 :- use_module(library(pce)).
 :- initialization(remove_sandbox_at_exit, now).
@@ -102,7 +93,6 @@ sandbox_tracer_config :-
 :- use_module(library(trace/trace), []).   % loads trace/gui, which does
                                           % not survive a use_module of
                                           % its own
-:- use_module(library(apply), [maplist/3]).
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2, member_chain/2]).
@@ -116,11 +106,19 @@ sandbox_tracer_config :-
 
 pane_layouts:arrangements_file(File) :-
     current_prolog_flag(tmp_dir, Tmp),
-    atom_concat(Tmp, '/test_tool_panes_store', File).
+    current_prolog_flag(pid, PID),
+    atomic_list_concat([Tmp, '/test_tool_panes_store_', PID], File).
+
 :- use_module(library(lists), [member/2]).
 :- use_module(library(terms), [mapsubterms/3]).
 
 test_tool_panes :-
+    setup_call_cleanup(
+        sandbox_tracer_config(Ctx),
+        test_tool_panes_,
+        cleanup_tracer_config(Ctx)).
+
+test_tool_panes_ :-
     run_tests([ tool_panes,
                 navigator_pane,
                 debug_monitor_pane,
