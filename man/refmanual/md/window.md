@@ -50,6 +50,9 @@ kinds of windows:
 - window.subpixel_events: bool = @off
     Default for `window <->subpixel_events`.
 
+- window.smooth_scroll: bool = @off
+    Default for `window <->smooth_scroll`.
+
 
 ## Instance variables {#class-window-instvars}
 
@@ -245,6 +248,20 @@ kinds of windows:
     variable `window.subpixel_events`.
 
     @see event<-position
+
+- window<->smooth_scroll: bool
+    If @on, every scroll step of a trackpad or high resolution wheel
+    over this window generates a wheel or horizontal_wheel event.  The
+    `event <-rotation` of such an event may be a fraction of a notch
+    (15).  If @off (default), steps are added up and an event is
+    generated for each whole notch.  The built-in handlers add up the
+    fractions as well: the window scrolls in whole pixels, an editor
+    or list_browser in whole lines.  Code that handles wheel events
+    itself should do the same, or use the precise `event <-dy` and
+    `event <-dx`.  The default comes from the class variable
+    `window.smooth_scroll`.
+
+    @see class wheel_data
 
 - window-tile: tile*
     Tile object associated with this window.  The associated tile

@@ -10,6 +10,7 @@ COMMON(status)	makeClassConnectGesture(Class class);
 COMMON(void)	considerLocStillEvent(void);
 COMMON(void)	freePointerStateDevice(InputDevice d);
 COMMON(InputDevice) lastPointerDevice(void);
+COMMON(double)	wheelStepsEvent(EventObj ev, Any rec, double unit);
 COMMON(void)	setFrameEvent(EventObj ev, FrameObj fr);
 COMMON(PceWindow) WindowOfLastEvent(void);
 COMMON(void)	unlinkedWindowEvent(Any sw);
@@ -73,6 +74,7 @@ COMMON(Chain)	getInputDevicesDisplay(DisplayObj d);
 COMMON(status)	makeClassInputDevice(Class class);
 COMMON(status)	makeClassEventDetail(Class class);
 COMMON(status)	makeClassDropData(Class class);
+COMMON(status)	makeClassWheelData(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/evt/modifier.c */
 COMMON(status)	makeClassModifier(Class class);

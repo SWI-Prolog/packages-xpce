@@ -209,6 +209,9 @@ static struct class_definition classdefs[] =
   { NAME_dropData, NAME_eventDetail, makeClassDropData,
     &ClassDropData, "Data of a drop_* event" },
 
+  { NAME_wheelData, NAME_eventDetail, makeClassWheelData,
+    &ClassWheelData, "Precise scroll data of a wheel event" },
+
   { NAME_event, NAME_object, makeClassEvent,
     &ClassEvent, "PCE's notion of a user event" },
 

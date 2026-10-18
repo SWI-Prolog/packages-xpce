@@ -1974,6 +1974,11 @@ that define the visual consists-of hierarchy as shown by the
 `visual ->destroy' to ensure destruction of a sub-tree of the
 visual consists-of hierarchy.
 
+#class wheel_data "wheel_data(dx, dy, flipped)"
+The `event <-detail' of the wheel events, holding the precise scroll
+distance in both directions as reported by trackpads.  The event
+delegates to it, so `event <-dx' and `event <-dy' give the distance.
+
 #class when "when(condition, then, else)"
 Class \class{when} realises a function version of \class{if}. It
 evaluates the {\em condition} and then returns the return-value of

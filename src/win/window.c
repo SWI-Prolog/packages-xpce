@@ -38,6 +38,7 @@
 #include <h/text.h>
 #include <h/unix.h>
 #include <stdbool.h>
+#include <math.h>
 
 static status	uncreateWindow(PceWindow sw);
 static status   tileWindow(PceWindow sw, TileObj t);
@@ -1878,7 +1879,7 @@ scrollHorizontalWindow(PceWindow sw,
 
     scrollWindow(sw, toInt(dir == NAME_forwards ? d : -d), DEFAULT, OFF, ON);
   } else if ( unit == NAME_line )
-  { int d = 20 * valInt(amount);
+  { int d = (int)lround(20 * valNum(amount));
 
     scrollWindow(sw, toInt(dir == NAME_forwards ? d : -d), DEFAULT, OFF, ON);
   }
@@ -1908,8 +1909,8 @@ scrollVerticalWindow(PceWindow sw,
     int d = (valInt(a->h) * valInt(amount)) / 1000;
 
     scrollWindow(sw, DEFAULT, toInt(dir == NAME_forwards ? d : -d), ON, OFF);
-  } else if ( unit == NAME_line )
-  { int d = 20 * valInt(amount);
+  } else if ( unit == NAME_line )	/* fractional amount: smooth_scroll */
+  { int d = (int)lround(20 * valNum(amount));
 
     scrollWindow(sw, DEFAULT, toInt(dir == NAME_forwards ? d : -d), ON, OFF);
   }
@@ -2835,6 +2836,8 @@ static vardecl var_window[] =
      NAME_scroll, "If @on, clamp scrolling to <-bounding_box"),
   IV(NAME_subpixelEvents, "bool", IV_BOTH,
      NAME_event, "If @on, event positions in this window keep fractions"),
+  IV(NAME_smoothScroll, "bool", IV_BOTH,
+     NAME_event, "If @on, wheel events report fractions of a notch"),
   SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundWindow,
      NAME_appearance, "Background colour or pattern"),
   IV(NAME_hasPointer, "bool", IV_BOTH,
@@ -3015,7 +3018,9 @@ static classvardecl rc_window[] =
   RC(NAME_selectionFeedback, NULL,            "colour",                      NULL),
   RC(NAME_restrictScroll,    "bool",          "@off",                        NULL),
   RC(NAME_subpixelEvents,    "bool",          "@off",
-     "If @on, event positions in this window keep fractions")
+     "If @on, event positions in this window keep fractions"),
+  RC(NAME_smoothScroll,      "bool",          "@off",
+     "If @on, wheel events report fractions of a notch")
 };
 
 /* Class Declaration */

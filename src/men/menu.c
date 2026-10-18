@@ -1512,7 +1512,11 @@ eventMenu(Menu m, EventObj ev)
     { Int rot = ev->rotation;
 
       if ( notNil(rot) )
-      { if ( nextMenu(m, valInt(rot) < 0 ? NAME_up : NAME_down) )
+      { double notches = wheelStepsEvent(ev, m, 1.0);
+
+	if ( notches == 0.0 )		/* smooth_scroll: a fraction */
+	  succeed;
+	if ( nextMenu(m, notches < 0 ? NAME_up : NAME_down) )
 	{ if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
 	    forwardMenu(m, m->message, ev);
 	  succeed;

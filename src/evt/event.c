@@ -1176,6 +1176,54 @@ scroll_wheel(Any rec, Name selector, Name dir, Name unit, Int count)
 }
 
 
+/* Wheel events in a window with <-smooth_scroll @on report fractions
+ * of a notch.  Code that acts in whole steps, e.g., lines, calls this
+ * function, which adds the rotation of `ev` to what is left from the
+ * previous wheel events on `rec` in the same direction and returns the
+ * whole steps of `unit` notches.  A rotation of whole notches is
+ * returned as is.  `unit` must divide 1.
+ */
+
+double
+wheelStepsEvent(EventObj ev, Any rec, double unit)
+{ static Any    last_rec = NULL;	/* only compared */
+  static Name   last_id  = NULL;
+  static double residue  = 0.0;
+  double n = valNum(ev->rotation)/15.0;	/* notches */
+
+  if ( n == trunc(n) )
+    return n;
+
+  if ( rec != last_rec || ev->id != last_id ||
+       (residue != 0.0 && (residue > 0.0) != (n > 0.0)) )
+  { last_rec = rec;
+    last_id  = ev->id;
+    residue  = 0.0;
+  }
+
+  residue += n;
+  double steps = trunc(residue/unit + 1e-9*(residue > 0 ? 1 : -1))*unit;
+  residue -= steps;
+
+  return steps;
+}
+
+
+/* True if `rec` scrolls using the methods of class window, which
+ * scroll in pixels (see scrollVerticalWindow()).
+ */
+
+static bool
+scrolls_in_pixels(Any rec, Name selector)
+{ if ( !instanceOfObject(rec, ClassWindow) )
+    return false;
+
+  SendMethod m = getSendMethodClass(classOfObject(rec), selector);
+
+  return m && m->context == ClassWindow;
+}
+
+
 /* Map a wheel event on rec.  If `horizontal` is true, a `wheel` event
  * scrolls horizontally, e.g., if it is on a horizontal scroll_bar.
  */
@@ -1189,11 +1237,20 @@ mapWheelMouseEventAs(EventObj ev, Any rec, bool horizontal)
 
   if ( isNil(ev->rotation) )
     fail;				/* Error? */
-  intptr_t rot = valInt(ev->rotation);
-  Int count = toInt((labs(rot)*3)/15);
-
   if ( isDefault(rec) )
     rec = ev->receiver;
+
+  /* A notch is 3 lines.  If the receiver scrolls in pixels, a line is 20
+     pixels and a smooth wheel event scrolls by whole pixels. */
+  Name sel = ( ev->id == NAME_horizontalWheel || horizontal ||
+	       (valInt(ev->buttons) & BUTTON_shift)
+	       ? NAME_scrollHorizontal : NAME_scrollVertical );
+  double unit = scrolls_in_pixels(rec, sel) ? 1.0/60.0 : 1.0/3.0;
+  double notches = wheelStepsEvent(ev, rec, unit);
+  if ( notches == 0.0 )
+    succeed;				/* a fraction of a line */
+  int rot = notches > 0 ? 1 : -1;
+  Int count = toNum(fabs(notches)*3);
 
   DEBUG(NAME_wheel,
 	Cprintf("mapWheelMouseEvent() on %s, id=%s, rot=%s\n",
@@ -1262,7 +1319,7 @@ static vardecl var_event[] =
      NAME_position, "X-coordinate, relative to window; may be fractional"),
   IV(NAME_y, "pixels=num", IV_GET,
      NAME_position, "Y-coordinate, relative to window; may be fractional"),
-  IV(NAME_rotation, "degrees=int*", IV_GET,
+  IV(NAME_rotation, "degrees=num*", IV_GET,
      NAME_classify, "`wheel' and `horizontal_wheel' events: rotation, 15 per notch"),
   IV(NAME_device, "input_device", IV_GET,
      NAME_context, "Device that generated the event"),

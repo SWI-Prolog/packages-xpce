@@ -160,6 +160,14 @@ test(event_methods_first, [X-Id == 10-drop_file]) :-
     drop_event(drop_file, drop_data(path := x), E),
     get(E, x, X),
     get(E, id, Id).
+test(wheel_data, [DX-DY-F == 0.25-(-1.5)-(@off)]) :-
+    drop_event(wheel, wheel_data(0.25, -1.5), E),
+    get(E, dx, DX),
+    get(E, dy, DY),
+    get(E, flipped, F).
+test(wheel_flipped, F == @on) :-
+    drop_event(wheel, wheel_data(0, 1, @on), E),
+    get(E, flipped, F).
 
 :- end_tests(event_detail).
 

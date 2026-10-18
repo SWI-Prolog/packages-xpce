@@ -294,3 +294,62 @@ makeClassDropData(Class class)
 
   succeed;
 }
+
+
+		 /*******************************
+		 *	     WHEEL DATA		*
+		 *******************************/
+
+/* Data of the wheel and horizontal_wheel events.  Unlike
+ * event<-rotation, which reports whole notches in the dominant
+ * direction, this holds the precise scroll distance of both directions
+ * since the previous wheel event, as reported by trackpads.
+ */
+
+static status
+initialiseWheelData(WheelData wd, Int dx, Int dy, BoolObj flipped)
+{ assign(wd, dx,      dx);
+  assign(wd, dy,      dy);
+  assign(wd, flipped, isDefault(flipped) ? OFF : flipped);
+
+  succeed;
+}
+
+
+/* Type declarations */
+
+static char *T_initialiseWheelData[] =
+        { "dx=num", "dy=num", "flipped=[bool]" };
+
+/* Instance Variables */
+
+static vardecl var_wheel_data[] =
+{ IV(NAME_dx, "num", IV_GET,
+     NAME_scroll, "Horizontal scroll in notches; positive is to the right"),
+  IV(NAME_dy, "num", IV_GET,
+     NAME_scroll, "Vertical scroll in notches; positive is up"),
+  IV(NAME_flipped, "bool", IV_GET,
+     NAME_scroll, "@on if the system uses natural scrolling")
+};
+
+/* Send Methods */
+
+static senddecl send_wheel_data[] =
+{ SM(NAME_initialise, 3, T_initialiseWheelData, initialiseWheelData,
+     DEFAULT, "Create from dx, dy and flipped")
+};
+
+/* Class Declaration */
+
+static Name wheel_data_termnames[] = { NAME_dx, NAME_dy, NAME_flipped };
+
+ClassDecl(wheel_data_decls,
+          var_wheel_data, send_wheel_data, NULL, NULL,
+          3, wheel_data_termnames);
+
+status
+makeClassWheelData(Class class)
+{ declareClass(class, &wheel_data_decls);
+
+  succeed;
+}

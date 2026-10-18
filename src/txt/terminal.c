@@ -724,7 +724,9 @@ clickedLinkTerminalImage(TerminalImage ti, Name href)
 
 /** How far the wheel turned, in notches.  Negative is towards the
  * user, i.e. forwards through the text.  Fails on an event that
- * carries no rotation, which is not a wheel event at all.
+ * carries no rotation, which is not a wheel event at all.  In a window
+ * with smooth_scroll, a wheel event may turn a fraction of a notch.
+ * These add up to whole notches, so `*notches` may be 0.
  */
 
 static bool
@@ -733,6 +735,11 @@ rlc_wheel_notches(EventObj ev, int *notches)
 
   if ( isNil(rot) )
     return false;
+
+  if ( valNum(rot) != (double)valInt(rot) )
+  { *notches = (int)wheelStepsEvent(ev, ev->receiver, 1.0);
+    return true;
+  }
 
   int deg = valInt(rot);		/* a notch is 15 degrees */
   int n   = deg/15;

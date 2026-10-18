@@ -763,6 +763,7 @@ End;
   BoolObj	sensitive;		/* Sensitive to events */ \
   BoolObj	restrict_scroll;	/* Clamp scroll to <-bounding_box */ \
   BoolObj	subpixel_events;	/* Event positions keep fractions */ \
+  BoolObj	smooth_scroll;		/* Wheel events for every step */ \
   Any		background;		/* Background colour of the window */ \
   BoolObj	has_pointer;		/* We own the pointer */ \
   Any		selection_feedback;	/* Feedback for selection */ \
@@ -992,6 +993,12 @@ NewClass(input_device)
 End;
 
 NewClass(event_detail)
+End;
+
+NewClass(wheel_data)
+  Int		dx;			/* Horizontal scroll (notches) */
+  Int		dy;			/* Vertical scroll (notches) */
+  BoolObj	flipped;		/* Natural scrolling */
 End;
 
 NewClass(drop_data)

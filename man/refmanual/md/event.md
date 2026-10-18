@@ -119,6 +119,13 @@ example-- type _3_ into _\C-c_.
     is positive to the right.  If a trackpad scrolls diagonally, the
     event reports the dominant direction.
 
+    The <-detail of both events is a wheel_data object that holds the
+    precise scroll distance in both directions, so a handler may use
+    `get(Ev, dx, DX)` and `get(Ev, dy, DY)` for smooth scrolling.
+
+    In a window with `window <->smooth_scroll` @on, the <-rotation may
+    be a fraction of a notch.  See there.
+
     The wheel event is handled by class window, class editor,
     class list_browser and class scroll_bar.  The wheel scrolls
     vertically, a page if Control is held down.  As usual, the wheel

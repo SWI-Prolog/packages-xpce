@@ -247,6 +247,7 @@ scope('C.variable', basic).
 scope('C.vector', basic).
 scope('C.view', basic).
 scope('C.visual', basic).
+scope('C.wheel_data', basic).
 scope('C.when', basic).
 scope('C.while', basic).
 scope('C.window', basic).

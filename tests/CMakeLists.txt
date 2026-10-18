@@ -67,6 +67,7 @@ test_libs(emacs_split          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(event_clone          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(subpixel_events      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(input_device         OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(smooth_scroll        OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(prolog_mode          OPTIONS ${XPCE_TEST_OPTIONS})
 if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -155,6 +156,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:event_clone
                      xpce:subpixel_events
                      xpce:input_device
+                     xpce:smooth_scroll
                      xpce:prolog_mode
                      xpce:no_display
                      xpce:display_function

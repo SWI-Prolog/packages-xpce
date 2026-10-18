@@ -341,6 +341,8 @@ typedef struct sdl_pointer
   SDL_WindowID	tracking_wid;		/* SDL window of the down */
   Uint8		down_button;		/* button of tracking_wid */
   Any		pointer_window;		/* Window holding the pointer */
+  float		wheel_dx;		/* scroll since last wheel event */
+  float		wheel_dy;
 } sdl_pointer;
 
 /* Records are allocated one by one, so a record does not move when
@@ -685,6 +687,46 @@ redirect_to_tracking_frame(SDL_WindowID *wid, SDL_WindowID tracking_wid,
   *wid = tracking_wid;
 }
 
+/* Complete a wheel event for `window'.  `*rotation' holds the whole
+   notches SDL reports, or is NULL.  If `window' has <-smooth_scroll
+   @on, every SDL wheel event is delivered with the rotation and detail
+   of this event alone.  Otherwise we only deliver whole notches, and
+   the detail holds the precise scrolling since the last delivered
+   wheel event.  False if there is no event to deliver.
+*/
+
+static bool
+wheel_event(SDL_Event *event, sdl_pointer *sp, Any window,
+	    Any *name, Int *rotation, Any *detail)
+{ BoolObj flipped = ( event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED
+		      ? ON : OFF );
+
+  if ( instanceOfObject(window, ClassWindow) &&
+       ((PceWindow)window)->smooth_scroll == ON )
+  { float px = event->wheel.x, py = event->wheel.y;
+
+    if ( py != 0.0f && fabsf(py) >= fabsf(px) )
+    { *name     = NAME_wheel;
+      *rotation = toNum(py*15.0);
+    } else if ( px != 0.0f )
+    { *name     = NAME_horizontalWheel;
+      *rotation = toNum(px*15.0);
+    } else
+      return false;
+
+    *detail = answerObject(ClassWheelData, toNum(px), toNum(py), flipped, EAV);
+  } else
+  { if ( !*rotation )
+      return false;			/* not a whole notch */
+    *detail = answerObject(ClassWheelData,
+			   toNum(sp->wheel_dx), toNum(sp->wheel_dy), flipped,
+			   EAV);
+  }
+  sp->wheel_dx = sp->wheel_dy = 0.0f;
+
+  return true;
+}
+
 /* A motion event shows the button pressed in `sp->tracking_wid' is no
    longer held, but we never saw it going up.  This may happen if it is
    released outside our windows.  Turn the motion into the lost up-event
@@ -817,6 +859,10 @@ CtoEvent(SDL_Event *event)
     { static int last_time = 0;
       wid  = event->wheel.windowID;
       time = event->wheel.timestamp/1000000;
+      fx   = event->wheel.mouse_x;
+      fy   = event->wheel.mouse_y;
+      sp->wheel_dx += event->wheel.x;	/* see the detail below */
+      sp->wheel_dy += event->wheel.y;
       int dx = 0, dy = 0;
 #if SDL_VERSION_ATLEAST(3, 2, 12)
       dx = event->wheel.integer_x;
@@ -842,7 +888,9 @@ CtoEvent(SDL_Event *event)
 		    event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED
 		    ? " (flipped)" : ""));
       /* An xpce event scrolls in one direction.  If a trackpad scrolls
-	 diagonally, we use the dominant direction. */
+	 diagonally, we use the dominant direction.  Whether we deliver
+	 an event that is not a whole notch depends on the window.  See
+	 smooth_wheel_event(). */
       if ( dy && abs(dy) >= abs(dx) )
       { name = NAME_wheel;
 	rotation = toInt(dy*15);
@@ -850,7 +898,7 @@ CtoEvent(SDL_Event *event)
       { name = NAME_horizontalWheel;
 	rotation = toInt(dx*15);
       } else
-	fail;
+	name = NAME_wheel;		/* a fraction of a notch */
       last_time = time;
       break;
     }
@@ -1119,6 +1167,10 @@ CtoEvent(SDL_Event *event)
       addCodeReference(sp->tracking_window);
     }
   }
+
+  if ( event->type == SDL_EVENT_MOUSE_WHEEL &&
+       !wheel_event(event, sp, window, &name, &rotation, &detail) )
+    fail;
 
   if ( event->type == SDL_EVENT_DROP_POSITION )
     update_drop_tracking_window(window, x, y);
