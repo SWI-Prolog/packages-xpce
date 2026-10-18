@@ -746,7 +746,7 @@ goto_url(MHC, URLSpec:name, _Dir:[{forward,backward}]) :->
     ),
     send(MHC, add_history, AbsURL).
 
-%!  ->goto_history(+Location) is det.
+%!  ->goto_history
 %
 %   Invoked by =|library(pce_history)|='s =|->forward|= /
 %   =|->backward|= on the history object during navigation. The
