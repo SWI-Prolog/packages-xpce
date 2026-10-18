@@ -1786,6 +1786,77 @@ dispatch_sdl_event(SDL_Event *ev)
 
 
 		 /*******************************
+		 *	   POLLING KEYS		*
+		 *******************************/
+
+/* Is a key held down?  This is for applications such as games that
+ * poll the keyboard, as xpce has no events for releasing a key.  `key`
+ * is a name of a key event (cursor_left, RET, f1, ...), a single
+ * character or the name SDL uses for the key (e.g., `Left Shift`).
+ * Returns false if the key is unknown.
+ */
+
+static const struct
+{ const char   *name;
+  SDL_Keycode	key;
+} named_keys[] =
+{ { "RET",	   SDLK_RETURN },
+  { "ESC",	   SDLK_ESCAPE },
+  { "TAB",	   SDLK_TAB },
+  { "BS",	   SDLK_BACKSPACE },
+  { "DEL",	   SDLK_DELETE },
+  { "pause",	   SDLK_PAUSE },
+  { "insert",	   SDLK_INSERT },
+  { "cursor_home", SDLK_HOME },
+  { "end",	   SDLK_END },
+  { "page_up",	   SDLK_PAGEUP },
+  { "page_down",   SDLK_PAGEDOWN },
+  { "cursor_left", SDLK_LEFT },
+  { "cursor_right",SDLK_RIGHT },
+  { "cursor_up",   SDLK_UP },
+  { "cursor_down", SDLK_DOWN },
+  { "space",	   SDLK_SPACE },
+  { NULL,	   0 }
+};
+
+static SDL_Scancode
+key_scancode(const char *name)
+{ for(int i=0; named_keys[i].name; i++)
+  { if ( streq(named_keys[i].name, name) )
+      return SDL_GetScancodeFromKey(named_keys[i].key, NULL);
+  }
+
+  int fn;
+  char c;
+  if ( sscanf(name, "f%d%c", &fn, &c) == 1 && fn >= 1 && fn <= 24 )
+    return fn <= 12 ? SDL_SCANCODE_F1 + (fn-1)
+		    : SDL_SCANCODE_F13 + (fn-13);
+
+  if ( name[0] && !name[1] )		/* a character: use the layout */
+  { SDL_Keycode k = (SDL_Keycode)tolower((unsigned char)name[0]);
+
+    return SDL_GetScancodeFromKey(k, NULL);
+  }
+
+  return SDL_GetScancodeFromName(name); /* SDL_SCANCODE_UNKNOWN if none */
+}
+
+bool
+ws_key_down(Name key, bool *down)
+{ SDL_Scancode sc = key_scancode(strName(key));
+  int count = 0;
+  const bool *state;
+
+  if ( sc == SDL_SCANCODE_UNKNOWN )
+    return false;
+  state = SDL_GetKeyboardState(&count);
+  *down = (int)sc < count && state[sc];
+
+  return true;
+}
+
+
+		 /*******************************
 		 *	  TESTING SUPPORT	*
 		 *******************************/
 

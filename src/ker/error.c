@@ -289,6 +289,8 @@ static const error_def errors[] =
     "%N: Cannot create: %s" },
   { NAME_notSupported,		EF_REPORT,
     "%N: Not supported: %s" },
+  { NAME_unknownKey,		EF_REPORT,
+    "%N: Unknown key: %s" },
   { NAME_seekFile,		EF_REPORT,
     "%N: Cannot seek to %d from %s: %s" },
   { NAME_cannotFindFile,	EF_REPORT,

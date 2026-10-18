@@ -209,6 +209,9 @@ static struct class_definition classdefs[] =
   { NAME_gamepad, NAME_inputDevice, makeClassGamepad,
     &ClassGamepad, "Game controller" },
 
+  { NAME_keyboard, NAME_inputDevice, makeClassKeyboard,
+    &ClassKeyboard, "The keyboard; can be polled" },
+
   { NAME_sound, NAME_object, makeClassSound,
     &ClassSound, "Audio that can be played" },
 

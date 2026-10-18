@@ -1038,6 +1038,11 @@ the classes \class{text}, \class{text_item}, \class{editor} and
 \idx{keyboard-accelerators}, though `menu_item <->accelerator' is
 generally more suitable for this purpose.
 
+#class keyboard "keyboard(kind, id, name)"
+The \class{input_device} @keyboard_device.  Keyboard events refer to it
+and `keyboard <-key_down' tells whether a key is held down, which games
+use to poll the keyboard.
+
 #class label "label(name, selection, font)"
 A \class{label} is a controller used to display read-only text or
 \class{image}. Labels can handle ->report messages. See \secref{report}.

@@ -122,6 +122,14 @@ test(clone_shares_device, D == Pen) :-
     get(E, clone, E2),
     device(E2, D),
     event(loc_move, P, @mouse_device, _).
+test(keyboard_class, true) :-
+    send(@keyboard_device, instance_of, keyboard).
+test(key_names, Vs == [@off, @off, @off, @off, @off]) :-
+    findall(V, ( member(K, [cursor_left, a, space, 'Left Shift', f5]),
+                 get(@keyboard_device, key_down, K, V)
+               ), Vs).                  % no key is held during the test
+test(unknown_key, fail) :-
+    get(@keyboard_device, key_down, no_such_key, _).
 test(device_name, [N == pen]) :-
     new(Pen, input_device(pen)),
     get(Pen, name, N).

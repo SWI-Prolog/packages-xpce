@@ -1027,6 +1027,10 @@ NewClass(input_device)
   ABSTRACT_INPUT_DEVICE
 End;
 
+NewClass(keyboard)
+  ABSTRACT_INPUT_DEVICE
+End;
+
 NewClass(gamepad)
   ABSTRACT_INPUT_DEVICE
   WsRef		ws_ref;			/* SDL_Gamepad, NULL if removed */

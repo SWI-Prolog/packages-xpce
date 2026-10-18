@@ -79,6 +79,7 @@ COMMON(status)	makeClassPenState(Class class);
 COMMON(status)	makeClassTouchPoint(Class class);
 COMMON(status)	makeClassPinchData(Class class);
 COMMON(status)	makeClassGamepad(Class class);
+COMMON(status)	makeClassKeyboard(Class class);
 COMMON(status)	makeClassGamepadInput(Class class);
 COMMON(void)	removeInputDevice(InputDevice d);
 COMMON(Chain)	getGamepadsDisplay(DisplayObj d);

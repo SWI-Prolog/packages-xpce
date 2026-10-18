@@ -14,7 +14,12 @@ input from mouse input:
 	get(@event, device, Device),
 	get(Device, kind, pen)
 
+Devices that can be polled have their own subclass: @keyboard_device
+is a keyboard and gamepads are of class gamepad.
+
 @see event<-device
+@see class keyboard
+@see class gamepad
 @see display<-input_devices
 @see class event_detail
 

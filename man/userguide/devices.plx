@@ -246,7 +246,9 @@ Triggers (0..1)	& \const{left_trigger}, \const{right_trigger} \\
 \end{table}
 
 A game typically polls the state of the controller from a
-\class{timer} instead.  `gamepad <-button' and `gamepad <-axis' return
+\class{timer} instead.  The same applies to the keyboard: `keyboard
+<-key_down' tells whether a key is held down, e.g.,
+\exam{get(@keyboard_device, key_down, cursor_left, @on)}.  `gamepad <-button' and `gamepad <-axis' return
 the current state of a button or axis.  `gamepad ->rumble' makes the
 controller vibrate and `gamepad ->led' sets the colour of its light,
 if it has these.  The example below moves a box using the left stick

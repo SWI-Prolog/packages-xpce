@@ -90,8 +90,9 @@ findInputDevice(Name kind, intptr_t id, const char *name)
       return d;
   }
 
-  InputDevice d = newObject(kind == NAME_gamepad ? ClassGamepad
-						  : ClassInputDevice,
+  InputDevice d = newObject(kind == NAME_gamepad  ? ClassGamepad  :
+			    kind == NAME_keyboard ? ClassKeyboard :
+						    ClassInputDevice,
 			    kind, iid,
 			    name ? (Name)UTF8ToName(name) : (Name)DEFAULT,
 			    EAV);
@@ -190,7 +191,7 @@ makeClassInputDevice(Class class)
   InputDevices = globalObject(NAME_inputDevices, ClassChain, EAV);
   DEVICE_mouse = globalObject(NAME_mouseDevice, ClassInputDevice,
 			      NAME_mouse, ZERO, EAV);
-  DEVICE_keyboard = globalObject(NAME_keyboardDevice, ClassInputDevice,
+  DEVICE_keyboard = globalObject(NAME_keyboardDevice, ClassKeyboard,
 				 NAME_keyboard, ZERO, EAV);
   appendChain(InputDevices, DEVICE_mouse);
   appendChain(InputDevices, DEVICE_keyboard);
@@ -573,6 +574,49 @@ ClassDecl(pinch_data_decls,
 status
 makeClassPinchData(Class class)
 { declareClass(class, &pinch_data_decls);
+
+  succeed;
+}
+
+
+		 /*******************************
+		 *	      KEYBOARD		*
+		 *******************************/
+
+/* The keyboard, @keyboard_device.  Keyboard events report it as their
+ * <-device.  It can be polled for keys that are held down, which games
+ * need as there are no events for releasing a key.  The window system
+ * combines all keyboards, so there is one keyboard object.
+ */
+
+static BoolObj
+getKeyDownKeyboard(Keyboard kb, Name key)
+{ bool down;
+
+  if ( ws_key_down(key, &down) )
+    answer(down ? ON : OFF);
+
+  errorPce(kb, NAME_unknownKey, key);
+  fail;
+}
+
+
+/* Get Methods */
+
+static getdecl get_keyboard[] =
+{ GM(NAME_keyDown, 1, "bool", "key=name", getKeyDownKeyboard,
+     NAME_poll, "@on if the key is held down")
+};
+
+/* Class Declaration */
+
+ClassDecl(keyboard_decls,
+          NULL, NULL, get_keyboard, NULL,
+          3, input_device_termnames);
+
+status
+makeClassKeyboard(Class class)
+{ declareClass(class, &keyboard_decls);
 
   succeed;
 }
