@@ -41,6 +41,8 @@
 :- use_module(library(persistent_frame)).
 :- autoload(library(process), [process_which/2]).
 :- autoload(library(pce_emacs), [emacs/1]).
+:- autoload(library(apply), [include/3]).
+:- autoload(library(lists), [member/2]).
 
 /** <module> XPCE demo starter
 
@@ -55,7 +57,7 @@ list of available demo's.
 initialise(F, M:man_manual) :->
     "Create tool for manual"::
     send_super(F, initialise, M, 'XPCE Demo Programs'),
-    send(F, append, new(B, browser(@default, size(60,10)))),
+    send(F, append, new(B, browser(@default, size(80,25)))),
     send(B, confirm_done, @off),
     get(B?font, width, "Drag-and-drop File   ", LeftWidth),
     send(B, tab_stops, vector(LeftWidth)),
@@ -71,15 +73,38 @@ initialise(F, M:man_manual) :->
     send(B, style, title, style(font := boldlarge)).
 
 fill_browser(_F, B:browser) :->
-    forall(demo(Name, Summary, _, _),
-           send(B, append, dict_item(Name,
-                                     string('%s\t%s', Name, Summary)))),
+    forall(demo_group(Title, Names),
+           ( include(available_demo, Names, Available),
+             Available \== []
+           ->  send(B, append, dict_item(Title, style := title)),
+               forall(member(Name, Available),
+                      append_demo(B, Name))
+           ;   true
+           )),
+    findall(Name, ( demo(Name, _, _, _),
+                    \+ ( demo_group(_, Names), memberchk(Name, Names) )
+                  ), Others0),
+    sort(Others0, Others),
+    (   Others \== []
+    ->  send(B, append, dict_item('Other demos', style := title)),
+        forall(member(Name, Others), append_demo(B, Name))
+    ;   true
+    ),
     send(B, append,
          dict_item('💙 Contributions 💙',
                    style := title)),
     forall(contribution(Name, Summary, _Author, _, _),
            send(B, append, dict_item(Name,
                                      string('%s\t%s', Name, Summary)))).
+
+available_demo(Name) :-
+    demo(Name, _, _, _),
+    !.
+
+append_demo(B, Name) :-
+    demo(Name, Summary, _, _),
+    !,
+    send(B, append, dict_item(Name, string('%s\t%s', Name, Summary))).
 
 open_demo(_F, Browser:browser) :->
     "Open a demo"::
@@ -131,6 +156,32 @@ locate_file(Base, File) :-
                 /********************************
                 *             DEMO'S            *
                 ********************************/
+
+%!  demo_group(?Title, ?Demos) is nondet.
+%
+%   The demo browser shows the demos in groups, in this order.  Demos
+%   that are not in a group are shown under "Other demos".
+
+demo_group('Applications and tools',
+           [ 'PceDraw', 'ImageViewer', 'FontViewer', 'XMLView',
+             'GraphViewer', xdot, 'Random Terms', 'London Tube',
+             'Ispell', 'ChessTool'
+           ]).
+demo_group('Dialogs and windows',
+           [ 'Dialog gallery', 'Tabs and splitting', 'Drag-and-drop File',
+             'Cursors', 'EventHierarchy'
+           ]).
+demo_group('Graphics',
+           [ 'Path gallery', 'Paint gallery', 'Text gallery', 'Arc gallery',
+             'Chart gallery', 'Canvas', 'Transform', 'Opacity', 'Colours',
+             'HSV Colours', 'Constraints'
+           ]).
+demo_group('Media and devices',
+           [ 'Camera', 'Sound'
+           ]).
+demo_group('Games and animation',
+           [ 'Asteroids', 'Kangaroo', 'Juggler'
+           ]).
 
 demo('PceDraw',                         % Name
      'Drawing tool',                    % Summary
