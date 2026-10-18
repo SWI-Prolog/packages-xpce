@@ -296,6 +296,20 @@ test(erase_does_not_outlive_the_line,
     tail_colours(TI, Reused),
     assertion(Reused == Plain).
 
+% An erase that starts beyond the text of the line must still take the
+% background colour.  Dialogs such as raspi-config (whiptail) fill the
+% screen with one colour and draw the shadow of their window by moving
+% right of the start of an empty row and erasing it in black.  The
+% shadow came out in the default background.
+
+test(erase_beyond_text_takes_background,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    bg(Bg),
+    atomic_list_concat(['\e[44m\e[2J\e[H\e[K\e[1;2H', Bg, '\e[K\e[0m'],
+                       Seq),
+    send(TI, insert, Seq),
+    painted(TI).
+
 % The lines a scroll brings in are erased, and so take the background
 % colour as an erase does.  This is what xterm does.
 

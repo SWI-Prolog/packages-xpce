@@ -9153,9 +9153,13 @@ rlc_erase_line(RlcData b, int mode)
 
   switch(mode)
   { case 0:
-      /* If the caret sits beyond the text, the cells in between were
-	 never written and must keep the default background, which the
-	 single colour we record for the tail cannot express. */
+      /* If the caret sits beyond the text, the cells in between keep
+	 what they show: the background of an earlier erase or the
+	 default.  The single colour we record for the tail cannot
+	 express both, so we write out these cells if they differ. */
+      if ( b->caret_x > tl->size &&
+	   (tl->eol_erased || b->sgr_flags.bg != PAL_DEFAULT) )
+	tl = rlc_prepare_line(b, b->caret_y);
       bce = b->caret_x <= tl->size;
       if ( b->caret_x < tl->size )
 	tl->size = b->caret_x;
@@ -9342,19 +9346,26 @@ rlc_256_colour(RlcData b, bool fg, int n)
     b->sgr_flags.bg = idx;
 }
 
+/** Extend the current line with spaces up to the caret.  The cells it
+ * adds were never written, so they get what is painted to the right of
+ * the text: the background of an erase (see rlc_eol_flags()) or the
+ * default.
+ */
+
 static RlcTextLine
 rlc_prepare_line(RlcData b, int y)
 { RlcTextLine tl = &b->lines[b->caret_y];
+  text_flags pad = rlc_eol_flags(tl);
   text_char *tc;
 
+  pad.width = 1;
+  pad.link  = 0;			/* no href covers padding */
   rlc_unadjust_line(b, b->caret_y);
   while( tl->size < b->caret_x )
   { tc = &tl->text[tl->size++];
 
     tc->code  = ' ';
-    tc->flags = b->sgr_flags;
-    tc->flags.width = 1;
-    tc->flags.link = 0;			/* no href covers padding */
+    tc->flags = pad;
   }
 
   return tl;
