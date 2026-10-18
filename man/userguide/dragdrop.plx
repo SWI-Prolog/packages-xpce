@@ -87,8 +87,8 @@ drop sequence starts with a \const{drop_begin} event, followed by
 \const{drop_position} events while the user moves the pointer over the
 window, a \const{drop_file} or \const{drop_text} event for each dropped
 item and finally a \const{drop_complete} event.  The dropped file or
-text is available as the attribute \const{path} or \const{text} of the
-event.  The library \pllib{pce_drop_target} provides
+text is available as `event <-path' or `event <-text', which the event
+delegates to its \class{drop_data} <-detail.  The library \pllib{pce_drop_target} provides
 \predref{drop_target_event}{4} to handle this sequence from an ->event
 method.  It shows a hint while the user drags over the target and calls
 a predicate with the list of dropped files on completion.  See also the

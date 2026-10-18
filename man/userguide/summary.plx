@@ -630,6 +630,12 @@ displayed by the \tool{Visual Hierarchy} tool.  After the theme or
 system colours change, `display_manager ->colours_changed' notifies all
 frames and graphicals.
 
+#class drop_data "drop_data(path, text, source)"
+The `event <-detail' of the drop events that are generated when files
+or text are dropped on a window from another application.  The event
+delegates to it, so `event <-path' and `event <-text' give the dropped
+file or text.
+
 #class edit_text_gesture "edit_text_gesture(button, modifier)"
 Used internally to handle selection inside a \class{text} object. See
 also the library \pllib{pce_editable_text}.

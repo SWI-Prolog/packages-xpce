@@ -993,6 +993,12 @@ End;
 NewClass(event_detail)
 End;
 
+NewClass(drop_data)
+  Name		path;			/* Dropped file */
+  StringObj	text;			/* Dropped text */
+  Name		source;			/* Application that dropped */
+End;
+
 NewClass(eventobj)
   Any		frame;			/* Original frame */
   Any		window;			/* Targeted window */

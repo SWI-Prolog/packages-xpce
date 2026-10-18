@@ -667,8 +667,7 @@ CtoEvent(SDL_Event *event)
   SDL_MouseButtonFlags mouse_flags = 0;
   float fx, fy;
   Any name = NULL;
-  Name ctx_name = NULL;
-  Any ctx = NULL;
+  Any detail = NIL;			/* ev->detail */
   Int rotation = NULL;			/* wheel events */
   SDL_WindowID wid = 0;
   SDL_WindowID tracking_wid = 0;	/* frame of the down event */
@@ -862,14 +861,16 @@ CtoEvent(SDL_Event *event)
       fy   = event->drop.y;
       wid  = event->drop.windowID;
       time = event->drop.timestamp/1000000;
-      if ( event->drop.data )
-      { if ( event->type == SDL_EVENT_DROP_TEXT )
-	{ ctx_name = NAME_text;
-	  ctx     = CtoString(event->drop.data);
-	} else if ( event->type == SDL_EVENT_DROP_FILE )
-	{ ctx_name = NAME_path;
-	  ctx     = CtoName(event->drop.data);
-	}
+      { const char *data = event->drop.data;
+	Any path = DEFAULT, text = DEFAULT, source = DEFAULT;
+
+	if ( data && event->type == SDL_EVENT_DROP_TEXT )
+	  text = CtoString(data);
+	else if ( data && event->type == SDL_EVENT_DROP_FILE )
+	  path = CtoName(data);
+	if ( event->drop.source )
+	  source = CtoName(event->drop.source);
+	detail = answerObject(ClassDropData, path, text, source, EAV);
       }
       DEBUG(NAME_event,
 	    Cprintf("Drop event %s on SDL window-id=%u: %s\n",
@@ -1098,8 +1099,8 @@ CtoEvent(SDL_Event *event)
 
     if ( rotation )
       assign(ev, rotation, rotation);
-    if ( ctx_name )
-      attributeObject(ev, ctx_name, ctx);
+    if ( notNil(detail) )
+      assign(ev, detail, detail);
   } else
   { Cprintf("Failed to create event with id %s\n", pp(name));
   }

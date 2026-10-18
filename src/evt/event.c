@@ -1165,7 +1165,7 @@ static vardecl var_event[] =
   IV(NAME_device, "input_device", IV_GET,
      NAME_context, "Device that generated the event"),
   IV(NAME_detail, "event_detail*", IV_GET,
-     NAME_classify, "Device specific data, e.g., pen pressure"),
+     NAME_classify, "Device specific data; the event delegates to it"),
   IV(NAME_position, "point*", IV_NONE,
      NAME_position, "Last calculated position"),
   IV(NAME_time, "alien:Time", IV_NONE,
@@ -1259,6 +1259,7 @@ makeClassEvent(Class class)
   cloneStyleVariableClass(class, NAME_receiver, NAME_reference);
   cloneStyleVariableClass(class, NAME_window,   NAME_reference);
   cloneStyleVariableClass(class, NAME_device,   NAME_reference);
+  delegateClass(class, NAME_detail);	/* methods of the event_detail */
   realiseClass(ClassInputDevice);	/* @mouse_device, @keyboard_device */
   init_event_tree();
 
@@ -1386,9 +1387,9 @@ static struct namepair
   { NAME_obtainFocus,			NAME_focus },
 
   /* OS-level file / text drag-and-drop, delivered by the SDL backend
-   * via SDL_EVENT_DROP_*.  The drop_file / drop_text events carry the
-   * path / text payload as the `path' / `text' attribute on the
-   * event.  drop_begin / drop_complete bracket a drop sequence;
+   * via SDL_EVENT_DROP_*.  Their <-detail is a drop_data, so the event
+   * answers <-path (drop_file), <-text (drop_text) and <-source.
+   * drop_begin / drop_complete bracket a drop sequence;
    * drop_position is emitted while the user drags over the window.
    */
   { NAME_drop,				NAME_any },

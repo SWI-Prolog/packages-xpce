@@ -99,12 +99,12 @@ drop_target_event(Target, Ev, Hint, _) :-
 drop_target_event(Target, Ev, _, _) :-
     send(Ev, is_a, drop_file),
     !,
-    get(Ev, attribute, path, Path),
+    get(Ev, path, Path),
     drop_target_collect(Target, Path).
 drop_target_event(Target, Ev, _, _) :-
     send(Ev, is_a, drop_text),
     drop_text_is_file_list,
-    get(Ev, attribute, text, TextObj),
+    get(Ev, text, TextObj),
     get(TextObj, value, Text),
     drop_text_files(Text, Paths),
     !,

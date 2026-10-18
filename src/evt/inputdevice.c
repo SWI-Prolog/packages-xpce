@@ -171,8 +171,9 @@ makeClassInputDevice(Class class)
 		 *******************************/
 
 /* An event_detail holds the data that is specific for the kind of
- * event, e.g., the pressure of a pen.  This class only defines the
- * common super class.
+ * event, e.g., the pressure of a pen.  Class event delegates to its
+ * <-detail, so the methods of the detail are available on the event.
+ * This class only defines the common super class.
  */
 
 ClassDecl(event_detail_decls, NULL, NULL, NULL, NULL,
@@ -181,6 +182,102 @@ ClassDecl(event_detail_decls, NULL, NULL, NULL, NULL,
 status
 makeClassEventDetail(Class class)
 { declareClass(class, &event_detail_decls);
+
+  succeed;
+}
+
+
+		 /*******************************
+		 *	     DROP DATA		*
+		 *******************************/
+
+/* Data of the drop_* events: the dropped file or text and the
+ * application that sent it.  The getters fail if the drop does not
+ * provide the value, e.g., <-path for a drop_text event.
+ */
+
+static status
+initialiseDropData(DropData dd, Name path, StringObj text, Name source)
+{ assign(dd, path,   isDefault(path)   ? NIL : path);
+  assign(dd, text,   isDefault(text)   ? NIL : text);
+  assign(dd, source, isDefault(source) ? NIL : source);
+
+  succeed;
+}
+
+
+static Name
+getPathDropData(DropData dd)
+{ if ( notNil(dd->path) )
+    answer(dd->path);
+
+  fail;
+}
+
+
+static StringObj
+getTextDropData(DropData dd)
+{ if ( notNil(dd->text) )
+    answer(dd->text);
+
+  fail;
+}
+
+
+static Name
+getSourceDropData(DropData dd)
+{ if ( notNil(dd->source) )
+    answer(dd->source);
+
+  fail;
+}
+
+
+/* Type declarations */
+
+static char *T_initialiseDropData[] =
+        { "path=[name]", "text=[string]", "source=[name]" };
+
+/* Instance Variables */
+
+static vardecl var_drop_data[] =
+{ IV(NAME_path, "name*", IV_NONE,
+     NAME_drop, "Dropped file (drop_file)"),
+  IV(NAME_text, "string*", IV_NONE,
+     NAME_drop, "Dropped text (drop_text)"),
+  IV(NAME_source, "name*", IV_NONE,
+     NAME_drop, "Application that sent the drop")
+};
+
+/* Send Methods */
+
+static senddecl send_drop_data[] =
+{ SM(NAME_initialise, 3, T_initialiseDropData, initialiseDropData,
+     DEFAULT, "Create from path, text and source")
+};
+
+/* Get Methods */
+
+static getdecl get_drop_data[] =
+{ GM(NAME_path, 0, "name", NULL, getPathDropData,
+     NAME_drop, "Dropped file; fails if not a file drop"),
+  GM(NAME_text, 0, "string", NULL, getTextDropData,
+     NAME_drop, "Dropped text; fails if not a text drop"),
+  GM(NAME_source, 0, "name", NULL, getSourceDropData,
+     NAME_drop, "Application that sent the drop; fails if unknown")
+};
+
+/* Class Declaration */
+
+static Name drop_data_termnames[] = { NAME_path, NAME_text, NAME_source };
+
+ClassDecl(drop_data_decls,
+          var_drop_data, send_drop_data, get_drop_data, NULL,
+          3, drop_data_termnames);
+
+status
+makeClassDropData(Class class)
+{ declareClass(class, &drop_data_decls);
 
   succeed;
 }

@@ -70,6 +70,7 @@ COMMON(InputDevice) findInputDevice(Name kind, intptr_t id, const char *name);
 COMMON(Chain)	getInputDevicesDisplay(DisplayObj d);
 COMMON(status)	makeClassInputDevice(Class class);
 COMMON(status)	makeClassEventDetail(Class class);
+COMMON(status)	makeClassDropData(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/evt/modifier.c */
 COMMON(status)	makeClassModifier(Class class);

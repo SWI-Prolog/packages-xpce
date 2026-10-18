@@ -71,10 +71,14 @@ example-- type _3_ into _\C-c_.
     	triple-click	0xC0
 
 - event<-detail: event_detail*
-    Data that is specific to the device that generated the event, e.g.,
-    the pressure of a pen, or @nil.
+    Data that is specific to the kind of event, e.g., the dropped file
+    of a drop_file event or the pressure of a pen, or @nil.  The event
+    *delegates* to its detail: methods the event does not define are
+    executed on the detail.  For example, a drop_file event answers
+    `event<-path`.
 
     @see class event_detail
+    @see class drop_data
 
 - event<-device: input_device
     The device that generated the event.  This is @mouse_device for

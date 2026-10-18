@@ -79,17 +79,17 @@ add_log_handler(Target, Log, Event) :-
 %!  log_event(+LogView, +Target, +Event, +Tag) is det.
 %
 %   Append one line to LogView describing Event. For drop_file the
-%   line shows the path stored on the event's `path' attribute; for
-%   drop_text the `text' attribute. Position-bearing events also
-%   show the (x,y) coordinates relative to Target.
+%   line shows the event's <-path; for drop_text its <-text.
+%   Position-bearing events also show the (x,y) coordinates relative
+%   to Target.
 
 log_event(Log, _Target, Event, Tag) :-
     get(Event, x, X),
     get(Event, y, Y),
-    (   get(Event, attribute, path, Path)
-    ->  Payload = Path
-    ;   get(Event, attribute, text, Text)
-    ->  Payload = Text
+    (   send(Event, is_a, drop_file)
+    ->  get(Event, path, Payload)
+    ;   send(Event, is_a, drop_text)
+    ->  get(Event, text, Payload)
     ;   Payload = ''
     ),
     new(S, string('%s\t(%d, %d)\t%s\n', Tag, X, Y, Payload)),

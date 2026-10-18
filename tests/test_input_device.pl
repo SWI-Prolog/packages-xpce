@@ -40,6 +40,9 @@ Each event refers to the input_device that generated it.  Events that
 do not specify a device get @keyboard_device if they are keyboard
 events and the device of the last pointer event otherwise.
 
+An event delegates to its <-detail, so the methods of the detail are
+available on the event.
+
 Run with:
 
     swipl -g test_input_device -t halt \
@@ -54,7 +57,9 @@ setup_headless :-
 :- initialization(setup_headless, now).
 
 test_input_device :-
-    run_tests([ input_device ]).
+    run_tests([ input_device,
+                event_detail
+              ]).
 
 %!  event(+Id, +Window, ?Device, -Event) is det.
 %
@@ -118,3 +123,38 @@ test(device_name, [N == pen]) :-
     get(Pen, name, N).
 
 :- end_tests(input_device).
+
+%!  drop_event(+Id, +Detail, -Event) is det.
+%
+%   Create a drop event Id whose <-detail is Detail.
+
+drop_event(Id, Detail, E) :-
+    new(P, picture),
+    event(Id, P, @mouse_device, E),
+    send(E, slot, detail, Detail).
+
+:- begin_tests(event_detail).
+
+test(drop_file_path, Path == '/tmp/dropped.txt') :-
+    drop_event(drop_file, drop_data(path := '/tmp/dropped.txt'), E),
+    get(E, path, Path).
+test(drop_file_no_text, fail) :-
+    drop_event(drop_file, drop_data(path := '/tmp/dropped.txt'), E),
+    get(E, text, _).
+test(drop_text, Text == "hello") :-
+    drop_event(drop_text, drop_data(text := string(hello)), E),
+    get(E, text, Str),
+    get(Str, value, Value),
+    atom_string(Value, Text).
+test(source, [Source == nautilus]) :-
+    drop_event(drop_file, drop_data(path := x, source := nautilus), E),
+    get(E, source, Source).
+test(no_source, fail) :-
+    drop_event(drop_file, drop_data(path := x), E),
+    get(E, source, _).
+test(event_methods_first, [X-Id == 10-drop_file]) :-
+    drop_event(drop_file, drop_data(path := x), E),
+    get(E, x, X),
+    get(E, id, Id).
+
+:- end_tests(event_detail).

@@ -115,6 +115,7 @@ scope('C.dict_item', basic).
 scope('C.directory', basic).
 scope('C.display', basic).
 scope('C.display_manager', basic).
+scope('C.drop_data', basic).
 scope('C.edit_text_gesture', advanced).
 scope('C.editor', basic).
 scope('C.elevation', basic).
