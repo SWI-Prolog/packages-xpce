@@ -343,6 +343,19 @@ typedef struct sdl_pointer
   Any		pointer_window;		/* Window holding the pointer */
   float		wheel_dx;		/* scroll since last wheel event */
   float		wheel_dy;
+  float		last_x;			/* position of the last event */
+  float		last_y;
+  SDL_WindowID	last_wid;		/* window of last_x, last_y */
+					/* Pens */
+  SDL_PenInputFlags pen_state;		/* last reported state */
+  float		pen_axes[SDL_PEN_AXIS_COUNT]; /* last value of each axis */
+  float		pen_x;			/* last position */
+  float		pen_y;
+  SDL_WindowID	pen_wid;		/* window of pen_x, pen_y */
+					/* Touch screens */
+  int		fingers;		/* fingers on the screen */
+  bool		has_primary;		/* primary finger is down */
+  SDL_FingerID	primary;		/* finger for ms_left_* */
 } sdl_pointer;
 
 /* Records are allocated one by one, so a record does not move when
@@ -727,6 +740,90 @@ wheel_event(SDL_Event *event, sdl_pointer *sp, Any window,
   return true;
 }
 
+		 /*******************************
+		 *	       PENS		*
+		 *******************************/
+
+/* The tip of a pen is the left button.  The first and second button
+ * on its barrel are the right and middle button, as with most drawing
+ * programs.
+ */
+
+static int
+pen_button_to_mouse_button(Uint8 button)
+{ switch(button)
+  { case 1: return SDL_BUTTON_RIGHT;
+    case 2: return SDL_BUTTON_MIDDLE;
+    case 3: return SDL_BUTTON_X1;
+    case 4: return SDL_BUTTON_X2;
+    default: return 0;
+  }
+}
+
+static SDL_MouseButtonFlags
+pen_mouse_flags(SDL_PenInputFlags state)
+{ SDL_MouseButtonFlags flags = 0;
+
+  if ( state & SDL_PEN_INPUT_DOWN )     flags |= SDL_BUTTON_LMASK;
+  if ( state & SDL_PEN_INPUT_BUTTON_1 ) flags |= SDL_BUTTON_RMASK;
+  if ( state & SDL_PEN_INPUT_BUTTON_2 ) flags |= SDL_BUTTON_MMASK;
+  if ( state & SDL_PEN_INPUT_BUTTON_3 ) flags |= SDL_BUTTON_X1MASK;
+  if ( state & SDL_PEN_INPUT_BUTTON_4 ) flags |= SDL_BUTTON_X2MASK;
+
+  return flags;
+}
+
+/* Remember the position of a pen event.  The proximity events have no
+ * position; they use the last.
+ */
+
+static void
+pen_position(sdl_pointer *sp, SDL_WindowID wid, float x, float y)
+{ sp->pen_wid = wid;
+  sp->pen_x   = x;
+  sp->pen_y   = y;
+}
+
+static Any
+pen_detail(sdl_pointer *sp)
+{ float *a = sp->pen_axes;
+  SDL_PenInputFlags state = sp->pen_state;
+
+  return answerObject(ClassPenState,
+		      toNum(a[SDL_PEN_AXIS_PRESSURE]),
+		      toNum(a[SDL_PEN_AXIS_XTILT]),
+		      toNum(a[SDL_PEN_AXIS_YTILT]),
+		      toNum(a[SDL_PEN_AXIS_DISTANCE]),
+		      toNum(a[SDL_PEN_AXIS_ROTATION]),
+		      toNum(a[SDL_PEN_AXIS_SLIDER]),
+		      toNum(a[SDL_PEN_AXIS_TANGENTIAL_PRESSURE]),
+		      (state & SDL_PEN_INPUT_ERASER_TIP) ? ON : OFF,
+		      toInt((state >> 1) & 0x1f),	/* BUTTON_1 .. BUTTON_5 */
+		      EAV);
+}
+
+		 /*******************************
+		 *	   TOUCH SCREENS	*
+		 *******************************/
+
+/* SDL reports finger positions normalised to the window.  Get them in
+ * pixels.
+ */
+
+static void
+finger_position(SDL_TouchFingerEvent *f, float *x, float *y,
+		float *dx, float *dy)
+{ SDL_Window *win = SDL_GetWindowFromID(f->windowID);
+  int w = 0, h = 0;
+
+  if ( win )
+    SDL_GetWindowSize(win, &w, &h);
+  *x  = f->x*w;
+  *y  = f->y*h;
+  *dx = f->dx*w;
+  *dy = f->dy*h;
+}
+
 /* A motion event shows the button pressed in `sp->tracking_wid' is no
    longer held, but we never saw it going up.  This may happen if it is
    released outside our windows.  Turn the motion into the lost up-event
@@ -766,6 +863,9 @@ CtoEvent(SDL_Event *event)
   Any name = NULL;
   Any detail = NIL;			/* ev->detail */
   Int rotation = NULL;			/* wheel events */
+  int press = 0;			/* button that went down */
+  int release = 0;			/* button that went up */
+  bool moved = false;			/* pointer may have moved */
   SDL_WindowID wid = 0;
   SDL_WindowID tracking_wid = 0;	/* frame of the down event */
   FrameObj frame = NIL;		/* ev->frame */
@@ -799,14 +899,54 @@ CtoEvent(SDL_Event *event)
   }
   mouse_flags = SDL_GetMouseState(&fx, &fy);
 
+  if ( !DEVICE_mouse )			/* creates @mouse_device */
+    realiseClass(ClassInputDevice);
   Any device = DEFAULT;			/* keyboard or last pointer */
   switch ( event->type )
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_MOUSE_MOTION:
     case SDL_EVENT_MOUSE_WHEEL:
+      /* We disabled SDL's emulation (see sdl.c), but be safe */
+      if ( event->motion.which == SDL_PEN_MOUSEID ||
+	   event->motion.which == SDL_TOUCH_MOUSEID )
+	fail;
       device = DEVICE_mouse;
       break;
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    case SDL_EVENT_PINCH_BEGIN:		/* a trackpad gesture */
+    case SDL_EVENT_PINCH_UPDATE:
+    case SDL_EVENT_PINCH_END:
+      device = DEVICE_mouse;
+      break;
+#endif
+    case SDL_EVENT_PEN_PROXIMITY_IN:	/* all have `which` at the */
+    case SDL_EVENT_PEN_PROXIMITY_OUT:	/* same offset */
+    case SDL_EVENT_PEN_DOWN:
+    case SDL_EVENT_PEN_UP:
+    case SDL_EVENT_PEN_MOTION:
+    case SDL_EVENT_PEN_BUTTON_DOWN:
+    case SDL_EVENT_PEN_BUTTON_UP:
+    case SDL_EVENT_PEN_AXIS:
+      device = findInputDevice(NAME_pen, (intptr_t)event->pproximity.which,
+			       NULL);
+      if ( !device )
+	fail;
+      break;
+    case SDL_EVENT_FINGER_DOWN:
+    case SDL_EVENT_FINGER_UP:
+    case SDL_EVENT_FINGER_MOTION:
+    case SDL_EVENT_FINGER_CANCELED:
+    { SDL_TouchID id = event->tfinger.touchID;
+
+      if ( id == SDL_PEN_TOUCHID || id == SDL_MOUSE_TOUCHID )
+	fail;				/* emulated; see sdl.c */
+      device = findInputDevice(NAME_touch, (intptr_t)id,
+			       SDL_GetTouchDeviceName(id));
+      if ( !device )
+	fail;
+      break;
+    }
     default:
       break;
   }
@@ -828,6 +968,11 @@ CtoEvent(SDL_Event *event)
       tracking_wid = sp->tracking_wid;
       sp->tracking_wid = 0;
     mouse_cont:
+      if ( event->button.down )
+	press = event->button.button;
+      else
+	release = event->button.button;
+      moved = true;
       fx = event->button.x;	/* these are floats */
       fy = event->button.y;
       wid  = event->button.windowID;
@@ -838,6 +983,7 @@ CtoEvent(SDL_Event *event)
       break;
       /* https://wiki.libsdl.org/SDL3/SDL_MouseMotionEvent */
     case SDL_EVENT_MOUSE_MOTION:
+      moved = true;
       fx   = event->motion.x;	/* these are floats */
       fy   = event->motion.y;
       wid  = event->motion.windowID;
@@ -902,6 +1048,191 @@ CtoEvent(SDL_Event *event)
       last_time = time;
       break;
     }
+      /* https://wiki.libsdl.org/SDL3/CategoryPen */
+    case SDL_EVENT_PEN_PROXIMITY_IN:
+    case SDL_EVENT_PEN_PROXIMITY_OUT:
+      wid  = event->pproximity.windowID ? event->pproximity.windowID
+					: sp->pen_wid;
+      fx   = sp->pen_x;
+      fy   = sp->pen_y;
+      time = event->pproximity.timestamp/1000000;
+      sp->pen_state = event->pproximity.pen_state;
+      mouse_flags = pen_mouse_flags(sp->pen_state);
+      name = ( event->type == SDL_EVENT_PEN_PROXIMITY_IN
+	       ? NAME_penProximityIn : NAME_penProximityOut );
+      break;
+    case SDL_EVENT_PEN_DOWN:
+    case SDL_EVENT_PEN_UP:
+      pen_position(sp, event->ptouch.windowID,
+		   event->ptouch.x, event->ptouch.y);
+      wid  = event->ptouch.windowID;
+      fx   = event->ptouch.x;
+      fy   = event->ptouch.y;
+      time = event->ptouch.timestamp/1000000;
+      sp->pen_state = event->ptouch.pen_state;
+      if ( event->ptouch.eraser )
+	sp->pen_state |= SDL_PEN_INPUT_ERASER_TIP;
+      if ( event->ptouch.down )
+      { sp->pen_state |= SDL_PEN_INPUT_DOWN;
+	sp->tracking_wid = wid;
+	press = SDL_BUTTON_LEFT;
+      } else
+      { sp->pen_state &= ~SDL_PEN_INPUT_DOWN;
+	tracking_wid = sp->tracking_wid;
+	sp->tracking_wid = 0;
+	release = SDL_BUTTON_LEFT;
+      }
+      mouse_flags = pen_mouse_flags(sp->pen_state);
+      name = button_to_name(event->ptouch.down, SDL_BUTTON_LEFT);
+      moved = true;
+      break;
+    case SDL_EVENT_PEN_BUTTON_DOWN:
+    case SDL_EVENT_PEN_BUTTON_UP:
+    { int button = pen_button_to_mouse_button(event->pbutton.button);
+
+      if ( !button )
+	fail;
+      pen_position(sp, event->pbutton.windowID,
+		   event->pbutton.x, event->pbutton.y);
+      wid  = event->pbutton.windowID;
+      fx   = event->pbutton.x;
+      fy   = event->pbutton.y;
+      time = event->pbutton.timestamp/1000000;
+      sp->pen_state = event->pbutton.pen_state;
+      SDL_PenInputFlags bit = SDL_PEN_INPUT_BUTTON_1 << (event->pbutton.button-1);
+      if ( event->pbutton.down )
+      { sp->pen_state |= bit;
+	sp->tracking_wid = wid;
+	press = button;
+      } else
+      { sp->pen_state &= ~bit;
+	tracking_wid = sp->tracking_wid;
+	sp->tracking_wid = 0;
+	release = button;
+      }
+      mouse_flags = pen_mouse_flags(sp->pen_state);
+      name = button_to_name(event->pbutton.down, button);
+      moved = true;
+      break;
+    }
+    case SDL_EVENT_PEN_MOTION:
+      pen_position(sp, event->pmotion.windowID,
+		   event->pmotion.x, event->pmotion.y);
+      wid  = event->pmotion.windowID;
+      fx   = event->pmotion.x;
+      fy   = event->pmotion.y;
+      time = event->pmotion.timestamp/1000000;
+      sp->pen_state = event->pmotion.pen_state;
+      mouse_flags = pen_mouse_flags(sp->pen_state);
+      if ( mouse_flags )
+	tracking_wid = sp->tracking_wid;
+      if ( mouse_flags & SDL_BUTTON_LMASK )
+	name = NAME_msLeftDrag;
+      else if ( mouse_flags & SDL_BUTTON_RMASK )
+	name = NAME_msRightDrag;
+      else if ( mouse_flags & SDL_BUTTON_MMASK )
+	name = NAME_msMiddleDrag;
+      else
+	name = NAME_locMove;
+      moved = true;
+      break;
+    case SDL_EVENT_PEN_AXIS:
+      pen_position(sp, event->paxis.windowID,
+		   event->paxis.x, event->paxis.y);
+      wid  = event->paxis.windowID;
+      fx   = event->paxis.x;
+      fy   = event->paxis.y;
+      time = event->paxis.timestamp/1000000;
+      sp->pen_state = event->paxis.pen_state;
+      mouse_flags = pen_mouse_flags(sp->pen_state);
+      if ( mouse_flags )
+	tracking_wid = sp->tracking_wid;
+      if ( event->paxis.axis < SDL_PEN_AXIS_COUNT )
+	sp->pen_axes[event->paxis.axis] = event->paxis.value;
+      name = NAME_penAxis;
+      break;
+      /* https://wiki.libsdl.org/SDL3/SDL_TouchFingerEvent */
+    case SDL_EVENT_FINGER_DOWN:
+    case SDL_EVENT_FINGER_UP:
+    case SDL_EVENT_FINGER_MOTION:
+    case SDL_EVENT_FINGER_CANCELED:
+    { SDL_TouchFingerEvent *f = &event->tfinger;
+      float dx, dy;
+      bool primary;
+
+      finger_position(f, &fx, &fy, &dx, &dy);
+      wid  = f->windowID;
+      time = f->timestamp/1000000;
+
+      if ( event->type == SDL_EVENT_FINGER_DOWN )
+      { primary = (sp->fingers++ == 0);
+	if ( primary )
+	{ sp->has_primary = true;
+	  sp->primary = f->fingerID;
+	}
+      } else
+      { primary = sp->has_primary && sp->primary == f->fingerID;
+      }
+
+      if ( primary )
+      { switch(event->type)
+	{ case SDL_EVENT_FINGER_DOWN:
+	    sp->tracking_wid = wid;
+	    press = SDL_BUTTON_LEFT;
+	    name = NAME_msLeftDown;
+	    break;
+	  case SDL_EVENT_FINGER_MOTION:
+	    tracking_wid = sp->tracking_wid;
+	    name = NAME_msLeftDrag;
+	    break;
+	  default:			/* up or canceled */
+	    tracking_wid = sp->tracking_wid;
+	    sp->tracking_wid = 0;
+	    sp->has_primary = false;
+	    release = SDL_BUTTON_LEFT;
+	    name = NAME_msLeftUp;
+	}
+	moved = true;
+      } else
+      { switch(event->type)
+	{ case SDL_EVENT_FINGER_DOWN:	  name = NAME_touchDown;   break;
+	  case SDL_EVENT_FINGER_MOTION:	  name = NAME_touchMotion; break;
+	  case SDL_EVENT_FINGER_UP:	  name = NAME_touchUp;     break;
+	  default:			  name = NAME_touchCancel; break;
+	}
+      }
+      if ( event->type == SDL_EVENT_FINGER_UP ||
+	   event->type == SDL_EVENT_FINGER_CANCELED )
+      { if ( sp->fingers > 0 )
+	  sp->fingers--;
+      }
+      mouse_flags = ( sp->has_primary || press ) ? SDL_BUTTON_LMASK : 0;
+      detail = answerObject(ClassTouchPoint,
+			    toNum((double)f->fingerID), toNum(f->pressure),
+			    toNum(dx), toNum(dy), EAV);
+      break;
+    }
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+      /* https://wiki.libsdl.org/SDL3/SDL_PinchFingerEvent.  This has no
+	 position.  Use that of the last mouse event in this window, or
+	 the position of the mouse from SDL_GetMouseState(). */
+    case SDL_EVENT_PINCH_BEGIN:
+    case SDL_EVENT_PINCH_UPDATE:
+    case SDL_EVENT_PINCH_END:
+      wid  = event->pinch.windowID;
+      time = event->pinch.timestamp/1000000;
+      if ( wid == sp->last_wid )	/* sp is that of the mouse */
+      { fx = sp->last_x;
+	fy = sp->last_y;
+      }
+      switch(event->type)
+      { case SDL_EVENT_PINCH_BEGIN:  name = NAME_pinchBegin;  break;
+	case SDL_EVENT_PINCH_UPDATE: name = NAME_pinchUpdate; break;
+	default:		     name = NAME_pinchEnd;    break;
+      }
+      detail = answerObject(ClassPinchData, toNum(event->pinch.scale), EAV);
+      break;
+#endif
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
     case SDL_EVENT_KEYMAP_CHANGED:
       DEBUG(NAME_keyboard,
@@ -1061,6 +1392,11 @@ CtoEvent(SDL_Event *event)
       fail;			/* for now */
   }
 
+  if ( moved )
+  { sp->last_x   = fx;
+    sp->last_y   = fy;
+    sp->last_wid = wid;
+  }
   if ( tracking_wid && wid != tracking_wid )
     redirect_to_tracking_frame(&wid, tracking_wid, &fx, &fy);
 
@@ -1138,8 +1474,7 @@ CtoEvent(SDL_Event *event)
     { window = frame;
       event_window(&window, &x, &y);
     }
-    if ( event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
-	 sp->tracking_button == event->button.button )
+    if ( release && sp->tracking_button == release )
     { delCodeReference(sp->tracking_window);
       sp->tracking_window = NIL;
     }
@@ -1161,9 +1496,9 @@ CtoEvent(SDL_Event *event)
   { not_grabbing:
     window = frame;
     event_window(&window, &x, &y);
-    if ( event->type == SDL_EVENT_MOUSE_BUTTON_DOWN )
+    if ( press )
     { sp->tracking_window = window;
-      sp->tracking_button = event->button.button;
+      sp->tracking_button = press;
       addCodeReference(sp->tracking_window);
     }
   }
@@ -1175,36 +1510,23 @@ CtoEvent(SDL_Event *event)
   if ( event->type == SDL_EVENT_DROP_POSITION )
     update_drop_tracking_window(window, x, y);
 
-  /* For mouse events, read modifiers live: cached lastmod can be stale
-   * because event->key.mod on KEY_UP is not always reliable (we have
-   * observed a phantom RSHIFT bit set on LSHIFT release with SDL3 on
-   * Linux, which then leaked into the next mouse click).  For non-mouse
+  /* For pointer events, read modifiers live: cached lastmod can be
+   * stale because event->key.mod on KEY_UP is not always reliable (we
+   * have observed a phantom RSHIFT bit set on LSHIFT release with SDL3
+   * on Linux, which then leaked into the next mouse click).  For other
    * events keep lastmod, which the TEXT_INPUT path masks to suppress
    * AltGr.
    */
-  SDL_Keymod mod_for_event = lastmod;
-  switch ( event->type )
-  { case SDL_EVENT_MOUSE_BUTTON_DOWN:
-    case SDL_EVENT_MOUSE_BUTTON_UP:
-    case SDL_EVENT_MOUSE_MOTION:
-    case SDL_EVENT_MOUSE_WHEEL:
-      mod_for_event = SDL_GetModState();
-      break;
-    default:
-      break;
-  }
+  SDL_Keymod mod_for_event = isDefault(device) ? lastmod : SDL_GetModState();
 
   Any buttons = state_to_buttons(mouse_flags, mod_for_event);
 
-  switch ( event->type )		/* pointer moved to another window? */
-  { case SDL_EVENT_MOUSE_BUTTON_DOWN:
-    case SDL_EVENT_MOUSE_BUTTON_UP:
-    case SDL_EVENT_MOUSE_MOTION:
-      update_pointer_window(sp, window, frame, frame_x, frame_y, buttons);
-      break;
-    default:
-      break;
-  }
+  if ( moved )				/* pointer moved to another window? */
+    update_pointer_window(sp, window, frame, frame_x, frame_y, buttons);
+  else if ( event->type == SDL_EVENT_PEN_PROXIMITY_OUT )
+    update_pointer_window(sp, NIL, frame, frame_x, frame_y, buttons);
+  if ( notDefault(device) && ((InputDevice)device)->kind == NAME_pen )
+    detail = pen_detail(sp);
 
   EventObj ev = answerObject(ClassEvent,
 			     name,
@@ -1367,6 +1689,195 @@ dispatch_sdl_event(SDL_Event *ev)
   }
   pceMTUnlock();
 }
+
+
+		 /*******************************
+		 *	  TESTING SUPPORT	*
+		 *******************************/
+
+/* For testing input that cannot be generated otherwise, e.g., pens and
+ * touch screens: build an SDL event of `type` for `fr` from the
+ * attributes of `fields` (named as the fields of the SDL event
+ * structure; missing fields are 0) and process it as if SDL reported
+ * it.  Positions are relative to the frame, except for the finger
+ * events, whose x and y are normalised to 0..1, as in SDL.
+ */
+
+static float
+field(Sheet fields, const char *name)
+{ Any v = getValueSheet(fields, CtoName(name));
+
+  if ( v && isInteger(v) )
+    return (float)valNum(v);
+  if ( v == ON )
+    return 1.0f;
+
+  return 0.0f;
+}
+
+#define F(name) field(fields, #name)
+
+typedef struct
+{ const char *name;
+  SDL_EventType type;
+} test_event_type;
+
+static const test_event_type test_event_types[] =
+{ { "mouse_motion",	 SDL_EVENT_MOUSE_MOTION },
+  { "mouse_button_down", SDL_EVENT_MOUSE_BUTTON_DOWN },
+  { "mouse_button_up",	 SDL_EVENT_MOUSE_BUTTON_UP },
+  { "mouse_wheel",	 SDL_EVENT_MOUSE_WHEEL },
+  { "pen_proximity_in",	 SDL_EVENT_PEN_PROXIMITY_IN },
+  { "pen_proximity_out", SDL_EVENT_PEN_PROXIMITY_OUT },
+  { "pen_down",		 SDL_EVENT_PEN_DOWN },
+  { "pen_up",		 SDL_EVENT_PEN_UP },
+  { "pen_motion",	 SDL_EVENT_PEN_MOTION },
+  { "pen_button_down",	 SDL_EVENT_PEN_BUTTON_DOWN },
+  { "pen_button_up",	 SDL_EVENT_PEN_BUTTON_UP },
+  { "pen_axis",		 SDL_EVENT_PEN_AXIS },
+  { "finger_down",	 SDL_EVENT_FINGER_DOWN },
+  { "finger_up",	 SDL_EVENT_FINGER_UP },
+  { "finger_motion",	 SDL_EVENT_FINGER_MOTION },
+  { "finger_canceled",	 SDL_EVENT_FINGER_CANCELED },
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+  { "pinch_begin",	 SDL_EVENT_PINCH_BEGIN },
+  { "pinch_update",	 SDL_EVENT_PINCH_UPDATE },
+  { "pinch_end",	 SDL_EVENT_PINCH_END },
+#endif
+  { NULL, 0 }
+};
+
+status
+ws_test_event(FrameObj fr, Name type, Sheet fields)
+{ WsFrame wfr = sdl_frame(fr, false);
+  const test_event_type *t;
+  SDL_Event ev;
+
+  if ( !wfr || !wfr->ws_window )
+    fail;
+  for(t=test_event_types; t->name; t++)
+  { if ( streq(t->name, strName(type)) )
+      break;
+  }
+  if ( !t->name )
+    return errorPce(fr, NAME_unexpectedType, type);
+
+  SDL_WindowID wid = SDL_GetWindowID(wfr->ws_window);
+  Uint64 now = SDL_GetTicksNS();
+
+  SDL_zero(ev);
+  ev.type = t->type;
+  switch(t->type)
+  { case SDL_EVENT_MOUSE_MOTION:
+      ev.motion.timestamp = now;
+      ev.motion.windowID  = wid;
+      ev.motion.which     = (SDL_MouseID)F(which);
+      ev.motion.state     = (SDL_MouseButtonFlags)F(state);
+      ev.motion.x	  = F(x);
+      ev.motion.y	  = F(y);
+      break;
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+      ev.button.timestamp = now;
+      ev.button.windowID  = wid;
+      ev.button.which     = (SDL_MouseID)F(which);
+      ev.button.button    = (Uint8)F(button);
+      ev.button.down      = t->type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+      ev.button.clicks    = 1;
+      ev.button.x	  = F(x);
+      ev.button.y	  = F(y);
+      break;
+    case SDL_EVENT_MOUSE_WHEEL:
+      ev.wheel.timestamp = now;
+      ev.wheel.windowID  = wid;
+      ev.wheel.which     = (SDL_MouseID)F(which);
+      ev.wheel.x	 = F(dx);
+      ev.wheel.y	 = F(dy);
+      ev.wheel.integer_x = (Sint32)F(integer_x);
+      ev.wheel.integer_y = (Sint32)F(integer_y);
+      ev.wheel.mouse_x	 = F(x);
+      ev.wheel.mouse_y	 = F(y);
+      ev.wheel.direction = F(flipped) ? SDL_MOUSEWHEEL_FLIPPED
+				      : SDL_MOUSEWHEEL_NORMAL;
+      break;
+    case SDL_EVENT_PEN_PROXIMITY_IN:
+    case SDL_EVENT_PEN_PROXIMITY_OUT:
+      ev.pproximity.timestamp = now;
+      ev.pproximity.windowID  = wid;
+      ev.pproximity.which     = (SDL_PenID)F(which);
+      break;
+    case SDL_EVENT_PEN_DOWN:
+    case SDL_EVENT_PEN_UP:
+      ev.ptouch.timestamp = now;
+      ev.ptouch.windowID  = wid;
+      ev.ptouch.which     = (SDL_PenID)F(which);
+      ev.ptouch.pen_state = (SDL_PenInputFlags)F(state);
+      ev.ptouch.x	  = F(x);
+      ev.ptouch.y	  = F(y);
+      ev.ptouch.eraser    = F(eraser) != 0.0f;
+      ev.ptouch.down      = t->type == SDL_EVENT_PEN_DOWN;
+      break;
+    case SDL_EVENT_PEN_MOTION:
+      ev.pmotion.timestamp = now;
+      ev.pmotion.windowID  = wid;
+      ev.pmotion.which     = (SDL_PenID)F(which);
+      ev.pmotion.pen_state = (SDL_PenInputFlags)F(state);
+      ev.pmotion.x	   = F(x);
+      ev.pmotion.y	   = F(y);
+      break;
+    case SDL_EVENT_PEN_BUTTON_DOWN:
+    case SDL_EVENT_PEN_BUTTON_UP:
+      ev.pbutton.timestamp = now;
+      ev.pbutton.windowID  = wid;
+      ev.pbutton.which     = (SDL_PenID)F(which);
+      ev.pbutton.pen_state = (SDL_PenInputFlags)F(state);
+      ev.pbutton.x	   = F(x);
+      ev.pbutton.y	   = F(y);
+      ev.pbutton.button    = (Uint8)F(button);
+      ev.pbutton.down      = t->type == SDL_EVENT_PEN_BUTTON_DOWN;
+      break;
+    case SDL_EVENT_PEN_AXIS:
+      ev.paxis.timestamp = now;
+      ev.paxis.windowID  = wid;
+      ev.paxis.which     = (SDL_PenID)F(which);
+      ev.paxis.pen_state = (SDL_PenInputFlags)F(state);
+      ev.paxis.x	 = F(x);
+      ev.paxis.y	 = F(y);
+      ev.paxis.axis	 = (SDL_PenAxis)F(axis);
+      ev.paxis.value	 = F(value);
+      break;
+    case SDL_EVENT_FINGER_DOWN:
+    case SDL_EVENT_FINGER_UP:
+    case SDL_EVENT_FINGER_MOTION:
+    case SDL_EVENT_FINGER_CANCELED:
+      ev.tfinger.timestamp = now;
+      ev.tfinger.windowID  = wid;
+      ev.tfinger.touchID   = (SDL_TouchID)F(touch_id);
+      ev.tfinger.fingerID  = (SDL_FingerID)F(finger_id);
+      ev.tfinger.x	   = F(x);
+      ev.tfinger.y	   = F(y);
+      ev.tfinger.dx	   = F(dx);
+      ev.tfinger.dy	   = F(dy);
+      ev.tfinger.pressure  = F(pressure);
+      break;
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    case SDL_EVENT_PINCH_BEGIN:
+    case SDL_EVENT_PINCH_UPDATE:
+    case SDL_EVENT_PINCH_END:
+      ev.pinch.timestamp = now;
+      ev.pinch.windowID  = wid;
+      ev.pinch.scale	 = F(scale);
+      break;
+#endif
+    default:
+      fail;
+  }
+
+  dispatch_sdl_event(&ev);
+  succeed;
+}
+
+#undef F
 
 
 static bool

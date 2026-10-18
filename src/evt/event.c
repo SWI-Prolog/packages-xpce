@@ -1474,6 +1474,25 @@ static struct namepair
   { NAME_button,	NAME_mouse },
   { NAME_wheel,		NAME_mouse },
   { NAME_horizontalWheel,	NAME_mouse },
+  { NAME_pinch,		NAME_mouse },	/* trackpad zoom gesture */
+  { NAME_pinchBegin,	NAME_pinch },
+  { NAME_pinchUpdate,	NAME_pinch },
+  { NAME_pinchEnd,	NAME_pinch },
+					/* Pen events that are not mouse
+					   events.  The tip and barrel
+					   buttons give ms_* events */
+  { NAME_pen,		NAME_any },
+  { NAME_penProximityIn,	NAME_pen },
+  { NAME_penProximityOut,	NAME_pen },
+  { NAME_penAxis,	NAME_pen },
+					/* Fingers on a touch screen other
+					   than the first, which gives
+					   ms_left_* events */
+  { NAME_touch,		NAME_any },
+  { NAME_touchDown,	NAME_touch },
+  { NAME_touchMotion,	NAME_touch },
+  { NAME_touchUp,	NAME_touch },
+  { NAME_touchCancel,	NAME_touch },
   { NAME_msLeft,	NAME_button },
   { NAME_msMiddle,	NAME_button },
   { NAME_msRight,	NAME_button },

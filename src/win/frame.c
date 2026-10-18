@@ -2203,6 +2203,9 @@ static vardecl var_frame[] =
 
 /* Send Methods */
 
+static char *T_sdlTestEvent[] =
+        { "type=name", "fields=sheet" };
+
 static senddecl send_frame[] =
 { SM(NAME_convertOldSlot, 2, T_convertOldSlot, convertOldSlotFrame,
      DEFAULT, "Convert old `show' slot"),
@@ -2326,6 +2329,8 @@ static senddecl send_frame[] =
   SM(NAME_updateTileAdjusters, 1, "[tile]", updateTileAdjustersFrame,
      NAME_tile, "Update display and location of tile-adjusters"),
 
+  SM(NAME_sdlTestEvent, 2, T_sdlTestEvent, ws_test_event,
+     NAME_test, "Process an SDL event built from the sheet (testing)"),
   SM(NAME_attachTransient, 1, "frame", attachTransientFrame,
      NAME_transient, "A frame is attached as a transient for me"),
   SM(NAME_detachTransient, 1, "frame", detachTransientFrame,

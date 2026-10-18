@@ -995,6 +995,29 @@ End;
 NewClass(event_detail)
 End;
 
+NewClass(pen_state)
+  Int		pressure;		/* 0..1 */
+  Int		xtilt;			/* -90..90 degrees */
+  Int		ytilt;			/* -90..90 degrees */
+  Int		hover_distance;		/* 0..1 */
+  Int		barrel_rotation;	/* -180..180 degrees */
+  Int		slider;			/* 0..1 */
+  Int		tangential_pressure;	/* 0..1 */
+  BoolObj	eraser;			/* Eraser end is used */
+  Int		barrel_buttons;		/* Mask of pressed barrel buttons */
+End;
+
+NewClass(touch_point)
+  Int		finger;			/* Finger id */
+  Int		pressure;		/* 0..1 */
+  Int		dx;			/* Motion in pixels */
+  Int		dy;
+End;
+
+NewClass(pinch_data)
+  Int		scale;			/* Change since last update */
+End;
+
 NewClass(wheel_data)
   Int		dx;			/* Horizontal scroll (notches) */
   Int		dy;			/* Vertical scroll (notches) */

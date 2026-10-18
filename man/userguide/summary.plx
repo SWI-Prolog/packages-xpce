@@ -1321,10 +1321,21 @@ User = jan
 #class pen "pen(thickness, texture, colour)"
 Reserved for future usage.
 
+#class pen_state "pen_state(pressure, xtilt, ytilt, ...)"
+The `event <-detail' of events from a pen on a tablet or touch screen,
+holding the pressure, tilt and other axes of the pen and its barrel
+buttons.  The event delegates to it, so `event <-pressure' gives the
+pressure of the tip.
+
 #class picture "picture(label)"
 A \class{picture} is a \class{window} with scrollbars, normally used for
 application graphics. If a graphical window without scrollbars is
 required, \class{window} should be considered.
+
+#class pinch_data "pinch_data(scale)"
+The `event <-detail' of the pinch_begin, pinch_update and pinch_end
+events of a trackpad zoom gesture.  The event delegates to it, so
+`event <-scale' gives the change of scale since the previous update.
 
 #class pixmap "pixmap(source, width, height)"
 A \class{pixmap} is a subclass of \class{image} that is reserved for
@@ -1892,6 +1903,12 @@ send(T, start),
 A \class{tokeniser} returns tokens from the input source according to
 the syntax specified. It is part of the \product{} object parser and its
 specification is not (yet) public.
+
+#class touch_point "touch_point(finger, pressure, dx, dy)"
+The `event <-detail' of events from a touch screen.  The first finger
+that touches the screen generates the ms_left_* events, the others the
+touch_* events.  The event delegates to it, so `event <-finger'
+identifies the finger.
 
 #class transform "transform(rotate, scale, shear)"
 A \class{transform} is a 2D affine transformation (rotation, scaling,

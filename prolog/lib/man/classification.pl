@@ -183,7 +183,9 @@ scope('C.parser', basic).
 scope('C.path', basic).
 scope('C.pce', basic).
 scope('C.pen', advanced).
+scope('C.pen_state', basic).
 scope('C.picture', basic).
+scope('C.pinch_data', basic).
 scope('C.pixmap', basic).
 scope('C.point', basic).
 scope('C.popup', basic).
@@ -238,6 +240,7 @@ scope('C.theme_font', advanced).
 scope('C.tile', basic).
 scope('C.timer', basic).
 scope('C.tokeniser', basic).
+scope('C.touch_point', basic).
 scope('C.transform', basic).
 scope('C.tree', basic).
 scope('C.tuple', basic).

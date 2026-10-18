@@ -37,9 +37,10 @@
 
 /** <module> Pan and zoom recogniser for figures
 
-A pan_zoom_recogniser handles mouse-wheel zoom around the cursor and
-left-button drag panning by editing the receiver figure's `<-transform`.
-Both operations write the same six coefficients so they compose cleanly.
+A pan_zoom_recogniser handles mouse-wheel and trackpad pinch zoom around
+the cursor and left-button drag panning by editing the receiver
+figure's `<-transform`.  These operations write the same six
+coefficients so they compose cleanly.
 
 Recognisers are attached per instance. The shared global
 `@pan_zoom_recogniser` is stateless across calls (the drag anchor lives
@@ -57,12 +58,17 @@ and `<-window`; xpce's figure class does.
 :- pce_global(@pan_zoom_recogniser, new(pan_zoom_recogniser)).
 
 :- pce_begin_class(pan_zoom_recogniser, recogniser,
-                   "Wheel zoom around cursor + left-drag pan").
+                   "Wheel and pinch zoom around cursor + left-drag pan").
 
 event(R, Ev:event) :->
-    "Dispatch wheel, ms_left_down and ms_left_drag; fail otherwise"::
+    "Dispatch wheel, pinch, ms_left_down and ms_left_drag; fail otherwise"::
     (   send(Ev, is_a, wheel)
     ->  send(R, zoom, Ev)
+    ;   send(Ev, is_a, pinch)
+    ->  (   send(Ev, is_a, pinch_update)
+        ->  send(R, zoom, Ev)
+        ;   true                        % pinch_begin and pinch_end
+        )
     ;   send(Ev, is_a, ms_left_down)
     ->  send(R, pan_start, Ev)
     ;   send(Ev, is_a, ms_left_drag)
@@ -72,24 +78,12 @@ event(R, Ev:event) :->
 
 zoom(_R, Ev:event) :->
     "Scale the receiver figure around the cursor"::
-    get(Ev, receiver, F),
-    get(F, window, Win),
-    get(Ev, position, Win, point(WX, WY)),
-    get(F, position, point(FX, FY)),
-    X is WX - FX,                       % cursor in figure-origin coord
-    Y is WY - FY,
-    get(Ev, rotation, Angle),
-    S is (100 - Angle)/100,
-    ensure_transform(F, T),
-    get(T, xx, A0), get(T, xy, B0),
-    get(T, yx, C0), get(T, yy, D0),
-    get(T, tx, TX0), get(T, ty, TY0),
-    A  is S*A0,  B  is S*B0,
-    C  is S*C0,  D  is S*D0,
-    TX is S*TX0 + (1-S)*X,
-    TY is S*TY0 + (1-S)*Y,
-    send(T, set, A, B, C, D, TX, TY),
-    send(F, transform, T).
+    (   send(Ev, is_a, pinch)
+    ->  get(Ev, scale, S)
+    ;   get(Ev, rotation, Angle),
+        S is (100 - Angle)/100
+    ),
+    zoom_by(Ev, S).
 
 pan_start(_R, Ev:event) :->
     "Record the cursor anchor for a panning drag"::
@@ -115,6 +109,28 @@ pan_drag(_R, Ev:event) :->
     send(F, transform, T).
 
 :- pce_end_class.
+
+%!  zoom_by(+Event, +Scale) is det.
+%
+%   Scale the receiver of Event by Scale around the position of Event.
+
+zoom_by(Ev, S) :-
+    get(Ev, receiver, F),
+    get(F, window, Win),
+    get(Ev, position, Win, point(WX, WY)),
+    get(F, position, point(FX, FY)),
+    X is WX - FX,                       % cursor in figure-origin coord
+    Y is WY - FY,
+    ensure_transform(F, T),
+    get(T, xx, A0), get(T, xy, B0),
+    get(T, yx, C0), get(T, yy, D0),
+    get(T, tx, TX0), get(T, ty, TY0),
+    A  is S*A0,  B  is S*B0,
+    C  is S*C0,  D  is S*D0,
+    TX is S*TX0 + (1-S)*X,
+    TY is S*TY0 + (1-S)*Y,
+    send(T, set, A, B, C, D, TX, TY),
+    send(F, transform, T).
 
 %!  ensure_transform(+Figure, -Transform) is det.
 %

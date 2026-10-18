@@ -91,6 +91,11 @@ setPceThread(const char *app_name)
 			       "application");
 
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
+    /* xpce turns pen and touch input into mouse events itself, with
+       the device and its data.  See CtoEvent(). */
+    SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_PEN_TOUCH_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 
     if ( !SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO) )
     { Name why = CtoName(SDL_GetError());

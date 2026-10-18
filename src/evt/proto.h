@@ -75,6 +75,9 @@ COMMON(status)	makeClassInputDevice(Class class);
 COMMON(status)	makeClassEventDetail(Class class);
 COMMON(status)	makeClassDropData(Class class);
 COMMON(status)	makeClassWheelData(Class class);
+COMMON(status)	makeClassPenState(Class class);
+COMMON(status)	makeClassTouchPoint(Class class);
+COMMON(status)	makeClassPinchData(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/evt/modifier.c */
 COMMON(status)	makeClassModifier(Class class);

@@ -353,3 +353,206 @@ makeClassWheelData(Class class)
 
   succeed;
 }
+
+
+		 /*******************************
+		 *	      PEN STATE		*
+		 *******************************/
+
+/* The state of a pen when it generated the event: the axes reported by
+ * the tablet and the buttons on its barrel.  The names follow SDL,
+ * except for `hover_distance` and `barrel_rotation`, as an event
+ * already has a <-distance and a <-rotation.  Axes the pen does not
+ * have are 0.
+ */
+
+static Int
+num_default(Int v)
+{ return isDefault(v) ? ZERO : v;
+}
+
+static status
+initialisePenState(PenState ps, Int pressure, Int xtilt, Int ytilt,
+		   Int hover_distance, Int barrel_rotation, Int slider,
+		   Int tangential_pressure, BoolObj eraser,
+		   Int barrel_buttons)
+{ assign(ps, pressure,		  num_default(pressure));
+  assign(ps, xtilt,		  num_default(xtilt));
+  assign(ps, ytilt,		  num_default(ytilt));
+  assign(ps, hover_distance,	  num_default(hover_distance));
+  assign(ps, barrel_rotation,	  num_default(barrel_rotation));
+  assign(ps, slider,		  num_default(slider));
+  assign(ps, tangential_pressure, num_default(tangential_pressure));
+  assign(ps, eraser,		  isDefault(eraser) ? OFF : eraser);
+  assign(ps, barrel_buttons,	  num_default(barrel_buttons));
+
+  succeed;
+}
+
+
+/* Type declarations */
+
+static char *T_initialisePenState[] =
+        { "pressure=[num]", "xtilt=[num]", "ytilt=[num]",
+	  "hover_distance=[num]", "barrel_rotation=[num]", "slider=[num]",
+	  "tangential_pressure=[num]", "eraser=[bool]",
+	  "barrel_buttons=[int]" };
+
+/* Instance Variables */
+
+static vardecl var_pen_state[] =
+{ IV(NAME_pressure, "num", IV_GET,
+     NAME_pen, "Pressure of the tip, 0..1"),
+  IV(NAME_xtilt, "num", IV_GET,
+     NAME_pen, "Horizontal tilt, -90..90 degrees (left to right)"),
+  IV(NAME_ytilt, "num", IV_GET,
+     NAME_pen, "Vertical tilt, -90..90 degrees (top to bottom)"),
+  IV(NAME_hoverDistance, "num", IV_GET,
+     NAME_pen, "Distance of the tip to the surface, 0..1"),
+  IV(NAME_barrelRotation, "num", IV_GET,
+     NAME_pen, "Rotation of the barrel, -180..180 degrees, clockwise"),
+  IV(NAME_slider, "num", IV_GET,
+     NAME_pen, "Position of the finger wheel or slider, 0..1"),
+  IV(NAME_tangentialPressure, "num", IV_GET,
+     NAME_pen, "Pressure from squeezing the barrel, 0..1"),
+  IV(NAME_eraser, "bool", IV_GET,
+     NAME_pen, "@on if the eraser end of the pen is used"),
+  IV(NAME_barrelButtons, "int", IV_GET,
+     NAME_pen, "Mask of the barrel buttons that are down (1: first, ...)")
+};
+
+/* Send Methods */
+
+static senddecl send_pen_state[] =
+{ SM(NAME_initialise, 9, T_initialisePenState, initialisePenState,
+     DEFAULT, "Create from the axes and buttons")
+};
+
+/* Class Declaration */
+
+static Name pen_state_termnames[] =
+{ NAME_pressure, NAME_xtilt, NAME_ytilt, NAME_hoverDistance,
+  NAME_barrelRotation, NAME_slider, NAME_tangentialPressure,
+  NAME_eraser, NAME_barrelButtons
+};
+
+ClassDecl(pen_state_decls,
+          var_pen_state, send_pen_state, NULL, NULL,
+          9, pen_state_termnames);
+
+status
+makeClassPenState(Class class)
+{ declareClass(class, &pen_state_decls);
+
+  succeed;
+}
+
+
+		 /*******************************
+		 *	     TOUCH POINT	*
+		 *******************************/
+
+/* A finger on a touch screen.  The first finger that touches the
+ * screen generates the ms_left_* events, the others the touch_* events.
+ * <-finger identifies the finger during the time it touches the
+ * screen.
+ */
+
+static status
+initialiseTouchPoint(TouchPoint tp, Int finger, Int pressure,
+		     Int dx, Int dy)
+{ assign(tp, finger,   finger);
+  assign(tp, pressure, num_default(pressure));
+  assign(tp, dx,       num_default(dx));
+  assign(tp, dy,       num_default(dy));
+
+  succeed;
+}
+
+
+/* Type declarations */
+
+static char *T_initialiseTouchPoint[] =
+        { "finger=int", "pressure=[num]", "dx=[num]", "dy=[num]" };
+
+/* Instance Variables */
+
+static vardecl var_touch_point[] =
+{ IV(NAME_finger, "int", IV_GET,
+     NAME_touch, "Identifies the finger while it touches the screen"),
+  IV(NAME_pressure, "num", IV_GET,
+     NAME_touch, "Pressure, 0..1"),
+  IV(NAME_dx, "num", IV_GET,
+     NAME_touch, "Horizontal motion in pixels"),
+  IV(NAME_dy, "num", IV_GET,
+     NAME_touch, "Vertical motion in pixels")
+};
+
+/* Send Methods */
+
+static senddecl send_touch_point[] =
+{ SM(NAME_initialise, 4, T_initialiseTouchPoint, initialiseTouchPoint,
+     DEFAULT, "Create from finger, pressure and motion")
+};
+
+/* Class Declaration */
+
+static Name touch_point_termnames[] =
+{ NAME_finger, NAME_pressure, NAME_dx, NAME_dy };
+
+ClassDecl(touch_point_decls,
+          var_touch_point, send_touch_point, NULL, NULL,
+          4, touch_point_termnames);
+
+status
+makeClassTouchPoint(Class class)
+{ declareClass(class, &touch_point_decls);
+
+  succeed;
+}
+
+
+		 /*******************************
+		 *	     PINCH DATA		*
+		 *******************************/
+
+/* Data of the pinch_* events: the change of scale since the previous
+ * pinch_update.  A scale above 1 zooms in.
+ */
+
+static status
+initialisePinchData(PinchData pd, Int scale)
+{ assign(pd, scale, isDefault(scale) ? ONE : scale);
+
+  succeed;
+}
+
+
+/* Instance Variables */
+
+static vardecl var_pinch_data[] =
+{ IV(NAME_scale, "num", IV_GET,
+     NAME_pinch, "Change of scale since the last update; > 1 zooms in")
+};
+
+/* Send Methods */
+
+static senddecl send_pinch_data[] =
+{ SM(NAME_initialise, 1, "scale=[num]", initialisePinchData,
+     DEFAULT, "Create from scale")
+};
+
+/* Class Declaration */
+
+static Name pinch_data_termnames[] = { NAME_scale };
+
+ClassDecl(pinch_data_decls,
+          var_pinch_data, send_pinch_data, NULL, NULL,
+          1, pinch_data_termnames);
+
+status
+makeClassPinchData(Class class)
+{ declareClass(class, &pinch_data_decls);
+
+  succeed;
+}

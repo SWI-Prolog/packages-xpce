@@ -212,6 +212,15 @@ static struct class_definition classdefs[] =
   { NAME_wheelData, NAME_eventDetail, makeClassWheelData,
     &ClassWheelData, "Precise scroll data of a wheel event" },
 
+  { NAME_penState, NAME_eventDetail, makeClassPenState,
+    &ClassPenState, "State of a pen: pressure, tilt, ..." },
+
+  { NAME_touchPoint, NAME_eventDetail, makeClassTouchPoint,
+    &ClassTouchPoint, "Finger on a touch screen" },
+
+  { NAME_pinchData, NAME_eventDetail, makeClassPinchData,
+    &ClassPinchData, "Scale of a pinch gesture" },
+
   { NAME_event, NAME_object, makeClassEvent,
     &ClassEvent, "PCE's notion of a user event" },
 

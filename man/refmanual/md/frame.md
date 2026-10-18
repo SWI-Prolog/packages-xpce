@@ -639,6 +639,22 @@ imply X-specific semantics.
     @see frame<-transient_for
     @see frame<-transients
 
+- frame->sdl_test_event: type=name, fields=sheet
+    For testing only.  Build an SDL event of `type` for this frame and
+    process it as if SDL reported it.  This allows testing input that
+    is not available on the test machine, such as pen and touch input.
+    `type` is one of `mouse_motion`, `mouse_button_down`,
+    `mouse_button_up`, `mouse_wheel`, `pen_proximity_in`,
+    `pen_proximity_out`, `pen_down`, `pen_up`, `pen_motion`,
+    `pen_button_down`, `pen_button_up`, `pen_axis`, `finger_down`,
+    `finger_up`, `finger_motion`, `finger_canceled`, `pinch_begin`,
+    `pinch_update` and `pinch_end`.  The attributes of `fields` are
+    named after the fields of the SDL event structure (e.g., `x`, `y`,
+    `which`, `button`, `pressure`); missing fields are 0.  Positions
+    are relative to the frame, except for the finger events, whose `x`
+    and `y` are normalised to 0..1 as in SDL.  The wheel event takes
+    `dx`, `dy` (precise) and `integer_x`, `integer_y` (whole notches).
+
 - frame->attach_transient: frame
 - frame->detach_transient: frame
     Maintain the `<-transients` chain.  Called by `->transient_for`

@@ -40,6 +40,7 @@
 void ev_event_grab_window(Any window);
 void ws_event_destroyed_target(Any window);
 void ws_pointer_left_frame(FrameObj fr);
+status ws_test_event(FrameObj fr, Name type, Sheet fields);
 PceWindow ws_grabbing_window(void);
 PceWindow ws_pointer_window(void);
 
