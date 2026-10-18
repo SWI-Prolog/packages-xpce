@@ -62,6 +62,9 @@ ws_initialise(int argc, char **argv)
 #ifdef CAIRO_HAS_SVG_SURFACE		/* Cairo may lack the SVG surface */
   send(PCE, NAME_feature, NAME_svg, EAV);
 #endif
+#ifdef HAVE_SDL3_SOUND			/* class sound loads MP3, ... */
+  send(PCE, NAME_feature, NAME_soundDecoders, EAV);
+#endif
 }
 
 static int sdl_main_thread = 0;

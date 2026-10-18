@@ -9,7 +9,13 @@ game.  When a play is finished, <-message is executed:
 	send(S, message, message(@prolog, clicked, @arg1)),
 	send(S, play).
 
-Only WAV files are supported.
+If xpce is built with SDL3_sound, a sound can be loaded from WAV,
+MP3, Ogg Vorbis, FLAC, AIFF, AU, VOC and module (MOD, XM, IT, ...)
+files, and @pce has the feature `sound_decoders` (see
+`pce->has_feature`).  Otherwise only WAV files are supported.
+`display<-sound_file_extensions` lists the extensions of the files
+that can be loaded.  A sound is decoded completely when loaded and
+saved as WAV.
 
 @see class audio_recorder
 
@@ -39,8 +45,8 @@ Only WAV files are supported.
     Create a sound, loading the WAV file if given.
 
 - sound->load: file
-    Load audio from a WAV file.  Raises an error if the file cannot be
-    loaded.
+    Load audio from a sound file.  Fails with a report if the file
+    cannot be loaded.
 
 - sound->save: file
     Save the audio as a WAV file.
@@ -54,6 +60,11 @@ Only WAV files are supported.
 
 
 ## Get methods {#class-sound-get}
+
+- sound<-peaks: parts=1..10000 -> vector
+    New vector with the peak level (0..1) of each of `parts` equal
+    parts of the sound: the largest absolute sample value of all
+    channels.  This is typically used to draw the waveform.
 
 - sound<-playing: -> bool
     `@on` if the sound is being played.

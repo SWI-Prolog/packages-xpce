@@ -37,6 +37,9 @@
 #include <h/unix.h>
 #include "sdluserevent.h"
 #include <math.h>
+#ifdef HAVE_SDL3_SOUND
+#include <SDL3_sound/SDL_sound.h>
+#endif
 
 /* Audio for class sound and class audio_recorder.  SDL calls its audio
  * callbacks from its own thread, where we cannot run xpce code.
@@ -145,6 +148,54 @@ update_sound(Sound s)
   }
 }
 
+#ifdef HAVE_SDL3_SOUND
+/* Decode a sound file into memory using SDL_sound, which handles WAV,
+ * MP3, Ogg Vorbis, FLAC, etc.  The decoder is chosen from the file
+ * extension; if that fails, SDL_sound tries all decoders.
+ */
+
+static bool
+init_sound_decoders(void)
+{ static bool done = false;
+
+  if ( !done )
+    done = Sound_Init() != 0;
+
+  return done;
+}
+
+static bool
+decode_file(const char *fn, SDL_AudioSpec *spec, Uint8 **data, Uint32 *len,
+	    const char **err)
+{ if ( !init_sound_decoders() )
+  { *err = Sound_GetError();
+    return false;
+  }
+
+  Sound_Sample *smp = Sound_NewSampleFromFile(fn, NULL, 65536);
+  if ( !smp )
+  { *err = Sound_GetError();
+    return false;
+  }
+
+  Uint32 n = Sound_DecodeAll(smp);
+  bool rc = false;
+
+  if ( (smp->flags & SOUND_SAMPLEFLAG_ERROR) || n == 0 )
+  { *err = Sound_GetError();
+  } else if ( (*data = SDL_malloc(n)) )
+  { memcpy(*data, smp->buffer, n);
+    *spec = smp->actual;
+    *len  = n;
+    rc = true;
+  } else
+    *err = "Not enough memory";
+  Sound_FreeSample(smp);
+
+  return rc;
+}
+#endif /*HAVE_SDL3_SOUND*/
+
 status
 ws_load_sound(Sound s, FileObj file)
 { char *fn = charArrayToFN((CharArray)getOsNameFile(file));
@@ -152,8 +203,16 @@ ws_load_sound(Sound s, FileObj file)
   Uint8 *data;
   Uint32 len;
 
+#ifdef HAVE_SDL3_SOUND
+  const char *err = NULL;
+
+  if ( !decode_file(fn, &spec, &data, &len, &err) )
+    return errorPce(s, NAME_cannotLoad, file,
+		    CtoName(err && err[0] ? err : "cannot decode"));
+#else
   if ( !SDL_LoadWAV(fn, &spec, &data, &len) )
     return errorPce(s, NAME_cannotLoad, file, CtoName(SDL_GetError()));
+#endif
 
   ws_stop_sound(s);
   ws_sound *wss = sound_data(s, true);
@@ -300,6 +359,77 @@ ws_free_sound(Sound s)
     SDL_free(wss);
     s->ws_ref = NULL;
   }
+}
+
+
+/* Lower-case extensions of the sound files we can load */
+
+Chain
+ws_sound_file_extensions(void)
+{ Chain ch = answerObject(ClassChain, EAV);
+
+#ifdef HAVE_SDL3_SOUND
+  if ( init_sound_decoders() )
+  { for(const Sound_DecoderInfo **d = Sound_AvailableDecoders(); *d; d++)
+    { for(const char **e = (*d)->extensions; *e; e++)
+      { char buf[32];
+	int i;
+
+	for(i=0; (*e)[i] && i < (int)sizeof(buf)-1; i++)
+	  buf[i] = (char)tolower((unsigned char)(*e)[i]);
+	buf[i] = 0;
+	if ( strcmp(buf, "raw") != 0 )	/* needs the format given */
+	  appendChain(ch, CtoName(buf));
+      }
+    }
+  }
+#else
+  appendChain(ch, CtoName("wav"));
+#endif
+
+  return ch;
+}
+
+
+/* The peak level (0..1) of each of `n` equal parts of the sound, e.g.,
+ * to draw its waveform.  The level is the largest absolute sample
+ * value of all channels.
+ */
+
+bool
+ws_sound_peaks(Sound s, int n, double *peaks)
+{ ws_sound *wss = s->ws_ref;
+  SDL_AudioSpec fspec;
+  Uint8 *fdata = NULL;
+  int flen = 0;
+
+  for(int i=0; i<n; i++)
+    peaks[i] = 0.0;
+  if ( !wss || wss->len == 0 || n <= 0 )
+    return true;
+
+  fspec = wss->spec;
+  fspec.format = SDL_AUDIO_F32;
+  if ( !SDL_ConvertAudioSamples(&wss->spec, wss->data, (int)wss->len,
+				&fspec, &fdata, &flen) )
+    return false;
+
+  const float *samples = (const float*)fdata;
+  size_t nframes = (size_t)flen/sizeof(float)/fspec.channels;
+
+  for(size_t f=0; f<nframes; f++)
+  { int part = (int)((double)f*n/nframes);
+
+    for(int c=0; c<fspec.channels; c++)
+    { double v = fabs(samples[f*fspec.channels+c]);
+
+      if ( v > peaks[part] )
+	peaks[part] = v > 1.0 ? 1.0 : v;
+    }
+  }
+  SDL_free(fdata);
+
+  return true;
 }
 
 

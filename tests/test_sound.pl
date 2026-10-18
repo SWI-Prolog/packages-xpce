@@ -101,6 +101,35 @@ write_tone(File, Seconds) :-
         ),
         close(Out)).
 
+%!  write_au(+File, +Seconds) is det.
+%
+%   Write the tone of write_tone/2 as a Sun/NeXT .au file: a header and
+%   big-endian 16-bit samples.  SDL itself only reads WAV files, so
+%   loading this tests the decoders of SDL3_sound.
+
+write_au(File, Seconds) :-
+    Rate = 8000,
+    N is round(Rate*Seconds),
+    setup_call_cleanup(
+        open(File, write, Out, [type(binary)]),
+        ( format(Out, ".snd", []),
+          be(Out, 24, 4), be(Out, N*2, 4), be(Out, 3, 4),
+          be(Out, Rate, 4), be(Out, 1, 4),
+          forall(between(1, N, I),
+                 ( V is round(10000*sin(2*pi*440*I/Rate)),
+                   be(Out, V, 2)
+                 ))
+        ),
+        close(Out)).
+
+be(Out, V0, Bytes) :-
+    V is V0,
+    Max is Bytes-1,
+    forall(between(0, Max, I),
+           ( B is (V >> (8*(Max-I))) /\ 0xff,
+             put_byte(Out, B)
+           )).
+
 le(Out, V0, Bytes) :-
     V is V0,
     Max is Bytes-1,
@@ -247,5 +276,27 @@ test(save_and_load, [F-C-Same == 44100-1-true]) :-
     get(S2, channels, C),
     get(S2, duration, D2),
     ( abs(D2-D) < 0.001 -> Same = true ; Same = false ).
+
+test(peaks, [Peaks == [0.31, 0.31, 0.31, 0.31]]) :-
+    test_file('tone.wav', File),        % amplitude 10000/32768
+    write_tone(File, 0.4),
+    new(S, sound(File)),
+    get(S, peaks, 4, Vector),
+    findall(P, ( between(1, 4, I),
+                 get(Vector, element, I, P0),
+                 P is round(P0*100)/100.0
+               ), Peaks).
+test(extensions, true(memberchk(wav, Exts))) :-
+    get(@display, sound_file_extensions, Chain),
+    chain_list(Chain, Exts).
+test(au_file, [ condition(send(@pce, has_feature, sound_decoders)),
+                F-C-D == 8000-1-0.25
+              ]) :-
+    test_file('tone.au', File),
+    write_au(File, 0.25),
+    new(S, sound(File)),
+    get(S, frequency, F),
+    get(S, channels, C),
+    get(S, duration, D).
 
 :- end_tests(sound).

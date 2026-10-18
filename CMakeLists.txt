@@ -41,6 +41,13 @@ set(GUI_LIBRARIES
     PkgConfig::CAIRO
     PkgConfig::PANGO
     PkgConfig::PANGOCAIRO)
+# SDL3_sound decodes MP3, Ogg Vorbis, FLAC, etc. for class sound.
+# Without it, class sound only loads WAV files.
+find_package(SDL3_sound CONFIG QUIET)
+if(SDL3_sound_FOUND)
+  set(HAVE_SDL3_SOUND 1)
+  list(APPEND GUI_LIBRARIES SDL3_sound::SDL3_sound)
+endif()
 if(APPLE)
   list(APPEND GUI_LIBRARIES "-framework Cocoa")
 elseif(NOT WIN32)

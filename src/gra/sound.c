@@ -101,6 +101,21 @@ getPlayingSound(Sound s)
 }
 
 
+static Vector
+getPeaksSound(Sound s, Int parts)
+{ int n = valInt(parts);
+  double *peaks = alloca(n*sizeof(double));
+  Any *argv = alloca(n*sizeof(Any));
+
+  if ( !ws_sound_peaks(s, n, peaks) )
+    fail;
+  for(int i=0; i<n; i++)
+    argv[i] = toNum(peaks[i]);
+
+  answer(answerObjectv(ClassVector, n, argv));
+}
+
+
 /* Type declarations */
 
 /* Instance Variables */
@@ -141,7 +156,9 @@ static senddecl send_sound[] =
 
 static getdecl get_sound[] =
 { GM(NAME_playing, 0, "bool", NULL, getPlayingSound,
-     NAME_action, "@on if the sound is being played")
+     NAME_action, "@on if the sound is being played"),
+  GM(NAME_peaks, 1, "vector", "parts=1..10000", getPeaksSound,
+     NAME_analyse, "Peak level (0..1) of each of `parts` parts")
 };
 
 /* Class Declaration */

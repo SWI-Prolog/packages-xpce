@@ -46,5 +46,7 @@ status	ws_start_recording(AudioRecorder r);
 void	ws_stop_recording(AudioRecorder r);
 bool	sdl_audio_event(SDL_Event *event);
 void	sdl_start_media_tick(void);
+Chain	ws_sound_file_extensions(void);
+bool	ws_sound_peaks(Sound s, int n, double *peaks);
 
 #endif /*SDLAUDIO_H*/

@@ -676,6 +676,11 @@ getCamerasDisplay(DisplayObj d)
 { answer(ws_cameras());
 }
 
+static Chain
+getSoundFileExtensionsDisplay(DisplayObj d)
+{ answer(ws_sound_file_extensions());
+}
+
 static char *T_sdlTestGamepad[] =
         { "action={attach,detach,button,axis}", "control=[name]",
 	  "value=[num]" };
@@ -770,6 +775,8 @@ static getdecl get_display[] =
      NAME_power, "Seconds the battery lasts; fails if unknown"),
   GM(NAME_preferredLocales, 0, "chain", NULL, getPreferredLocalesDisplay,
      NAME_language, "The user's preferred locales, e.g., en_US"),
+  GM(NAME_soundFileExtensions, 0, "chain", NULL, getSoundFileExtensionsDisplay,
+     NAME_sound, "Extensions of the sound files that can be loaded"),
   GM(NAME_cameras, 0, "chain", NULL, getCamerasDisplay,
      NAME_video, "Names of the available cameras"),
   GM(NAME_gamepads, 0, "chain", NULL, getGamepadsDisplay,

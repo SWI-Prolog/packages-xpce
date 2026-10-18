@@ -285,8 +285,12 @@ dpad(Pad, Minus, Plus, V0, V) :-
 
 \section{Sound}					\label{sec:sound}
 
-\index{sound}\index{audio}\index{WAV}%
-A \class{sound} holds audio, loaded from a WAV file.  `sound ->play'
+\index{sound}\index{audio}\index{WAV}\index{MP3}%
+A \class{sound} holds audio, loaded from a sound file.  If \product{}
+is built with SDL3_sound, it loads WAV, MP3, Ogg Vorbis, FLAC, AIFF
+and various other formats.  Otherwise it only loads WAV files.
+`display <-sound_file_extensions' lists the extensions of the files
+that can be loaded.  `sound ->play'
 plays it on the default audio output and returns immediately.  A sound
 may be played several times at the same time, e.g., for the sound
 effects of a game.  `sound ->stop' stops all plays of the sound and
@@ -320,7 +324,8 @@ record_example :-
 \end{code}
 
 The system may ask the user for permission to use the microphone.
-Only WAV files are supported.
+`sound <-peaks' returns the peak level of a given number of parts of
+the sound, which is useful to draw its waveform.
 
 
 \section{Video from a camera}			\label{sec:camera}
