@@ -70,4 +70,7 @@ Any ws_get_selection(DisplayObj d, Name which, Name target);
 status	ws_selection_object_display(DisplayObj d, Name which, Any obj);
 Chain	ws_selection_targets_display(DisplayObj d, Name which);
 
+Name	ws_power_display(DisplayObj d, int *seconds, int *percent);
+Chain	ws_preferred_locales_display(DisplayObj d);
+
 #endif /* RAYDISPLAY_H */

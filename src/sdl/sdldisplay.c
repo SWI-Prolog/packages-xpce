@@ -516,6 +516,60 @@ ws_selection_display(DisplayObj d, Name which, StringObj data)
 }
 
 		 /*******************************
+		 *	   POWER & LOCALE	*
+		 *******************************/
+
+/* Power state of the system.  `seconds` and `percent` are -1 if they
+ * are unknown.
+ */
+
+Name
+ws_power_display(DisplayObj d, int *seconds, int *percent)
+{ int secs = -1, pct = -1;
+  SDL_PowerState st = SDL_GetPowerInfo(&secs, &pct);
+
+  if ( seconds ) *seconds = secs;
+  if ( percent ) *percent = pct;
+
+  switch(st)
+  { case SDL_POWERSTATE_ON_BATTERY: return NAME_onBattery;
+    case SDL_POWERSTATE_NO_BATTERY: return NAME_noBattery;
+    case SDL_POWERSTATE_CHARGING:   return NAME_charging;
+    case SDL_POWERSTATE_CHARGED:    return NAME_charged;
+    default:			    return NAME_unknown;
+  }
+}
+
+
+/* The user's preferred locales, most preferred first, as names such as
+ * en_US or nl.
+ */
+
+Chain
+ws_preferred_locales_display(DisplayObj d)
+{ Chain ch = answerObject(ClassChain, EAV);
+  int count = 0;
+  SDL_Locale **locales = SDL_GetPreferredLocales(&count);
+
+  if ( locales )
+  { for(int i=0; i<count; i++)
+    { char buf[64];
+
+      if ( locales[i]->country )
+	snprintf(buf, sizeof(buf), "%s_%s",
+		 locales[i]->language, locales[i]->country);
+      else
+	snprintf(buf, sizeof(buf), "%s", locales[i]->language);
+      appendChain(ch, CtoName(buf));
+    }
+    SDL_free(locales);
+  }
+
+  return ch;
+}
+
+
+		 /*******************************
 		 *	  CLIPBOARD DATA	*
 		 *******************************/
 

@@ -292,6 +292,42 @@ copyDisplay(DisplayObj d, Any data)
 }
 
 
+static Name
+getPowerStateDisplay(DisplayObj d)
+{ answer(ws_power_display(d, NULL, NULL));
+}
+
+
+static Int
+getBatteryPercentDisplay(DisplayObj d)
+{ int pct;
+
+  ws_power_display(d, NULL, &pct);
+  if ( pct >= 0 )
+    answer(toInt(pct));
+
+  fail;
+}
+
+
+static Int
+getBatterySecondsDisplay(DisplayObj d)
+{ int secs;
+
+  ws_power_display(d, &secs, NULL);
+  if ( secs >= 0 )
+    answer(toInt(secs));
+
+  fail;
+}
+
+
+static Chain
+getPreferredLocalesDisplay(DisplayObj d)
+{ answer(ws_preferred_locales_display(d));
+}
+
+
 static Chain
 getSelectionTargetsDisplay(DisplayObj d, Name which)
 { return ws_selection_targets_display(d, isDefault(which) ? NAME_clipboard
@@ -725,6 +761,15 @@ static getdecl get_display[] =
   GM(NAME_sdlTestGamepad, 1, "num", "{rumble_low,rumble_high,red,green,blue}",
      ws_test_gamepad_output,
      NAME_test, "Output sent to the virtual gamepad (testing)"),
+  GM(NAME_powerState, 0, "{unknown,on_battery,no_battery,charging,charged}",
+     NULL, getPowerStateDisplay,
+     NAME_power, "Whether the system runs on a battery"),
+  GM(NAME_batteryPercent, 0, "0..100", NULL, getBatteryPercentDisplay,
+     NAME_power, "Charge of the battery; fails if unknown"),
+  GM(NAME_batterySeconds, 0, "int", NULL, getBatterySecondsDisplay,
+     NAME_power, "Seconds the battery lasts; fails if unknown"),
+  GM(NAME_preferredLocales, 0, "chain", NULL, getPreferredLocalesDisplay,
+     NAME_language, "The user's preferred locales, e.g., en_US"),
   GM(NAME_cameras, 0, "chain", NULL, getCamerasDisplay,
      NAME_video, "Names of the available cameras"),
   GM(NAME_gamepads, 0, "chain", NULL, getGamepadsDisplay,

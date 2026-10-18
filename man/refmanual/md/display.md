@@ -318,6 +318,22 @@ See `display_manager <-current`.
     device_added or device_removed event, whose `event<-device` is the
     device.
 
+- display<-power_state: -> {unknown,on_battery,no_battery,charging,charged}
+    Whether the system runs on a battery and, if so, whether it is
+    charging.
+
+- display<-battery_percent: -> 0..100
+    The charge of the battery.  Fails if this is unknown, e.g., if the
+    system has no battery.
+
+- display<-battery_seconds: -> int
+    The estimated number of seconds the battery lasts.  Fails if this
+    is unknown.
+
+- display<-preferred_locales: -> chain
+    New chain with the user's preferred locales, most preferred first,
+    as names such as `en_US` or `nl`.
+
 - display<-cameras: -> chain
     New chain holding the names of the available cameras.  The first
     call starts the support for cameras, which may ask the user for
