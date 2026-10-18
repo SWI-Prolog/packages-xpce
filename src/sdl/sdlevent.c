@@ -310,14 +310,9 @@ is_cue_alt_key(SDL_Keycode key)
 #endif
 }
 static Any grabbing_window = NIL;
-static Any mouse_tracking_window = NIL; /* Window or Frame */
-static Any pointer_window = NIL;	/* Window holding the pointer */
 static Any drop_tracking_window = NIL;	/* Window of the last drop_position */
 static float drop_tracking_x, drop_tracking_y; /* its position there */
 static bool drop_tracking_done = false;	/* drop_complete was delivered */
-static Uint8 mouse_tracking_button;
-static SDL_WindowID mouse_tracking_wid = 0;
-static Uint8 mouse_down_button;		/* button of mouse_tracking_wid */
 static SDL_Event lost_up_event;		/* see lost_mouse_up() */
 static SDL_DisplayID last_display_id = 0;
 static Uint32 keyboard_timer = 0;
@@ -333,7 +328,56 @@ static Uint64 menubar_key_time = 0;	/* key-down taken by the MacOS menu */
 #define KEYBOARD_DELAY 10
 #define ms_to_ns(ms) ((Uint64)(ms)*1000000)
 
-static void	set_pointer_window(Any window);
+/* The window system state of a pointer device: the implicit grab
+ * from a button-down to the matching up and the window that holds the
+ * pointer.  Keyboard and drop events use the state of the last pointer
+ * device.
+ */
+
+typedef struct sdl_pointer
+{ InputDevice	device;			/* the device */
+  Any		tracking_window;	/* Window or Frame of the down */
+  Uint8		tracking_button;	/* button of tracking_window */
+  SDL_WindowID	tracking_wid;		/* SDL window of the down */
+  Uint8		down_button;		/* button of tracking_wid */
+  Any		pointer_window;		/* Window holding the pointer */
+} sdl_pointer;
+
+/* Records are allocated one by one, so a record does not move when
+ * a handler of an event we are processing adds a device.
+ */
+
+static sdl_pointer **sdl_pointers = NULL;
+static int sdl_pointer_count = 0;
+static int sdl_pointer_allocated = 0;
+
+static sdl_pointer *
+sdl_pointer_state(InputDevice d)
+{ if ( d->kind == NAME_keyboard )
+    d = lastPointerDevice();
+
+  for(int i=0; i<sdl_pointer_count; i++)
+  { if ( sdl_pointers[i]->device == d )
+      return sdl_pointers[i];
+  }
+
+  if ( sdl_pointer_count == sdl_pointer_allocated )
+  { int n = sdl_pointer_allocated ? sdl_pointer_allocated*2 : 4;
+    sdl_pointers = pceRealloc(sdl_pointers, n*sizeof(*sdl_pointers));
+    sdl_pointer_allocated = n;
+  }
+
+  sdl_pointer *sp = pceMalloc(sizeof(*sp));
+  sdl_pointers[sdl_pointer_count++] = sp;
+  memset(sp, 0, sizeof(*sp));
+  sp->device          = d;
+  sp->tracking_window = NIL;
+  sp->pointer_window  = NIL;
+
+  return sp;
+}
+
+static void	set_pointer_window(sdl_pointer *sp, Any window);
 
 static Uint32
 tm_keyboard_timeout(void *udata, SDL_TimerID id, Uint32 interval)
@@ -401,7 +445,9 @@ ws_grabbing_window(void)
 
 PceWindow
 ws_pointer_window(void)
-{ if ( notNil(pointer_window) &&
+{ Any pointer_window = sdl_pointer_state(DEVICE_mouse)->pointer_window;
+
+  if ( notNil(pointer_window) &&
        instanceOfObject(pointer_window, ClassWindow) &&
        !onFlag(pointer_window, F_FREED|F_FREEING) )
     return pointer_window;
@@ -461,14 +507,18 @@ void
 ws_event_destroyed_target(Any window)
 { if ( window == drop_tracking_window )
     set_drop_tracking_window(NIL);
-  if ( window == mouse_tracking_window )
-  { delCodeReference(mouse_tracking_window);
-    mouse_tracking_window = NIL;
-  }
   if ( window == grabbing_window )
     ev_event_grab_window(NIL);
-  if ( window == pointer_window )
-    set_pointer_window(NIL);
+  for(int i=0; i<sdl_pointer_count; i++)
+  { sdl_pointer *sp = sdl_pointers[i];
+
+    if ( window == sp->tracking_window )
+    { delCodeReference(sp->tracking_window);
+      sp->tracking_window = NIL;
+    }
+    if ( window == sp->pointer_window )
+      set_pointer_window(sp, NIL);
+  }
 }
 
 
@@ -485,7 +535,8 @@ ws_event_destroyed_target(Any window)
 */
 
 static void
-post_area_event(Any window, Name id, float x, float y, Any buttons)
+post_area_event(Any window, Name id, float x, float y, Any buttons,
+		Any device)
 { if ( onFlag(window, F_FREED|F_FREEING) )
     return;
 
@@ -495,7 +546,8 @@ post_area_event(Any window, Name id, float x, float y, Any buttons)
 
 		markAnswerStack(mark);	/* before creating the event */
 		if ( (ev=answerObject(ClassEvent, id, window,
-				      toNum(x), toNum(y), buttons, EAV)) )
+				      toNum(x), toNum(y), buttons,
+				      DEFAULT, device, EAV)) )
 		{ addCodeReference(ev);
 		  postNamedEvent(ev, window, DEFAULT, NAME_postEvent);
 		  delCodeReference(ev);
@@ -510,10 +562,10 @@ post_area_event(Any window, Name id, float x, float y, Any buttons)
 */
 
 static void
-set_pointer_window(Any window)
-{ if ( notNil(pointer_window) )
-    delCodeReference(pointer_window);
-  pointer_window = window;
+set_pointer_window(sdl_pointer *sp, Any window)
+{ if ( notNil(sp->pointer_window) )
+    delCodeReference(sp->pointer_window);
+  sp->pointer_window = window;
   if ( notNil(window) )
     addCodeReference(window);		/* keep it around while we
 					   hold a pointer to it */
@@ -521,9 +573,9 @@ set_pointer_window(Any window)
 
 
 static void
-update_pointer_window(Any window, FrameObj frame,
+update_pointer_window(sdl_pointer *sp, Any window, FrameObj frame,
 		      float fx, float fy, Any buttons)
-{ Any old = pointer_window;
+{ Any old = sp->pointer_window;
 
   if ( !instanceOfObject(window, ClassWindow) )
     window = NIL;			/* on the frame, but not in a
@@ -532,14 +584,14 @@ update_pointer_window(Any window, FrameObj frame,
     return;
 
   addCodeReference(old);		/* survives set_pointer_window() */
-  set_pointer_window(window);		/* update before we post: the
+  set_pointer_window(sp, window);	/* update before we post: the
 					   handlers may generate events */
 
   if ( notNil(old) && !onFlag(old, F_FREED|F_FREEING) )
   { float ox=0, oy=0;
 
     ws_window_frame_position(old, frame, &ox, &oy);
-    post_area_event(old, NAME_areaExit, fx-ox, fy-oy, buttons);
+    post_area_event(old, NAME_areaExit, fx-ox, fy-oy, buttons, sp->device);
   }
   delCodeReference(old);
 
@@ -547,7 +599,8 @@ update_pointer_window(Any window, FrameObj frame,
   { float ox=0, oy=0;
 
     ws_window_frame_position(window, frame, &ox, &oy);
-    post_area_event(window, NAME_areaEnter, fx-ox, fy-oy, buttons);
+    post_area_event(window, NAME_areaEnter, fx-ox, fy-oy, buttons,
+		    sp->device);
   }
 }
 
@@ -577,7 +630,7 @@ update_drop_tracking_window(Any window, float x, float y)
   set_drop_tracking_window(window);	/* update before we post */
 
   if ( notNil(old) && !done && !onFlag(old, F_FREED|F_FREEING) )
-    post_area_event(old, NAME_dropComplete, old_x, old_y, ZERO);
+    post_area_event(old, NAME_dropComplete, old_x, old_y, ZERO, DEFAULT);
   delCodeReference(old);
 }
 
@@ -586,9 +639,11 @@ update_drop_tracking_window(Any window, float x, float y)
 
 void
 ws_pointer_left_frame(FrameObj fr)
-{ if ( notNil(pointer_window) &&
-       getFrameWindow(pointer_window, OFF) == fr )
-    update_pointer_window(NIL, fr, 0.0, 0.0, ZERO);
+{ sdl_pointer *sp = sdl_pointer_state(DEVICE_mouse);
+
+  if ( notNil(sp->pointer_window) &&
+       getFrameWindow(sp->pointer_window, OFF) == fr )
+    update_pointer_window(sp, NIL, fr, 0.0, 0.0, ZERO);
 }
 
 DisplayObj
@@ -630,28 +685,28 @@ redirect_to_tracking_frame(SDL_WindowID *wid, SDL_WindowID tracking_wid,
   *wid = tracking_wid;
 }
 
-/* A motion event shows the button pressed in `mouse_tracking_wid' is no
+/* A motion event shows the button pressed in `sp->tracking_wid' is no
    longer held, but we never saw it going up.  This may happen if it is
    released outside our windows.  Turn the motion into the lost up-event
    such that the gesture that handled the down terminates.
 */
 
 static SDL_Event *
-lost_mouse_up(SDL_Event *motion)
-{ if ( !mouse_tracking_wid ||
-       (motion->motion.state & SDL_BUTTON_MASK(mouse_down_button)) )
+lost_mouse_up(sdl_pointer *sp, SDL_Event *motion)
+{ if ( !sp->tracking_wid ||
+       (motion->motion.state & SDL_BUTTON_MASK(sp->down_button)) )
     return motion;
 
   DEBUG(NAME_event,
 	Cprintf("Synthesizing lost up-event for button %d\n",
-		mouse_down_button));
+		sp->down_button));
 
   memset(&lost_up_event, 0, sizeof(lost_up_event));
   lost_up_event.button.type	 = SDL_EVENT_MOUSE_BUTTON_UP;
   lost_up_event.button.timestamp = motion->motion.timestamp;
   lost_up_event.button.windowID  = motion->motion.windowID;
   lost_up_event.button.which	 = motion->motion.which;
-  lost_up_event.button.button	 = mouse_down_button;
+  lost_up_event.button.button	 = sp->down_button;
   lost_up_event.button.down	 = false;
   lost_up_event.button.clicks	 = 1;
   lost_up_event.button.x	 = motion->motion.x;
@@ -701,20 +756,35 @@ CtoEvent(SDL_Event *event)
     fail;
   }
   mouse_flags = SDL_GetMouseState(&fx, &fy);
+
+  Any device = DEFAULT;			/* keyboard or last pointer */
+  switch ( event->type )
+  { case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+    case SDL_EVENT_MOUSE_MOTION:
+    case SDL_EVENT_MOUSE_WHEEL:
+      device = DEVICE_mouse;
+      break;
+    default:
+      break;
+  }
+  sdl_pointer *sp = sdl_pointer_state(isDefault(device) ? lastPointerDevice()
+						      : device);
+
   if ( event->type == SDL_EVENT_MOUSE_MOTION )
-    event = lost_mouse_up(event);
+    event = lost_mouse_up(sp, event);
 
   switch (event->type)
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
-      mouse_tracking_wid = event->button.windowID;
-      mouse_down_button = event->button.button;
+      sp->tracking_wid = event->button.windowID;
+      sp->down_button = event->button.button;
       goto mouse_cont;
     case SDL_EVENT_MOUSE_BUTTON_UP:
       /* https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent */
       if ( !event->button.windowID ) /* Seems to happen on MacOS */
-	event->button.windowID = mouse_tracking_wid;
-      tracking_wid = mouse_tracking_wid;
-      mouse_tracking_wid = 0;
+	event->button.windowID = sp->tracking_wid;
+      tracking_wid = sp->tracking_wid;
+      sp->tracking_wid = 0;
     mouse_cont:
       fx = event->button.x;	/* these are floats */
       fy = event->button.y;
@@ -732,7 +802,7 @@ CtoEvent(SDL_Event *event)
       time = event->motion.timestamp/1000000; // ns -> ms
       mouse_flags = event->motion.state;
       if ( mouse_flags & (SDL_BUTTON_LMASK|SDL_BUTTON_MMASK|SDL_BUTTON_RMASK) )
-	tracking_wid = mouse_tracking_wid;
+	tracking_wid = sp->tracking_wid;
 
       if ( mouse_flags & SDL_BUTTON_LMASK )
 	name = NAME_msLeftDrag;
@@ -1000,20 +1070,20 @@ CtoEvent(SDL_Event *event)
 
   if ( drop_tracked )
   { /* window, x and y are set above */
-  } else if ( notNil(mouse_tracking_window) )
-  { if ( onFlag(mouse_tracking_window, F_FREED|F_FREEING) ||
-	 !ws_created_window(mouse_tracking_window) )
+  } else if ( notNil(sp->tracking_window) )
+  { if ( onFlag(sp->tracking_window, F_FREED|F_FREEING) ||
+	 !ws_created_window(sp->tracking_window) )
     { Cprintf("Mouse tracking window (%s) is lost?\n",
-	      pp(mouse_tracking_window));
-      delCodeReference(mouse_tracking_window);
-      mouse_tracking_window = NIL;
+	      pp(sp->tracking_window));
+      delCodeReference(sp->tracking_window);
+      sp->tracking_window = NIL;
       fail;
     }
 
     float ox=0, oy=0;
-    bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
+    bool rc = ws_window_frame_position(sp->tracking_window, frame, &ox, &oy);
     if ( rc )
-    { window = mouse_tracking_window;
+    { window = sp->tracking_window;
       x -= ox;
       y -= oy;
     } else
@@ -1021,9 +1091,9 @@ CtoEvent(SDL_Event *event)
       event_window(&window, &x, &y);
     }
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
-	 mouse_tracking_button == event->button.button )
-    { delCodeReference(mouse_tracking_window);
-      mouse_tracking_window = NIL;
+	 sp->tracking_button == event->button.button )
+    { delCodeReference(sp->tracking_window);
+      sp->tracking_window = NIL;
     }
   } else if ( notNil(grabbing_window) )
   { if ( onFlag(grabbing_window, F_FREED|F_FREEING) )
@@ -1044,9 +1114,9 @@ CtoEvent(SDL_Event *event)
     window = frame;
     event_window(&window, &x, &y);
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_DOWN )
-    { mouse_tracking_window = window;
-      mouse_tracking_button = event->button.button;
-      addCodeReference(mouse_tracking_window);
+    { sp->tracking_window = window;
+      sp->tracking_button = event->button.button;
+      addCodeReference(sp->tracking_window);
     }
   }
 
@@ -1061,14 +1131,12 @@ CtoEvent(SDL_Event *event)
    * AltGr.
    */
   SDL_Keymod mod_for_event = lastmod;
-  Any device = DEFAULT;			/* keyboard or last pointer */
   switch ( event->type )
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_MOUSE_MOTION:
     case SDL_EVENT_MOUSE_WHEEL:
       mod_for_event = SDL_GetModState();
-      device = DEVICE_mouse;
       break;
     default:
       break;
@@ -1080,7 +1148,7 @@ CtoEvent(SDL_Event *event)
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_MOUSE_MOTION:
-      update_pointer_window(window, frame, frame_x, frame_y, buttons);
+      update_pointer_window(sp, window, frame, frame_x, frame_y, buttons);
       break;
     default:
       break;

@@ -56,6 +56,15 @@ initialiseInputDevice(InputDevice d, Name kind, Int id, Name name)
 { assign(d, kind, kind);
   assign(d, id,   isDefault(id) ? ZERO : id);
   assign(d, name, isDefault(name) ? kind : name);
+  d->pointer = NULL;
+
+  succeed;
+}
+
+
+static status
+unlinkInputDevice(InputDevice d)
+{ freePointerStateDevice(d);
 
   succeed;
 }
@@ -113,14 +122,18 @@ static vardecl var_input_device[] =
   IV(NAME_id, "int", IV_GET,
      NAME_name, "Window system identifier of the device"),
   IV(NAME_name, "name", IV_GET,
-     NAME_name, "Human readable name of the device")
+     NAME_name, "Human readable name of the device"),
+  IV(NAME_pointer, "alien:PointerState", IV_NONE,
+     NAME_event, "Defaults and multiclick state for its events")
 };
 
 /* Send Methods */
 
 static senddecl send_input_device[] =
 { SM(NAME_initialise, 3, T_initialise, initialiseInputDevice,
-     DEFAULT, "Create from kind, id and name")
+     DEFAULT, "Create from kind, id and name"),
+  SM(NAME_unlink, 0, NULL, unlinkInputDevice,
+     DEFAULT, "Free the event state")
 };
 
 /* Get Methods */

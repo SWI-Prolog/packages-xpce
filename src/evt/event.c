@@ -42,26 +42,116 @@ forwards void init_event_tree(void);
 
 extern EventNodeObj getNodeEventTree(EventTreeObj t, Any value);
 
-#define TOINT(x) x
+/* The state of a pointing device: the defaults for its next event
+ * and its multiclick detection.  Each input_device that generates
+ * events has one, so the mouse, a pen and the fingers on a touch
+ * screen do not disturb each other.  The keyboard has no position.  A
+ * keyboard event uses and updates the state of the last pointer device.
+ * All states are linked, see unlinkedWindowEvent().
+ */
 
-static Int	 last_buttons     = TOINT(ZERO); /* defaults for next event */
-static Any	 last_window      = NIL;
-static Any	 last_frame       = NIL;	/* <-frame of the last event */
-static Int	 last_x		  = TOINT(ZERO);
-static Int	 last_y		  = TOINT(ZERO);
-static unsigned long last_time	  = 0L;
-static InputDevice last_pointer	  = NULL;	/* device of last non-key event */
+struct pointer_state
+{ PointerState	next;			/* next in pointer_states */
+  InputDevice	device;			/* device we belong to */
+  Any		window;			/* <-window of the last event */
+  Any		frame;			/* <-frame of the last event */
+  Int		x;			/* position of the last event */
+  Int		y;
+  Int		buttons;		/* <-buttons of the last event */
+  Int		down_bts;		/* multiclick detection */
+  int		down_x;
+  int		down_y;
+  int64_t	down_time;
+  int		click_type;
+};
 
-static Int		 last_down_bts    = ZERO;
-static int		 last_down_x      = -1000; /* multiclick detection */
-static int		 last_down_y	  = -1000;
-static int64_t		 last_down_time   = 0;
+static PointerState	 pointer_states   = NULL; /* all states */
+static InputDevice	 last_pointer     = NULL; /* device of last non-key event */
+static unsigned long	 last_time	  = 0L;
 static unsigned int	 multi_click_time = 400;
 static int		 multi_click_diff = 4;
-static int		 last_click_type  = CLICK_TYPE_triple;
 static int		 loc_still_posted = TRUE;
 static int64_t		 host_last_time   = 0;
 static int		 loc_still_time	  = 400;
+
+
+InputDevice
+lastPointerDevice(void)
+{ if ( last_pointer )
+    return last_pointer;
+  if ( !DEVICE_mouse )			/* no events yet */
+    realiseClass(ClassInputDevice);
+
+  return DEVICE_mouse;
+}
+
+
+/* The state of `d' or, for the keyboard, that of the last pointer.
+ */
+
+static PointerState
+pointerState(InputDevice d)
+{ if ( d->kind == NAME_keyboard )
+    d = lastPointerDevice();
+
+  if ( !d->pointer )
+  { PointerState ps = alloc(sizeof(*ps));
+
+    memset(ps, 0, sizeof(*ps));
+    ps->device     = d;
+    ps->window     = NIL;
+    ps->frame      = NIL;
+    ps->x	   = ZERO;
+    ps->y	   = ZERO;
+    ps->buttons    = ZERO;
+    ps->down_bts   = ZERO;
+    ps->down_x     = -1000;
+    ps->down_y     = -1000;
+    ps->click_type = CLICK_TYPE_triple;
+    ps->next       = pointer_states;
+    pointer_states = ps;
+    d->pointer     = ps;
+  }
+
+  return d->pointer;
+}
+
+
+/* Called if `d' is destroyed */
+
+void
+freePointerStateDevice(InputDevice d)
+{ PointerState ps = d->pointer;
+
+  if ( last_pointer == d )
+    last_pointer = NULL;
+
+  if ( ps )
+  { PointerState *pp;
+
+    for(pp = &pointer_states; *pp; pp = &(*pp)->next)
+    { if ( *pp == ps )
+      { *pp = ps->next;
+	break;
+      }
+    }
+    d->pointer = NULL;
+    unalloc(sizeof(*ps), ps);
+  }
+}
+
+
+static bool
+isKeyboardEventId(Any id)
+{ if ( isInteger(id) )			/* a character */
+    return true;
+
+  EventNodeObj node = getNodeEventTree(EventTree, id);
+  EventNodeObj kbd  = getNodeEventTree(EventTree, NAME_keyboard);
+
+  return node && kbd && isAEventNode(node, kbd);
+}
+
 
 static status
 initialiseEvent(EventObj e, Name id, Any window,
@@ -71,26 +161,37 @@ initialiseEvent(EventObj e, Name id, Any window,
   initialiseProgramObject(e);
 
   EventObj parent = getValueVar(EVENT);
+  if ( isDefault(device) )
+  { if ( notNil(parent) )
+      device = parent->device;
+    else if ( isKeyboardEventId(id) )
+      device = DEVICE_keyboard;
+    else
+      device = lastPointerDevice();
+  }
+  PointerState ps = pointerState(device);
+
   if ( notNil(parent) )
   { if ( isDefault(x) )      x      = parent->x;
     if ( isDefault(y) )      y      = parent->y;
     if ( isDefault(bts) )    bts    = parent->buttons;
     if ( isDefault(window) ) window = parent->window;
     if ( isDefault(time) )   t      = max(last_time, parent->time);
-    if ( isDefault(device) ) device = parent->device;
   } else
-  { if ( isDefault(x) )      x      = last_x;
-    if ( isDefault(y) )      y      = last_y;
-    if ( isDefault(bts) )    bts    = last_buttons;
-    if ( isDefault(window) ) window = last_window;
+  { if ( isDefault(x) )      x      = ps->x;
+    if ( isDefault(y) )      y      = ps->y;
+    if ( isDefault(bts) )    bts    = ps->buttons;
+    if ( isDefault(window) ) window = ps->window;
     if ( isDefault(time) )   t      = last_time;
   }
 
   host_last_time = mclock();
   last_time      = t;
-  last_buttons   = bts;			/* save these values */
-  last_x         = x;
-  last_y         = y;
+  ps->buttons    = bts;			/* save these values */
+  ps->x          = x;
+  ps->y          = y;
+  if ( device->kind != NAME_keyboard )
+    last_pointer = device;
 
   FrameObj fr;
   if ( instanceOfObject(window, ClassWindow) )
@@ -110,14 +211,6 @@ initialiseEvent(EventObj e, Name id, Any window,
   assign(e, y,		y);
   assign(e, buttons,	bts);
   assign(e, rotation,	NIL);
-  if ( isDefault(device) )
-  { if ( isAEvent(e, NAME_keyboard) )
-      device = DEVICE_keyboard;
-    else
-      device = last_pointer ? last_pointer : DEVICE_mouse;
-  }
-  if ( device->kind != NAME_keyboard )
-    last_pointer = device;
   assign(e, device,	device);
   assign(e, detail,	NIL);
   e->time = t;
@@ -128,45 +221,45 @@ initialiseEvent(EventObj e, Name id, Any window,
     int py  = valFloor(y);
 
     DEBUG(NAME_multiclick, Cprintf("t: %ld (%ld), x: %d (%d), y: %d (%d) --> ",
-				   t, last_down_time, px, last_down_x,
-				   py, last_down_y));
+				   t, ps->down_time, px, ps->down_x,
+				   py, ps->down_y));
 
     if ( (valInt(e->buttons) & CLICK_TYPE_mask) == CLICK_TYPE_double )
-    { switch( last_click_type )
+    { switch( ps->click_type )
       { case CLICK_TYPE_single:	clt = CLICK_TYPE_double; break;
 	case CLICK_TYPE_double:	clt = CLICK_TYPE_triple; break;
 	default:		clt = CLICK_TYPE_single; break;
       }
       e->buttons = toInt(valInt(e->buttons) & ~CLICK_TYPE_mask);
     } else
-    { if ( t >= last_down_time &&	/* not before the last one */
-	   (t - last_down_time) < multi_click_time &&
-	   abs(last_down_x - px) <= multi_click_diff &&
-	   abs(last_down_y - py) <= multi_click_diff &&
-	   (valInt(last_down_bts)&BUTTON_mask) == (valInt(bts)&BUTTON_mask) &&
-	   last_window == window )
-      { switch( last_click_type )
+    { if ( t >= ps->down_time &&	/* not before the last one */
+	   (t - ps->down_time) < multi_click_time &&
+	   abs(ps->down_x - px) <= multi_click_diff &&
+	   abs(ps->down_y - py) <= multi_click_diff &&
+	   (valInt(ps->down_bts)&BUTTON_mask) == (valInt(bts)&BUTTON_mask) &&
+	   ps->window == window )
+      { switch( ps->click_type )
 	{ case CLICK_TYPE_single:	clt = CLICK_TYPE_double; break;
 	  case CLICK_TYPE_double:	clt = CLICK_TYPE_triple; break;
 	}
       }
     }
 
-    last_click_type = clt;
+    ps->click_type = clt;
     assign(e, buttons, toInt(valInt(e->buttons) | clt));
 
     DEBUG(NAME_multiclick, Cprintf("%s\n", strName(getMulticlickEvent(e))));
 
-    last_down_bts     = bts;
-    last_down_time    = t;
-    last_down_x       = px;
-    last_down_y       = py;
+    ps->down_bts  = bts;
+    ps->down_time = t;
+    ps->down_x    = px;
+    ps->down_y    = py;
   } else if ( isUpEvent(e) )
-  { assign(e, buttons, toInt(valInt(e->buttons) | last_click_type));
+  { assign(e, buttons, toInt(valInt(e->buttons) | ps->click_type));
   }
 
   if ( !onFlag(window, F_FREED|F_FREEING) )
-    last_window = window;
+    ps->window = window;
 
   if ( loc_still_posted )
   { if ( isAEvent(e, NAME_locMove) )
@@ -195,7 +288,7 @@ initialiseEvent(EventObj e, Name id, Any window,
 void
 setFrameEvent(EventObj ev, FrameObj fr)
 { assign(ev, frame, fr);
-  last_frame = fr;
+  pointerState(ev->device)->frame = fr;
 }
 
 
@@ -211,9 +304,12 @@ considerLocStillEvent()
 
     if ( !pceMTTryLock() )
       return;
+    PointerState ps = pointerState(lastPointerDevice());
+    Any last_window = ps->window;
+    Any last_frame  = ps->frame;
     if ( instanceOfObject(last_window, ClassWindow) &&
 	 !onFlag(last_window, F_FREED|F_FREEING) &&
-	 valInt(last_x) > 0 && valInt(last_y) > 0 )
+	 valInt(ps->x) > 0 && valInt(ps->y) > 0 )
     { ServiceMode(is_service_window(last_window),
 		  { AnswerMark mark;
 		    EventObj e;
@@ -221,8 +317,9 @@ considerLocStillEvent()
 		    markAnswerStack(mark);
 		    e = newObject(ClassEvent,
 				  NAME_locStill, last_window,
-				  last_x, last_y, last_buttons,
-				  toInt(last_time + now - host_last_time), EAV);
+				  ps->x, ps->y, ps->buttons,
+				  toInt(last_time + now - host_last_time),
+				  ps->device, EAV);
 		    if ( isProperObject(last_frame) &&
 			 instanceOfObject(last_frame, ClassFrame) &&
 			 !onFlag(last_frame, F_FREED|F_FREEING) )
@@ -246,7 +343,9 @@ considerLocStillEvent()
 
 PceWindow
 WindowOfLastEvent(void)
-{ if ( !isProperObject(last_window) )
+{ Any last_window = pointerState(lastPointerDevice())->window;
+
+  if ( !isProperObject(last_window) )
   { Cprintf("Warning: last_window = %s\n", pp(last_window));
     fail;
   }
@@ -260,8 +359,10 @@ WindowOfLastEvent(void)
 
 void
 unlinkedWindowEvent(Any sw)
-{ if ( sw == last_window )
-    last_window = NIL;
+{ for(PointerState ps = pointer_states; ps; ps = ps->next)
+  { if ( sw == ps->window )
+      ps->window = NIL;
+  }
 }
 
 
@@ -355,7 +456,7 @@ eventName(Name name)
 
 static status
 allButtonsUpLastEvent(void)
-{ if ( valInt(last_buttons) &
+{ if ( valInt(pointerState(lastPointerDevice())->buttons) &
        (BUTTON_ms_left|BUTTON_ms_middle|BUTTON_ms_right) )
     fail;
 
@@ -502,7 +603,7 @@ getMulticlickEvent(EventObj e)
 
 Int
 getClickTimeEvent(EventObj e)
-{ answer(toInt(e->time - last_down_time));
+{ answer(toInt(e->time - pointerState(e->device)->down_time));
 
   fail;
 }
@@ -510,8 +611,9 @@ getClickTimeEvent(EventObj e)
 
 Int
 getClickDisplacementEvent(EventObj e)
-{ int dx = valFloor(e->x) - last_down_x;
-  int dy = valFloor(e->y) - last_down_y;
+{ PointerState ps = pointerState(e->device);
+  int dx = valFloor(e->x) - ps->down_x;
+  int dy = valFloor(e->y) - ps->down_y;
 
   answer(toInt(isqrt(dx*dx + dy*dy)));
 }

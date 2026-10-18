@@ -988,6 +988,7 @@ NewClass(input_device)
   Name		kind;			/* mouse, pen, touch, ... */
   Int		id;			/* Window system id */
   Name		name;			/* Human readable name */
+  PointerState	pointer;		/* State for events (event.c) */
 End;
 
 NewClass(event_detail)

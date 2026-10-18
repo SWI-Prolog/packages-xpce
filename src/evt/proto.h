@@ -8,6 +8,8 @@ COMMON(status)	makeClassConnectGesture(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/evt/event.c */
 COMMON(void)	considerLocStillEvent(void);
+COMMON(void)	freePointerStateDevice(InputDevice d);
+COMMON(InputDevice) lastPointerDevice(void);
 COMMON(void)	setFrameEvent(EventObj ev, FrameObj fr);
 COMMON(PceWindow) WindowOfLastEvent(void);
 COMMON(void)	unlinkedWindowEvent(Any sw);

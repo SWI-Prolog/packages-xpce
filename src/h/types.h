@@ -93,6 +93,7 @@ typedef struct eventobj *		EventObj;
 typedef struct input_device *		InputDevice;
 typedef struct event_detail *		EventDetail;
 typedef struct drop_data *		DropData;
+typedef struct pointer_state *		PointerState;
 typedef struct expression *		Expression;
 typedef struct fileobj *		FileObj;
 typedef struct function *		Function;
