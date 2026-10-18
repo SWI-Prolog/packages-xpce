@@ -862,14 +862,8 @@ pceImage2SDL_Surface(Image image)
     { uint32_t *dst_row = (uint32_t *)((uint8_t *)sdl_surf->pixels +
 				       y * sdl_surf->pitch);
       uint32_t *src_row = (uint32_t *)(data + y * stride);
-      for (int x = 0; x < width; ++x)
-      { uint32_t pixel = src_row[x];
-	// Cairo's ARGB premultiplied -> SDL ARGB
-	// (which expects straight alpha)
-	// Optionally unpremultiply here if you need accuracy
-	dst_row[x] = pixel; // naive copy; may look wrong with
-			    // transparency on some platforms
-      }
+      for (int x = 0; x < width; ++x)	/* Cairo is premultiplied */
+	dst_row[x] = unpremultiply_pixel(src_row[x]);
     }
     SDL_UnlockSurface(sdl_surf);
 

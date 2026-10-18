@@ -3107,7 +3107,7 @@ r_pixel(int x, int y, Any val)
     if ( instanceOfObject(val, ClassColour) )
     { Colour c = val;
       ws_named_colour(c);
-      rgba = (uint32_t)valInt(c->rgba);
+      rgba = premultiply_pixel((uint32_t)valInt(c->rgba));
     } else
     { if ( isOn(val) )
 	rgba = 0xff000000;
@@ -3142,13 +3142,14 @@ d_modify(void)
  */
 COLORRGBA
 r_get_pixel(int x, int y)
-{ unsigned char *p = (unsigned char *)target_pixel(x, y);
+{ uint32_t *p = target_pixel(x, y);
 
   if ( p )
-  { uint8_t b = p[0];
-    uint8_t g = p[1];
-    uint8_t r = p[2];
-    uint8_t a = p[3];
+  { uint32_t pixel = unpremultiply_pixel(*p);
+    uint8_t b = pixel & 0xff;
+    uint8_t g = (pixel >> 8) & 0xff;
+    uint8_t r = (pixel >> 16) & 0xff;
+    uint8_t a = pixel >> 24;
 
     return RGBA(r,g,b,a);
   } else

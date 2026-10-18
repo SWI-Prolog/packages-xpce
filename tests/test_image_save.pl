@@ -119,6 +119,18 @@ can_save(Format) :-
     get(@display, image_save_formats, Chain),
     send(Chain, member, Format).
 
+half_transparent(I) :-
+    new(I, image(@nil, 4, 4, pixmap)),
+    forall(( between(0, 3, X), between(0, 3, Y) ),
+           send(I, pixel, X, Y, colour(@default, 200, 100, 50, 128))).
+
+pixel_rgba(I, R-G-B-A) :-
+    get(I, pixel, 1, 1, C),
+    get(C, red, R), get(C, green, G), get(C, blue, B), get(C, alpha, A).
+
+close_rgba(R1-G1-B1-A1, R2-G2-B2-A2) :-
+    maplist([X,Y]>>(abs(X-Y) =< 3), [R1,G1,B1,A1], [R2,G2,B2,A2]).
+
 file_size(Name, Size) :-
     test_file(Name, File),
     size_file(File, Size).
@@ -161,5 +173,20 @@ test(jpeg_quality, true(Small < Large)) :-
 test(save_formats, true(subset([png, jpeg, gif, bmp], Formats))) :-
     get(@display, image_save_formats, Chain),
     chain_list(Chain, Formats).
+
+%   Images are stored with premultiplied alpha.  Setting and getting
+%   pixels and saving must convert, or semi-transparent pixels come out
+%   too dark.  8-bit premultiplied alpha loses some precision, so we
+%   compare with a tolerance.
+
+test(semi_transparent_pixel, true(close_rgba(RGBA, 200-100-50-128))) :-
+    half_transparent(I),
+    pixel_rgba(I, RGBA).
+test(semi_transparent_save, true(close_rgba(RGBA, 200-100-50-128))) :-
+    half_transparent(I),
+    test_file('alpha.png', File),
+    send(I, save, File),
+    new(I2, image(File)),
+    pixel_rgba(I2, RGBA).
 
 :- end_tests(image_save).

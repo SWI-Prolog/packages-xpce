@@ -48,6 +48,36 @@ typedef uint32_t COLORRGBA;
 #define ColorBValue(rgb) (((rgb)>> 0)&0xff)
 #define ColorAValue(rgb) (((rgb)>>24)&0xff)
 
+/* Convert an ARGB pixel between straight alpha, as in colours and SDL
+ * surfaces, and premultiplied alpha, as in Cairo image surfaces.
+ */
+
+static inline COLORRGBA
+premultiply_pixel(COLORRGBA p)
+{ uint32_t a = ColorAValue(p);
+
+  if ( a == 255 )
+    return p;
+
+  return RGBA((ColorRValue(p)*a + 127)/255,
+	      (ColorGValue(p)*a + 127)/255,
+	      (ColorBValue(p)*a + 127)/255, a);
+}
+
+static inline COLORRGBA
+unpremultiply_pixel(COLORRGBA p)
+{ uint32_t a = ColorAValue(p);
+
+  if ( a == 255 || a == 0 )
+    return p;
+
+  uint32_t r = (ColorRValue(p)*255 + a/2)/a;
+  uint32_t g = (ColorGValue(p)*255 + a/2)/a;
+  uint32_t b = (ColorBValue(p)*255 + a/2)/a;
+
+  return RGBA(r > 255 ? 255 : r, g > 255 ? 255 : g, b > 255 ? 255 : b, a);
+}
+
 #define WS_COLOR_CREATED (((uintptr_t)1) << 32)
 
 status ws_named_colour(Colour c);
