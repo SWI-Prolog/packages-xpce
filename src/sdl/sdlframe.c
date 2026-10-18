@@ -300,10 +300,12 @@ constrain_popup(SDL_Window *parent, int *x, int *y, int w, int h)
 
 /* Popups have rounded corners (see draw_popup_frame() in men/menu.c),
  * for which their window must be transparent outside the corners.  That
- * needs a compositor.  MacOS, Windows and Wayland always have one.  On
- * X11 we ask whether a compositing manager owns _NET_WM_CM_S0.  We have
- * no link to libX11, but SDL has loaded it.  Without a compositor the
- * transparent pixels show black, so popups get square corners.
+ * needs a compositor.  MacOS and Wayland always have one.  On X11 we ask
+ * whether a compositing manager owns _NET_WM_CM_S0.  We have no link to
+ * libX11, but SDL has loaded it.  Without a compositor the transparent
+ * pixels show black, so popups get square corners.  On Windows, SDL's
+ * transparent windows show black too (Windows 11 and Wine), so popups
+ * are square there as well.  Windows 11 rounds their corners itself.
  */
 
 static int popups_transparent = -1;	/* unknown */
@@ -338,8 +340,10 @@ static bool
 transparent_popups(SDL_Window *parent)
 { if ( popups_transparent < 0 )
   {
-#if defined(__APPLE__) || defined(__WINDOWS__)
+#if defined(__APPLE__)
     popups_transparent = 1;
+#elif defined(__WINDOWS__)
+    popups_transparent = 0;
 #else
     const char *drv = SDL_GetCurrentVideoDriver();
 
