@@ -100,6 +100,32 @@ tabs(F, Tabs) :-
 terminals(F, Count) :-
     get(F?panes, size, Count).
 
+%!  process_groups is semidet.
+%
+%   True if a terminal knows the process group in its foreground.
+
+process_groups :-
+    \+ current_prolog_flag(windows, true).
+
+%!  wait_until(:Goal) is semidet.
+%
+%   Wait at most 10 seconds for Goal, a condition another process makes
+%   true, handling the events meanwhile.
+
+wait_until(Goal) :-
+    get_time(T0),
+    Deadline is T0+10,
+    wait_until(Goal, Deadline).
+
+wait_until(Goal, _) :-
+    call(Goal),
+    !.
+wait_until(Goal, Deadline) :-
+    get_time(Now),
+    Now < Deadline,
+    pce_principal:pce_dispatch(-1, 0.05),
+    wait_until(Goal, Deadline).
+
 %!  expose(+Frame, +Window) is det.
 %
 %   Bring the tab holding Window to the front, as clicking it does.
@@ -577,6 +603,34 @@ test(closing_the_last_terminal_ends_the_window) :-
     epilog(F, W),
     send(W?terminal, close),
     \+ object(F).
+
+%       A shell waiting for a command loses nothing when its terminal
+%       closes, but a command it runs may.  An interactive shell runs a
+%       command in a process group of its own, which then holds the
+%       terminal.  Windows has no process groups that hold a terminal,
+%       so terminal<-foreground_process always fails there.
+
+test(an_idle_shell_closes_without_asking,
+     [ condition(process_groups)
+     ]) :-
+    epilog([profile(shell), object(F)]),
+    get(F, current_pane, W),
+    get(W, terminal, PT),
+    wait_until(get(PT, foreground_process, _)),
+    send(W, can_close, @off).
+
+test(a_command_in_a_shell_asks_before_closing,
+     [ condition(process_groups),
+       cleanup(send(PT, send, '\x3\'))
+     ]) :-
+    epilog([profile(shell), object(F)]),
+    get(F, current_pane, W),
+    get(W, terminal, PT),
+    wait_until(get(PT, foreground_process, _)),
+    get(PT, foreground_process, Shell),
+    send(PT, send, 'sleep 30\n'),
+    wait_until(( get(PT, foreground_process, Group), Group \== Shell )),
+    \+ send(W, can_close, @off).
 
 :- end_tests(epilog_close).
 

@@ -2153,7 +2153,18 @@ terminal_busy(PT, Why) :-
     ;   Why = 'A query is running'
     ).
 terminal_busy(PT, 'A program is running') :-
-    get(PT, foreground_process, _).
+    get(PT, foreground_process, Group),
+    \+ shell_process(PT, Group).         % a shell waiting for a command
+
+%!  shell_process(?Terminal, ?PID) is nondet.
+%
+%   True when PID is the shell that run_shell/1 runs in Terminal.  The
+%   shell leads its own session, so PID is also its process group.  It
+%   puts a command it runs in a group of its own, so if the shell is
+%   the foreground process group, it waits for the user to type a
+%   command and closing the terminal loses nothing.
+
+:- dynamic shell_process/2.
 
 ask_close(T, Ask, Why) :-
     Ask \== @off,
@@ -2482,7 +2493,7 @@ debug_popup(MD, Debug) :-
 %   Initialisation goal for a  terminal  that   must  run  its external
 %   processes in Dir.  We cannot use  working_directory/2 as the Prolog
 %   working directory is  shared  by  all   threads.   Instead  we  let
-%   run_shell/0 pass Dir to process_create/3.  Nothing needs to be done
+%   run_shell/1 pass Dir to process_create/3.  Nothing needs to be done
 %   if Dir is already the current directory.
 
 :- public set_process_working_directory/1.
@@ -2501,27 +2512,30 @@ set_process_working_directory(Dir) :-
 
 epilog_run(PT, _:shell) :-
     !,
-    run_shell,
+    run_shell(PT),
     send(PT, window_label, 'Shell').
 epilog_run(_, Goal) :-
     call(Goal).
 
-%!  run_shell is det.
+%!  run_shell(+Terminal) is det.
 %
-%   Run an interactive shell  in  this   terminal.  Unlike  shell/0, we
+%   Run an interactive shell  in  Terminal.  Unlike  shell/0, we
 %   use process_create/3 to run the shell   in  the directory the user
-%   was in when this terminal was created.
+%   was in when this terminal was created.  While the shell runs,
+%   shell_process/2 tells can_close whether it waits for a command.
 %
 %   We wait using process_wait/2 rather   than leaving the waiting to
 %   process_create/3, as the latter turns a  non-zero exit status into
 %   an exception.  As for shell/0, the exit status is not our business.
 
-run_shell :-
+run_shell(PT) :-
     findall(Option, shell_process_option(Option), Options),
     shell_command(Shell),
     shell_prog_argv(Shell, Prog, Argv),
     process_create(Prog, Argv, [process(PID)|Options]),
-    process_wait(PID, _Status).
+    assertz(shell_process(PT, PID)),
+    call_cleanup(process_wait(PID, _Status),
+                 retractall(shell_process(PT, PID))).
 
 %!  shell_process_option(-Option) is nondet.
 %
