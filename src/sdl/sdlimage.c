@@ -277,6 +277,94 @@ ws_image_from_data(Image image, const void *data, size_t size)
   return sdl_surface_to_image(image, surf);	/* consumes surf */
 }
 
+		 /*******************************
+		 *	    ANIMATIONS		*
+		 *******************************/
+
+/* Add `surf` (consumed) as a frame of `a` that is shown for `ms`
+ * milliseconds.
+ */
+
+static status
+add_animation_frame(Animation a, SDL_Surface *surf, Uint64 ms)
+{ Image img = newObject(ClassImage, NIL, ONE, ONE, NAME_pixmap, EAV);
+
+  if ( !img )
+  { SDL_DestroySurface(surf);
+    fail;
+  }
+  ws_destroy_image(img);
+  TRY(sdl_surface_to_image(img, surf));
+
+  Any delay = toInt(ms);
+  appendVector(a->frames, 1, (Any *)&img);
+  appendVector(a->delays, 1, &delay);
+
+  succeed;
+}
+
+/**
+ * Load all frames of the animated image file `a->file`.  A file that
+ * is not animated becomes a single frame.
+ */
+status
+ws_load_animation(Animation a)
+{ IMG_AnimationDecoder *dec = NULL;
+  SDL_Surface *single = NULL;
+  IOSTREAM *fd = NULL;
+  SDL_IOStream *io = NULL;
+  const char *fname = NULL;
+  status rc = FAIL;
+
+  if ( instanceOfObject(a->file, ClassFile) )
+  { fname = charArrayToFN((CharArray)getOsNameFile((FileObj)a->file));
+
+    if ( !(dec = IMG_CreateAnimationDecoder(fname)) )
+      single = IMG_Load(fname);
+  } else if ( (fd = Sopen_object(a->file, "rbr")) &&
+	      (io = IOSTREAM_to_SDL_IOStream(fd)) )
+  { if ( !(dec = IMG_CreateAnimationDecoder_IO(io, false, NULL)) &&
+	 SDL_SeekIO(io, 0, SDL_IO_SEEK_SET) == 0 )
+      single = IMG_Load_IO(io, false);
+  }
+
+  if ( dec )
+  { SDL_PropertiesID props = IMG_GetAnimationDecoderProperties(dec);
+    SDL_Surface *frame;
+    Uint64 ms;
+
+    if ( props )
+      assign(a, loop_count,
+	     toInt(SDL_GetNumberProperty(props,
+					 IMG_PROP_METADATA_LOOP_COUNT_NUMBER,
+					 0)));
+    rc = SUCCEED;
+    while( rc && IMG_GetAnimationDecoderFrame(dec, &frame, &ms) )
+      rc = add_animation_frame(a, frame, ms);
+    if ( IMG_GetAnimationDecoderStatus(dec) == IMG_DECODER_STATUS_FAILED )
+      rc = FAIL;
+    IMG_CloseAnimationDecoder(dec);
+  } else if ( single )
+  { rc = add_animation_frame(a, single, 0);
+  }
+
+  if ( io )
+    SDL_CloseIO(io);
+  if ( fd )
+    Sclose(fd);
+
+  if ( rc && valInt(a->frames->size) > 0 )
+  { Image first = getElementVector(a->frames, ONE);
+
+    copySize(a->size, first->size);
+    succeed;
+  }
+
+  Cprintf("Failed to load animation %s: %s\n",
+	  fname ? fname : pp(a->file), SDL_GetError());
+  fail;
+}
+
 /* The standard Huffman tables of JPEG (ITU T.81, Annex K.3) as a DHT
  * segment.  The MJPG of many cameras leaves them out and expects the
  * decoder to use these.  libjpeg does, but the decoder SDL_image uses

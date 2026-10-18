@@ -62,5 +62,6 @@ status	ws_set_image_pixels(Image image, SDL_Surface *surf);
 
 bool	ws_image_to_png(Image image, void **data, size_t *size);
 status	ws_image_from_data(Image image, const void *data, size_t size);
+status	ws_load_animation(Animation a);
 
 #endif /* RAYIMAGE_H */

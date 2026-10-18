@@ -79,6 +79,15 @@ send(Dialog, append,
 ...,
 \end{code}
 
+#class animation "animation(file)"
+An animation holds the frames of an animated image file (PNG, GIF,
+WebP, AVIF) as \classs{image}, with the time each frame is shown.  A
+\class{bitmap} shows and plays it:
+\begin{code}
+?- new(B, bitmap(animation('spinner.png'))),
+   send(B, play).
+\end{code}
+
 #class application "application(name)"
 An application object is a \class{visual} object used to combine
 multiple \classs{frame}.  See \secref{application} for a discussion
@@ -188,7 +197,8 @@ send(Box, height, Text?height + 10),
 #class bitmap "bitmap(image)"
 A bitmap turns an \class{image} into a graphical object that can be
 displayed on a \class{device}.  Transparency is defined by the alpha
-channel of the image.
+channel of the image.  A bitmap can also show and play an
+\class{animation}.
 \begin{code}
 ?- new(I, image('pce.svg')),
    new(B, bitmap(I)).

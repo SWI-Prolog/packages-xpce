@@ -80,6 +80,7 @@ scope('C.behaviour', basic).
 scope('C.bezier_curve', basic).
 scope('C.binary_condition', basic).
 scope('C.binary_expression', basic).
+scope('C.animation', basic).
 scope('C.bitmap', basic).
 scope('C.block', basic).
 scope('C.bool', basic).

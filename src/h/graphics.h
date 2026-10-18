@@ -803,6 +803,10 @@ End;
 NewClass(bitmapobj)
   ABSTRACT_GRAPHICAL
   Image		image;			/* Image of the bitmap */
+  Animation	animation;		/* Animation shown or @nil */
+  Int		frame;			/* Index of the frame shown */
+  Timer		timer;			/* Plays the animation */
+  Int		loops;			/* Times the animation was played */
 End;
 
 
@@ -999,6 +1003,14 @@ NewClass(tray_icon)
   CharArray	tooltip;		/* Tooltip or @nil */
   PopupObj	popup;			/* Menu or @nil */
   WsRef		ws_ref;			/* SDL_Tray and its entries */
+End;
+
+NewClass(animation)
+  SourceSink	file;			/* Loaded from */
+  Vector	frames;			/* Images of the frames */
+  Vector	delays;			/* Milliseconds per frame */
+  Int		loop_count;		/* Times to play; 0: forever */
+  Size		size;			/* Size of the frames */
 End;
 
 NewClass(camera)
