@@ -614,6 +614,11 @@ static vardecl var_display[] =
 
 /* Send Methods */
 
+static Chain
+getCamerasDisplay(DisplayObj d)
+{ answer(ws_cameras());
+}
+
 static char *T_sdlTestGamepad[] =
         { "action={attach,detach,button,axis}", "control=[name]",
 	  "value=[num]" };
@@ -696,6 +701,8 @@ static getdecl get_display[] =
   GM(NAME_sdlTestGamepad, 1, "num", "{rumble_low,rumble_high,red,green,blue}",
      ws_test_gamepad_output,
      NAME_test, "Output sent to the virtual gamepad (testing)"),
+  GM(NAME_cameras, 0, "chain", NULL, getCamerasDisplay,
+     NAME_video, "Names of the available cameras"),
   GM(NAME_gamepads, 0, "chain", NULL, getGamepadsDisplay,
      NAME_event, "Connected gamepads; enables gamepad events"),
 };

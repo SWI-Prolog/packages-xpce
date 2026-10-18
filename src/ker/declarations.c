@@ -215,6 +215,9 @@ static struct class_definition classdefs[] =
   { NAME_audioRecorder, NAME_object, makeClassAudioRecorder,
     &ClassAudioRecorder, "Record audio from the microphone" },
 
+  { NAME_camera, NAME_object, makeClassCamera,
+    &ClassCamera, "Video from a camera as an image" },
+
   { NAME_dropData, NAME_eventDetail, makeClassDropData,
     &ClassDropData, "Data of a drop_* event" },
 

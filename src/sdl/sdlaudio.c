@@ -40,13 +40,14 @@
 
 /* Audio for class sound and class audio_recorder.  SDL calls its audio
  * callbacks from its own thread, where we cannot run xpce code.
- * Instead, a timer pushes MY_EVENT_AUDIO while sounds are playing or
- * recorders are recording.  sdl_audio_event() handles this event in the
- * main loop: it finishes plays whose audio was consumed and moves the
- * recorded audio into the sound of each recorder.
+ * Instead, a timer pushes MY_EVENT_MEDIA while sounds are playing,
+ * recorders are recording or cameras are open.  sdl_audio_event()
+ * handles this event in the main loop: it finishes plays whose audio
+ * was consumed, moves the recorded audio into the sound of each
+ * recorder and lets sdl_camera_tick() deliver camera frames.
  */
 
-#define AUDIO_TICK_MS 25		/* poll interval */
+#define MEDIA_TICK_MS 15		/* poll interval */
 
 typedef struct ws_sound
 { SDL_AudioSpec spec;			/* format of data */
@@ -83,22 +84,22 @@ init_audio(void)
 }
 
 static Uint32 SDLCALL
-audio_tick(void *udata, SDL_TimerID id, Uint32 interval)
+media_tick(void *udata, SDL_TimerID id, Uint32 interval)
 { if ( !SDL_GetAtomicInt(&ticking) )
     return 0;
 
   SDL_Event ev;
   SDL_zero(ev);
-  ev.type = MY_EVENT_AUDIO;
+  ev.type = MY_EVENT_MEDIA;
   SDL_PushEvent(&ev);
 
   return interval;
 }
 
-static void
-start_ticking(void)
+void
+sdl_start_media_tick(void)
 { if ( SDL_CompareAndSwapAtomicInt(&ticking, 0, 1) )
-    SDL_AddTimer(AUDIO_TICK_MS, audio_tick, NULL);
+    SDL_AddTimer(MEDIA_TICK_MS, media_tick, NULL);
 }
 
 
@@ -241,7 +242,7 @@ ws_play_sound(Sound s, double volume)
   p->next   = plays;
   plays     = p;
   addCodeReference(s);
-  start_ticking();
+  sdl_start_media_tick();
 
   succeed;
 }
@@ -334,7 +335,7 @@ ws_start_recording(AudioRecorder r)
   recorders     = rec;
   r->ws_ref     = rec;
   addCodeReference(r);
-  start_ticking();
+  sdl_start_media_tick();
 
   succeed;
 }
@@ -407,7 +408,7 @@ ws_stop_recording(AudioRecorder r)
 
 bool
 sdl_audio_event(SDL_Event *event)
-{ if ( event->type != MY_EVENT_AUDIO )
+{ if ( event->type != MY_EVENT_MEDIA )
     return false;
 
   pceMTLock();
@@ -428,7 +429,9 @@ sdl_audio_event(SDL_Event *event)
     rec = next;
   }
 
-  if ( !plays && !recorders )
+  bool cameras = sdl_camera_tick();
+
+  if ( !plays && !recorders && !cameras )
     SDL_SetAtomicInt(&ticking, 0);
   pceMTUnlock();
 

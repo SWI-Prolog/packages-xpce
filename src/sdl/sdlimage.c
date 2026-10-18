@@ -233,6 +233,49 @@ sdl_surface_to_image(Image image, SDL_Surface *surf0)
 }
 
 /**
+ * Replace the pixels of `image` by those of `surf`, which may have any
+ * format, e.g., the YUV format of a camera.  The cairo surface of the
+ * image is reused if it has the right size.
+ */
+status
+ws_set_image_pixels(Image image, SDL_Surface *surf)
+{ SDL_Surface *argb = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_ARGB8888);
+
+  if ( !argb )
+  { Cprintf("Failed to convert frame for %s: %s\n",
+	    pp(image), SDL_GetError());
+    fail;
+  }
+
+  cairo_surface_t *cs = image->ws_ref;
+  if ( !cs ||
+       cairo_image_surface_get_width(cs)  != argb->w ||
+       cairo_image_surface_get_height(cs) != argb->h )
+  { ws_destroy_image(image);
+    cs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, argb->w, argb->h);
+    if ( !my_cairo_check_surface(image, cs) )
+    { SDL_DestroySurface(argb);
+      fail;
+    }
+    image->ws_ref = cs;
+  }
+
+  cairo_surface_flush(cs);
+  unsigned char *dst = cairo_image_surface_get_data(cs);
+  int dst_stride = cairo_image_surface_get_stride(cs);
+  for(int y=0; y<argb->h; y++)
+    memcpy(dst+y*dst_stride, (Uint8*)argb->pixels+y*argb->pitch,
+	   (size_t)argb->w*4);
+  cairo_surface_mark_dirty(cs);
+
+  int w = argb->w, h = argb->h;
+  SDL_DestroySurface(argb);
+  assign(image, kind, NAME_pixmap);
+
+  return pixelsChangedImage(image, w, h);
+}
+
+/**
  * Load an image from its associated file path.
  *
  * @param image Pointer to the Image object.

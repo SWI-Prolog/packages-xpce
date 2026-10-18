@@ -374,6 +374,20 @@ changedEntireImageImage(Image image)
 }
 
 
+/* The window system replaced all pixels of `image`, e.g., by a frame
+ * of a camera, and the image is now `w` x `h` pixels.
+ */
+
+status
+pixelsChangedImage(Image image, int w, int h)
+{ CHANGING_IMAGE(image,
+		 assign(image->size, w, toInt(w));
+		 assign(image->size, h, toInt(h)));
+
+  return changedEntireImageImage(image);
+}
+
+
 static status
 inImage(Image image, Int x, Int y)
 { if ( valInt(x) >= 0 && valInt(y) >= 0 &&

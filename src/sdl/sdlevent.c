@@ -895,7 +895,9 @@ CtoEvent(SDL_Event *event)
     fail;
   if ( sdl_gamepad_hotplug_event(event) ) /* gamepad added/removed */
     fail;
-  if ( sdl_audio_event(event) )	/* sounds and recorders */
+  if ( sdl_audio_event(event) )	/* sounds, recorders and cameras */
+    fail;
+  if ( sdl_camera_event(event) ) /* camera permission and removal */
     fail;
   if ( sdl_frame_event(event) )	/* window events (close/open/size/...) */
     fail;

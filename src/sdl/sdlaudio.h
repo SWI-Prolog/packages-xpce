@@ -45,5 +45,6 @@ void	ws_free_sound(Sound s);
 status	ws_start_recording(AudioRecorder r);
 void	ws_stop_recording(AudioRecorder r);
 bool	sdl_audio_event(SDL_Event *event);
+void	sdl_start_media_tick(void);
 
 #endif /*SDLAUDIO_H*/

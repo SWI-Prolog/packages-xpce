@@ -87,6 +87,7 @@ scope('C.box', basic).
 scope('C.browser', basic).
 scope('C.browser_select_gesture', advanced).
 scope('C.button', basic).
+scope('C.camera', basic).
 scope('C.canvas', basic).
 scope('C.chain', basic).
 scope('C.chain_hyper', basic).

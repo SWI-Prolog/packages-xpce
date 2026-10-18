@@ -58,4 +58,6 @@ Image ws_grayscale_image(Image image);
 void ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int h);
 status ws_has_alpha_image(Image image);
 
+status	ws_set_image_pixels(Image image, SDL_Surface *surf);
+
 #endif /* RAYIMAGE_H */

@@ -269,6 +269,12 @@ starts a destructive action.
 		 message(@pce, write_ln, hello))).
 \end{code}
 
+#class camera "camera(name)"
+A \class{camera} delivers video from a camera as an \class{image}:
+each frame is copied into its <-image, so a \class{bitmap} that shows
+this image shows the video, and its <-message is executed.
+`display <-cameras' lists the available cameras.
+
 #class canvas "canvas(width, height)"
 A \class{canvas} is a graphical to draw on using operations modelled after
 Cairo: build a path using `canvas ->move_to', `canvas ->line_to',

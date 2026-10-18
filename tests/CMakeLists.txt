@@ -71,6 +71,7 @@ test_libs(smooth_scroll        OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(sdl_input            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(gamepad              OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(sound                OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(camera               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(prolog_mode          OPTIONS ${XPCE_TEST_OPTIONS})
 if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -163,6 +164,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:sdl_input
                      xpce:gamepad
                      xpce:sound
+                     xpce:camera
                      xpce:prolog_mode
                      xpce:no_display
                      xpce:display_function

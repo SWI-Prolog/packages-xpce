@@ -302,6 +302,13 @@ See `display_manager <-current`.
     device_added or device_removed event, whose `event<-device` is the
     device.
 
+- display<-cameras: -> chain
+    New chain holding the names of the available cameras.  The first
+    call starts the support for cameras, which may ask the user for
+    permission.
+
+    @see class camera
+
 - display<-gamepads: -> chain
     New chain holding the connected gamepads.  The first call starts
     the support for gamepads: as this may be slow and, on some

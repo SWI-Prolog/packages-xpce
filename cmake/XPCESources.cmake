@@ -23,7 +23,7 @@ set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c gradient.c
 		joint.c line.c link.c listbrowser.c node.c path.c pathseg.c strokestyle.c markuptext.c canvas.c
 		scrollbar.c text.c transform.c tree.c visual.c
 		pixmap.c elevation.c shadow.c pen.c draw.c bezier.c hsv.c
-		sound.c)
+		sound.c camera.c)
 
 set(ITF_SRC	host.c interface.c asfile.c console.c
 		stub.c xmalloc.c iostream.c srcsink.c rc.c hostdata.c)
@@ -73,7 +73,7 @@ set(WIN_SRC	browser.c decorate.c dialog.c display.c
 set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c
-		sdlgamepad.c sdlaudio.c
+		sdlgamepad.c sdlaudio.c sdlcamera.c
 		sdlmenubar.c)
 if(APPLE)
   # The Cocoa halves of the native menu bar and the system colours.

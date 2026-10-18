@@ -52,6 +52,7 @@
 #include <sdl/sdlstream.h>
 #include <sdl/sdlgamepad.h>
 #include <sdl/sdlaudio.h>
+#include <sdl/sdlcamera.h>
 #include <gra/graphstate.h>
 
 COMMON(status)	metaModifierDisplay(DisplayObj d, Name name);

@@ -186,7 +186,7 @@ test(load, [F-C-D == 8000-1-0.25]) :-
     get(S, frequency, F),
     get(S, channels, C),
     get(S, duration, D).
-test(load_error, [error(_)]) :-
+test(load_error, fail) :-
     test_file('nonexistent.wav', File),
     new(_, sound(File)).
 test(play, [Playing-Done == (@on)-(@off)]) :-

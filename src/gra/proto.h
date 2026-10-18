@@ -21,6 +21,8 @@ COMMON(status)	makeClassCircle(Class class);
 /* /swi40/jan/src/pl/packages/xpce/src/gra/colour.c */
 COMMON(Int)	getRedColour(Colour c);
 COMMON(status)	makeClassSound(Class class);
+COMMON(status)	makeClassCamera(Class class);
+COMMON(status)	pixelsChangedImage(Image image, int w, int h);
 COMMON(status)	makeClassAudioRecorder(Class class);
 COMMON(Int)	getGreenColour(Colour c);
 COMMON(Int)	getBlueColour(Colour c);

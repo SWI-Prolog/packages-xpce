@@ -994,6 +994,15 @@ NewClass(sound)
   WsRef		ws_ref;			/* The samples */
 End;
 
+NewClass(camera)
+  Name		name;			/* Name of the device or @nil */
+  Image		image;			/* The last frame */
+  Name		status;			/* closed, waiting, open, denied */
+  Code		message;		/* Executed for each frame */
+  Code		status_message;		/* Executed if <-status changes */
+  WsRef		ws_ref;			/* SDL_Camera */
+End;
+
 NewClass(audio_recorder)
   Sound		sound;			/* Recorded sound */
   Code		level_message;		/* Executed with the input level */
