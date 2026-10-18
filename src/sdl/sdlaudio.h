@@ -39,6 +39,7 @@
 status	ws_load_sound(Sound s, FileObj file);
 status	ws_save_sound(Sound s, FileObj file);
 status	ws_play_sound(Sound s, double volume);
+status	ws_tone_sound(Sound s, int freq, double secs);
 status	ws_stop_sound(Sound s);
 bool	ws_playing_sound(Sound s);
 void	ws_free_sound(Sound s);

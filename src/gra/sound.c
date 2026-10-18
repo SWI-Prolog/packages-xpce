@@ -84,6 +84,15 @@ saveSound(Sound s, FileObj file)
 
 
 static status
+toneSound(Sound s, Int frequency, Real duration)
+{ TRY(ws_tone_sound(s, valInt(frequency), valReal(duration)));
+  assign(s, file, NIL);
+
+  succeed;
+}
+
+
+static status
 playSound(Sound s, Int volume)
 { return ws_play_sound(s, isDefault(volume) ? 1.0 : valNum(volume));
 }
@@ -137,6 +146,9 @@ static vardecl var_sound[] =
 
 /* Send Methods */
 
+static char *T_tone[] =
+	{ "frequency=20..20000", "duration=real" };
+
 static senddecl send_sound[] =
 { SM(NAME_initialise, 1, "file=[file]", initialiseSound,
      DEFAULT, "Create, optionally loading a WAV file"),
@@ -146,6 +158,8 @@ static senddecl send_sound[] =
      NAME_storage, "Load audio from a WAV file"),
   SM(NAME_save, 1, "file", saveSound,
      NAME_storage, "Save the audio as a WAV file"),
+  SM(NAME_tone, 2, T_tone, toneSound,
+     NAME_storage, "Make a sine tone of frequency Hz for duration seconds"),
   SM(NAME_play, 1, "volume=[0.0..1.0]", playSound,
      NAME_action, "Play on the default output device"),
   SM(NAME_stop, 0, NULL, stopSound,

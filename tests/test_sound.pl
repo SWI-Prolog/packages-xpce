@@ -299,4 +299,64 @@ test(au_file, [ condition(send(@pce, has_feature, sound_decoders)),
     get(S, channels, C),
     get(S, duration, D).
 
+%   A tone fades in and out over 5 milliseconds, so the first of 50
+%   parts of a 0.25 second tone (5 ms) is softer than the rest.
+
+test(tone, [F-C-D-Soft-Loud == 44100-1-0.25-true-0.98]) :-
+    new(S, sound),
+    send(S, tone, 440, 0.25),
+    get(S, frequency, F),
+    get(S, channels, C),
+    get(S, duration, D0),
+    D is round(D0*100)/100.0,
+    get(S, peaks, 50, V),
+    get(V, element, 1, First),
+    get(V, element, 25, Middle),
+    ( First < Middle -> Soft = true ; Soft = false ),
+    Loud is round(Middle*100)/100.0.
+
+%   ->bell plays display<-bell_sound, by default a tone made from the
+%   class variables bell_pitch and bell_duration.
+
+test(bell_sound, [F-D == 44100-0.2]) :-
+    get(@display, bell_sound, S),
+    get(S, frequency, F),
+    get(S, duration, D0),
+    D is round(D0*100)/100.0.
+test(bell, [Playing-Done == (@on)-(@off)]) :-
+    send(@display, bell),
+    get(@display, slot, bell_sound, S),     % the sound it plays
+    get(S, playing, Playing),
+    pump(get(S, playing, @off)),
+    get(S, playing, Done).
+test(bell_file, [ F-D == 8000-0.25,
+                  cleanup(set_bell_sound(@nil))
+                ]) :-
+    test_file('bell.wav', File),
+    write_tone(File, 0.25),
+    set_bell_sound(File),
+    get(@display, bell_sound, S),
+    get(S, frequency, F),
+    get(S, duration, D).
+test(bell_file_change, [ D == 0.5,
+                         cleanup(set_bell_sound(@nil))
+                       ]) :-
+    test_file('bell1.wav', File1),
+    test_file('bell2.wav', File2),
+    test_file('bell3.wav', File3),
+    write_tone(File1, 0.25),
+    write_tone(File2, 0.5),
+    write_tone(File3, 0.5),
+    set_bell_sound(File1),
+    send(@display, bell, 0),
+    set_bell_sound(File2),
+    send(@display, bell, 0),
+    set_bell_sound(File3),
+    get(@display, bell_sound, S),
+    get(S, duration, D).
+
 :- end_tests(sound).
+
+set_bell_sound(File) :-
+    get(@display?class, class_variable, bell_sound, CV),
+    send(CV, value, File).

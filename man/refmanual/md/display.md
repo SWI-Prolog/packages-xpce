@@ -51,6 +51,11 @@ See `display_manager <-current`.
 - display.bell_duration: num = 0.2
     Length of the tone of `display ->bell` in seconds.
 
+- display.bell_sound: file* = @nil
+    Sound file that `display ->bell` plays instead of the tone, e.g.,
+    a WAV or Ogg file.  See `sound->load` for the formats.  If the
+    file cannot be loaded, the bell plays the tone.
+
 
 ## Instance variables {#class-display-instvars}
 
@@ -146,9 +151,8 @@ See `display_manager <-current`.
     to refresh after an external change.
 
 - display->bell: volume=[0..100]
-    Ring the bell on this display.  Volume defaults to
-    `display.volume`.  The tone is defined by `display.bell_pitch`
-    and `display.bell_duration`.
+    Ring the bell on this display: play <-bell_sound.  Volume defaults
+    to `display.volume`.
 
     @see display.volume
     @see frame->bell
@@ -333,6 +337,11 @@ See `display_manager <-current`.
 - display<-preferred_locales: -> chain
     New chain with the user's preferred locales, most preferred first,
     as names such as `en_US` or `nl`.
+
+- display<-bell_sound: -> sound
+    The sound `->bell` plays: the file of `display.bell_sound` or else
+    a tone (see `sound->tone`) of `display.bell_pitch` Hz that lasts
+    `display.bell_duration` seconds.
 
 - display<-sound_file_extensions: -> chain
     New chain with the (lower case) extensions of the sound files

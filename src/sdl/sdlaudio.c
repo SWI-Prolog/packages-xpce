@@ -275,6 +275,50 @@ ws_save_sound(Sound s, FileObj file)
 }
 
 
+#define TONE_RATE 44100			/* samples per second */
+#define TONE_FADE 0.005			/* seconds; avoids clicks */
+
+/**
+ * Make `s` a sine tone of `freq` Hz that lasts `secs` seconds.  It
+ * fades in and out over a few milliseconds, as a tone that starts or
+ * stops abruptly clicks.
+ */
+status
+ws_tone_sound(Sound s, int freq, double secs)
+{ int n = (int)(TONE_RATE*secs + 0.5);
+  int fade = (int)(TONE_RATE*TONE_FADE);
+  Sint16 *buf;
+
+  if ( n <= 0 )
+    return errorPce(s, NAME_noData);
+  if ( fade > n/2 )
+    fade = n/2;
+  if ( !(buf = SDL_malloc((size_t)n*sizeof(Sint16))) )
+    return errorPce(s, NAME_notEnoughMemory);
+
+  for(int i=0; i<n; i++)
+  { double env = 1.0;
+
+    if ( i < fade )
+      env = (double)i/fade;
+    else if ( n-1-i < fade )
+      env = (double)(n-1-i)/fade;
+    buf[i] = (Sint16)(env * 32000.0 * sin(2.0*M_PI*freq*i/TONE_RATE));
+  }
+
+  ws_sound *wss = sound_data(s, true);
+  free_sound_data(wss);
+  wss->spec.format   = SDL_AUDIO_S16;
+  wss->spec.channels = 1;
+  wss->spec.freq     = TONE_RATE;
+  wss->data	     = (Uint8 *)buf;
+  wss->len	     = wss->allocated = (Uint32)(n*sizeof(Sint16));
+  update_sound(s);
+
+  succeed;
+}
+
+
 status
 ws_play_sound(Sound s, double volume)
 { ws_sound *wss = s->ws_ref;

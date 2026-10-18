@@ -51,6 +51,12 @@ saved as WAV.
 - sound->save: file
     Save the audio as a WAV file.
 
+- sound->tone: frequency=20..20000, duration=real
+    Replace the audio by a sine tone of frequency Hz that lasts
+    duration seconds, e.g., to make a beep.  The tone fades in and out
+    over 5 milliseconds to avoid clicks.  `display->bell` plays such a
+    tone.
+
 - sound->play: volume=[0.0..1.0]
     Play the sound on the default audio output.  The default volume
     is 1.0.  This returns immediately.

@@ -934,6 +934,7 @@ NewClass(displayobj)
   Colour	background;		/* Window default background */
   DisplayManager display_manager;	/* Global display manager */
   Int		busy_locks;		/* Lock count of ->busy_cursor */
+  Sound		bell_sound;		/* Sound of the last ->bell */
   WsRef		ws_ref;			/* Window System Reference */
 End;
 

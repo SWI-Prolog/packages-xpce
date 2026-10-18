@@ -53,6 +53,7 @@ initialiseDisplay(DisplayObj d, Name name, Area a)
   assign(d, inspect_handlers,	dm->inspect_handlers);
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
+  assign(d, bell_sound,		NIL);
   obtainClassVariablesObject(d);
 
   appendDisplayManager(dm, d);
@@ -166,19 +167,48 @@ getScreenKeyboardShownDisplay(DisplayObj d)
 }
 
 
-status
-bellDisplay(DisplayObj d, Int vol)
-{ if ( isDefault(vol) )
-    vol = getClassVariableValueObject(d, NAME_volume);
+/* The sound ->bell plays: the file of display.bell_sound or else a tone
+ * of display.bell_pitch and display.bell_duration.  We keep the sound of
+ * a file in <-bell_sound, so we only load it again if the file changes.
+ * Making a tone is cheap.
+ */
+
+static Sound
+getBellSoundDisplay(DisplayObj d)
+{ Any file = getClassVariableValueObject(d, NAME_bellSound);
+  Sound s = d->bell_sound;
+
+  if ( instanceOfObject(file, ClassFile) )
+  { if ( notNil(s) && s->file == file )
+      answer(s);
+    if ( (s = newObject(ClassSound, file, EAV)) )
+    { assign(d, bell_sound, s);
+      answer(s);
+    }
+  }
 
   Int pitch    = getClassVariableValueObject(d, NAME_bellPitch);
   Any duration = getClassVariableValueObject(d, NAME_bellDuration);
+  int p	       = isInteger(pitch) ? valInt(pitch) : 440;
+  double secs  = isNum(duration) ? valNum(duration) : 0.2;
 
-  ws_bell_display(d, valInt(vol),
-		  isInteger(pitch) ? valInt(pitch) : 440,
-		  isNum(duration) ? valNum(duration) : 0.2);
+  TRY(s = newObject(ClassSound, EAV));
+  assign(d, bell_sound, s);
+  TRY(send(s, NAME_tone, toInt(p), CtoReal(secs), EAV));
 
-  succeed;
+  answer(s);
+}
+
+
+status
+bellDisplay(DisplayObj d, Int vol)
+{ Sound s;
+
+  if ( isDefault(vol) )
+    vol = getClassVariableValueObject(d, NAME_volume);
+  TRY(s = getBellSoundDisplay(d));
+
+  return send(s, NAME_play, toNum(valNum(vol)/100.0), EAV);
 }
 
 
@@ -665,6 +695,8 @@ static vardecl var_display[] =
      NAME_organisation, "The global display manager (@display_manager)"),
   IV(NAME_busyLocks, "0..", IV_NONE,
      NAME_event, "Lock count for ->busy_cursor"),
+  IV(NAME_bellSound, "sound*", IV_NONE,
+     NAME_report, "Sound of the last ->bell"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_windowSystem, "Window-System reference")
 };
@@ -710,7 +742,7 @@ static senddecl send_display[] =
   SM(NAME_ConfirmPressed, 1, "event", ConfirmPressedDisplay,
      NAME_internal, "Handle confirmer events"),
   SM(NAME_bell, 1, "volume=[0..100]", bellDisplay,
-     NAME_report, "Ring the bell at volume"),
+     NAME_report, "Play <-bell_sound at volume"),
   SM(NAME_confirm, 4, T_inform, confirmDisplay,
      NAME_report, "Test if the user confirms string"),
   SM(NAME_inform, 4, T_inform, informDisplay,
@@ -780,6 +812,8 @@ static getdecl get_display[] =
      NAME_power, "Seconds the battery lasts; fails if unknown"),
   GM(NAME_preferredLocales, 0, "chain", NULL, getPreferredLocalesDisplay,
      NAME_language, "The user's preferred locales, e.g., en_US"),
+  GM(NAME_bellSound, 0, "sound", NULL, getBellSoundDisplay,
+     NAME_report, "Sound played by ->bell"),
   GM(NAME_soundFileExtensions, 0, "chain", NULL, getSoundFileExtensionsDisplay,
      NAME_sound, "Extensions of the sound files that can be loaded"),
   GM(NAME_imageSaveFormats, 0, "chain", NULL, getImageSaveFormatsDisplay,
@@ -808,7 +842,9 @@ static classvardecl rc_display[] =
   RC(NAME_bellPitch, "20..20000", "440",
      "Frequency of ->bell in Hz"),
   RC(NAME_bellDuration, "num", "0.2",
-     "Length of ->bell in seconds")
+     "Length of ->bell in seconds"),
+  RC(NAME_bellSound, "file*", "@nil",
+     "Sound file ->bell plays instead of a tone")
 };
 
 /* Class Declaration */
