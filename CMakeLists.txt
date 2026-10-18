@@ -81,8 +81,9 @@ configure_file(config.h.cmake config.h)
 # Build pl2xpce shared object
 
 # -DSWI is required for the interface only
+add_compile_options(-DHAVE_CONFIG_H)
 if(UNIX)
-  add_compile_options(-DHAVE_CONFIG_H -DSWI)
+  add_compile_options(-DSWI)
 endif()
 
 set(cdirs adt ari box evt fmt gnu gra img itf ker men msg msw
