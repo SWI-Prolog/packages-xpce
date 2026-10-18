@@ -49,6 +49,7 @@ Run with:
 :- use_module(library(lists)).
 :- use_module(library(apply)).
 :- use_module(library(filesex)).
+:- use_module(library(aggregate)).
 
 setup_headless :-
     set_prolog_flag('SDL_VIDEODRIVER', dummy).
@@ -216,7 +217,11 @@ apng(A) :-
 colour_of(Image, Colour) :-
     get(Image, pixel, 1, 1, C),
     get(C, red, R), get(C, green, G), get(C, blue, B),
-    once(rgb(Colour, R, G, B)).
+    aggregate_all(min(D, Name),
+                  ( rgb(Name, R1, G1, B1),
+                    D is abs(R-R1)+abs(G-G1)+abs(B-B1)
+                  ), min(Dist, Colour)),
+    Dist < 48.
 
 vector_list(Vector, List) :-
     get(Vector, size, N),
@@ -319,4 +324,139 @@ test(one_frame_does_not_play, fail) :-
     new(BM, bitmap(A)),
     send(BM, play).
 
+test(append, [N-W-H-Delays == 2-4-4-[30, 100]]) :-
+    new(A, animation),
+    image(red, I1),
+    image(lime, I2),
+    send(A, append, I1, 30),
+    send(A, append, I2),
+    get(A, count, N),
+    get(A?size, width, W),
+    get(A?size, height, H),
+    get(A, delays, V),
+    vector_list(V, Delays).
+test(append_copies, C == red) :-
+    new(A, animation),
+    image(red, I),
+    send(A, append, I),
+    send(I, fill, colour(blue)),
+    get(A, frame, 1, F),
+    colour_of(F, C).
+test(append_scales, W-H == 4-4) :-
+    new(A, animation),
+    image(red, I1),
+    send(A, append, I1),
+    new(I2, image(@nil, 8, 6, pixmap)),
+    send(I2, fill, colour(blue)),
+    send(A, append, I2),
+    get(A, frame, 2, F),
+    get(F?size, width, W),
+    get(F?size, height, H).
+test(save_apng, [N-Delays-Colours == 3-[50, 100, 150]-[red, lime, blue]]) :-
+    saved_copy('copy.png', default, A),
+    animation_info(A, N, Delays, Colours).
+test(save_gif, [N-Delays-Colours == 3-[50, 100, 150]-[red, lime, blue]]) :-
+    saved_copy('copy.gif', default, A),
+    animation_info(A, N, Delays, Colours).
+test(save_format, [N-Colours == 3-[red, lime, blue]]) :-
+    saved_copy('copy.anim', gif, A),
+    animation_info(A, N, _, Colours).
+test(save_nothing, fail) :-
+    new(A, animation),
+    test_file('empty.png', File),
+    send(A, save, File).
+test(record, true(N >= 3)) :-
+    new(W, window('Record', size(40, 30))),
+    send(W, background, colour(red)),
+    send(W, open),
+    new(A, animation),
+    send(A, record, W, 0.02),
+    wait_until(( get(A, count, C), C >= 3 ), 3),
+    send(A, stop),
+    get(A, recording, @nil),
+    get(A, count, N),
+    send(W, destroy).
+
+%   APNG and WebP keep all metadata; GIF only the loop count and the
+%   description (as a comment).
+
+test(metadata_apng, [Info == 3-"Ball"-"Jan"-"Bounces"-"PD"]) :-
+    with_metadata('meta.png', Info).
+test(metadata_gif, [L-D == 3-"Bounces"]) :-
+    with_metadata('meta.gif', L-_-_-D-_).
+test(metadata_webp, [ condition(can_save(webp)),
+                      Info == 3-"Ball"-"Jan"-"Bounces"-"PD"
+                    ]) :-
+    with_metadata('meta.webp', Info).
+test(no_metadata, [T-L == (@nil)-2]) :-
+    apng(A),
+    get(A, title, T),
+    get(A, loop_count, L).
+
 :- end_tests(animation).
+
+can_save(Format) :-
+    get(@display, image_save_formats, Chain),
+    send(Chain, member, Format).
+
+%!  with_metadata(+Name, -Info) is det.
+%
+%   Save an animation with a loop count and metadata as Name, load it
+%   and return what was read back.
+
+with_metadata(Name, Loops-Title-Author-Descr-Copyright) :-
+    new(A0, animation),
+    forall(member(Colour, [red, blue]),
+           ( image(Colour, I),
+             send(A0, append, I))),
+    send(A0, loop_count, 3),
+    send(A0, title, 'Ball'),
+    send(A0, author, 'Jan'),
+    send(A0, description, 'Bounces'),
+    send(A0, copyright, 'PD'),
+    test_file(Name, File),
+    send(A0, save, File),
+    new(A, animation(File)),
+    get(A, loop_count, Loops),
+    maplist(metadata(A), [title, author, description, copyright],
+            [Title, Author, Descr, Copyright]).
+
+metadata(A, Slot, Value) :-
+    get(A, Slot, V0),
+    (   V0 == @nil
+    ->  Value = @nil
+    ;   get(V0, value, Atom),
+        atom_string(Atom, Value)
+    ).
+
+image(Colour, I) :-
+    rgb(Colour, R, G, B),
+    new(I, image(@nil, 4, 4, pixmap)),
+    send(I, fill, colour(@default, R, G, B)).
+
+%!  saved_copy(+Name, +Format, -Animation) is det.
+%
+%   Build the animation of frames/1 by appending images, save it as Name
+%   and load it back.
+
+saved_copy(Name, Format, A) :-
+    frames(Frames),
+    new(A0, animation),
+    forall(member(Colour-Ms, Frames),
+           ( image(Colour, I),
+             send(A0, append, I, Ms))),
+    test_file(Name, File),
+    (   Format == default
+    ->  send(A0, save, File)
+    ;   send(A0, save, File, Format)
+    ),
+    new(A, animation(File)).
+
+animation_info(A, N, Delays, Colours) :-
+    get(A, count, N),
+    get(A, delays, V),
+    vector_list(V, Delays),
+    findall(C, ( between(1, N, I),
+                 get(A, frame, I, Image),
+                 colour_of(Image, C)
+               ), Colours).

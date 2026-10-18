@@ -65,5 +65,7 @@ bool	ws_image_to_png(Image image, void **data, size_t *size);
 status	ws_image_from_data(Image image, const void *data, size_t size);
 status	ws_load_animation(Animation a);
 Chain	ws_image_save_formats(void);
+status	ws_save_animation(Animation a, FileObj file, Name format,
+			  int quality);
 
 #endif /* RAYIMAGE_H */

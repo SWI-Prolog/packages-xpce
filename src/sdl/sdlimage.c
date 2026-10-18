@@ -303,6 +303,64 @@ add_animation_frame(Animation a, SDL_Surface *surf, Uint64 ms)
   succeed;
 }
 
+/* The metadata of animations that we copy from and to SDL properties */
+
+static const struct metadata_prop
+{ const char *prop;			/* SDL_image property */
+  size_t      offset;			/* Slot of struct animation */
+} metadata_props[] =
+{ { IMG_PROP_METADATA_TITLE_STRING,	  offsetof(struct animation, title) },
+  { IMG_PROP_METADATA_AUTHOR_STRING,	  offsetof(struct animation, author) },
+  { IMG_PROP_METADATA_DESCRIPTION_STRING, offsetof(struct animation, description) },
+  { IMG_PROP_METADATA_COPYRIGHT_STRING,	  offsetof(struct animation, copyright) },
+  { NULL, 0 }
+};
+
+#define METADATA_SLOT(a, mp) ((Any *)((char *)(a) + (mp)->offset))
+
+static void
+get_animation_metadata(Animation a, SDL_PropertiesID props)
+{ assign(a, loop_count,
+	 toInt(SDL_GetNumberProperty(props,
+				     IMG_PROP_METADATA_LOOP_COUNT_NUMBER, 0)));
+
+  for(const struct metadata_prop *mp = metadata_props; mp->prop; mp++)
+  { const char *s = SDL_GetStringProperty(props, mp->prop, NULL);
+
+    if ( s && *s )
+      assignField((Instance)a, METADATA_SLOT(a, mp), UTF8ToString(s));
+  }
+}
+
+static void
+set_animation_metadata(Animation a, SDL_PropertiesID props)
+{ SDL_SetNumberProperty(props, IMG_PROP_METADATA_LOOP_COUNT_NUMBER,
+			valInt(a->loop_count));
+
+  for(const struct metadata_prop *mp = metadata_props; mp->prop; mp++)
+  { CharArray s = *METADATA_SLOT(a, mp);
+
+    if ( notNil(s) )
+      SDL_SetStringProperty(props, mp->prop, charArrayToUTF8(s));
+  }
+}
+
+/* The type of animation in `io`, as IMG_CreateAnimationDecoder_IO()
+ * wants it, judged from the data rather than a file name.  NULL if it
+ * is not a format that can be animated.
+ */
+
+static const char *
+animation_type(SDL_IOStream *io)
+{ if ( IMG_isPNG(io) )  return "png";
+  if ( IMG_isGIF(io) )  return "gif";
+  if ( IMG_isWEBP(io) ) return "webp";
+  if ( IMG_isAVIF(io) ) return "avif";
+  if ( IMG_isANI(io) )  return "ani";
+
+  return NULL;
+}
+
 /**
  * Load all frames of the animated image file `a->file`.  A file that
  * is not animated becomes a single frame.
@@ -313,17 +371,21 @@ ws_load_animation(Animation a)
   SDL_Surface *single = NULL;
   IOSTREAM *fd = NULL;
   SDL_IOStream *io = NULL;
-  const char *fname = NULL;
   status rc = FAIL;
 
   if ( instanceOfObject(a->file, ClassFile) )
-  { fname = charArrayToFN((CharArray)getOsNameFile((FileObj)a->file));
+  { const char *fname =
+      charArrayToFN((CharArray)getOsNameFile((FileObj)a->file));
 
-    if ( !(dec = IMG_CreateAnimationDecoder(fname)) )
-      single = IMG_Load(fname);
-  } else if ( (fd = Sopen_object(a->file, "rbr")) &&
-	      (io = IOSTREAM_to_SDL_IOStream(fd)) )
-  { if ( !(dec = IMG_CreateAnimationDecoder_IO(io, false, NULL)) &&
+    io = SDL_IOFromFile(fname, "rb");
+  } else if ( (fd = Sopen_object(a->file, "rbr")) )
+  { io = IOSTREAM_to_SDL_IOStream(fd);
+  }
+
+  if ( io )
+  { const char *type = animation_type(io);
+
+    if ( !(type && (dec = IMG_CreateAnimationDecoder_IO(io, false, type))) &&
 	 SDL_SeekIO(io, 0, SDL_IO_SEEK_SET) == 0 )
       single = IMG_Load_IO(io, false);
   }
@@ -334,10 +396,7 @@ ws_load_animation(Animation a)
     Uint64 ms;
 
     if ( props )
-      assign(a, loop_count,
-	     toInt(SDL_GetNumberProperty(props,
-					 IMG_PROP_METADATA_LOOP_COUNT_NUMBER,
-					 0)));
+      get_animation_metadata(a, props);
     rc = SUCCEED;
     while( rc && IMG_GetAnimationDecoderFrame(dec, &frame, &ms) )
       rc = add_animation_frame(a, frame, ms);
@@ -360,9 +419,53 @@ ws_load_animation(Animation a)
     succeed;
   }
 
-  Cprintf("Failed to load animation %s: %s\n",
-	  fname ? fname : pp(a->file), SDL_GetError());
-  fail;
+  return errorPce(a, NAME_cannotLoad, a->file, CtoName(SDL_GetError()));
+}
+
+/**
+ * Save the frames of `a` as an animated image file.  If `format` is
+ * default, the extension of the file selects it.  `quality` is -1 for
+ * the default of SDL_image.
+ */
+status
+ws_save_animation(Animation a, FileObj file, Name format, int quality)
+{ const char *fname = nameToFN(file->name);
+  SDL_PropertiesID props = SDL_CreateProperties();
+  IMG_AnimationEncoder *enc;
+  bool rc = true;
+
+  SDL_SetStringProperty(props, IMG_PROP_ANIMATION_ENCODER_CREATE_FILENAME_STRING,
+			fname);
+  if ( notDefault(format) )
+    SDL_SetStringProperty(props, IMG_PROP_ANIMATION_ENCODER_CREATE_TYPE_STRING,
+			  format == NAME_png ? "apng" : strName(format));
+  if ( quality >= 0 )
+    SDL_SetNumberProperty(props, IMG_PROP_ANIMATION_ENCODER_CREATE_QUALITY_NUMBER,
+			  quality);
+  set_animation_metadata(a, props);	/* encoders copy them from props */
+  enc = IMG_CreateAnimationEncoderWithProperties(props);
+  SDL_DestroyProperties(props);
+  if ( !enc )
+    return errorPce(a, NAME_cannotSave, file, CtoName(SDL_GetError()));
+
+  for(int i=1; rc && i <= valInt(a->frames->size); i++)
+  { Image img = getElementVector(a->frames, toInt(i));
+    Int delay = getElementVector(a->delays, toInt(i));
+    SDL_Surface *surf = pceImage2SDL_Surface(img);
+
+    rc = ( surf &&
+	   IMG_AddAnimationEncoderFrame(enc, surf,
+					isInteger(delay) ? valInt(delay) : 0) );
+    if ( surf )
+      SDL_DestroySurface(surf);
+  }
+  if ( !IMG_CloseAnimationEncoder(enc) )
+    rc = false;
+
+  if ( !rc )
+    return errorPce(a, NAME_cannotSave, file, CtoName(SDL_GetError()));
+
+  succeed;
 }
 
 /* The standard Huffman tables of JPEG (ITU T.81, Annex K.3) as a DHT

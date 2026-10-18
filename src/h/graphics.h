@@ -1011,6 +1011,12 @@ NewClass(animation)
   Vector	delays;			/* Milliseconds per frame */
   Int		loop_count;		/* Times to play; 0: forever */
   Size		size;			/* Size of the frames */
+  CharArray	title;			/* Metadata */
+  CharArray	author;
+  CharArray	description;
+  CharArray	copyright;
+  Any		recording;		/* Frame or window recorded */
+  Timer		timer;			/* Records frames */
 End;
 
 NewClass(camera)
