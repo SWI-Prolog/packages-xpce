@@ -174,6 +174,11 @@ demo('EventHierarchy',
      demo(event_hierarchy),
      event_hierarchy).
 
+demo('Camera',
+     'Show and capture the video of a camera',
+     demo(camera_demo),
+     camera_demo).
+
 demo('Drag-and-drop File',
      'Receive files dropped from the desktop (drop_file/drop_text events)',
      demo(dragdrop_file),

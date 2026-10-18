@@ -347,7 +347,9 @@ The user may have to give the application permission to use the
 camera.  Until this is decided, `camera <-status' is \const{waiting};
 it is \const{open} when the camera delivers frames and \const{denied}
 if the user refused.  `camera <->status_message' is executed when the
-status changes.
+status changes.  The demo \textsf{Camera} of the demo browser
+(\exam{?- manpce.}, menu \textsf{File/Demo programs}) shows the video,
+takes snapshots and saves them or copies them to the clipboard.
 
 
 \section{The desktop}				\label{sec:desktop}
