@@ -37,15 +37,15 @@ of a predefined cursor to a cursor object.
     If the cursor is user-defined, this describes the offset from the
     top-left of the image to the location of the pointer-device.
 
-- cursor<-image: image*
+- cursor<-image: image|animation*
     If the cursor is user-defined, this image of `image <-kind: image`
-    defines the cursor.
+    defines the cursor.  If it is an animation, the cursor is animated.
 
-- cursor<-kind: {standard,x11,image}
+- cursor<-kind: {standard,x11,image,animation}
     Where the cursor comes from: `standard` for a cursor of the
     system, `x11` for a name kept for compatibility with the X11 cursor
-    font (it maps to a standard cursor) and `image` for a cursor
-    defined from an image.
+    font (it maps to a standard cursor), `image` for a cursor defined
+    from an image and `animation` for an animated cursor.
 
 - cursor<-summary: char_array*
     Description of the cursor.  Set for the standard cursors.  An old
@@ -63,7 +63,7 @@ of a predefined cursor to a cursor object.
 
 ## Send methods {#class-cursor-send}
 
-- cursor->initialise: name=name*, image=[image], hot_spot=[point]
+- cursor->initialise: name=name*, image=[image|animation], hot_spot=[point]
     This method takes two forms.  If only a name is specified, this should
     be a name of a cursor that is predefined in @cursor_names.  This
     provides access to the SDL predefined cursors.  See the demo
@@ -82,7 +82,16 @@ of a predefined cursor to a cursor object.
     	| <-background | Colour for the _0_-s in <-image       |
 
     <-image *must* be specified.  <-hot_spot defaults to `image
-    <-hot_spot', or otherwise to point(0,0).  Both colours default
+    <-hot_spot', or otherwise to point(0,0).  Images loaded from a
+    Windows cursor file (`.cur`) have the hot spot of the file.
+
+    <-image may also be an animation, e.g., loaded from a Windows
+    animated cursor (`.ani`) or an animated PNG or GIF.  The hot spot
+    then defaults to that of its first frame:
+
+    	send(Window, cursor, cursor(busy, animation('busy.ani'))).
+
+    Whether the cursor is animated depends on the platform.  Both colours default
     to the fore- and background colours of the display on which the
     cursor is opened and often need not be specified.
 

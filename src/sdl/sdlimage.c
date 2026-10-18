@@ -198,7 +198,18 @@ my_cairo_check_surface(Any ctx, cairo_surface_t *s)
  */
 static status
 sdl_surface_to_image(Image image, SDL_Surface *surf0)
-{ SDL_Surface *surf1 = SDL_ConvertSurface(surf0, SDL_PIXELFORMAT_ARGB8888);
+{ SDL_PropertiesID props = SDL_GetSurfaceProperties(surf0);
+
+  if ( props && SDL_HasProperty(props, SDL_PROP_SURFACE_HOTSPOT_X_NUMBER) )
+  { Int x = toInt(SDL_GetNumberProperty(props,
+					SDL_PROP_SURFACE_HOTSPOT_X_NUMBER, 0));
+    Int y = toInt(SDL_GetNumberProperty(props,
+					SDL_PROP_SURFACE_HOTSPOT_Y_NUMBER, 0));
+
+    assign(image, hot_spot, newObject(ClassPoint, x, y, EAV));
+  }
+
+  SDL_Surface *surf1 = SDL_ConvertSurface(surf0, SDL_PIXELFORMAT_ARGB8888);
   SDL_DestroySurface(surf0);
   if ( !surf1 )
   { Cprintf("Failed to convert %s: %s\n", pp(image), SDL_GetError());
@@ -861,6 +872,15 @@ pceImage2SDL_Surface(Image image)
       }
     }
     SDL_UnlockSurface(sdl_surf);
+
+    if ( notNil(image->hot_spot) )	/* used by CUR and ANI files */
+    { SDL_PropertiesID props = SDL_GetSurfaceProperties(sdl_surf);
+
+      SDL_SetNumberProperty(props, SDL_PROP_SURFACE_HOTSPOT_X_NUMBER,
+			    valInt(image->hot_spot->x));
+      SDL_SetNumberProperty(props, SDL_PROP_SURFACE_HOTSPOT_Y_NUMBER,
+			    valInt(image->hot_spot->y));
+    }
 
     return sdl_surf;
   }

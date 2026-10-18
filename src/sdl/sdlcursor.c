@@ -265,10 +265,46 @@ ws_cursor_font_index(Name name)
  * @param d Pointer to the DisplayObj representing the display context.
  * @return SUCCEED on successful creation; otherwise, FAIL.
  */
+/* An animated cursor.  As bitmap->play, we show frames that ask for 10
+ * milliseconds or less for 100 milliseconds; for SDL 0 means forever.
+ */
+
+static SDL_Cursor *
+animated_cursor(CursorObj c, Animation a)
+{ int n = valInt(a->frames->size);
+  SDL_CursorFrameInfo *frames = SDL_calloc(n, sizeof(*frames));
+  SDL_Cursor *cursor = NULL;
+  int i;
+
+  if ( !frames )
+    return NULL;
+  for(i=0; i<n; i++)
+  { Image img = getElementVector(a->frames, toInt(i+1));
+    Int delay = getElementVector(a->delays, toInt(i+1));
+    int ms = isInteger(delay) ? valInt(delay) : 0;
+
+    if ( !(frames[i].surface = pceImage2SDL_Surface(img)) )
+      break;
+    frames[i].duration = ms <= 10 ? 100 : ms;
+  }
+  if ( i == n )
+    cursor = SDL_CreateAnimatedCursor(frames, n,
+				      valInt(c->hot_spot->x),
+				      valInt(c->hot_spot->y));
+  for(int j=0; j<i; j++)
+    SDL_DestroySurface(frames[j].surface);
+  SDL_free(frames);
+
+  return cursor;
+}
+
 status
 ws_create_cursor(CursorObj c, DisplayObj d)
 { if ( !c->ws_ref )
-  { if ( isNil(c->image) )
+  { if ( instanceOfObject(c->image, ClassAnimation) )
+    { ASSERT_SDL_MAIN();
+      c->ws_ref = animated_cursor(c, (Animation)c->image);
+    } else if ( isNil(c->image) )
     { Int idx = ws_cursor_font_index(c->name);
       assert(idx);
       ASSERT_SDL_MAIN();

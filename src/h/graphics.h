@@ -812,9 +812,9 @@ End;
 
 NewClass(cursorobj)
   Name		name;			/* Name of the cursor */
-  Image		image;			/* User-defined image */
+  Any		image;			/* User image or animation */
   Point		hot_spot;		/* User-defined hot_spot */
-  Name		kind;			/* `standard', `x11' or `image' */
+  Name		kind;			/* standard, x11, image, animation */
   CharArray	summary;		/* Description */
   WsRef		ws_ref;			/* Window system reference */
 End;

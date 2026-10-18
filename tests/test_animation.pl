@@ -393,6 +393,37 @@ test(no_metadata, [T-L == (@nil)-2]) :-
     get(A, title, T),
     get(A, loop_count, L).
 
+test(cursor, [Kind-X-Y == animation-0-0]) :-
+    apng(A),
+    new(C, cursor(@nil, A)),
+    get(C, kind, Kind),
+    get(C?hot_spot, x, X),
+    get(C?hot_spot, y, Y).
+%   Using the cursor creates it for the window system.
+
+test(cursor_in_window, C2 == C) :-
+    apng(A),
+    new(C, cursor(@nil, A)),
+    new(W, window('Cursor', size(40, 30))),
+    send(W, open),
+    send(W, cursor, C),
+    ignore(send(@display, dispatch)),
+    get(W, cursor, C2),
+    send(W, destroy).
+test(ani_hot_spot, [Kind-X-Y == animation-2-3]) :-
+    new(A0, animation),
+    forall(member(Colour, [red, blue]),
+           ( image(Colour, I),
+             send(I, hot_spot, point(2, 3)),
+             send(A0, append, I))),
+    test_file('busy.ani', File),
+    send(A0, save, File),
+    new(A, animation(File)),
+    new(C, cursor(@nil, A)),
+    get(C, kind, Kind),
+    get(C?hot_spot, x, X),
+    get(C?hot_spot, y, Y).
+
 :- end_tests(animation).
 
 can_save(Format) :-

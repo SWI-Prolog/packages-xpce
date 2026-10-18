@@ -37,8 +37,12 @@
 
 static status XcloseCursor(CursorObj, DisplayObj);
 
+/* `image` is an image or an animation.  The default hot spot is that
+ * of the (first frame of) the image, e.g., from a CUR or ANI file.
+ */
+
 static status
-initialiseCursor(CursorObj c, Name name, Image image, Point hot)
+initialiseCursor(CursorObj c, Name name, Any image, Point hot)
 { assign(c, name, name);
   assign(c, summary, NIL);
 
@@ -55,11 +59,22 @@ initialiseCursor(CursorObj c, Name name, Image image, Point hot)
     if ( (summary = ws_cursor_summary(name)) )
       assign(c, summary, CtoString(summary));
   } else
-  { assign(c, kind, NAME_image);
+  { Image first = image;
+
+    if ( instanceOfObject(image, ClassAnimation) )
+    { Animation a = image;
+
+      if ( !(first = getElementVector(a->frames, ONE)) )
+	return errorPce(a, NAME_noData);
+      assign(c, kind, NAME_animation);
+    } else
+    { assign(c, kind, NAME_image);
+    }
+
     if ( isDefault(hot) )
     { hot = newObject(ClassPoint, EAV);
-      if ( notNil(image->hot_spot) )
-	copyPoint(hot, image->hot_spot);
+      if ( notNil(first->hot_spot) )
+	copyPoint(hot, first->hot_spot);
     }
 
     assign(c, image,      image);
@@ -128,18 +143,18 @@ getConvertCursor(Class class, Name name)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "name=name*", "image=[image]", "hot_spot=[point]" };
+        { "name=name*", "image=[image|animation]", "hot_spot=[point]" };
 
 /* Instance Variables */
 
 static vardecl var_cursor[] =
 { IV(NAME_name, "name*", IV_GET,
      NAME_name, "Name of the cursor"),
-  IV(NAME_image, "image*", IV_GET,
-     NAME_appearance, "User-defined image"),
+  IV(NAME_image, "image|animation*", IV_GET,
+     NAME_appearance, "User-defined image or animation"),
   IV(NAME_hotSpot, "point*", IV_GET,
      NAME_appearance, "User-defined hot spot"),
-  IV(NAME_kind, "{standard,x11,image}", IV_GET,
+  IV(NAME_kind, "{standard,x11,image,animation}", IV_GET,
      NAME_name, "Where the cursor comes from"),
   IV(NAME_summary, "char_array*", IV_BOTH,
      NAME_manual, "Description of the cursor"),

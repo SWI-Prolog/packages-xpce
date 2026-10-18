@@ -84,7 +84,8 @@ unlinkAnimation(Animation a)
 
 
 /* Append a copy of `image`: the source may be reused, as the image of
- * a camera.  The first frame sets <-size; others are scaled to it.
+ * a camera.  The first frame sets <-size; others are scaled to it.  The
+ * copy keeps the hot spot, which ANI (cursor) files save.
  */
 
 static status
@@ -101,6 +102,9 @@ appendAnimation(Animation a, Image image, Int delay)
   } else
   { TRY(copy = get(image, NAME_scale, a->size, EAV));
   }
+  if ( notNil(image->hot_spot) )	/* e.g., for cursors */
+    assign(copy, hot_spot, newObject(ClassPoint, image->hot_spot->x,
+				     image->hot_spot->y, EAV));
 
   Any d = isDefault(delay) ? toInt(100) : delay;
   appendVector(a->frames, 1, (Any *)&copy);
