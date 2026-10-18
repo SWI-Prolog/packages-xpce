@@ -659,20 +659,56 @@ load_user_extension(_Emacs, Base:name) :->
 
 
 load_user_init_file(_Emacs) :->
-    "Load user_profile('.pceemacsrc') or user_profile('pceemacs.ini')"::
-    (   get(@pce, operating_system, win32)
-    ->  Base = 'pceemacs.ini'
-    ;   Base = '.pceemacsrc'
-    ),
+    "Load user_app_config('xpce/emacs/init')"::
     (   user_customisation,
-        absolute_file_name(user_profile(Base),
-                           [ access(read),
-                             file_errors(fail)
-                           ],
-                           Profile)
-    ->  ignore(load_files(user:Profile, [autoload(true)]))
+        emacs_init_file(InitFile)
+    ->  ignore(load_files(user:InitFile, [autoload(true)]))
+    ;   user_customisation,
+        old_emacs_init_file(Old)
+    ->  print_message(warning, emacs(old_init_file(Old)))
     ;   true
     ).
 
 :- pce_end_class(emacs).
+
+%!  emacs_init_file(-File) is semidet.
+%
+%   File is the init file of PceEmacs: `xpce/emacs/init.pl` in the
+%   user's configuration directory, e.g., ~/.config/swi-prolog on
+%   Linux.
+
+emacs_init_file(File) :-
+    absolute_file_name(user_app_config('xpce/emacs/init'), File,
+                       [ access(read),
+                         file_type(prolog),
+                         file_errors(fail)
+                       ]).
+
+%!  old_emacs_init_file(-File) is semidet.
+%
+%   File is where older versions found the init file of PceEmacs.  We
+%   no longer load it, but tell the user to move it.
+
+old_emacs_init_file(File) :-
+    member(Base, ['.pceemacsrc', 'pceemacs.ini']),
+    absolute_file_name(user_profile(Base), File,
+                       [ access(read),
+                         file_errors(fail)
+                       ]),
+    !.
+
+:- multifile prolog:message//1.
+
+prolog:message(emacs(old_init_file(Old))) -->
+    { absolute_file_name(user_app_config('xpce/emacs/init.pl'), New,
+                         [ solutions(first), file_errors(fail) ])
+    },
+    !,
+    [ 'PceEmacs no longer loads ~w'-[Old], nl,
+      'Please move it to ~w'-[New]
+    ].
+prolog:message(emacs(old_init_file(Old))) -->
+    [ 'PceEmacs no longer loads ~w'-[Old], nl,
+      'Please move it to xpce/emacs/init.pl in your configuration directory'
+    ].
 

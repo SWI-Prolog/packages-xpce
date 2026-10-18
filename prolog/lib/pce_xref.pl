@@ -1927,6 +1927,11 @@ library_file(Path) :-
 profile_file(Path) :-
     file_name_on_path(Path, user_profile(File)),
     known_profile_file(File).
+profile_file(Path) :-                   % e.g., the PceEmacs init file
+    file_name_on_path(Path, Spec),
+    Spec =.. [Alias, File],
+    memberchk(Alias, [app_config, user_app_config]),
+    sub_atom(File, 0, _, _, 'xpce/emacs/').
 
 known_profile_file('.swiplrc').
 known_profile_file('swipl.ini').
