@@ -179,6 +179,11 @@ demo('Camera',
      demo(camera_demo),
      camera_demo).
 
+demo('Sound',
+     'Record, replay and load sound (WAV, MP3, Ogg, FLAC, ...)',
+     demo(sound_demo),
+     sound_demo).
+
 demo('Drag-and-drop File',
      'Receive files dropped from the desktop (drop_file/drop_text events)',
      demo(dragdrop_file),
