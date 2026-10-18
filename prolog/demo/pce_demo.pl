@@ -346,7 +346,7 @@ demo('Kangaroo',
      kangaroo).
 
 demo('Juggler',
-     'Annimation of a juggling creature',
+     'Animation of a juggling creature',
      demo(juggler),
      juggle_demo).
 

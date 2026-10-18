@@ -44,16 +44,22 @@
            , send_list/3
            ]).
 
+/** <module> A juggling creature
+
+Plays an animation made from the five SVG images juggler1.svg ...
+juggler5.svg, rendered at the size of the window.  The popup menu of
+the window stops and starts the animation and sets its speed.
+*/
+
 juggle_demo :-
     new(_, juggler).
 
 :- pce_begin_class(juggler, frame).
 
-variable(timer, timer, get, "Timer for animation").
-variable(speed, int,   get, "Animations/second").
+variable(speed, int, get, "Frames/second").
 
 class_variable(size,	 size,		size(200,200),  "Window size").
-class_variable(speed,    int,           10,             "Animations/second").
+class_variable(speed,    int,           10,             "Frames/second").
 
 :- pce_global(@juggler_popup, make_juggler_popup).
 
@@ -74,40 +80,43 @@ initialise(F) :->
     get(F, class_variable_value, size, Size),
     object(Size, size(W,H)),
     send(F, append, new(P, window(@default, Size))),
+    send(P, name, stage),
     send(P, popup, @juggler_popup),
 
-    send(P, display, new(Fig, figure)),
-    send(Fig, status, 1),
+    new(A, animation),
     forall(member(N, [1,2,3,4,5]),
-           (atomic_list_concat([juggler, N, '.svg'], IconName),
-            new(I, bitmap(image(IconName, W, H))),
-            send(I, name, N),
-            send(Fig, display, I))),
-
-    send(F, slot, timer, new(T, timer(0.1, message(Fig, next_status)))),
-    send(T, start),
+           ( atomic_list_concat([juggler, N, '.svg'], IconName),
+             send(A, append, image(IconName, W, H)))),
+    send(P, display, new(BM, bitmap(A))),
+    send(BM, name, juggler),
     get(F, class_variable_value, speed, Speed),
     send(F, speed, Speed),
+    send(BM, play),
 
     send(F, open).
 
-unlink(F) :->
-    send(F?timer, stop),
-    send(F, send_super, unlink).
+bitmap(F, BM:bitmap) :<-
+    "The bitmap that plays the animation"::
+    get(F, member, stage, W),
+    get(W, member, juggler, BM).
 
 speed(F, Speed:int) :->
-    "Set animations/second"::
-    Interval is 1 / Speed,
-    send(F?timer, interval, Interval),
+    "Set frames/second"::
+    Ms is round(1000 / Speed),
+    get(F, bitmap, BM),
+    get(BM?animation, delays, Delays),
+    send(Delays, fill, Ms),
     send(F, slot, speed, Speed).
 
 stop(F) :->
     "Stop the juggler"::
-    send(F?timer, stop).
+    get(F, bitmap, BM),
+    send(BM, stop).
 
 start(F) :->
     "(Re)Start the juggler"::
-    send(F?timer, start).
+    get(F, bitmap, BM),
+    send(BM, play).
 
 set_speed(F) :->
     "Popup a dialog to set the speed"::

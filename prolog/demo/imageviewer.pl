@@ -60,11 +60,9 @@ image_viewer :-
     send(D, append, new(Dir, directory_item(directory, DefDir))),
     send(D, append, new(File, text_item(file_pattern, '*.svg'))),
     send_list([Dir,File], hor_stretch, 100),
-    new(ValueSet, chain('*.svg', '*.png', '*.gif', '*.jpg', '*.jpeg')),
-    (   get(@pce, window_system, windows)
-    ->  send_list(ValueSet, append, ['*.ico', '*.cur'])
-    ;   true
-    ),
+    new(ValueSet, chain('*.svg', '*.png', '*.gif', '*.jpg', '*.jpeg',
+                        '*.webp', '*.avif', '*.bmp', '*.ico', '*.cur',
+                        '*.ani')),
     send(File, value_set, ValueSet),
     send(D, append, button(apply,
                            message(@prolog, view, P,
@@ -184,9 +182,8 @@ show(P, [_|R], Dir) :-
 show_file(P, File) :-
     get(File, base_name, Name),
     debug(pce(image), 'Showing ~p', [Name]),
-    new(I, image(File?name)),      % first make image to avoid error
+    file_bitmap(File, B),
     !,
-    new(B, bitmap(I)),              % the bitmap
     send(B, recogniser, @image_recogniser),
 
     new(F2, figure),                % elevate it from the background
@@ -201,6 +198,35 @@ show_file(P, File) :-
     send(@image_viewer_icon_spatial, forwards, F2, T),
 
     send(P, display, D).            % display (<-format positions)
+
+%!  file_bitmap(+File, -Bitmap) is semidet.
+%
+%   Bitmap shows the image in File.  If the file holds an animation, the
+%   bitmap plays it.  The frames of an animation are images that are not
+%   associated with the file, so we tell the bitmap what its file is for
+%   the menu of @image_recogniser.
+
+file_bitmap(File, B) :-
+    get(File, name, Path),
+    file_name_extension(_, Ext0, Path),
+    downcase_atom(Ext0, Ext),
+    animated_extension(Ext),
+    new(A, animation(Path)),
+    get(A, count, N),
+    N > 1,
+    !,
+    new(B, bitmap(A)),
+    send(B, attribute, file, File),
+    send(B, play).
+file_bitmap(File, B) :-
+    new(I, image(File?name)),       % first make image to avoid error
+    new(B, bitmap(I)).
+
+animated_extension(png).
+animated_extension(gif).
+animated_extension(webp).
+animated_extension(avif).
+animated_extension(ani).
 
                  /*******************************
                  *             UTIL             *
