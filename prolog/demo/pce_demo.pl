@@ -184,6 +184,11 @@ demo('Sound',
      demo(sound_demo),
      sound_demo).
 
+demo('Asteroids',
+     'A game like Asteroids: keyboard polling, gamepad and sound',
+     demo(asteroids),
+     asteroids).
+
 demo('Drag-and-drop File',
      'Receive files dropped from the desktop (drop_file/drop_text events)',
      demo(dragdrop_file),
