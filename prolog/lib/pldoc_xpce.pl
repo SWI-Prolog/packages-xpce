@@ -83,12 +83,16 @@ well_known_global(arg5).        well_known_global(arg6).
 well_known_global(arg7).        well_known_global(arg8).
 well_known_global(arg9).        well_known_global(arg10).
 well_known_global(classes).
+well_known_global(completer).
 well_known_global(cursor_names).
+well_known_global(cursors).
 well_known_global(default).     well_known_global(display).
 well_known_global(display_manager).
 well_known_global(error_database).
+well_known_global(errors).
 well_known_global(event).       well_known_global(event_tree).
 well_known_global(grabbed_windows).
+well_known_global(key_bindings).
 well_known_global(nil).
 well_known_global(off).         well_known_global(on).
 well_known_global(pce).         well_known_global(prolog).
