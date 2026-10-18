@@ -1881,6 +1881,11 @@ field(Sheet fields, const char *name)
 }
 
 #define F(name) field(fields, #name)
+/* Device ids are unsigned, but SDL's special ids are negative, e.g.,
+ * SDL_PEN_MOUSEID is (SDL_MouseID)-2.  Converting a negative float
+ * directly to an unsigned integer is undefined: it gives 0 on ARM64.
+ */
+#define ID(name) ((Sint64)field(fields, #name))
 
 typedef struct
 { const char *name;
@@ -1936,7 +1941,7 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
   { case SDL_EVENT_MOUSE_MOTION:
       ev.motion.timestamp = now;
       ev.motion.windowID  = wid;
-      ev.motion.which     = (SDL_MouseID)F(which);
+      ev.motion.which     = (SDL_MouseID)ID(which);
       ev.motion.state     = (SDL_MouseButtonFlags)F(state);
       ev.motion.x	  = F(x);
       ev.motion.y	  = F(y);
@@ -1945,7 +1950,7 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
     case SDL_EVENT_MOUSE_BUTTON_UP:
       ev.button.timestamp = now;
       ev.button.windowID  = wid;
-      ev.button.which     = (SDL_MouseID)F(which);
+      ev.button.which     = (SDL_MouseID)ID(which);
       ev.button.button    = (Uint8)F(button);
       ev.button.down      = t->type == SDL_EVENT_MOUSE_BUTTON_DOWN;
       ev.button.clicks    = 1;
@@ -1955,7 +1960,7 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
     case SDL_EVENT_MOUSE_WHEEL:
       ev.wheel.timestamp = now;
       ev.wheel.windowID  = wid;
-      ev.wheel.which     = (SDL_MouseID)F(which);
+      ev.wheel.which     = (SDL_MouseID)ID(which);
       ev.wheel.x	 = F(dx);
       ev.wheel.y	 = F(dy);
       ev.wheel.integer_x = (Sint32)F(integer_x);
@@ -1969,13 +1974,13 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
     case SDL_EVENT_PEN_PROXIMITY_OUT:
       ev.pproximity.timestamp = now;
       ev.pproximity.windowID  = wid;
-      ev.pproximity.which     = (SDL_PenID)F(which);
+      ev.pproximity.which     = (SDL_PenID)ID(which);
       break;
     case SDL_EVENT_PEN_DOWN:
     case SDL_EVENT_PEN_UP:
       ev.ptouch.timestamp = now;
       ev.ptouch.windowID  = wid;
-      ev.ptouch.which     = (SDL_PenID)F(which);
+      ev.ptouch.which     = (SDL_PenID)ID(which);
       ev.ptouch.pen_state = (SDL_PenInputFlags)F(state);
       ev.ptouch.x	  = F(x);
       ev.ptouch.y	  = F(y);
@@ -1985,7 +1990,7 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
     case SDL_EVENT_PEN_MOTION:
       ev.pmotion.timestamp = now;
       ev.pmotion.windowID  = wid;
-      ev.pmotion.which     = (SDL_PenID)F(which);
+      ev.pmotion.which     = (SDL_PenID)ID(which);
       ev.pmotion.pen_state = (SDL_PenInputFlags)F(state);
       ev.pmotion.x	   = F(x);
       ev.pmotion.y	   = F(y);
@@ -1994,7 +1999,7 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
     case SDL_EVENT_PEN_BUTTON_UP:
       ev.pbutton.timestamp = now;
       ev.pbutton.windowID  = wid;
-      ev.pbutton.which     = (SDL_PenID)F(which);
+      ev.pbutton.which     = (SDL_PenID)ID(which);
       ev.pbutton.pen_state = (SDL_PenInputFlags)F(state);
       ev.pbutton.x	   = F(x);
       ev.pbutton.y	   = F(y);
@@ -2004,7 +2009,7 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
     case SDL_EVENT_PEN_AXIS:
       ev.paxis.timestamp = now;
       ev.paxis.windowID  = wid;
-      ev.paxis.which     = (SDL_PenID)F(which);
+      ev.paxis.which     = (SDL_PenID)ID(which);
       ev.paxis.pen_state = (SDL_PenInputFlags)F(state);
       ev.paxis.x	 = F(x);
       ev.paxis.y	 = F(y);
@@ -2017,8 +2022,8 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
     case SDL_EVENT_FINGER_CANCELED:
       ev.tfinger.timestamp = now;
       ev.tfinger.windowID  = wid;
-      ev.tfinger.touchID   = (SDL_TouchID)F(touch_id);
-      ev.tfinger.fingerID  = (SDL_FingerID)F(finger_id);
+      ev.tfinger.touchID   = (SDL_TouchID)ID(touch_id);
+      ev.tfinger.fingerID  = (SDL_FingerID)ID(finger_id);
       ev.tfinger.x	   = F(x);
       ev.tfinger.y	   = F(y);
       ev.tfinger.dx	   = F(dx);
@@ -2043,6 +2048,7 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
 }
 
 #undef F
+#undef ID
 
 
 static bool
