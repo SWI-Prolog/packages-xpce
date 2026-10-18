@@ -121,6 +121,7 @@ scope('C.elevation', basic).
 scope('C.ellipse', basic).
 scope('C.error', basic).
 scope('C.event', basic).
+scope('C.event_detail', advanced).
 scope('C.event_node', basic).
 scope('C.event_tree', basic).
 scope('C.figure', basic).
@@ -146,6 +147,7 @@ scope('C.hyper', basic).
 scope('C.identity', basic).
 scope('C.if', basic).
 scope('C.image', basic).
+scope('C.input_device', basic).
 scope('C.int_item', basic).
 scope('C.joint', basic).
 scope('C.key_binding', basic).

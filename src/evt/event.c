@@ -50,6 +50,7 @@ static Any	 last_frame       = NIL;	/* <-frame of the last event */
 static Int	 last_x		  = TOINT(ZERO);
 static Int	 last_y		  = TOINT(ZERO);
 static unsigned long last_time	  = 0L;
+static InputDevice last_pointer	  = NULL;	/* device of last non-key event */
 
 static Int		 last_down_bts    = ZERO;
 static int		 last_down_x      = -1000; /* multiclick detection */
@@ -64,7 +65,7 @@ static int		 loc_still_time	  = 400;
 
 static status
 initialiseEvent(EventObj e, Name id, Any window,
-		Int x, Int y, Int bts, Int time)
+		Int x, Int y, Int bts, Int time, InputDevice device)
 { unsigned long t = valInt(time);
 
   initialiseProgramObject(e);
@@ -76,6 +77,7 @@ initialiseEvent(EventObj e, Name id, Any window,
     if ( isDefault(bts) )    bts    = parent->buttons;
     if ( isDefault(window) ) window = parent->window;
     if ( isDefault(time) )   t      = max(last_time, parent->time);
+    if ( isDefault(device) ) device = parent->device;
   } else
   { if ( isDefault(x) )      x      = last_x;
     if ( isDefault(y) )      y      = last_y;
@@ -108,6 +110,16 @@ initialiseEvent(EventObj e, Name id, Any window,
   assign(e, y,		y);
   assign(e, buttons,	bts);
   assign(e, rotation,	NIL);
+  if ( isDefault(device) )
+  { if ( isAEvent(e, NAME_keyboard) )
+      device = DEVICE_keyboard;
+    else
+      device = last_pointer ? last_pointer : DEVICE_mouse;
+  }
+  if ( device->kind != NAME_keyboard )
+    last_pointer = device;
+  assign(e, device,	device);
+  assign(e, detail,	NIL);
   e->time = t;
 
   if ( isDownEvent(e) )
@@ -1126,7 +1138,8 @@ mapWheelMouseEvent(EventObj ev, Any rec)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "id=event_id", "origin=[window|frame]", "x=[num]", "y=[num]", "button_mask=[int]", "time=[int]" };
+        { "id=event_id", "origin=[window|frame]", "x=[num]", "y=[num]", "button_mask=[int]", "time=[int]",
+	  "device=[input_device]" };
 static char *T_post[] =
         { "to=graphical", "recogniser=[recogniser]" };
 
@@ -1149,6 +1162,10 @@ static vardecl var_event[] =
      NAME_position, "Y-coordinate, relative to window; may be fractional"),
   IV(NAME_rotation, "degrees=int*", IV_GET,
      NAME_classify, "`wheel' and `horizontal_wheel' events: rotation, 15 per notch"),
+  IV(NAME_device, "input_device", IV_GET,
+     NAME_context, "Device that generated the event"),
+  IV(NAME_detail, "event_detail*", IV_GET,
+     NAME_classify, "Device specific data, e.g., pen pressure"),
   IV(NAME_position, "point*", IV_NONE,
      NAME_position, "Last calculated position"),
   IV(NAME_time, "alien:Time", IV_NONE,
@@ -1158,8 +1175,8 @@ static vardecl var_event[] =
 /* Send Methods */
 
 static senddecl send_event[] =
-{ SM(NAME_initialise, 6, T_initialise, initialiseEvent,
-     DEFAULT, "Create from type, window, x, y, buttons and time"),
+{ SM(NAME_initialise, 7, T_initialise, initialiseEvent,
+     DEFAULT, "Create from type, window, x, y, buttons, time and device"),
   SM(NAME_hasModifier, 1, "modifier", hasModifierEvent,
      NAME_classify, "Test if event meets modifier spec"),
   SM(NAME_isA, 1, "super=event_id", isAEvent,
@@ -1241,6 +1258,8 @@ makeClassEvent(Class class)
   cloneStyleVariableClass(class, NAME_frame,    NAME_reference);
   cloneStyleVariableClass(class, NAME_receiver, NAME_reference);
   cloneStyleVariableClass(class, NAME_window,   NAME_reference);
+  cloneStyleVariableClass(class, NAME_device,   NAME_reference);
+  realiseClass(ClassInputDevice);	/* @mouse_device, @keyboard_device */
   init_event_tree();
 
   if ( (t=getClassVariableValueClass(class, NAME_locStillTime)) )

@@ -984,6 +984,15 @@ NewClass(frameobj)
 End;
 
 
+NewClass(input_device)
+  Name		kind;			/* mouse, pen, touch, ... */
+  Int		id;			/* Window system id */
+  Name		name;			/* Human readable name */
+End;
+
+NewClass(event_detail)
+End;
+
 NewClass(eventobj)
   Any		frame;			/* Original frame */
   Any		window;			/* Targeted window */
@@ -993,6 +1002,8 @@ NewClass(eventobj)
   Int		x;			/* X coordinate relative to window */
   Int		y;			/* Y coordinate relative to window */
   Int		rotation;		/* Wheel rotation (degrees) or NIL */
+  InputDevice	device;			/* Device that generated the event */
+  Any		detail;			/* event_detail* with device data */
   Point		position;		/* Computed Position */
   uintptr_t	time;			/* Time of event in milliseconds */
 End;
@@ -1209,6 +1220,9 @@ GLOBAL Image EXCLAMATION_IMAGE;
 GLOBAL Modifier MODIFIER_shift;		/* Demands `shift-is-down' */
 GLOBAL Modifier MODIFIER_control;	/* Demands `control-is-down' */
 GLOBAL Modifier MODIFIER_allup;		/* Demands all modifiers up */
+
+GLOBAL InputDevice DEVICE_mouse;	/* @mouse_device */
+GLOBAL InputDevice DEVICE_keyboard;	/* @keyboard_device */
 
 GLOBAL PopupGesture GESTURE_popup;	/* Displays a popup menu */
 GLOBAL ClickGesture GESTURE_button;	/* Gesture for handling buttons */

@@ -10,7 +10,7 @@ set(ARI_SRC	equation.c expression.c)
 
 set(EVT_SRC	clickgesture.c conngesture.c event.c
 		eventnode.c eventtree.c gesture.c handler.c
-		handlergroup.c modifier.c movegesture.c
+		handlergroup.c inputdevice.c modifier.c movegesture.c
 		mvolgesture.c popupgesture.c recogniser.c
 		resizegesture.c rzolgesture.c edittextgest.c
 		browserselgesture.c resizetabslice.c)

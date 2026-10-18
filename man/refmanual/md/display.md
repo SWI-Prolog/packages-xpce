@@ -286,3 +286,8 @@ See `display_manager <-current`.
 
 - display<-screen_keyboard_shown: -> bool
     `@on` when the on-screen keyboard is currently visible.
+
+- display<-input_devices: -> chain
+    Chain of input_device objects known to xpce.  It holds at least
+    @mouse_device and @keyboard_device.  Other devices are added when
+    the window system reports them.  The chain should not be modified.

@@ -65,6 +65,12 @@ COMMON(status)	makeClassHandler(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/evt/handlergroup.c */
 COMMON(status)	makeClassHandlerGroup(Class class);
 
+/* /staff/jan/src/pl/packages/xpce/src/evt/inputdevice.c */
+COMMON(InputDevice) findInputDevice(Name kind, intptr_t id, const char *name);
+COMMON(Chain)	getInputDevicesDisplay(DisplayObj d);
+COMMON(status)	makeClassInputDevice(Class class);
+COMMON(status)	makeClassEventDetail(Class class);
+
 /* /staff/jan/src/pl/packages/xpce/src/evt/modifier.c */
 COMMON(status)	makeClassModifier(Class class);
 

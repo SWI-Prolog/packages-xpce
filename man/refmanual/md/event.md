@@ -70,6 +70,20 @@ example-- type _3_ into _\C-c_.
     	double-click	0x80
     	triple-click	0xC0
 
+- event<-detail: event_detail*
+    Data that is specific to the device that generated the event, e.g.,
+    the pressure of a pen, or @nil.
+
+    @see class event_detail
+
+- event<-device: input_device
+    The device that generated the event.  This is @mouse_device for
+    events from the mouse and @keyboard_device for keyboard events.  A
+    pen, touch screen or gamepad has its own input_device object.
+
+    @see class input_device
+    @see display<-input_devices
+
 - event<-id: event_id
     Identifier for the event.  This is either a name occurring in the
     event-type hierarchy @event_tree or an integer.  The latter is used for
@@ -175,11 +189,13 @@ example-- type _3_ into _\C-c_.
     @see modifier<-convert
     @see class modifier
 
-- event->initialise: id=event_id, origin=[window|frame], x=[num], y=[num], button_mask=[int], time=[int]
+- event->initialise: id=event_id, origin=[window|frame], x=[num], y=[num], button_mask=[int], time=[int], device=[input_device]
     Create an event from the specified parameters.  Events are
     seldomly generated explicitly by the application code.  All
     optional arguments default to their value of the last processed
-    event.  See also `graphical ->generate_event`.
+    event.  See also `graphical ->generate_event`.  The `device`
+    defaults to @keyboard_device for a keyboard event and to the device
+    of the last other event otherwise.
 
     @see graphical->generate_event
 

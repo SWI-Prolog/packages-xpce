@@ -707,6 +707,11 @@ Normally, \product{} will read and dispatch events when `there is nothing else
 to do'. For processing events during computation, see `graphical
 ->synchronise' and `display ->dispatch'.
 
+#class event_detail "event_detail()"
+Super class of the objects in `event <-detail', which hold data that is
+specific to the device that generated an event, such as the pressure
+of a pen.
+
 #class event_node "event_node(value, parent)"
 An \class{event_node} is a node in the event `is_a' hierarchy.  See the
 demo program \demo{EventHierarchy}.  Event-types are normally tested using
@@ -976,6 +981,13 @@ an image to a PNG file.  Images are displayed on a graphical device
 using a \class{bitmap}. They are also used to specify \class{cursor}
 objects, the icons of \classs{menu_item} and the icon associated with a
 `frame'.  See \secref{images}.
+
+#class input_device "input_device(kind, id, name)"
+An \class{input_device} describes the device that generated an event,
+see `event <-device'.  Events from the mouse refer to @mouse_device and
+keyboard events to @keyboard_device.  Pens, touch screens and gamepads
+are represented by their own \class{input_device}.  `display
+<-input_devices' lists the known devices.
 
 #class int_item "int_item(name, default, message, low, high)"
 Subclass of \class{text_item} for entering integer values.  Has stepper

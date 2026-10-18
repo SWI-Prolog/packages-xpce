@@ -1060,12 +1060,14 @@ CtoEvent(SDL_Event *event)
    * AltGr.
    */
   SDL_Keymod mod_for_event = lastmod;
+  Any device = DEFAULT;			/* keyboard or last pointer */
   switch ( event->type )
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_MOUSE_MOTION:
     case SDL_EVENT_MOUSE_WHEEL:
       mod_for_event = SDL_GetModState();
+      device = DEVICE_mouse;
       break;
     default:
       break;
@@ -1088,6 +1090,8 @@ CtoEvent(SDL_Event *event)
 			     window,
 			     toNum(x), toNum(y),
 			     buttons,
+			     DEFAULT,	/* time: see setLastEventTime() */
+			     device,
 			     EAV);
   if ( ev )
   { setFrameEvent(ev, frame);

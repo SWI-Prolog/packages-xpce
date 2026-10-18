@@ -200,6 +200,12 @@ static struct class_definition classdefs[] =
   { NAME_error, NAME_object, makeClassError,
     &ClassError, "Description of some (internal) problem" },
 
+  { NAME_inputDevice, NAME_object, makeClassInputDevice,
+    &ClassInputDevice, "Device that generates events" },
+
+  { NAME_eventDetail, NAME_object, makeClassEventDetail,
+    &ClassEventDetail, "Device specific data of an event" },
+
   { NAME_event, NAME_object, makeClassEvent,
     &ClassEvent, "PCE's notion of a user event" },
 

@@ -685,6 +685,8 @@ static getdecl get_display[] =
   GM(NAME_screenKeyboardShown, 0, "bool", NULL,
      getScreenKeyboardShownDisplay,
      NAME_event, "@on if the on-screen keyboard is currently shown"),
+  GM(NAME_inputDevices, 0, "chain", NULL, getInputDevicesDisplay,
+     NAME_event, "Chain of known input devices"),
 };
 
 /* Resources */
