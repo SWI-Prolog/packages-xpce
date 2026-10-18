@@ -1083,6 +1083,37 @@ ws_scale_image(Image image, int w, int h)
 }
 
 /**
+ * Replace the pixels of `image` by a copy of those of `src`, including
+ * their transparency.  `image` gets the size of `src`.
+ */
+status
+ws_copy_image(Image image, Image src)
+{ if ( !src->ws_ref && !XopenImage(src, CurrentDisplay(NIL)) )
+    fail;
+
+  cairo_surface_t *from = src->ws_ref;
+  int w = cairo_image_surface_get_width(from);
+  int h = cairo_image_surface_get_height(from);
+  cairo_surface_t *dst = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+
+  if ( !my_cairo_check_surface(image, dst) )
+    fail;
+
+  cairo_t *cr = cairo_create(dst);
+  cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+  cairo_set_source_surface(cr, from, 0, 0);
+  cairo_paint(cr);
+  cairo_destroy(cr);
+
+  ws_destroy_image(image);
+  image->ws_ref = dst;
+  assign(image->size, w, toInt(w));
+  assign(image->size, h, toInt(h));
+
+  succeed;
+}
+
+/**
  * Create a rotated version of the image.
  *
  * @param image Pointer to the source Image.

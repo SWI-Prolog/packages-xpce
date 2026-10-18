@@ -431,22 +431,17 @@ resizeImage(Image image, Int w, Int h)
 }
 
 
+/* An exact copy, including transparent pixels: drawing i2 into image
+ * would paint it over the old pixels.
+ */
+
 static status
 copyImage(Image image, Image i2)
-{ Int w = i2->size->w;
-  Int h = i2->size->h;
-
-  TRY(verifyAccessImage(image, NAME_copy));
+{ TRY(verifyAccessImage(image, NAME_copy));
 
   CHANGING_IMAGE(image,
-    TRY(resizeImage(image, w, h));
-
-    if ( d_image(image, 0, 0, valInt(w), valInt(h)) )
-    { d_modify();
-      r_image(i2, 0, 0, 0, 0, valInt(w), valInt(h));
-      d_done();
-      changedEntireImageImage(image);
-    });
+    TRY(ws_copy_image(image, i2));
+    changedEntireImageImage(image));
 
   succeed;
 }

@@ -189,4 +189,27 @@ test(semi_transparent_save, true(close_rgba(RGBA, 200-100-50-128))) :-
     new(I2, image(File)),
     pixel_rgba(I2, RGBA).
 
+%   image->copy makes an exact copy: transparent pixels stay
+%   transparent rather than showing the old pixels of the copy.
+
+test(copy_keeps_transparency, A == 0) :-
+    new(I, image(@nil, 4, 4, pixmap)),
+    send(I, pixel, 1, 1, colour(@default, 0, 0, 0, 0)),
+    new(Copy, image(@nil, 4, 4, pixmap)),
+    send(Copy, copy, I),
+    pixel_rgba(Copy, _-_-_-A).
+test(append_keeps_transparency, A == 0) :-
+    new(I, image(@nil, 4, 4, pixmap)),
+    send(I, pixel, 1, 1, colour(@default, 0, 0, 0, 0)),
+    new(Anim, animation),
+    send(Anim, append, I),
+    get(Anim, frame, 1, Frame),
+    pixel_rgba(Frame, _-_-_-A).
+test(copy_takes_size, W-H == 7-5) :-
+    new(I, image(@nil, 7, 5, pixmap)),
+    new(Copy, image(@nil, 4, 4, pixmap)),
+    send(Copy, copy, I),
+    get(Copy?size, width, W),
+    get(Copy?size, height, H).
+
 :- end_tests(image_save).
