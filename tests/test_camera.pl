@@ -96,6 +96,12 @@ test(frame, [W-H-RGB == 64-48-rgb(256, 0, 0)]) :-
     get(C, image, I),
     get(I, size, size(W, H)),
     rgb(I, 10, 10, RGB).
+test(mjpg_frame, [W-H-RGB == 64-48-rgb(256, 0, 0)]) :-
+    new(C, camera),                     % many cameras deliver JPEG
+    send(C, sdl_test_frame, 64, 48, colour(red), mjpg),
+    get(C, image, I),
+    get(I, size, size(W, H)),
+    rgb(I, 10, 10, RGB).
 test(message, N == 2) :-
     new(C, camera),
     send(C, message, message(@prolog, test_camera_frame, @arg1)),

@@ -115,7 +115,7 @@ camera_example :-
     new(P, picture('Camera')),
     send(P, display, bitmap(C?image)),
     send(P, open),
-    send(C, open),
+    send(C, open, size(640, 480)),
     send(P, attribute, camera, C).          % freed with the picture
 
 

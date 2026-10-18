@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <SDL3_image/SDL_image.h>
 
 /* Cameras.  SDL has no event for a new frame, so the open cameras are
  * polled from the media tick (see sdlaudio.c).  The camera subsystem
@@ -110,8 +111,101 @@ find_camera(Camera c)
 }
 
 
+static double
+spec_fps(const SDL_CameraSpec *s)
+{ return s->framerate_denominator ?
+	   (double)s->framerate_numerator/s->framerate_denominator : 0.0;
+}
+
+/* True if `a` is a better match for a w x h video than `b`: the exact
+ * size, else the smallest that is at least as large, else the largest.
+ * Then the highest frame rate and an uncompressed format, which does
+ * not have to be decoded.
+ */
+
+static bool
+better_spec(const SDL_CameraSpec *a, const SDL_CameraSpec *b, int w, int h)
+{ bool a_fits = a->width >= w && a->height >= h;
+  bool b_fits = b->width >= w && b->height >= h;
+  long a_area = (long)a->width*a->height;
+  long b_area = (long)b->width*b->height;
+
+  if ( a_fits != b_fits )
+    return a_fits;
+  if ( a_area != b_area )
+    return a_fits ? a_area < b_area : a_area > b_area;
+  if ( spec_fps(a) != spec_fps(b) )
+    return spec_fps(a) > spec_fps(b);
+
+  return a->format != SDL_PIXELFORMAT_MJPG && b->format == SDL_PIXELFORMAT_MJPG;
+}
+
+static bool
+choose_spec(SDL_CameraID id, int w, int h, SDL_CameraSpec *spec)
+{ int count = 0;
+  SDL_CameraSpec **specs = SDL_GetCameraSupportedFormats(id, &count);
+  const SDL_CameraSpec *best = NULL;
+
+  for(int i=0; i<count; i++)
+  { if ( !best || better_spec(specs[i], best, w, h) )
+      best = specs[i];
+  }
+  if ( best )
+    *spec = *best;
+  SDL_free(specs);
+
+  return best != NULL;
+}
+
+
+/* The sizes the camera supports, smallest first */
+
+Chain
+ws_camera_sizes(Camera c)
+{ Chain ch = answerObject(ClassChain, EAV);
+  SDL_CameraID id;
+
+  if ( init_cameras() && (id = find_camera(c)) )
+  { int count = 0;
+    SDL_CameraSpec **specs = SDL_GetCameraSupportedFormats(id, &count);
+
+    for(int i=0; i<count; i++)		/* insertion sort, no duplicates */
+    { int w = specs[i]->width, h = specs[i]->height;
+      Cell cell;
+      Any before = NIL;
+      bool dup = false;
+
+      for_cell(cell, ch)
+      { Size s = cell->value;
+	long a = (long)valInt(s->w)*valInt(s->h);
+
+	if ( valInt(s->w) == w && valInt(s->h) == h )
+	{ dup = true;
+	  break;
+	}
+	if ( a > (long)w*h )
+	{ before = s;
+	  break;
+	}
+      }
+      if ( !dup )
+      { Size s = newObject(ClassSize, toInt(w), toInt(h), EAV);
+
+	if ( isNil(before) )
+	  appendChain(ch, s);
+	else
+	  insertBeforeChain(ch, s, before);
+      }
+    }
+    SDL_free(specs);
+  }
+
+  return ch;
+}
+
+
 status
-ws_open_camera(Camera c)
+ws_open_camera(Camera c, Size size)
 { if ( !init_cameras() )
     fail;
 
@@ -119,7 +213,10 @@ ws_open_camera(Camera c)
   if ( !id )
     return errorPce(c, NAME_noCamera);
 
-  SDL_Camera *cam = SDL_OpenCamera(id, NULL);
+  SDL_CameraSpec spec;
+  bool have_spec = ( notDefault(size) &&
+		     choose_spec(id, valInt(size->w), valInt(size->h), &spec) );
+  SDL_Camera *cam = SDL_OpenCamera(id, have_spec ? &spec : NULL);
   if ( !cam )
     return errorPce(c, NAME_cannotOpen, CtoName(SDL_GetError()));
 
@@ -244,12 +341,61 @@ sdl_camera_event(SDL_Event *event)
 }
 
 
-/* Testing: deliver a frame of `w` x `h` pixels of colour in the YUY2
- * format of many cameras, so that it is converted as a camera frame.
+/* Testing: deliver a frame of `w` x `h` pixels of colour in one of the
+ * formats of cameras: YUY2 or MJPG, which holds a JPEG image.  Like the
+ * MJPG of many webcams, the JPEG has no Huffman tables (DHT segments):
+ * the decoder must use the standard tables, which SDL's own conversion
+ * and some decoders of SDL_image do not do.
  */
 
+static size_t
+strip_dht(Uint8 *d, size_t len)
+{ size_t i = 2, o = 2;			/* after SOI */
+
+  while( i+4 <= len && d[i] == 0xFF )
+  { Uint8 marker = d[i+1];
+    size_t seglen = 2 + ((size_t)d[i+2]<<8 | d[i+3]);
+
+    if ( marker == 0xDA )		/* start of scan: copy the rest */
+      break;
+    if ( marker != 0xC4 )
+    { memmove(d+o, d+i, seglen);
+      o += seglen;
+    }
+    i += seglen;
+  }
+  memmove(d+o, d+i, len-i);
+
+  return o + (len-i);
+}
+
+static SDL_Surface *
+mjpg_surface(SDL_Surface *rgb, void **data)
+{ SDL_IOStream *io = SDL_IOFromDynamicMem();
+  SDL_Surface *mjpg = NULL;
+
+  *data = NULL;
+  if ( io && IMG_SaveJPG_IO(rgb, io, false, 90) )
+  { Sint64 len = SDL_GetIOSize(io);
+    void *mem = SDL_GetPointerProperty(SDL_GetIOProperties(io),
+				       SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER,
+				       NULL);
+
+    if ( len > 0 && mem && (*data = SDL_malloc((size_t)len)) )
+    { memcpy(*data, mem, (size_t)len);
+      len = (Sint64)strip_dht(*data, (size_t)len);
+      mjpg = SDL_CreateSurfaceFrom(rgb->w, rgb->h, SDL_PIXELFORMAT_MJPG,
+				   *data, (int)len);
+    }
+  }
+  if ( io )
+    SDL_CloseIO(io);
+
+  return mjpg;
+}
+
 status
-ws_test_camera_frame(Camera c, int w, int h, Colour colour)
+ws_test_camera_frame(Camera c, int w, int h, Colour colour, Name format)
 { SDL_Surface *rgb = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_XRGB8888);
 
   if ( !rgb )
@@ -259,15 +405,20 @@ ws_test_camera_frame(Camera c, int w, int h, Colour colour)
 					(Uint8)valInt(getRedColour(colour)),
 					(Uint8)valInt(getGreenColour(colour)),
 					(Uint8)valInt(getBlueColour(colour))));
-  SDL_Surface *yuv = SDL_ConvertSurface(rgb, SDL_PIXELFORMAT_YUY2);
+  void *data = NULL;
+  SDL_Surface *frame = ( format == NAME_mjpg
+			 ? mjpg_surface(rgb, &data)
+			 : SDL_ConvertSurface(rgb, SDL_PIXELFORMAT_YUY2) );
   SDL_DestroySurface(rgb);
-  if ( !yuv )
-  { Cprintf("Cannot create YUY2 frame: %s\n", SDL_GetError());
+  if ( !frame )
+  { Cprintf("Cannot create %s frame: %s\n", pp(format), SDL_GetError());
+    SDL_free(data);
     fail;
   }
 
-  deliver_frame(c, yuv);
-  SDL_DestroySurface(yuv);
+  deliver_frame(c, frame);
+  SDL_DestroySurface(frame);
+  SDL_free(data);
 
   succeed;
 }

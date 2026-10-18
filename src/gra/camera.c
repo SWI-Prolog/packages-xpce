@@ -65,11 +65,17 @@ unlinkCamera(Camera c)
 
 
 static status
-openCamera(Camera c)
+openCamera(Camera c, Size size)
 { if ( c->status != NAME_closed )
     succeed;
 
-  return ws_open_camera(c);
+  return ws_open_camera(c, size);
+}
+
+
+static Chain
+getSizesCamera(Camera c)
+{ answer(ws_camera_sizes(c));
 }
 
 
@@ -82,8 +88,9 @@ closeCamera(Camera c)
 
 
 static status
-sdlTestFrameCamera(Camera c, Int w, Int h, Colour colour)
-{ return ws_test_camera_frame(c, valInt(w), valInt(h), colour);
+sdlTestFrameCamera(Camera c, Int w, Int h, Colour colour, Name format)
+{ return ws_test_camera_frame(c, valInt(w), valInt(h), colour,
+			      isDefault(format) ? NAME_yuy2 : format);
 }
 
 
@@ -107,19 +114,27 @@ static vardecl var_camera[] =
 /* Send Methods */
 
 static char *T_sdlTestFrame[] =
-        { "width=int", "height=int", "colour=colour" };
+        { "width=int", "height=int", "colour=colour",
+	  "format=[{yuy2,mjpg}]" };
 
 static senddecl send_camera[] =
 { SM(NAME_initialise, 1, "name=[name]", initialiseCamera,
      DEFAULT, "Create for the named or first camera"),
   SM(NAME_unlink, 0, NULL, unlinkCamera,
      DEFAULT, "Close the camera"),
-  SM(NAME_open, 0, NULL, openCamera,
-     NAME_status, "Start delivering frames"),
+  SM(NAME_open, 1, "size=[size]", openCamera,
+     NAME_status, "Start delivering frames of about this size"),
   SM(NAME_close, 0, NULL, closeCamera,
      NAME_status, "Stop delivering frames"),
-  SM(NAME_sdlTestFrame, 3, T_sdlTestFrame, sdlTestFrameCamera,
+  SM(NAME_sdlTestFrame, 4, T_sdlTestFrame, sdlTestFrameCamera,
      NAME_test, "Deliver a frame of one colour (testing)")
+};
+
+/* Get Methods */
+
+static getdecl get_camera[] =
+{ GM(NAME_sizes, 0, "chain", NULL, getSizesCamera,
+     NAME_video, "Chain of sizes the camera supports, smallest first")
 };
 
 /* Class Declaration */
@@ -127,7 +142,7 @@ static senddecl send_camera[] =
 static Name camera_termnames[] = { NAME_name };
 
 ClassDecl(camera_decls,
-          var_camera, send_camera, NULL, NULL,
+          var_camera, send_camera, get_camera, NULL,
           1, camera_termnames);
 
 status

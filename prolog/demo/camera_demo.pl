@@ -89,11 +89,14 @@ initialise(F) :->
 fill_dialog(F, D:dialog) :->
     "Create the controls"::
     get(@display, cameras, Cameras),
-    send(D, append, new(M, menu(camera, cycle))),
+    send(D, append, new(M, menu(camera, cycle, message(F, fill_sizes)))),
+    send(D, append, menu(size, cycle), right),
     (   send(Cameras, empty)
     ->  send(M, append, menu_item(none, @default, 'No camera')),
-        send(M, active, @off)
-    ;   send(Cameras, for_all, message(M, append, @arg1))
+        send(M, active, @off),
+        send(D?size_member, active, @off)
+    ;   send(Cameras, for_all, message(M, append, @arg1)),
+        send(F, fill_sizes)
     ),
     send(D, append, button(start, message(F, start)), right),
     send(D, append, button(stop, message(F, stop)), right),
@@ -108,6 +111,26 @@ fill_dialog(F, D:dialog) :->
     ;   true
     ),
     send(F, update_buttons).
+
+fill_sizes(F) :->
+    "Fill the size menu with the sizes of the selected camera"::
+    get(F, member, controls, D),
+    get(D?camera_member, selection, Name),
+    get(D, size_member, Menu),
+    send(Menu, clear),
+    get(new(camera(Name)), sizes, Sizes),
+    send(Sizes, for_all,
+         message(Menu, append,
+                 create(menu_item, @arg1,
+                        label := create(string, '%dx%d',
+                                        @arg1?width, @arg1?height)))),
+    (   get(Menu?members, find,
+            and(@arg1?value?width == 640, @arg1?value?height == 480),
+            Default)
+    ->  send(Menu, selection, Default?value)
+    ;   true
+    ),
+    send(D, layout).
 
 unlink(F) :->
     "Stop the camera and the timer"::
@@ -131,9 +154,12 @@ start(F) :->
     send(F, stop),
     get(F, member, controls, D),
     get(D?camera_member, selection, Name),
+    get(D?size_member, selection, Size),
+    get(F, member, video, V),
+    send(V, size, Size),                    % the video pane fits the frames
     new(C, camera(Name)),
     send(F, use_camera, C),
-    send(C, open).
+    send(C, open, Size).
 
 use_camera(F, C:camera) :->
     "Show the video of C"::

@@ -328,7 +328,10 @@ Only WAV files are supported.
 \index{camera}\index{webcam}\index{video}%
 A \class{camera} delivers the video of a camera, e.g., a webcam, as an
 \class{image}.  `display <-cameras' lists the names of the available
-cameras.  `camera ->open' starts the camera.  Each new frame is copied
+cameras.  `camera ->open' starts the camera.  Without arguments, the
+camera chooses the size of the frames, often its largest.  `camera
+<-sizes' lists the supported sizes and `camera ->open' accepts the
+desired size.  Each new frame is copied
 into the same `camera <-image', so a \class{bitmap} that displays this
 image shows the video, and `camera <->message' is executed for each
 frame, e.g., to analyse it:
@@ -339,7 +342,7 @@ camera_example :-
     new(P, picture('Camera')),
     send(P, display, bitmap(C?image)),
     send(P, open),
-    send(C, open),
+    send(C, open, size(640, 480)),
     send(P, attribute, camera, C).          % freed with the picture
 \end{code}
 

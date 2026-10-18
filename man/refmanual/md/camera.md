@@ -44,13 +44,22 @@ this is decided, <-status is `waiting`.
     Create for the named camera or, if omitted, the first camera.  The
     camera is not opened.
 
-- camera->open
-    Start delivering frames.  Raises an error if there is no such
-    camera.
+- camera->open: size=[size]
+    Start delivering frames.  If `size` is given, the camera uses the
+    size it supports that is closest: the same size or else the
+    smallest larger size, using the highest frame rate.  Otherwise the
+    camera chooses, often its largest size.  Large frames take time to
+    process.  Fails with a report if there is no such camera.
 
 - camera->close
     Stop delivering frames.
 
-- camera->sdl_test_frame: width=int, height=int, colour=colour
-    For testing only.  Deliver a frame of the given size and colour,
-    converted from the YUY2 format of many cameras.
+- camera->sdl_test_frame: width=int, height=int, colour=colour, format=[{yuy2,mjpg}]
+    For testing only.  Deliver a frame of the given size and colour in
+    the YUY2 (default) or Motion JPEG format of cameras.
+
+
+## Get methods {#class-camera-get}
+
+- camera<-sizes: -> chain
+    New chain with the sizes the camera supports, smallest first.
