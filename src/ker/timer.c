@@ -243,7 +243,7 @@ static senddecl send_timer[] =
 { SM(NAME_initialise, 2, T_initialise, initialiseTimer,
      DEFAULT, "Create for interval and message"),
   SM(NAME_unlink, 0, NULL, unlinkTimer,
-     DEFAULT, "Destroy X-timer"),
+     DEFAULT, "Stop the timer"),
   SM(NAME_execute, 0, NULL, executeTimer,
      NAME_action, "Fire the timer right now"),
   SM(NAME_delay, 0, NULL, delayTimer,
