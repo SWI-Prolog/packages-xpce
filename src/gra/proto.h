@@ -27,6 +27,7 @@ struct d_buffer;
 COMMON(status)	svgBufferGraphical(Graphical gr, struct d_buffer *buf);
 COMMON(status)	pixelsChangedImage(Image image, int w, int h);
 COMMON(status)	makeClassAudioRecorder(Class class);
+COMMON(status)	makeClassAudioStream(Class class);
 COMMON(Int)	getGreenColour(Colour c);
 COMMON(Int)	getBlueColour(Colour c);
 COMMON(Colour)	getHiliteColour(Colour c, Num h);

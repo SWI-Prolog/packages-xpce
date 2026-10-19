@@ -1033,7 +1033,21 @@ NewClass(audio_recorder)
   Sound		sound;			/* Recorded sound */
   Code		level_message;		/* Executed with the input level */
   BoolObj	recording;		/* Currently recording */
+  SourceSink	sink;			/* Where the samples go, or @nil */
   WsRef		ws_ref;			/* Recording stream */
+End;
+
+NewClass(audio_stream)
+  ABSTRACT_SOURCE_SINK
+  Name		format;			/* Sample format or `encoded` */
+  Int		frequency;		/* Samples per second */
+  Int		channels;		/* 1: mono, 2: stereo, ... */
+  Any		volume;			/* Gain (0.0..1.0) */
+  Any		low_water;		/* Seconds */
+  Code		low_water_message;	/* Executed if less is queued */
+  Code		message;		/* Executed when all is played */
+  BoolObj	playing;		/* ->play was called */
+  WsRef		ws_ref;			/* Device stream, decoder */
 End;
 
 #define ABSTRACT_INPUT_DEVICE \

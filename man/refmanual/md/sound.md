@@ -18,6 +18,7 @@ that can be loaded.  A sound is decoded completely when loaded and
 saved as WAV.
 
 @see class audio_recorder
+@see class audio_stream for audio that is played while it is written
 
 
 ## Instance variables {#class-sound-instvars}

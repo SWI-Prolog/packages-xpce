@@ -146,9 +146,15 @@ send(Frame, attribute, visualises, bicycle24)
 
 #class audio_recorder "audio_recorder(level_message)"
 An \class{audio_recorder} records from the default audio input,
-normally the microphone, into its <-sound.  While recording, its
-<-level_message is executed regularly with the input level, e.g., to
-show a level meter.
+normally the microphone, into its <-sound or to a file or other
+\class{source_sink}.  While recording, its <-level_message is executed
+regularly with the input level, e.g., to show a level meter.
+
+#class audio_stream "audio_stream(format, frequency, channels)"
+An \class{audio_stream} plays audio while it is written, for example
+using pce_open/3: raw samples or a sound file such as MP3 or FLAC
+that is decoded on the fly.  Its <-low_water_message asks for more
+data.
 
 #class behaviour "behaviour(name, context)"
 Super class of \class{method} and \class{variable}, representing the

@@ -76,6 +76,7 @@ scope('C.arrow', basic).
 scope('C.assign', basic).
 scope('C.attribute', basic).
 scope('C.audio_recorder', basic).
+scope('C.audio_stream', basic).
 scope('C.behaviour', basic).
 scope('C.bezier_curve', basic).
 scope('C.binary_condition', basic).

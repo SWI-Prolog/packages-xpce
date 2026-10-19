@@ -13,9 +13,18 @@ between 0 and 1:
 	get(R, sound, Sound),
 	send(Sound, save, 'recording.wav').
 
+Given a sink, ->record writes the samples to it while recording rather
+than into <-sound.  A `file` becomes a WAV file; any other
+`source_sink` gets the raw samples (<-format, <-frequency and
+<-channels) using `source_sink->write_as_file` and
+`source_sink->close_as_file` when recording stops:
+
+	send(R, record, file('recording.wav'))
+
 The system may ask the user for permission to use the microphone.
 
 @see class sound
+@see class audio_stream
 
 
 ## Instance variables {#class-audio-recorder-instvars}
@@ -30,14 +39,33 @@ The system may ask the user for permission to use the microphone.
 - audio_recorder<-recording: bool
     `@on` while recording.
 
+- audio_recorder<-sink: source_sink*
+    Where ->record writes the samples, or `@nil` if it records into
+    <-sound.
+
 
 ## Send methods {#class-audio-recorder-send}
 
 - audio_recorder->initialise: level_message=[code]*
     Create a recorder.
 
-- audio_recorder->record
-    Start recording.  This replaces the audio of <-sound.
+- audio_recorder->record: to=[source_sink]
+    Start recording.  Without `to`, this replaces the audio of
+    <-sound.  Otherwise the samples are written to `to` while
+    recording, as described above.
 
 - audio_recorder->stop
     Stop recording.
+
+
+## Get methods {#class-audio-recorder-get}
+
+- audio_recorder<-format: -> name
+    Format of the recorded samples: `s16`, signed 16-bit in native
+    byte order.
+
+- audio_recorder<-frequency: -> int
+    Recorded samples per second: 44100.
+
+- audio_recorder<-channels: -> int
+    Number of channels recorded: 1.

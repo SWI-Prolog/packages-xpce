@@ -218,6 +218,9 @@ static struct class_definition classdefs[] =
   { NAME_audioRecorder, NAME_object, makeClassAudioRecorder,
     &ClassAudioRecorder, "Record audio from the microphone" },
 
+  { NAME_audioStream, NAME_sourceSink, makeClassAudioStream,
+    &ClassAudioStream, "Play audio while it is written" },
+
   { NAME_animation, NAME_object, makeClassAnimation,
     &ClassAnimation, "Frames of an animated image" },
 

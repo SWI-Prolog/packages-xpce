@@ -36,6 +36,7 @@
           [ sound_demo/0
           ]).
 :- use_module(library(pce)).
+:- autoload(library(http/http_open), [http_open/3]).
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
 
@@ -46,6 +47,12 @@ While recording, a meter shows the input level and the waveform grows.
 Load reads a sound file: WAV and, if xpce is built with SDL3_sound,
 also MP3, Ogg Vorbis, FLAC, etc. (see `display<-sound_file_extensions`).
 Save writes the sound as a WAV file.
+
+Stream plays a URL or a file while it is read, using an audio_stream:
+a thread copies the data to the stream, which decodes and plays it.
+This works for WAV, MP3 and FLAC, but not for Ogg Vorbis.
+Record to file records into a WAV file while recording, rather than
+into memory.
 
 The waveform is drawn from `sound<-peaks`, the peak level of each of a
 number of parts of the sound.
@@ -64,6 +71,7 @@ sound_demo :-
 
 variable(sound,    sound*,          get, "The current sound").
 variable(recorder, audio_recorder*, get, "Recorder while recording").
+variable(stream,   audio_stream*,   get, "Stream while streaming").
 variable(timer,    timer,           get, "Redraws the waveform while recording").
 
 wave_width(600).
@@ -97,6 +105,11 @@ fill_dialog(F, D:dialog) :->
     send(D, append, button(load, message(F, load)), right),
     send(D, append, button(save, message(F, save)), right),
     send(D, append, button(quit, message(F, destroy)), right),
+    send(D, append, new(Loc, text_item(location, ''))),
+    send(Loc, width, 40),
+    send(D, append, button(stream, message(F, stream)), right),
+    send(D, append, button(record_to_file, message(F, record_to_file)),
+         right),
     send(D, append, new(Status, label(status, ''))),
     send(Status, alignment, left).
 
@@ -122,14 +135,24 @@ record(F) :->
     send(F, update).
 
 stop(F) :->
-    "Stop recording or playing"::
+    "Stop recording, playing or streaming"::
     get(F, recorder, R),
     (   R \== @nil
     ->  send(R, stop),
         send(F?timer, stop),
         send(F, slot, recorder, @nil),
         send(F, level, 0),
-        send(F, draw_waveform)
+        get(R, sink, Sink),
+        (   Sink \== @nil              % recorded to a file: show it
+        ->  send(F, load_file, Sink)
+        ;   send(F, draw_waveform)
+        )
+    ;   true
+    ),
+    get(F, stream, AS),
+    (   AS \== @nil
+    ->  send(AS, stop),             % ends the thread that writes
+        send(F, slot, stream, @nil)
     ;   true
     ),
     get(F, sound, S),
@@ -148,6 +171,42 @@ play(F) :->
     V is Volume/100,
     send(S, message, message(F, update)),
     send(S, play, V),
+    send(F, update).
+
+record_to_file(F) :->
+    "Record into a WAV file"::
+    get(@finder, file, save, wav, File),
+    send(F, stop),
+    new(R, audio_recorder(message(F, level, @arg2))),
+    send(F, slot, recorder, R),
+    send(F, slot, sound, @nil),
+    send(R, record, file(File)),
+    send(F, draw_waveform),
+    send(F, update).
+
+stream(F) :->
+    "Play the URL or file of the location item while reading it"::
+    get(F, member, controls, D),
+    get(D?location_member, selection, Location0),
+    (   Location0 == ''
+    ->  get(@display, sound_file_extensions, Exts),
+        get(@finder, file, open, tuple('Sound files', Exts), Location),
+        send(D?location_member, selection, Location)
+    ;   Location = Location0
+    ),
+    send(F, stop),
+    get(D?volume_member, selection, Volume),
+    new(AS, audio_stream),
+    send(AS, volume, Volume/100),
+    send(AS, message, message(F, stream_done)),
+    send(F, slot, stream, AS),
+    send(AS, play),
+    thread_create(stream_source(AS, Location), _, [detached(true)]),
+    send(F, update).
+
+stream_done(F) :->
+    "The stream played all data"::
+    send(F, slot, stream, @nil),
     send(F, update).
 
 load(F) :->
@@ -225,20 +284,29 @@ update(F) :->
     get(F, member, controls, D),
     get(F, recorder, R),
     get(F, sound, S),
+    get(F, stream, AS),
     (   R \== @nil -> Recording = true ; Recording = false ),
+    (   AS \== @nil -> Streaming = true ; Streaming = false ),
     (   S \== @nil, get(S, duration, Dur), Dur > 0
     ->  HasSound = true
     ;   HasSound = false
     ),
     (   S \== @nil, get(S, playing, @on) -> Playing = true ; Playing = false ),
     active(D, record, \+ Recording),
-    active(D, stop, (Recording ; Playing)),
+    active(D, record_to_file, \+ Recording),
+    active(D, stop, (Recording ; Playing ; Streaming)),
     active(D, play, (HasSound, \+ Recording)),
     active(D, save, (HasSound, \+ Recording)),
     get(D, status_member, L),
-    (   Recording
+    (   Recording, get(R, sink, Sink), Sink \== @nil
+    ->  get(Sink, name, Name),
+        send(L, format, 'Recording to %s', Name)
+    ;   Recording
     ->  get(S, duration, T),
         send(L, format, 'Recording %.1f s', T)
+    ;   Streaming
+    ->  get(D?location_member, selection, Loc),
+        send(L, format, 'Streaming %s', Loc)
     ;   Playing
     ->  send(L, format, 'Playing %.1f s', Dur)
     ;   HasSound
@@ -252,6 +320,43 @@ update(F) :->
     ).
 
 :- pce_end_class(sound_demo).
+
+%   stream_source(+AudioStream, +Location)
+%
+%   Copy the data of Location, a URL or file, to AudioStream.  Runs in
+%   a thread of its own: the writes wait while the stream is far ahead.
+%   ->stop makes the writes fail, which ends the thread.
+
+stream_source(AS, Location) :-
+    catch(setup_call_cleanup(
+              open_source(Location, In),
+              setup_call_cleanup(
+                  pce_open(AS, write, Out),
+                  copy_stream_data(In, Out),
+                  close(Out)),
+              close(In)),
+          E,
+          stream_error(AS, E)).
+
+open_source(Location, In) :-
+    (   sub_atom(Location, 0, _, _, 'http://')
+    ;   sub_atom(Location, 0, _, _, 'https://')
+    ),
+    !,
+    http_open(Location, In, []),
+    set_stream(In, type(binary)).
+open_source(File, In) :-
+    open(File, read, In, [type(binary)]).
+
+%   An I/O error on the audio stream means it was stopped.  Other errors
+%   are reported in the window.
+
+stream_error(AS, E) :-
+    (   E = error(io_error(write, _), _)
+    ->  true
+    ;   message_to_string(E, Msg),
+        in_pce_thread(send(AS, report, error, '%s', Msg))
+    ).
 
 :- meta_predicate active(+, +, 0).
 
