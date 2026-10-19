@@ -206,15 +206,17 @@ test(plain_window, Ids == [0'a, 0'A, 0'!, 'RET', 1]) :-
     events(Ids).
 
 %       With text input the character comes from the text input event:
-%       the key-down that has none must not type it as well.
+%       the key-down that has none must not type it as well.  We only
+%       look at the key events, as pumping also delivers the events of
+%       the real pointer if it is over the window.
 
-test(text_input, Ids-Value == []-'') :-
+test(text_input, Keys-Value == []-'') :-
     open_window(F, W),
     send(W, display, new(TI, text_item(name, ''))),
     send(W, keyboard_focus, TI),
     key_down(F, 0'a, 4, 0),
     pump_for(0.2),
-    events(Ids),
+    keys(Keys),
     get(TI, selection, Value).
 
 %       The release of a key is a key_up event with the key of its
