@@ -964,7 +964,7 @@ borderText(TextObj t, Int border)
 
 status
 stringText(TextObj t, CharArray s)
-{ if ( t->string != s )
+{ if ( !equalCharArray(t->string, s, OFF) )
   { prepareEditText(t, DEFAULT);
 
     valueString((StringObj) t->string, s);
