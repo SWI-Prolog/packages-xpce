@@ -62,6 +62,7 @@ test_text_item :-
     run_tests([ text_item_clear_button,
                 text_item_icon,
                 text_item_step,
+                text_item_read_only,
                 float_item
               ]).
 
@@ -201,6 +202,60 @@ test(combo_box_arrow, [Clicked == false]) :-
     send(D, destroy).
 
 :- end_tests(text_item_icon).
+
+%!  clicked_caret(+Editable, -Caret) is det.
+%
+%   Click in a text item that is Editable or not and tell how its caret
+%   shows.
+
+clicked_caret(Editable, Caret) :-
+    new(D, dialog),
+    send(D, append, new(Item, text_item(name, hello))),
+    send(Item, editable, Editable),
+    send(D, open),
+    send(D, compute),
+    click_item(D, Item),
+    get(Item?value_text, show_caret, Caret),
+    send(D, destroy).
+
+click_item(D, Item) :-
+    get(Item, area, area(X0, Y0, _W, H)),
+    get(Item?value_text, x, TX),
+    X is X0+TX+5,
+    Y is Y0+H//2,
+    new(Down, event(ms_left_down, D, X, Y, 0x10, 1000)),
+    ignore(send(D, post_event, Down)).
+
+:- begin_tests(text_item_read_only).
+
+test(read_only_has_no_caret, Caret == @off) :-
+    clicked_caret(@off, Caret).
+
+test(editable_has_a_caret, true(Caret \== @off)) :-
+    clicked_caret(@on, Caret).
+
+test(read_only_takes_the_focus, Focus == Item) :-
+    new(D, dialog),
+    send(D, append, new(Item, text_item(name, hello))),
+    send(Item, editable, @off),
+    send(D, open),
+    send(D, compute),
+    click_item(D, Item),
+    get(D, keyboard_focus, Focus),
+    send(D, destroy).
+
+test(made_editable_shows_its_caret, true(Caret \== @off)) :-
+    new(D, dialog),
+    send(D, append, new(Item, text_item(name, hello))),
+    send(Item, editable, @off),
+    send(D, open),
+    send(D, compute),
+    click_item(D, Item),
+    send(Item, editable, @on),
+    get(Item?value_text, show_caret, Caret),
+    send(D, destroy).
+
+:- end_tests(text_item_read_only).
 
 %!  steps(+Item, +Keys, -Values) is det.
 %

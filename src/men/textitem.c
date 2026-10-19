@@ -200,6 +200,14 @@ static status
 updateShowCaretTextItem(TextItem ti)
 { Any old = ti->value_text->show_caret;
 
+  if ( ti->editable == OFF )		/* read-only: focus, but no caret */
+  { if ( old != OFF )
+    { showCaretText(ti->value_text, OFF);
+      return requestComputeGraphical(ti, DEFAULT);
+    }
+    succeed;
+  }
+
   if ( ti->status != NAME_inactive )
   { PceWindow sw = getWindowGraphical((Graphical)ti);
     int active = (sw && sw->input_focus == ON);
@@ -1325,10 +1333,16 @@ eventTextItem(TextItem ti, EventObj ev)
   } else if ( isAEvent(ev, NAME_focus) )
   { if ( isAEvent(ev, NAME_obtainKeyboardFocus) )
     { send(ti, NAME_status, NAME_active, EAV);
-      ws_enable_text_input((Graphical)ti, ON);
+      if ( ti->editable == ON )
+	ws_enable_text_input((Graphical)ti, ON);
+      else				/* no caret to say so */
+	send(ti, NAME_activate, ON, EAV);
     } else if ( isAEvent(ev, NAME_releaseKeyboardFocus) )
     { send(ti, NAME_status, NAME_inactive, EAV);
-      ws_enable_text_input((Graphical)ti, OFF);
+      if ( ti->editable == ON )
+	ws_enable_text_input((Graphical)ti, OFF);
+      else
+	send(ti, NAME_activate, OFF, EAV);
     }
 
     return updateShowCaretTextItem(ti);
@@ -1688,6 +1702,7 @@ editableTextItem(TextItem ti, BoolObj val)
     if ( val == OFF && notNil(ti->device) )
       send(ti->device, NAME_advance, ti, EAV);
     requestComputeGraphical(ti, DEFAULT);  /* the clear icon comes and goes */
+    updateShowCaretTextItem(ti);	   /* and so does the caret */
     changedDialogItem(ti);
   }
 
