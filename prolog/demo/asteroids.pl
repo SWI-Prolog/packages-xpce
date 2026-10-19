@@ -37,6 +37,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(random)).
+:- autoload(library(pce_class_variable_editor), [class_variable_editor/1]).
 
 /** <module> A game like Asteroids
 
@@ -46,15 +47,26 @@ Clear the field to get to the next level, which has more asteroids.
 The playing field follows the size of the window.
 
 Controls: cursor left/right rotate, cursor up thrusts, space fires,
-p pauses and Enter starts a new game.  A gamepad works as well: the
+p pauses and Enter starts a new game or resumes a paused one.  F1
+shows the controls.  A gamepad works as well: the
 left stick rotates, the right trigger or `north` button thrusts and the
 `south` button fires.
 
-Everything on the field is a graphical object that holds its own state:
-the ship, the asteroids, the bullets, the particles of an explosion, the
-stars and the texts of the scoreboard.  The objects that move keep their
-position and velocity as floats, as rounding to pixels on every tick
-would make slow objects stick.  The window holds the state of the game
+On start-up, after the game is over and while it is paused, the field
+shows buttons to play, to change the settings and to show the
+controls.  The settings are the class variables of the game, edited
+with the class variable editor (see library(pce_preferences)).  While
+playing, the pointer is hidden.
+
+The field is an sdl_window.  Everything that moves is a sprite: an
+sdl_layer that holds its own state.  The sprites are the ship, the
+asteroids, the bullets, the particles of an explosion and the stars.
+The renderer of the frame draws them on the GPU, so moving and rotating
+them costs no Cairo drawing.  Their looks are designed as figures that
+are drawn once into an sdl_texture.  The texts of the scoreboard are
+ordinary graphicals that appear on top of the sprites.  The objects
+that move keep their position and velocity as floats, as rounding to
+pixels on every tick would make slow objects stick.  The window holds the state of the game
 as a whole: the score, the lives, the level and the duration of the
 current tick.  The parameters of the game are class variables of the
 classes they belong to, so they can be changed in the user's xpce
@@ -62,18 +74,20 @@ defaults file.  A class variable with the same name as a variable
 provides the initial value of the variable.
 
 The game is driven by a timer.  On each tick the window sends `tick` to
-all its graphicals:
+all its layers and graphicals:
 
-    send(Window?graphicals, for_all, message(@arg1, tick))
+    send(Window?layers, for_all, message(@arg1, tick))
 
 Each object then moves, checks whether it hits something and destroys
 itself when its time is up.  `chain->for_all` works on a copy of the
 chain and skips objects that are destroyed during the iteration, so a
-tick may freely add and remove graphicals.  The ship gets its controls
+tick may freely add and remove sprites.  The ship gets its controls
 from `window<-input`, which polls the keyboard (`keyboard<-key_down`)
-and the gamepad.  The ship and the asteroids are figures holding a
-path, which are moved and rotated using `figure->transform`.  The
-sounds are computed as samples that are played using an audio_stream.
+and the gamepad.  A sprite is moved using `sdl_layer->transform` and
+rotated using `sdl_layer->angle`.  The texture of a sprite has a hot
+spot at the origin of the figure it was drawn from, so the sprite
+rotates around that point.  The sounds are computed as samples that are played using
+an audio_stream.
 
 Run with:
 
@@ -93,26 +107,29 @@ asteroids :-
 initialise(F) :->
     send_super(F, initialise, 'Asteroids'),
     send(F, append, new(P, asteroids_window(size(800, 600)))),
-    send(P, new_game).
+    send(P, intro).
 
 :- pce_end_class(asteroids_game).
 
 
 %   The window holds the state of the game as a whole and drives the
-%   game using a timer.  A key binding handles p (pause) and Enter (new
-%   game).  The controls of the ship are polled on each tick.
+%   game using a timer.  The sprites are its layers.  A key binding
+%   handles p (pause), Enter (new game or resume) and F1 (help).  The
+%   controls of the ship are polled on each tick.
 
-:- pce_begin_class(asteroids_window(size), window,
+:- pce_begin_class(asteroids_window(size), sdl_window,
                    "The field of the game").
 
 variable(timer,        timer*, get, "Timer that drives the game").
 variable(score,        int,    get, "Score of the player").
 variable(lives,        int,    get, "Ships left").
 variable(level,        int,    get, "Current level").
-variable(mode,  {playing,respawn,game_over}, get, "State of the game").
+variable(mode,  {intro,playing,respawn,game_over}, get,
+         "State of the game").
 variable(respawn,      num,    get, "Seconds until the next ship appears").
 variable(level_break,  num,    get, "Seconds left of the break after a level").
 variable(paused,       bool,   get, "Game is paused").
+variable(help,         bool,   get, "Show the controls").
 variable(time,         num,    get, "Time of the last tick").
 variable(dt,           num,    get, "Seconds since the last tick").
 variable(gamepad,      any*,   get, "Gamepad used to play").
@@ -130,6 +147,7 @@ initialise(P, Size:size=size) :->
     send_super(P, initialise, 'Asteroids', Size),
     send(P, background, colour(black)),
     send(P, slot, paused, @off),
+    send(P, slot, help, @off),
     get_time(Now),
     send(P, slot, time, Now),
     send(P, slot, dt, 0.0),
@@ -140,7 +158,8 @@ initialise(P, Size:size=size) :->
     ),
     send(P, recogniser, new(KB, key_binding)),
     send(KB, function,  p,    message(@receiver, toggle_paused)),
-    send(KB, function, 'RET', message(@receiver, new_game)).
+    send(KB, function, 'RET', message(@receiver, start)),
+    send(KB, function,  f1,   message(@receiver, toggle_help)).
 
 unlink(P) :->
     "Stop the timer"::
@@ -207,9 +226,29 @@ pad(P, Pad) :-
     Pad \== @nil,
     get(Pad, connected, @on).
 
+%!  ->intro
+%
+%   Show the field with asteroids, but without a ship, and the buttons
+%   to start playing.
+
+intro(P) :->
+    "Show the field before the first game"::
+    send(P, reset),
+    send(P, slot, mode, intro),
+    send(P, new_level),
+    send(P, panel).
+
 new_game(P) :->
     "Start a new game"::
+    send(P, reset),
+    send(P, new_level),
+    send(P, spawn_ship),
+    send(P, panel).
+
+reset(P) :->
+    "Empty the field and reset the state of the game"::
     send(P, start_ticking),
+    send(P?layers, for_all, message(@arg1, free)),
     send(P, clear),
     send(P, slot, score, 0),
     get(P, class_variable_value, lives, Lives),
@@ -218,11 +257,60 @@ new_game(P) :->
     send(P, slot, respawn, 0.0),
     send(P, slot, level_break, 0.0),
     send(P, slot, paused, @off),
+    send(P, slot, help, @off),
     send(P, stars),
     send(P, display, new(asteroids_score), point(10, 8)),
     send(P, display, new(asteroids_banner)),
-    send(P, new_level),
-    send(P, spawn_ship).
+    send(P, display, new(asteroids_panel(P))),
+    send(P, display, new(asteroids_help)).
+
+playing(P) :->
+    "True when the player is flying, i.e., not paused or game over"::
+    get(P, mode, Mode),
+    memberchk(Mode, [playing, respawn]),
+    get(P, paused, @off).
+
+%!  ->panel
+%
+%   Show the buttons and the pointer if the game is not being played,
+%   and hide them otherwise.  The help is only shown with the buttons.
+
+panel(P) :->
+    "Show or hide the buttons and the pointer"::
+    get(P, member, panel, Panel),
+    get(P, member, help, Help),
+    (   send(P, playing)
+    ->  send(Panel, displayed, @off),
+        send(Help, displayed, @off),
+        send(P, keyboard_focus, @nil),  % keys must reach the key binding
+        send(P, cursor, none)
+    ;   send(Panel, update),
+        send(Panel, displayed, @on),
+        send(Help, displayed, P?help),
+        send(P, cursor, @nil)
+    ).
+
+start(P) :->
+    "Resume a paused game or start a new one"::
+    (   get(P, paused, @on),
+        get(P, mode, Mode),
+        Mode \== game_over
+    ->  send(P, toggle_paused)
+    ;   send(P, new_game)
+    ).
+
+toggle_help(P) :->
+    "Show or hide the controls"::
+    (   send(P, playing)
+    ->  send(P, toggle_paused)          % F1 while playing pauses
+    ;   true
+    ),
+    send(P, slot, help, P?help?negate),
+    send(P, panel).
+
+settings(P) :->
+    "Edit the settings of the game"::
+    class_variable_editor(P).
 
 start_ticking(P) :->
     "Start the game ticker"::
@@ -243,9 +331,9 @@ tick(P) :->
     send(P, slot, time, Now),
     send(P, slot, dt, Dt),
     (   get(P, paused, @on)
-    ->  get(P, member, banner, Banner),
-        send(Banner, tick)
-    ;   send(P?graphicals, for_all, message(@arg1, tick)),
+    ->  send(P?graphicals, for_all, message(@arg1, tick))
+    ;   send(P?layers, for_all, message(@arg1, tick)),
+        send(P?graphicals, for_all, message(@arg1, tick)),
         respawn(P, Dt),
         next_level(P)
     ).
@@ -264,7 +352,7 @@ spawn_ship(P) :->
     get(P, width, W),
     get(P, height, H),
     X is W/2, Y is H/2,
-    send(P, display, asteroids_ship(X, Y)),
+    send(P, append, asteroids_ship(X, Y)),
     send(P, slot, mode, playing).
 
 ship_lost(P) :->
@@ -276,7 +364,8 @@ ship_lost(P) :->
     send(P, slot, respawn, RT),
     (   Lives > 0
     ->  send(P, slot, mode, respawn)
-    ;   send(P, slot, mode, game_over)
+    ;   send(P, slot, mode, game_over),
+        send(P, panel)
     ).
 
 add_score(P, Points:int) :->
@@ -287,7 +376,12 @@ add_score(P, Points:int) :->
 
 toggle_paused(P) :->
     "Pause the game on 'p'"::
-    send(P, slot, paused, P?paused?negate).
+    (   get(P, mode, Mode),
+        memberchk(Mode, [playing, respawn])
+    ->  send(P, slot, paused, P?paused?negate),
+        send(P, panel)
+    ;   true
+    ).
 
 respawn(P, Dt) :-
     get(P, mode, respawn),
@@ -305,7 +399,7 @@ respawn(_, _).
 
 next_level(P) :-
     \+ get(P, mode, game_over),
-    \+ get(P?graphicals, find, message(@arg1, instance_of, asteroid), _),
+    \+ get(P?layers, find, message(@arg1, instance_of, asteroid), _),
     !,
     get(P, level_break, Left0),
     (   Left0 > 0                       % in the break
@@ -329,7 +423,8 @@ next_level(_).
 
 start_level(P) :-
     send(P, new_level),
-    (   get(P, member, ship, Ship)
+    (   get(P?layers, find, message(@arg1, instance_of, asteroids_ship),
+            Ship)
     ->  get(Ship, class_variable_value, safe, Safe),
         send(Ship, slot, safe, Safe)
     ;   true
@@ -344,7 +439,7 @@ new_asteroid(P) :-
     ->  X is random_float*W, Y = 0
     ;   X = 0, Y is random_float*H
     ),
-    send(P, display, asteroid(large, X, Y)).
+    send(P, append, asteroid(large, X, Y)).
 
 %!  ->resize
 %
@@ -354,15 +449,15 @@ new_asteroid(P) :-
 
 resize(P) :->
     "Make a new starfield for the new size"::
-    send(P?graphicals, for_all,
+    send(P?layers, for_all,
          if(message(@arg1, instance_of, asteroids_star),
-            message(@arg1, destroy))),
+            message(@arg1, free))),
     send(P, stars).
 
 %!  ->stars
 %
-%   The stars are put below everything. The   number of stars depends on
-%   the size of the field.
+%   The stars are put below all other layers. The number of stars depends
+%   on the size of the field.
 
 stars(P) :->
     "Add random stars below everything"::
@@ -372,7 +467,7 @@ stars(P) :->
     forall(between(1, N, _),
            ( X is random(W), Y is random(H),
              random_member(Size, [1, 1, 2, 2, 3]),
-             send(P, display, new(Star, asteroids_star(Size)), point(X, Y)),
+             send(P, append, new(Star, asteroids_star(Size, X, Y))),
              send(Star, hide)
            )).
 
@@ -443,13 +538,13 @@ sample(noise(Level), I, N, _, V) :-
 		 *	       THE SHIP		*
 		 *******************************/
 
-:- pce_begin_class(asteroids_ship(px, py), figure, "The ship of the player").
+:- pce_begin_class(asteroids_ship(px, py), sdl_layer,
+                   "The ship of the player").
 
 variable(px,     num, get, "X of the centre").
 variable(py,     num, get, "Y of the centre").
 variable(vx,     num, get, "Horizontal velocity").
 variable(vy,     num, get, "Vertical velocity").
-variable(angle,  num, get, "Heading in degrees").
 variable(safe,   num, get, "Seconds the ship remains invulnerable").
 variable(reload, num, get, "Seconds until the ship can fire again").
 
@@ -465,36 +560,43 @@ class_variable(hit_radius,      num, 12,    "Radius for collisions").
 class_variable(burst_particles, int, 30,    "Particles of an explosion").
 
 initialise(S, X:num, Y:num) :->
-    send_super(S, initialise),
-    send(S, name, ship),
+    texture(ship(none), Texture),
+    send_super(S, initialise, Texture, @nil, none),
     send(S, slot, px, X),
     send(S, slot, py, Y),
     set_velocity(S, 0.0, 0.0),
-    send(S, slot, angle, -90.0),
+    send(S, angle, -90),
     send(S, slot, reload, 0.0),
+    place(S, X, Y).
+
+%   The ship as a figure around (0,0), pointing to the right.  Flame is
+%   the colour of the flame of the engine or `none`.
+
+ship_figure(Flame, Fig) :-
+    new(Fig, figure),
     Hull = [point(16, 0), point(-12, 10), point(-7, 0), point(-12, -10)],
     closed_path(Hull, Glow),                % a soft glow below the hull
     send(Glow, colour, colour(cyan)),
     send(Glow, pen, 7),
     send(Glow, opacity, 0.35),
-    send(S, display, Glow),
+    send(Fig, display, Glow),
     closed_path(Hull, Body),
     send(Body, colour, colour(white)),
     send(Body, fill, colour(midnight_blue)),
     send(Body, pen, 2),
-    send(S, display, Body),
-    new(Flame, path),
-    send_list(Flame, append, [point(-9, 5), point(-20, 0), point(-9, -5)]),
-    send(Flame, colour, colour(orange)),
-    send(Flame, pen, 2),
-    send(Flame, name, flame),
-    send(Flame, displayed, @off),
-    send(S, display, Flame),
-    place(S, X, Y, -90).
+    send(Fig, display, Body),
+    (   Flame == none
+    ->  true
+    ;   new(FP, path),
+        send_list(FP, append, [point(-9, 5), point(-20, 0), point(-9, -5)]),
+        send(FP, colour, colour(Flame)),
+        send(FP, pen, 2),
+        send(Fig, display, FP)
+    ).
 
 tick(S) :->
     "Steer, move, fire and check for a collision"::
-    get(S, device, P),
+    get(S, window, P),
     get(P, dt, Dt),
     get(P, input, In),
     get(S, rotate_speed, RS),
@@ -503,7 +605,7 @@ tick(S) :->
     get(S, friction, Fr),
     get(S, angle, Angle0),
     Angle is Angle0 + In.rotate*RS*Dt,
-    send(S, slot, angle, Angle),
+    send(S, angle, Angle),
     get(S, vx, VX0), get(S, vy, VY0),
     (   In.thrust == true
     ->  Rad is Angle*pi/180,
@@ -519,20 +621,22 @@ tick(S) :->
     VX is VX2*Fr, VY is VY2*Fr,
     set_velocity(S, VX, VY),
     move(S, X, Y, Dt),
-    place(S, X, Y, Angle),
+    place(S, X, Y),
     flame(S, In.thrust),
     blink(S, Dt),
     fire(S, In.fire, Dt),
     collide(S).
 
+%   The flame flickers by switching between textures of the ship with a
+%   flame of a different colour.
+
 flame(S, Thrust) :-
-    get(S, member, flame, Flame),
     (   Thrust == true
-    ->  send(Flame, displayed, @on),
-        random_member(FC, [orange, yellow, orange_red]),    % flicker
-        send(Flame, colour, colour(FC))
-    ;   send(Flame, displayed, @off)
-    ).
+    ->  random_member(FC, [orange, yellow, orange_red])
+    ;   FC = none
+    ),
+    texture(ship(FC), Texture),
+    send(S, texture, Texture).
 
 %   Blink while invulnerable.
 
@@ -554,8 +658,8 @@ fire(S, Fire, Dt) :-
     Reload is Reload0 - Dt,
     (   Fire == true,
         Reload =< 0,
-        get(S, device, P),
-        get(P?graphicals, find_all,
+        get(S, window, P),
+        get(P?layers, find_all,
             message(@arg1, instance_of, asteroids_bullet), Bullets),
         get(Bullets, size, NB),
         get(S, max_bullets, Max),
@@ -567,7 +671,7 @@ fire(S, Fire, Dt) :-
         Rad is Angle*pi/180,
         X is X0 + cos(Rad)*16, Y is Y0 + sin(Rad)*16,
         VX is VX0 + cos(Rad)*BS, VY is VY0 + sin(Rad)*BS,
-        send(P, display, asteroids_bullet(X, Y, VX, VY)),
+        send(P, append, asteroids_bullet(X, Y, VX, VY)),
         send(P, play, fire),
         get(S, class_variable_value, reload, Interval),
         send(S, slot, reload, Interval)
@@ -582,11 +686,11 @@ collide(S) :-
     get(S, hit_radius, R),
     hit_asteroid(S, X, Y, R, _),
     !,
-    get(S, device, P),
+    get(S, window, P),
     get(S, burst_particles, NP),
     burst(P, X, Y, NP),
     send(P, play, explosion),
-    send(S, destroy),
+    send(S, free),
     send(P, ship_lost).
 collide(_).
 
@@ -597,7 +701,7 @@ collide(_).
 		 *	      BULLETS		*
 		 *******************************/
 
-:- pce_begin_class(asteroids_bullet(px, py, vx, vy), circle,
+:- pce_begin_class(asteroids_bullet(px, py, vx, vy), sdl_layer,
                    "A bullet fired by the ship").
 
 variable(px,   num, get, "X of the centre").
@@ -610,13 +714,12 @@ class_variable(life,       num, 1.0, "Seconds until the bullet vanishes").
 class_variable(hit_radius, num, 2,   "Radius for collisions").
 
 initialise(B, X:num, Y:num, VX:num, VY:num) :->
-    send_super(B, initialise, 4),
-    send(B, fill, colour(white)),
-    send(B, colour, colour(cyan)),
+    texture(bullet, Texture),
+    send_super(B, initialise, Texture, @nil, none),
     send(B, slot, px, X),
     send(B, slot, py, Y),
     set_velocity(B, VX, VY),
-    move_circle(B, X, Y).
+    place(B, X, Y).
 
 %   A bullet destroys at most one asteroid.
 
@@ -626,13 +729,13 @@ tick(B) :->
     get(B, life, Life0),
     Life is Life0 - Dt,
     (   Life < 0
-    ->  send(B, destroy)
+    ->  send(B, free)
     ;   get(B, hit_radius, R),
         hit_asteroid(B, X, Y, R, A)
-    ->  send(B, destroy),
+    ->  send(B, free),
         send(A, explode)
     ;   send(B, slot, life, Life),
-        move_circle(B, X, Y)
+        place(B, X, Y)
     ).
 
 :- pce_end_class(asteroids_bullet).
@@ -642,7 +745,7 @@ tick(B) :->
 		 *	     ASTEROIDS		*
 		 *******************************/
 
-:- pce_begin_class(asteroid(size, px, py), figure,
+:- pce_begin_class(asteroid(size, px, py), sdl_layer,
                    "A rock floating through space").
 
 variable(size,       {large,medium,small}, get, "Size class").
@@ -651,7 +754,6 @@ variable(px,         num, get, "X of the centre").
 variable(py,         num, get, "Y of the centre").
 variable(vx,         num, get, "Horizontal velocity").
 variable(vy,         num, get, "Vertical velocity").
-variable(angle,      num, get, "Rotation in degrees").
 variable(spin,       num, get, "Rotation speed in degrees/second").
 
 class_variable(large_hit_radius,  int, 42,  "Radius of a large rock").
@@ -672,8 +774,18 @@ class_variable(burst_particles,   int, 10,  "Particles of an explosion").
 
 initialise(A, Size:{large,medium,small}, X:num, Y:num) :->
     "Create a rock of Size at X,Y with a random velocity"::
-    send_super(A, initialise),
     size_property(A, Size, hit_radius, R),
+    get(A, corners, N),
+    findall(point(PX, PY),
+            ( between(1, N, I),
+              Ang is 2*pi*I/N,
+              Rr is R*(0.75 + random_float*0.4),
+              PX is round(cos(Ang)*Rr), PY is round(sin(Ang)*Rr)
+            ), Outline),
+    rock_figure(Outline, R, Fig),
+    new(Texture, sdl_texture(Fig)),
+    free(Fig),
+    send_super(A, initialise, Texture, @nil, none),
     send(A, slot, size, Size),
     send(A, slot, hit_radius, R),
     send(A, slot, px, X),
@@ -684,20 +796,20 @@ initialise(A, Size:{large,medium,small}, X:num, Y:num) :->
     Spin is (random_float*2-1)*MaxSpin,
     Angle is random_float*360,
     send(A, slot, spin, Spin),
-    send(A, slot, angle, Angle),
-    get(A, corners, N),
-    findall(point(PX, PY),
-            ( between(1, N, I),
-              Ang is 2*pi*I/N,
-              Rr is R*(0.75 + random_float*0.4),
-              PX is round(cos(Ang)*Rr), PY is round(sin(Ang)*Rr)
-            ), Outline),
+    send(A, angle, Angle),
+    place(A, X, Y).
+
+%   Every rock has its own shape and colours.  We draw it as a figure
+%   around (0,0) and turn that into the texture of the rock.
+
+rock_figure(Outline, R, Fig) :-
+    new(Fig, figure),
     rock_colours(Light, Dark, Edge),
     closed_path(Outline, Glow),             % soft glow around the rock
     send(Glow, colour, colour(Edge)),
     send(Glow, pen, 8),
     send(Glow, opacity, 0.3),
-    send(A, display, Glow),
+    send(Fig, display, Glow),
     closed_path(Outline, Rock),             % the shaded rock
     new(Shade, gradient(radial, point(0.3, 0.3), point(0.5, 0.5),
                         0, 0.6, units := bounding_box)),
@@ -706,9 +818,8 @@ initialise(A, Size:{large,medium,small}, X:num, Y:num) :->
     send(Rock, fill, Shade),
     send(Rock, colour, colour(Edge)),
     send(Rock, pen, 2),
-    send(A, display, Rock),
-    craters(A, R, Dark),
-    place(A, X, Y, Angle).
+    send(Fig, display, Rock),
+    craters(Fig, R, Dark).
 
 tick(A) :->
     "Float and spin"::
@@ -716,8 +827,8 @@ tick(A) :->
     get(A, angle, Angle0),
     get(A, spin, Spin),
     Angle is Angle0 + Spin*Dt,
-    send(A, slot, angle, Angle),
-    place(A, X, Y, Angle).
+    send(A, angle, Angle),
+    place(A, X, Y).
 
 hit(A, X:num, Y:num, R:num) :->
     "Test whether a circle at X,Y with radius R touches the rock"::
@@ -729,18 +840,18 @@ hit(A, X:num, Y:num, R:num) :->
 
 explode(A) :->
     "Hit by a bullet: score, burst and split into two smaller rocks"::
-    get(A, device, P),
+    get(A, window, P),
     get(A, size, Size),
     get(A, px, X), get(A, py, Y),
     size_property(A, Size, score, Score),
     get(A, burst_particles, NP),
-    send(A, destroy),
+    send(A, free),
     send(P, add_score, Score),
     burst(P, X, Y, NP),
     (   split(Size, Smaller)
     ->  send(P, play, bang),
         forall(between(1, 2, _),
-               send(P, display, asteroid(Smaller, X, Y)))
+               send(P, append, asteroid(Smaller, X, Y)))
     ;   send(P, play, bang_small)
     ).
 
@@ -803,7 +914,7 @@ craters(Fig, R, Dark) :-
 
 %   Particles fly from an explosion and fade out during their life.
 
-:- pce_begin_class(asteroids_particle(px, py), circle,
+:- pce_begin_class(asteroids_particle(px, py), sdl_layer,
                    "A spark of an explosion").
 
 variable(px,       num, get, "X of the centre").
@@ -819,10 +930,9 @@ class_variable(min_lifetime, num, 0.4, "Minimal life time in seconds").
 class_variable(max_lifetime, num, 1.0, "Maximal life time in seconds").
 
 initialise(Pt, X:num, Y:num) :->
-    send_super(Pt, initialise, 3),
     random_member(Colour, [white, yellow, gold, orange, orange_red, red]),
-    send(Pt, fill, colour(Colour)),
-    send(Pt, colour, colour(Colour)),
+    texture(particle(Colour), Texture),
+    send_super(Pt, initialise, Texture, @nil, none),
     send(Pt, slot, px, X),
     send(Pt, slot, py, Y),
     Dir is random_float*2*pi,
@@ -836,7 +946,7 @@ initialise(Pt, X:num, Y:num) :->
     Life is MinLife + random_float*(MaxLife-MinLife),
     send(Pt, slot, life, Life),
     send(Pt, slot, lifetime, Life),
-    move_circle(Pt, X, Y).
+    place(Pt, X, Y).
 
 tick(Pt) :->
     "Fly and fade"::
@@ -844,12 +954,12 @@ tick(Pt) :->
     get(Pt, life, Life0),
     Life is Life0 - Dt,
     (   Life < 0
-    ->  send(Pt, destroy)
+    ->  send(Pt, free)
     ;   send(Pt, slot, life, Life),
-        move_circle(Pt, X, Y),
+        place(Pt, X, Y),
         get(Pt, lifetime, Total),
-        Opacity is Life/Total,
-        send(Pt, opacity, Opacity)
+        Alpha is Life/Total,
+        send(Pt, alpha, Alpha)
     ).
 
 :- pce_end_class(asteroids_particle).
@@ -861,38 +971,38 @@ tick(Pt) :->
 
 %   A star twinkles now and then: it dims for a moment.
 
-:- pce_begin_class(asteroids_star(width), box, "A star in the background").
+:- pce_begin_class(asteroids_star, sdl_layer, "A star in the background").
 
 variable(twinkle, num, get, "Seconds left of the current twinkle").
 
 class_variable(twinkle,         num, 0.3,  "Duration of a twinkle in seconds").
 class_variable(twinkle_odds,    int, 1000, "Twinkle once in so many ticks").
-class_variable(twinkle_opacity, num, 0.3,  "Opacity of a twinkling star").
+class_variable(twinkle_alpha,   num, 0.3,  "Opacity of a twinkling star").
 
-initialise(S, Size:int) :->
-    send_super(S, initialise, Size, Size),
+initialise(S, Size:int, X:int, Y:int) :->
     random_member(Colour, [grey40, grey60, grey80, white, light_sky_blue]),
-    send(S, pen, 0),
-    send(S, fill, colour(Colour)),
+    texture(star(Size, Colour), Texture),
+    send_super(S, initialise, Texture, @nil, none),
+    place(S, X, Y),
     send(S, slot, twinkle, 0.0).
 
 tick(S) :->
     "Maybe twinkle"::
     get(S, twinkle, T0),
     (   T0 > 0
-    ->  get(S?device, dt, Dt),
+    ->  get(S?window, dt, Dt),
         T is T0 - Dt,
         (   T > 0
         ->  send(S, slot, twinkle, T)
         ;   send(S, slot, twinkle, 0.0),
-            send(S, opacity, 1)
+            send(S, alpha, 1)
         )
     ;   get(S, twinkle_odds, Odds),
         random(Odds) =:= 0
     ->  get(S, class_variable_value, twinkle, Time),
-        get(S, twinkle_opacity, Opacity),
+        get(S, twinkle_alpha, Alpha),
         send(S, slot, twinkle, Time),
-        send(S, opacity, Opacity)
+        send(S, alpha, Alpha)
     ;   true
     ).
 
@@ -914,11 +1024,14 @@ initialise(T) :->
 tick(T) :->
     "Show the state of the game"::
     get(T, device, P),
-    get(P, score, Score),
-    get(P, lives, Lives),
-    get(P, level, Level),
-    format(string(String), 'Score ~w   Lives ~w   Level ~w',
-           [Score, Lives, Level]),
+    (   get(P, mode, intro)
+    ->  String = ''
+    ;   get(P, score, Score),
+        get(P, lives, Lives),
+        get(P, level, Level),
+        format(string(String), 'Score ~w   Lives ~w   Level ~w',
+               [Score, Lives, Level])
+    ),
     send(T, string, String).
 
 :- pce_end_class(asteroids_score).
@@ -937,8 +1050,10 @@ initialise(T) :->
 tick(T) :->
     "Show whether the game is over, paused or a level is done"::
     get(T, device, P),
-    (   get(P, mode, game_over)
-    ->  String = 'GAME OVER\nPress Enter'
+    (   get(P, mode, intro)
+    ->  String = 'ASTEROIDS'
+    ;   get(P, mode, game_over)
+    ->  String = 'GAME OVER'
     ;   get(P, paused, @on)
     ->  String = 'PAUSED'
     ;   get(P, level_break, Break),
@@ -948,9 +1063,146 @@ tick(T) :->
     ;   String = ''
     ),
     send(T, string, String),
-    send(T, center, P?center).
+    get(P, member, panel, Panel),
+    get(Panel, center, point(X, Y)),
+    send(T, center, point(X, Y-60)).
 
 :- pce_end_class(asteroids_banner).
+
+
+%   The buttons are shown on start-up, after the game is over and while
+%   the game is paused.
+
+:- pce_begin_class(asteroids_panel, device,
+                   "Buttons to play, change the settings and get help").
+
+class_variable(gap, int, 12, "Pixels between the buttons").
+
+initialise(D, Field:asteroids_window) :->
+    send_super(D, initialise),
+    send(D, name, panel),
+    send(D, display, button(play,     message(Field, start))),
+    send(D, display, button(settings, message(Field, settings))),
+    send(D, display, button(help,     message(Field, toggle_help))),
+    send(D, layout).
+
+layout(D) :->
+    "Put the buttons next to each other"::
+    get(D, gap, Gap),
+    get(D, graphicals, Buttons),
+    send(Buttons, for_all,
+         message(D, place_button, @arg1, Gap)).
+
+place_button(D, B:button, Gap:int) :->
+    "Place B to the right of the previous button"::
+    get(D?graphicals, index, B, I),
+    (   I > 1
+    ->  get(D?graphicals, nth1, I-1, Prev),
+        get(Prev, right_side, R),
+        send(B, x, R+Gap)
+    ;   send(B, x, 0)
+    ).
+
+update(D) :->
+    "Play resumes a paused game"::
+    get(D, device, P),
+    get(D, member, play, Play),
+    (   get(P, paused, @on)
+    ->  send(Play, label, 'Resume')
+    ;   send(Play, label, 'Play')
+    ),
+    send(D, layout),
+    send(D, tick).
+
+tick(D) :->
+    "Stay in the middle of the field, higher if the help is shown"::
+    get(D, device, P),
+    get(P, visible, Area),
+    get(Area, center, point(X, Y)),
+    (   get(P, member, help, Help),
+        get(Help, displayed, @on)
+    ->  get(Help, height, H),
+        CY is Y - H//2
+    ;   CY = Y
+    ),
+    send(D, center, point(X, CY)).
+
+:- pce_end_class(asteroids_panel).
+
+
+%   The controls, shown with the buttons by the help button or F1.
+
+:- pce_begin_class(asteroids_help, figure, "The controls of the game").
+
+class_variable(font, font, font(mono, normal, 14)).
+
+initialise(H) :->
+    send_super(H, initialise),
+    send(H, name, help),
+    send(H, displayed, @off),
+    send(H, border, 12),
+    send(H, radius, 8),
+    send(H, background, colour(grey15)),
+    send(H, pen, 1),
+    send(H, colour, colour(grey50)),
+    get(H, font, Font),
+    findall(Line, help_line(Line), Lines),
+    atomic_list_concat(Lines, '\n', String),
+    new(T, text(String, left, Font)),
+    send(T, colour, colour(white)),
+    send(H, display, T).
+
+help_line(Line) :-
+    help(Key, Action),
+    format(atom(Line), '~w~t~15|~w', [Key, Action]).
+
+help('Cursor left',   'Rotate left').
+help('Cursor right',  'Rotate right').
+help('Cursor up',     'Thrust').
+help('Space',         'Fire').
+help('P',             'Pause or resume').
+help('Enter',         'Play or resume').
+help('F1',            'Show or hide this help').
+help('Control-comma', 'Settings').
+help('',              '').
+help('Gamepad',       '').
+help('Left stick',    'Rotate').
+help('Right trigger', 'Thrust (or north button)').
+help('South button',  'Fire').
+
+tick(H) :->
+    "Stay below the buttons"::
+    (   get(H, displayed, @on)
+    ->  get(H, device, P),
+        get(P, member, panel, Panel),
+        get(Panel, center_x, X),
+        get(Panel, bottom_side, Y),
+        send(H, center_x, X),
+        send(H, y, Y+20)
+    ;   true
+    ).
+
+:- pce_end_class(asteroids_help).
+
+
+		 /*******************************
+		 *	      SETTINGS		*
+		 *******************************/
+
+%   The settings shown by the class variable editor.
+
+:- multifile pce_preferences:preferences/2.
+
+pce_preferences:preferences(asteroids_window,
+    [ asteroids_window - [lives, base_asteroids, respawn, level_break,
+                          volume],
+      asteroids_ship   - [rotate_speed, thrust, max_speed, friction,
+                          reload, max_bullets, bullet_speed, safe],
+      asteroid         - [max_spin, corners,
+                          large_min_speed, large_max_speed,
+                          medium_min_speed, medium_max_speed,
+                          small_min_speed, small_max_speed]
+    ]).
 
 
 		 /*******************************
@@ -962,19 +1214,19 @@ tick(T) :->
 %   Objects leaving the field on one side come back on the other.
 
 wrap(Gr, X0, Y0, X, Y) :-
-    get(Gr, device, P),
+    get(Gr, window, P),
     get(P, width, W),
     get(P, height, H),
     X is X0 - W*floor(X0/W),
     Y is Y0 - H*floor(Y0/H).
 
-%!  move(+Graphical, -X, -Y, -Dt) is det.
+%!  move(+Sprite, -X, -Y, -Dt) is det.
 %
-%   Move Graphical according to its velocity for the duration of this
-%   tick.  Graphical has the slots `px`, `py`, `vx` and `vy`.
+%   Move Sprite according to its velocity for the duration of this
+%   tick.  Sprite has the slots `px`, `py`, `vx` and `vy`.
 
 move(Gr, X, Y, Dt) :-
-    get(Gr?device, dt, Dt),
+    get(Gr?window, dt, Dt),
     get(Gr, px, X0), get(Gr, py, Y0),
     get(Gr, vx, VX), get(Gr, vy, VY),
     wrap(Gr, X0 + VX*Dt, Y0 + VY*Dt, X, Y),
@@ -984,10 +1236,6 @@ move(Gr, X, Y, Dt) :-
 set_velocity(Gr, VX, VY) :-
     send(Gr, slot, vx, VX),
     send(Gr, slot, vy, VY).
-
-move_circle(C, X, Y) :-
-    CX is round(X)-2, CY is round(Y)-2,
-    send(C, set, CX, CY).
 
 key_down(Key) :-
     get(@keyboard_device, key_down, Key, @on).
@@ -1000,33 +1248,73 @@ key(Key, V) :-
 
 %!  hit_asteroid(+Graphical, +X, +Y, +R, -Asteroid) is semidet.
 %
-%   True when a circle at X,Y with radius R on the device of Graphical
+%   True when a circle at X,Y with radius R on the window of Sprite
 %   touches Asteroid.
 
 hit_asteroid(Gr, X, Y, R, A) :-
-    get(Gr?device?graphicals, find,
+    get(Gr?window?layers, find,
         and(message(@arg1, instance_of, asteroid),
             message(@arg1, hit, X, Y, R)),
         A).
 
 burst(P, X, Y, N) :-
     forall(between(1, N, _),
-           send(P, display, asteroids_particle(X, Y))).
+           send(P, append, asteroids_particle(X, Y))).
 
 closed_path(Points, Path) :-
     new(Path, path),
     send_list(Path, append, Points),
     send(Path, closed, @on).
 
-%!  place(+Figure, +X, +Y, +Angle) is det.
+%!  place(+Sprite, +X, +Y) is det.
 %
-%   Move the figure to X,Y and rotate it by Angle degrees.  We give the
-%   figure a new transform rather than changing its transform, so the
-%   figure knows the area it occupied, which must be repainted.
+%   Move the hot spot of Sprite to X,Y.  The sprites are created with
+%   `scale` `none` and no `area`, so their hot spot is at the origin of
+%   the window and their transform moves them.  The sprite rotates
+%   around its hot spot using `sdl_layer->angle`.  Unlike a graphical,
+%   a sprite need not know the area it occupied, so we can change its
+%   transform and send it again to show it.
 
-place(Fig, X, Y, Angle) :-
-    Rad is Angle*pi/180,
-    C is cos(Rad), S is sin(Rad), NS is -S,
-    new(T, transform),
-    send(T, set, C, NS, S, C, X, Y),
-    send(Fig, transform, T).
+place(Sprite, X, Y) :-
+    get(Sprite, transform, T0),
+    (   T0 == @nil
+    ->  new(T, transform)
+    ;   T = T0
+    ),
+    send(T, set, 1, 0, 0, 1, X, Y),
+    send(Sprite, transform, T).
+
+%!  texture(+Spec, -Texture) is det.
+%
+%   Texture is the sdl_texture of the sprites described by Spec.  The
+%   textures are made from a figure when first needed and shared by all
+%   sprites that look the same.
+
+:- pce_global(@asteroids_textures, new(hash_table)).
+
+texture(Spec, Texture) :-
+    term_to_atom(Spec, Key),
+    (   get(@asteroids_textures, member, Key, Texture)
+    ->  true
+    ;   texture_figure(Spec, Fig),
+        new(Texture, sdl_texture(Fig)),
+        free(Fig),
+        send(@asteroids_textures, append, Key, Texture)
+    ).
+
+texture_figure(ship(Flame), Fig) :-
+    ship_figure(Flame, Fig).
+texture_figure(bullet, Fig) :-
+    new(Fig, circle(4)),
+    send(Fig, fill, colour(white)),
+    send(Fig, colour, colour(cyan)),
+    send(Fig, center, point(0, 0)).
+texture_figure(particle(Colour), Fig) :-
+    new(Fig, circle(3)),
+    send(Fig, fill, colour(Colour)),
+    send(Fig, colour, colour(Colour)),
+    send(Fig, center, point(0, 0)).
+texture_figure(star(Size, Colour), Fig) :-
+    new(Fig, box(Size, Size)),
+    send(Fig, pen, 0),
+    send(Fig, fill, colour(Colour)).

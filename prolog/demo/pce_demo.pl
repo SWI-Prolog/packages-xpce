@@ -241,7 +241,7 @@ demo('Animated images',
      animation_demo).
 
 demo('Asteroids',
-     'A game like Asteroids: keyboard polling, gamepad and sound',
+     'A game like Asteroids: GPU sprites, keyboard polling, gamepad and sound',
      demo(asteroids),
      asteroids).
 
