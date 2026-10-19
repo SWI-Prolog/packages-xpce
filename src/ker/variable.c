@@ -202,6 +202,22 @@ getArgumentTypeVariable(Variable var, Int n)
 }
 
 
+/* As method<-types: the argument types.  Sending to the variable takes
+ * a value of its type, getting it takes no arguments.  Fails if the
+ * variable is not accessible.
+ */
+
+static Vector
+getTypesVariable(Variable var)
+{ if ( sendAccessVariable(var) )
+    answer(answerObject(ClassVector, var->type, EAV));
+  if ( getAccessVariable(var) )
+    answer(answerObject(ClassVector, EAV));
+
+  fail;
+}
+
+
 static Type
 getReturnTypeVariable(Variable var)
 { if ( getAccessVariable(var) )
@@ -556,6 +572,8 @@ static getdecl get_variable[] =
 #endif /*O_RUNTIME*/
   GM(NAME_argumentType, 1, "type", "index=[int]", getArgumentTypeVariable,
      NAME_meta, "Type of n-th1 argument if <-access includes `send'"),
+  GM(NAME_types, 0, "vector", NULL, getTypesVariable,
+     NAME_meta, "Argument types: <-type if <-access includes send"),
   GM(NAME_returnType, 0, "type", NULL, getReturnTypeVariable,
      NAME_meta, "Return type if <-access includes `get'"),
   GM(NAME_allocValue, 0, "unchecked", NULL, getAllocValueVariable,

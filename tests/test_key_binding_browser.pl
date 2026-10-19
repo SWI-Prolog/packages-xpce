@@ -1031,6 +1031,28 @@ test(m_x_completes_commands, Same == true) :-
     ;   Same = false
     ).
 
+%   A slot may implement a command, e.g., comment_column of a language
+%   mode.  Its <-types are those of the send method, as for a method:
+%   the type of the slot, none if it can only be read.
+
+test(variable_command, Typed == yes) :-
+    emacs_mode(M),
+    typed(M, comment_column, Typed).
+test(variable_types, Name == int) :-
+    use_module(library(emacs/emacs)),
+    get(class(emacs_language_mode), instance_variable, comment_column, V),
+    get(V, types, Types),
+    get(Types, size, 1),
+    get(Types, element, 1, Type),
+    get(Type, name, Name).
+test(variable_types_get, Size == 0) :-
+    get(class(view), instance_variable, editor, V),
+    get(V, types, Types),
+    get(Types, size, Size).
+test(variable_types_no_access, fail) :-
+    get(class(display), instance_variable, ws_ref, V),
+    get(V, types, _).
+
 emacs_mode(M) :-
     use_module(library(emacs/emacs)),
     new(B, emacs_buffer(@nil, '*kbt-commands*')),
