@@ -61,6 +61,8 @@ convert(_, Name:name, SaveFile:save_file) :<-
 
 variable(exists,    'bool|{open,save}' := @off, both, "File must exist").
 variable(directory, directory*,                 both, "Relative to").
+variable(browse_directory, name*,               both,
+         "Where ->browse starts if the item is empty").
 
 initialise(FI, Name:[name], Def:[any|function], Msg:[code]*) :->
     clean_file_name(Def, Clean),
@@ -151,6 +153,17 @@ indicate_directory(_FI, Dir:string) :->
     ).
 
 
+selection(FI, Selection:any) :->
+    "Set the selection, also from a file or directory object"::
+    (   send(Selection, instance_of, file)
+    ->  get(Selection, name, Name)
+    ;   send(Selection, instance_of, directory)
+    ->  get(Selection, path, Name)
+    ;   Name = Selection
+    ),
+    send_super(FI, selection, Name).
+
+
 selection(FI, Warn:[bool], FileName:name) :<-
     "Get the current selection"::
     get(FI, modified, Modified),
@@ -208,7 +221,11 @@ clean_file_name(Def, Def).
 browse(FI) :->
     "Run finder to fill with value"::
     get(FI?value, value, Sofar),
-    (   exists_directory(Sofar)
+    (   Sofar == '',
+        get(FI, browse_directory, Dir),
+        Dir \== @nil
+    ->  true
+    ;   exists_directory(Sofar)
     ->  Dir = Sofar
     ;   file_directory_name(Sofar, Dir)
     ),

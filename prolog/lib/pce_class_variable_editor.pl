@@ -262,6 +262,7 @@ class_config_type(colour, Alts,     colour) :- subset(Alts, [pixmap]).
 class_config_type(image,  [],       image).
 class_config_type(cursor, [],       cursor).
 class_config_type(style,  [],       style).
+class_config_type(file,   [],       file).
 
 range_kind(int_range).
 range_kind(real_range).
@@ -322,6 +323,44 @@ cv_ui_type(_, _, CV, Type, Type) :-
 %   itself.
 
 class_variable_ui_type(display, theme, name).   % @default: see theme_item
+
+%   browse_directory(+Class, +Name, -Dir) is semidet.
+%
+%   The file class variable Name of Class is browsed from Dir if it has
+%   no value.
+
+browse_directory(Class, bell_sound, Dir) :-
+    send(Class, is_a, display),
+    system_sound_directory(Dir).
+
+%   system_sound_directory(-Dir) is semidet.
+%
+%   Dir is the directory holding the sounds of the desktop.
+
+system_sound_directory(Dir) :-
+    current_prolog_flag(windows, true),
+    !,
+    getenv('SystemRoot', OsRoot),
+    prolog_to_os_filename(Root, OsRoot),
+    directory_file_path(Root, 'Media', Dir),
+    exists_directory(Dir).
+system_sound_directory(Dir) :-
+    current_prolog_flag(apple, true),
+    !,
+    Dir = '/System/Library/Sounds',
+    exists_directory(Dir).
+system_sound_directory(Dir) :-
+    (   getenv('XDG_DATA_DIRS', Path),
+        Path \== ''
+    ->  true
+    ;   Path = '/usr/local/share:/usr/share'
+    ),
+    atomic_list_concat(DataDirs, :, Path),
+    member(DataDir, DataDirs),
+    DataDir \== '',
+    directory_file_path(DataDir, sounds, Dir),
+    exists_directory(Dir),
+    !.
 
 %   dedicated_item(+Class, +Name, +Value, -Item) is semidet.
 %
@@ -505,6 +544,10 @@ defaults_term(Obj, List) :-
     !,
     chain_list(Obj, Members),
     maplist(defaults_term, Members, List).
+defaults_term(Obj, Path) :-
+    send(Obj, instance_of, file),
+    !,
+    get(Obj, name, Path).
 defaults_term(Obj, Text) :-
     send(Obj, instance_of, char_array),
     !,
@@ -979,6 +1022,7 @@ variable(special,  name*,        get, "Value if switched off: none or default").
 variable(switch,   bool_item,    get, "Off for @nil or @default").
 variable(revert,   link_label,   get, "Link to revert to the default").
 variable(help,     link_label,   get, "Link to the manual entry").
+variable(browse,   button*,      get, "Button to browse for a file").
 variable(saved,    any,          both, "Value in the Defaults file").
 variable(applied,  any,          both, "Value applied to the session").
 variable(relevant, bool := @on,  get, "Off if another value makes it unused").
@@ -1005,6 +1049,17 @@ initialise(R, Class:class, Declarer:class, Name:name, Scope:[name]) :->
     value_tooltips(Item, Class, Name),
     send(R, slot, item, Item),
     send(Item, message, message(R, item_changed)),
+    (   send(Item, instance_of, file_item)
+    ->  send(Item, exists, open),
+        send(Item, length, 18),
+        (   browse_directory(Class, Name, Dir)
+        ->  send(Item, browse_directory, Dir)
+        ;   true
+        ),
+        send(R, slot, browse,
+             button('Browse ...', message(Item, browse)))
+    ;   true
+    ),
     send(R, slot, revert,
          new(Link, link_label(revert, 'Revert',
                               message(R, revert_to_default)))),
@@ -1270,24 +1325,33 @@ show_special(R, Value:any) :->
 
 activate_item(R) :->
     "The item is active if the switch is on and the value is used"::
-    get(R?switch, selection, On),
+    get(R, switch, Switch),
+    get(Switch, selection, On),
     get(R, relevant, Relevant),
     (   On == @on, Relevant == @on
-    ->  send(R?item, active, @on)
-    ;   send(R?item, active, @off)
+    ->  Active = @on
+    ;   Active = @off
+    ),
+    send(R?item, active, Active),
+    (   get(R, browse, Browse), Browse \== @nil
+    ->  send(Browse, active, Active)
+    ;   true
+    ),
+    (   get(R, special, Special), Special \== @nil  % else always inactive
+    ->  send(Switch, active, Relevant)
+    ;   true
     ).
 
 update_relevant(R) :->
     "Deactivate the row if the value it edits is not used"::
     get(R, class, Class),
     get(R, name, Name),
-    (   requirement(Class, Name, OnClass, OnName, Required)
-    ->  (   class_variable_value(OnClass, OnName, Current),
-            \+ changed(Current, Required)
-        ->  Relevant = @on
-        ;   Relevant = @off
-        )
-    ;   Relevant = @on
+    (   forall(requirement(Class, Name, OnClass, OnName, Required),
+               ( class_variable_value(OnClass, OnName, Current),
+                 \+ changed(Current, Required)
+               ))
+    ->  Relevant = @on
+    ;   Relevant = @off
     ),
     (   get(R, relevant, Relevant)
     ->  true
@@ -1312,37 +1376,42 @@ item_tooltip(Class, Name, CV, Tooltip) :-
     ->  Lines = [Summary]
     ;   Lines = []
     ),
-    (   requirement(Class, Name, OnClass, OnName, Required)
-    ->  get(OnClass, name, OnClassName),
-        value_to_defaults_text(Required, RequiredText),
-        format(string(Req), 'Only used if ~w.~w is ~w',
-               [OnClassName, OnName, RequiredText]),
-        append(Lines, [Req], All)
-    ;   All = Lines
-    ),
+    findall(Req,
+            ( requirement(Class, Name, OnClass, OnName, Required),
+              get(OnClass, name, OnClassName),
+              value_to_defaults_text(Required, RequiredText),
+              format(string(Req), 'Only used if ~w.~w is ~w',
+                     [OnClassName, OnName, RequiredText])
+            ),
+            Reqs),
+    append(Lines, Reqs, All),
     All \== [],
     atomic_list_concat(All, '\n', Tooltip).
 
-%   requirement(+Class, +Name, -OnClass, -OnName, -Value) is semidet.
+%   requirement(+Class, +Name, -OnClass, -OnName, -Value) is nondet.
 %
 %   The class variable Name of Class is only used if the class variable
-%   OnName of OnClass has the value Value.
+%   OnName of OnClass has the value Value.  If there are several
+%   requirements, all must hold.
 
 requirement(Class, Name, OnClass, OnName, Value) :-
     class_variable_requires(ClassName, Name, OnClassName, OnName, Value),
     send(Class, is_a, ClassName),
-    !,
     get(@pce, convert, OnClassName, class, OnClass).
 
 %   class_variable_requires(?Class, ?Name, ?OnClass, ?OnName, ?Value)
 %
 %   The class variable Name of Class is only used if OnClass.OnName is
 %   Value.  The editor deactivates the row of Name otherwise.  The bell
-%   is only rung by `graphical ->alert` if the visual bell is off.
+%   is only rung by `graphical ->alert` if the visual bell is off and
+%   the bell only plays a tone if it has no sound file.
 
 class_variable_requires(display,   volume,        graphical, visual_bell, @off).
+class_variable_requires(display,   bell_sound,    graphical, visual_bell, @off).
 class_variable_requires(display,   bell_pitch,    graphical, visual_bell, @off).
 class_variable_requires(display,   bell_duration, graphical, visual_bell, @off).
+class_variable_requires(display,   bell_pitch,    display,   bell_sound,  @nil).
+class_variable_requires(display,   bell_duration, display,   bell_sound,  @nil).
 class_variable_requires(graphical, visual_bell_duration,
                                                   graphical, visual_bell, @on).
 
@@ -1360,6 +1429,10 @@ append(R, D:dialog) :->
     ;   true
     ),
     send(G, append, Item, right),
+    (   get(R, browse, Browse), Browse \== @nil
+    ->  send(G, append, Browse, right)
+    ;   true
+    ),
     send(G, append, R?revert, right),      % acts on the value: next to it
     send(D, append, G),
     send(G, alignment, left),

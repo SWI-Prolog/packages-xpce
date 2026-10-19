@@ -209,7 +209,8 @@ general(theme,
         [ display - [ theme ],
           heading('Bell',
                   [ graphical - [ visual_bell, visual_bell_duration ],
-                    display   - [ volume, bell_pitch, bell_duration ]
+                    display   - [ volume, bell_sound, bell_pitch,
+                                  bell_duration ]
                   ])
         ]).
 general(layout,

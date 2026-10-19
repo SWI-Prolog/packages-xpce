@@ -910,8 +910,8 @@ test(general_tab_without_classes, [ fail ]) :-
     pce_preferences:general_preferences(Tabs),
     memberchk(tab(tcve_empty, _, _), Tabs).
 test(general_rows, [ true(subset([scale, pango_families, blink], Text)),
-                     true(subset([theme, visual_bell, volume, bell_pitch,
-                                  bell_duration], Theme)),
+                     true(subset([theme, visual_bell, volume, bell_sound,
+                                  bell_pitch, bell_duration], Theme)),
                      true(subset([border, gap_colour], Layout))
                    ]) :-
     new(E, class_variable_editor),
@@ -1052,6 +1052,55 @@ test(requires, [ Active == [@off, @on, @on, @off],
     get(Volume?item, active, A2),
     get(Flash?item, active, A3),
     Active = [A0, A1, A2, A3].
+
+%   The bell only plays a tone of bell_pitch if it has no sound file.
+%   The sound file is edited using a file_item.
+
+test(requires_all, [ Active == [@on, @off, @on, @off, @on, @on],
+                     cleanup(( send(class(graphical), class_variable_value,
+                                    visual_bell, @on),
+                               send(class(display), class_variable_value,
+                                    bell_sound, @nil)
+                             ))
+                   ]) :-
+    send(class(graphical), class_variable_value, visual_bell, @off),
+    new(Pitch, pce_class_variable_editor:cv_row(class(display),
+                                                class(display), bell_pitch)),
+    new(Sound, pce_class_variable_editor:cv_row(class(display),
+                                                class(display), bell_sound)),
+    get(Pitch?item, active, A0),
+    send(class(graphical), class_variable_value, visual_bell, @on),
+    send(Sound, sync),
+    get(Sound?switch, active, S0),
+    get(Sound?browse, active, B0),
+    assertion(B0 == @off),
+    send(class(graphical), class_variable_value, visual_bell, @off),
+    send(class(display), class_variable_value, bell_sound,
+         file('/no/such/bell.wav')),
+    send(Pitch, sync),
+    send(Sound, sync),
+    get(Pitch?item, active, A1),
+    get(Sound?item, active, A2),
+    get(Sound?switch, active, S1),
+    get(Sound?browse, active, B1),
+    Active = [A0, A1, A2, S0, S1, B1].
+%   The finder starts in the directory with the sounds of the desktop.
+%   Wine has no such directory.
+
+test(bell_sound_browse, [ Dir == Expected ]) :-
+    (   pce_class_variable_editor:system_sound_directory(Expected)
+    ->  true
+    ;   Expected = @nil
+    ),
+    new(Sound, pce_class_variable_editor:cv_row(class(display),
+                                                class(display), bell_sound)),
+    get(Sound?item, browse_directory, Dir).
+test(bell_sound_item, [ Class-Text == file_item-"'/tmp/bell.wav'" ]) :-
+    new(Sound, pce_class_variable_editor:cv_row(class(display),
+                                                class(display), bell_sound)),
+    get(Sound?item, class_name, Class),
+    pce_class_variable_editor:value_to_defaults_text(file('/tmp/bell.wav'),
+                                                     Text).
 
 %   A tool in the IDE is a pane_stack.  Where it is added is shown with
 %   the preferences of any object in it.
