@@ -377,10 +377,20 @@ example-- type _3_ into _\C-c_.
     $PCEHOME/prolog/lib/pce_drag_and_drop.pl.
 
 - event<-key: -> name
-    Key(-binding) description of event.  If the event is not a
-    keyboard event, this is the same as <-id.  Otherwise it
+    Key(-binding) description of event.  For a keyboard event, this
     is a symbolic description of the depressed key.  The
-    key-description is described with `key_binding ->function`.
+    key-description is described with `key_binding ->function`.  For
+    a key_up event, this is the <-key of the key-down it releases.
+    Fails for other events.
+
+    @see class key_data
+
+- event<-repeat: -> bool
+    `@on` if the event is a key-down that is auto-repeated because
+    the key is held.  @off otherwise, also for events without a
+    key_data <-detail.
+
+    @see class key_data
 
 - event<-master: -> any
     The `master` of an event is the `master` of its <-receiver.  See `visual

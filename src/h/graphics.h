@@ -1112,6 +1112,11 @@ NewClass(wheel_data)
   BoolObj	flipped;		/* Natural scrolling */
 End;
 
+NewClass(key_data)
+  Name		key;			/* event<-key of the key-down */
+  BoolObj	repeat;			/* Auto-repeated key-down */
+End;
+
 NewClass(drop_data)
   Name		path;			/* Dropped file */
   StringObj	text;			/* Dropped text */

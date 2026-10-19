@@ -158,6 +158,7 @@ scope('C.input_device', basic).
 scope('C.int_item', basic).
 scope('C.joint', basic).
 scope('C.key_binding', basic).
+scope('C.key_data', basic).
 scope('C.keyboard', basic).
 scope('C.label', basic).
 scope('C.label_box', advanced).

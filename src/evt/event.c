@@ -1062,7 +1062,18 @@ static Name
 getKeyEvent(EventObj ev)
 { if ( isAEvent(ev, NAME_keyboard) )
     answer(characterName(ev));
+  if ( ev->id == NAME_keyUp && instanceOfObject(ev->detail, ClassKeyData) )
+    answer(((KeyData)ev->detail)->key);
   fail;
+}
+
+
+static BoolObj
+getRepeatEvent(EventObj ev)
+{ if ( instanceOfObject(ev->detail, ClassKeyData) )
+    answer(((KeyData)ev->detail)->repeat);
+
+  answer(OFF);
 }
 
 
@@ -1372,6 +1383,8 @@ static getdecl get_event[] =
      NAME_classify, "`up' events: time since corresponding `down'"),
   GM(NAME_key, 0, "name", NULL, getKeyEvent,
      NAME_classify, "Key(-binding) description of event"),
+  GM(NAME_repeat, 0, "bool", NULL, getRepeatEvent,
+     NAME_classify, "@on if the key-down is auto-repeated"),
   GM(NAME_multiclick, 0, "{single,double,triple}", NULL, getMulticlickEvent,
      NAME_classify, "Click type"),
   GM(NAME_display, 0, "display", NULL, getDisplayEvent,
@@ -1436,7 +1449,8 @@ static struct namepair
 } initial_tree[] =
 { { NAME_mouse,		NAME_any },
   { NAME_keyboard,	NAME_any },
-  { NAME_user,		NAME_any },
+  { NAME_keyUp,		NAME_any },	/* not a keyboard event: see */
+  { NAME_user,		NAME_any },	/* class key_data */
 					/* Keyboard events */
   { NAME_ascii,		NAME_keyboard },
   { NAME_meta,		NAME_keyboard },

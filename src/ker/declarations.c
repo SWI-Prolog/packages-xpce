@@ -236,6 +236,9 @@ static struct class_definition classdefs[] =
   { NAME_wheelData, NAME_eventDetail, makeClassWheelData,
     &ClassWheelData, "Precise scroll data of a wheel event" },
 
+  { NAME_keyData, NAME_eventDetail, makeClassKeyData,
+    &ClassKeyData, "Key of a key event and whether it repeats" },
+
   { NAME_penState, NAME_eventDetail, makeClassPenState,
     &ClassPenState, "State of a pen: pressure, tilt, ..." },
 

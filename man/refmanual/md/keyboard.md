@@ -5,9 +5,10 @@ refer to it as their `event<-device`.  The window system combines all
 keyboards, so there is a single keyboard object.
 
 Besides delivering events, the keyboard can be polled using
-<-key_down.  This is needed by applications such as games that act
-on keys being held, as there are no events for releasing a key.  A
-game typically reads the keys on each tick of a timer:
+<-key_down.  This is useful for applications such as games that act
+on keys being held.  Such an application may also follow the key
+events and the `key_up` events that release them (see class
+key_data).  A game typically reads the keys on each tick of a timer:
 
 	tick(Ship) :-
 	    (   get(@keyboard_device, key_down, cursor_left, @on)

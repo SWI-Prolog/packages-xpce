@@ -771,6 +771,25 @@ postEventWindow(PceWindow sw, EventObj ev)
       send(fr, NAME_windowClicked, sw, EAV);
   }
 
+  /* The release of a key goes where its key-down went: to the keyboard
+   * focus.  It is not a keyboard event, so nothing that handles keys
+   * sees it unless it asks for key_up.
+   */
+  if ( ev->id == NAME_keyUp )
+  { PceWindow iw;
+
+    if ( fr && notNil(fr) &&
+	 (iw = getKeyboardFocusFrame(fr)) &&
+	 iw != sw )
+    { rval = eventFrame(fr, ev);
+      goto out;
+    }
+    if ( notNil(sw->keyboard_focus) )
+    { rval = postEvent(ev, sw->keyboard_focus, DEFAULT);
+      goto out;
+    }
+  }
+
   if ( isAEvent(ev, NAME_keyboard) )
   { PceWindow iw;
     FrameObj fr = getFrameWindow(sw, DEFAULT);

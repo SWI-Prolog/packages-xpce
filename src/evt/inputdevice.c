@@ -377,6 +377,61 @@ makeClassWheelData(Class class)
 
 
 		 /*******************************
+		 *	       KEY DATA		*
+		 *******************************/
+
+/* Data of a key event.  A key_up event is not a keyboard event, so
+ * its <-key is not computed from its id, but taken from the key-down
+ * it releases.  A key-down holds whether it is auto-repeated.
+ */
+
+static status
+initialiseKeyData(KeyData kd, Name key, BoolObj repeat)
+{ assign(kd, key,    key);
+  assign(kd, repeat, isDefault(repeat) ? OFF : repeat);
+
+  succeed;
+}
+
+
+/* Type declarations */
+
+static char *T_initialiseKeyData[] =
+        { "key=name", "repeat=[bool]" };
+
+/* Instance Variables */
+
+static vardecl var_key_data[] =
+{ IV(NAME_key, "name", IV_GET,
+     NAME_keyboard, "event<-key of the key that went down"),
+  IV(NAME_repeat, "bool", IV_GET,
+     NAME_keyboard, "@on if the key-down is auto-repeated")
+};
+
+/* Send Methods */
+
+static senddecl send_key_data[] =
+{ SM(NAME_initialise, 2, T_initialiseKeyData, initialiseKeyData,
+     DEFAULT, "Create from key and repeat")
+};
+
+/* Class Declaration */
+
+static Name key_data_termnames[] = { NAME_key, NAME_repeat };
+
+ClassDecl(key_data_decls,
+          var_key_data, send_key_data, NULL, NULL,
+          2, key_data_termnames);
+
+status
+makeClassKeyData(Class class)
+{ declareClass(class, &key_data_decls);
+
+  succeed;
+}
+
+
+		 /*******************************
 		 *	      PEN STATE		*
 		 *******************************/
 

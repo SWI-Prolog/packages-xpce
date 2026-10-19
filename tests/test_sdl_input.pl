@@ -85,6 +85,22 @@ event(_P, Ev:event) :->
 
 :- pce_end_class(recording_window).
 
+:- pce_begin_class(focus_window, recording_window,
+                   "Recording window to give the keyboard focus").
+:- pce_end_class(focus_window).
+
+:- pce_begin_class(recording_text_item, text_item,
+                   "Text item that records the events it receives").
+
+event(TI, Ev:event) :->
+    "Record a copy of the event and handle it"::
+    get(Ev, clone, Copy),
+    send(Copy, lock_object, @on),
+    assertz(seen(Copy)),
+    send_super(TI, event, Ev).
+
+:- pce_end_class(recording_text_item).
+
 %!  open_window(-Frame, -Window) is det.
 %
 %   Open a frame with a recording window of 200x200.  Clear the
@@ -145,6 +161,35 @@ pump_for(Seconds) :-
 key_down(F, Key, Scancode, Mod) :-
     sdl(F, key_down, [key=Key, scancode=Scancode, mod=Mod]).
 
+key_up(F, Key, Scancode) :-
+    sdl(F, key_up, [key=Key, scancode=Scancode]).
+
+%!  keys(-Keys) is det.
+%
+%   The recorded key events as Id-Key-Repeat.
+
+keys(Keys) :-
+    findall(Id-Key-Repeat,
+            ( seen(E),
+              get(E, id, Id),
+              get(E, key, Key),
+              get(E, repeat, Repeat)
+            ),
+            Keys).
+
+%!  receivers(-Pairs) is det.
+%
+%   The recorded key events as Id-ReceiverClass.
+
+receivers(Pairs) :-
+    findall(Id-Class,
+            ( seen(E),
+              get(E, key, _),
+              get(E, id, Id),
+              get(E?receiver, class_name, Class)
+            ),
+            Pairs).
+
 :- begin_tests(sdl_keyboard, [cleanup(close_windows)]).
 
 %       A window without text input gets the characters of the keys
@@ -171,6 +216,62 @@ test(text_input, Ids-Value == []-'') :-
     pump_for(0.2),
     events(Ids),
     get(TI, selection, Value).
+
+%       The release of a key is a key_up event with the key of its
+%       key-down, also if a modifier was released first.  An auto-repeat
+%       of a key-down says so.  Keys that gave no key-down event, such as
+%       Shift, give no key_up either.
+
+test(release, Keys == [ 0'a-a-(@off), 0'a-a-(@on), key_up-a-(@off),
+                        0'A-'A'-(@off), key_up-'A'-(@off),
+                        'RET'-'RET'-(@off), key_up-'RET'-(@off)
+                      ]) :-
+    open_window(F, _),
+    key_down(F, 0'a, 4, 0),
+    sdl(F, key_down, [key=0'a, scancode=4, repeat=1]),
+    key_up(F, 0'a, 4),
+    key_down(F, 0x400000e1, 225, 0x1),  % Left Shift
+    key_down(F, 0'a, 4, 0x1),
+    key_up(F, 0x400000e1, 225),
+    key_up(F, 0'a, 4),
+    key_down(F, 13, 40, 0),
+    key_up(F, 13, 40),
+    keys(Keys).
+
+%       With text input the key-down gives its character through the
+%       text input event.  Its release goes to the keyboard focus, as the
+%       key-down did, which does not type anything for it.
+
+test(release_with_text_input,
+     Keys-Pairs-Value == [ 0'a-a-(@off), key_up-a-(@off) ] -
+                         [ 0'a-recording_text_item,
+                           key_up-recording_text_item
+                         ] - a) :-
+    open_window(F, W),
+    send(W, display, new(TI, recording_text_item(name, ''))),
+    send(W, keyboard_focus, TI),
+    retractall(seen(_)),
+    key_down(F, 0'a, 4, 0),
+    sdl(F, text_input, [char=0'a]),
+    key_up(F, 0'a, 4),
+    keys(Keys),
+    receivers(Pairs),
+    get(TI, selection, Value).
+
+%       The release goes to the window with the keyboard focus, not to
+%       the one under the pointer.
+
+test(release_to_focus, Pairs == [0'a-focus_window, key_up-focus_window]) :-
+    close_windows,
+    new(F, frame),
+    send(F, append, new(W1, recording_window('', size(200, 200)))),
+    send(new(W2, focus_window('', size(200, 200))), below, W1),
+    send(F, open),
+    send(F, keyboard_focus, W2),
+    sdl(F, mouse_motion, [x=50, y=50]),  % pointer in W1
+    key_down(F, 0'a, 4, 0),
+    key_up(F, 0'a, 4),
+    receivers(Pairs).
 
 :- end_tests(sdl_keyboard).
 

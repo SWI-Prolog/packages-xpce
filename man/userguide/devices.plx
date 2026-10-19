@@ -58,6 +58,8 @@ so test the kind of event first, as above.
 \class{drop_data}	& drop_* events of files or text dropped from
 			  other applications: <-path, <-text, <-source.
 			  See \secref{dragdrop}. \\
+\class{key_data}	& keyboard events and key_up: <-key and
+			  <-repeat.  See \secref{keyup}. \\
 \class{wheel_data}	& wheel and horizontal_wheel: precise scroll
 			  distance <-dx and <-dy and <-flipped.  See
 			  \secref{scrolling}. \\
@@ -83,6 +85,16 @@ When a device is added or removed, e.g., a gamepad is plugged in, the
 window that has the keyboard focus in each frame receives a
 \const{device_added} or \const{device_removed} event, whose `event
 <-device' is the device concerned.
+
+\index{key_up}\index{repeat,key}%
+\label{sec:keyup}%
+Releasing a key generates a \const{key_up} event.  It goes to the
+keyboard focus, like the key-down, and `event <-key' is the key of
+the key-down it releases.  A key_up is not a keyboard event, so key
+bindings, text items and editors do not see it; test for it using
+`event ->is_a: key_up'.  `event <-repeat' is @on for a key-down that
+is auto-repeated because the key is held.  Together, these allow a
+window to track which keys are down.  See \class{key_data}.
 
 Each pointing device has its own state.  For example, if a pen and the
 mouse are used at the same time, a click of the mouse between two
@@ -447,7 +459,8 @@ if a device generated it:
     \tick{`frame ->sdl_test_event'}
 Builds an SDL event of a given type from a \class{sheet} with the
 fields of the event and processes it as if SDL reported it.  This
-allows testing mouse, wheel, pen, touch and pinch input, e.g.,
+allows testing mouse, wheel, pen, touch, pinch and keyboard input,
+e.g.,
 \begin{code}
 new(S, sheet), send(S, value, x, 50), send(S, value, y, 50),
 send(S, value, which, 7),               % pen 7

@@ -1054,6 +1054,12 @@ the classes \class{text}, \class{text_item}, \class{editor} and
 \idx{keyboard-accelerators}, though `menu_item <->accelerator' is
 generally more suitable for this purpose.
 
+#class key_data "key_data(key, repeat)"
+The `event <-detail' of keyboard events and of the \const{key_up}
+event generated when a key is released.  `event <-key' of a key_up is
+the key of the key-down it releases and `event <-repeat' tells whether
+a key-down is auto-repeated.
+
 #class keyboard "keyboard(kind, id, name)"
 The \class{input_device} @keyboard_device.  Keyboard events refer to it
 and `keyboard <-key_down' tells whether a key is held down, which games

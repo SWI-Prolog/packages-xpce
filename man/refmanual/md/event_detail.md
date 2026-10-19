@@ -10,4 +10,5 @@ events.
 
 @see event<-detail
 @see class drop_data
+@see class key_data
 @see class input_device

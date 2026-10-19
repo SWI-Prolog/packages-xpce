@@ -641,21 +641,22 @@ imply X-specific semantics.
 
 - frame->sdl_test_event: type=name, fields=sheet
     For testing only.  Build an SDL event of `type` for this frame and
-    process it as if SDL reported it.  This allows testing input that
-    is not available on the test machine, such as pen and touch input.
+    process it as if SDL reported it.  This allows testing input that is
+    not available on the test machine, such as pen and touch input.
     `type` is one of `mouse_motion`, `mouse_button_down`,
     `mouse_button_up`, `mouse_wheel`, `pen_proximity_in`,
     `pen_proximity_out`, `pen_down`, `pen_up`, `pen_motion`,
     `pen_button_down`, `pen_button_up`, `pen_axis`, `finger_down`,
     `finger_up`, `finger_motion`, `finger_canceled`, `pinch_begin`,
-    `pinch_update`, `pinch_end`, `key_down` and `key_up`.  The
-    attributes of `fields` are named after the fields of the SDL event
-    structure (e.g., `x`, `y`, `which`, `button`, `pressure`); missing
-    fields are 0.  Positions
-    are relative to the frame, except for the finger events, whose `x`
-    and `y` are normalised to 0..1 as in SDL.  The wheel event takes
-    `dx`, `dy` (precise) and `integer_x`, `integer_y` (whole notches).
-    The key events take `key` (the SDL keycode), `scancode` and `mod`.
+    `pinch_update`, `pinch_end`, `key_down`, `key_up` and `text_input`.
+    The attributes of `fields` are named after the fields of the SDL
+    event structure (e.g., `x`, `y`, `which`, `button`, `pressure`);
+    missing fields are 0.  Positions are relative to the frame, except
+    for the finger events, whose `x` and `y` are normalised to 0..1 as
+    in SDL.  The wheel event takes `dx`, `dy` (precise) and `integer_x`,
+    `integer_y` (whole notches).  The key events take `key` (the SDL
+    keycode), `scancode`, `mod` and `repeat`, and `text_input` takes
+    `char`, the code point of the text.
 
 - frame->attach_transient: frame
 - frame->detach_transient: frame

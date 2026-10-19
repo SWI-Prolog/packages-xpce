@@ -1728,6 +1728,15 @@ eventFrame(FrameObj fr, EventObj ev)
     return send(fr, NAME_typed, ev, EAV);
   }
 
+  if ( ev->id == NAME_keyUp )		/* to the focus, as the key-down */
+  { PceWindow sw;
+
+    if ( !blockedByModalFrame(fr) &&
+	 (sw = getKeyboardFocusFrame(fr)) )
+      return postNamedEvent(ev, (Graphical) sw, DEFAULT, NAME_postEvent);
+    fail;
+  }
+
   tileResizeEvent(ev);
 
   if ( isDownEvent(ev) && (bfr=blockedByModalFrame(fr)) )

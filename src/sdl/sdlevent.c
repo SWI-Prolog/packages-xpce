@@ -360,6 +360,62 @@ static Uint64 menubar_key_time = 0;	/* key-down taken by the MacOS menu */
 #define KEYBOARD_DELAY 10
 #define ms_to_ns(ms) ((Uint64)(ms)*1000000)
 
+/* The keys that are down, with the event<-key of their key-down, so
+ * the release can be reported as key_up with the same key, whatever
+ * modifiers changed in between.  Only keys that produced an event are
+ * here.
+ */
+
+#define MAX_KEYS_DOWN 32
+
+typedef struct
+{ SDL_Scancode	scancode;
+  Name		key;
+} key_down;
+
+static key_down keys_down[MAX_KEYS_DOWN];
+static int keys_down_count = 0;
+
+/* With text input, the key-down of a printable key gives no event: the
+ * text input event that follows it does.  Keep the key-down, so that
+ * text can be paired with its key.
+ */
+
+static SDL_KeyboardEvent text_keydown;
+static bool text_keydown_valid = false;
+
+static void
+remember_key_down(SDL_Scancode scancode, Name key)
+{ for(int i=0; i<keys_down_count; i++)
+  { if ( keys_down[i].scancode == scancode )
+    { keys_down[i].key = key;		/* auto-repeat, maybe other mods */
+      return;
+    }
+  }
+  if ( keys_down_count == MAX_KEYS_DOWN ) /* lost releases: drop oldest */
+  { memmove(&keys_down[0], &keys_down[1],
+	    (MAX_KEYS_DOWN-1)*sizeof(keys_down[0]));
+    keys_down_count--;
+  }
+  keys_down[keys_down_count].scancode = scancode;
+  keys_down[keys_down_count].key      = key;
+  keys_down_count++;
+}
+
+static Name
+forget_key_down(SDL_Scancode scancode)
+{ for(int i=0; i<keys_down_count; i++)
+  { if ( keys_down[i].scancode == scancode )
+    { Name key = keys_down[i].key;
+
+      keys_down[i] = keys_down[--keys_down_count];
+      return key;
+    }
+  }
+
+  return NULL;
+}
+
 /* The window system state of a pointer device: the implicit grab
  * from a button-down to the matching up and the window that holds the
  * pointer.  Keyboard and drop events use the state of the last pointer
@@ -913,6 +969,8 @@ CtoEvent(SDL_Event *event)
   Any name = NULL;
   Any detail = NIL;			/* ev->detail */
   Int rotation = NULL;			/* wheel events */
+  const SDL_KeyboardEvent *keydown = NULL; /* key-down of a key event */
+  Name keyup = NULL;			/* event<-key of a key_up */
   int press = 0;			/* button that went down */
   int release = 0;			/* button that went up */
   bool moved = false;			/* pointer may have moved */
@@ -1315,7 +1373,12 @@ CtoEvent(SDL_Event *event)
       lastmod = event->key.mod;
       if ( is_cue_alt_key(event->key.key) )
 	acceleratorCuesFrame(wsid_to_frame(event->key.windowID), false);
-      fail;		      /* only update modifiers */
+      if ( !(keyup = forget_key_down(event->key.scancode)) )
+	fail;			/* no event for its key-down */
+      wid  = event->key.windowID;
+      time = event->key.timestamp/1000000;
+      name = NAME_keyUp;
+      break;
       /* https://wiki.libsdl.org/SDL3/SDL_TextInputEvent */
     case SDL_EVENT_TEXT_INPUT:
     { int codepoint;
@@ -1350,10 +1413,18 @@ CtoEvent(SDL_Event *event)
 	{ SDL_RemoveTimer(keyboard_timer);
 	  keyboard_timer = 0;
 	  keyinput_time = event->text.timestamp;
+	  keydown = &keydown_event.key;	/* the text is of this key */
 	} else
 	{ fail;			/* process as key-down */
 	}
       }
+
+      if ( !keydown && text_keydown_valid &&
+	   event->text.timestamp >= text_keydown.timestamp &&
+	   event->text.timestamp - text_keydown.timestamp <
+	   ms_to_ns(KEYBOARD_DELAY) )
+	keydown = &text_keydown;	/* the text is of this key */
+      text_keydown_valid = false;
 
       /* Do not signal the meta-key(s) used to create text input */
       lastmod &= ~SDL_KMOD_RALT;
@@ -1422,6 +1493,7 @@ CtoEvent(SDL_Event *event)
 	fail;
       }
       menubar_key_time = 0;
+      text_keydown_valid = false;
       if ( ws_menubar_key_equivalent(event) )
       { DEBUG(NAME_keyboard,
 	      Cprintf("Keystroke claimed by the native menu bar.  "
@@ -1432,7 +1504,9 @@ CtoEvent(SDL_Event *event)
       }
       name = keycode_to_name(event);
       if ( !name )
-      { DEBUG(NAME_keyboard,
+      { text_keydown = event->key;	/* text input may follow */
+	text_keydown_valid = true;
+	DEBUG(NAME_keyboard,
 	      Cprintf("Ignoring keydown.  Mod=0x%x, scancode=%d, key=0x%x\n",
 		      event->key.mod, event->key.scancode, event->key.key));
 	fail;
@@ -1456,6 +1530,7 @@ CtoEvent(SDL_Event *event)
       wid     = event->key.windowID;
       time    = event->key.timestamp/1000000;
       name    = keycode_to_name(event);
+      keydown = &event->key;
       DEBUG(NAME_keyboard,
 	    bool delayed = (&keydown_event == event);
 	    Cprintf("SDL_EVENT_KEY_DOWN: %s at %"PRIu64"%s\n",
@@ -1631,6 +1706,15 @@ CtoEvent(SDL_Event *event)
 
     if ( rotation )
       assign(ev, rotation, rotation);
+    if ( keyup )
+      detail = answerObject(ClassKeyData, keyup, OFF, EAV);
+    else if ( keydown && isAEvent(ev, NAME_keyboard) )
+    { Name key = characterName(ev);
+
+      remember_key_down(keydown->scancode, key);
+      detail = answerObject(ClassKeyData, key,
+			    keydown->repeat ? ON : OFF, EAV);
+    }
     if ( notNil(detail) )
       assign(ev, detail, detail);
   } else
@@ -1823,7 +1907,7 @@ dispatch_sdl_event(SDL_Event *ev)
 		 *******************************/
 
 /* Is a key held down?  This is for applications such as games that
- * poll the keyboard, as xpce has no events for releasing a key.  `key`
+ * poll the keyboard rather than following key and key_up events.  `key`
  * is a name of a key event (cursor_left, RET, f1, ...), a single
  * character or the name SDL uses for the key (e.g., `Left Shift`).
  * Returns false if the key is unknown.
@@ -1949,6 +2033,7 @@ static const test_event_type test_event_types[] =
 #endif
   { "key_down",		 SDL_EVENT_KEY_DOWN },
   { "key_up",		 SDL_EVENT_KEY_UP },
+  { "text_input",	 SDL_EVENT_TEXT_INPUT },
   { NULL, 0 }
 };
 
@@ -2082,7 +2167,19 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
       ev.key.key       = (SDL_Keycode)F(key);
       ev.key.mod       = (SDL_Keymod)F(mod);
       ev.key.down      = t->type == SDL_EVENT_KEY_DOWN;
+      ev.key.repeat    = F(repeat) != 0.0f;
       break;
+    case SDL_EVENT_TEXT_INPUT:
+    { static char text[8];		/* SDL's text outlives the event */
+      int chr = (int)F(char);
+      char *e = utf8_put_char(text, chr);
+
+      *e = EOS;
+      ev.text.timestamp = now;
+      ev.text.windowID  = wid;
+      ev.text.text      = text;
+      break;
+    }
     default:
       fail;
   }
