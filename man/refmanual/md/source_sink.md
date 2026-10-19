@@ -3,6 +3,12 @@
 
 ## Send methods {#class-source_sink-send}
 
+- source_sink->close_as_file:
+    Sent when a stream opened for writing on this object using
+    pce_open/3 is closed: no more data follows.  The default does
+    nothing.  A subclass that processes the data while it arrives,
+    such as `audio_stream`, uses it to handle the end of the data.
+
 - source_sink->encoding: {octet,ascii,iso_latin_1,text,utf8,unicode_be,unicode_le,wchar}
     Encoding of the data-source:
 
@@ -25,6 +31,10 @@
     	internally format is implementation defined, both in
     	terms of the number of bytes per character as the
     	byte-order.
+
+    pce_open/3 opens a binary stream on a source_sink with encoding
+    `octet`: `->write_as_file` gets the bytes written unchanged.
+    Otherwise the stream is a text stream.
 
     See also `file->initialise`.
 

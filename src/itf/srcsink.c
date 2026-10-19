@@ -299,6 +299,8 @@ static senddecl send_source_sink[] =
      NAME_stream, "Truncate object (virtual method)"),
   SM(NAME_writeAsFile, 2, T_writeAsFile, virtualObject2,
      NAME_stream, "Write data to object (virtual method)"),
+  SM(NAME_closeAsFile, 0, NULL, succeedObject,
+     NAME_stream, "pce_open/3 stream for writing is closed (virtual method)"),
   SM(NAME_access, 1, "mode={read,write,append,execute}", virtualObject1,
      NAME_test, "Test if resource has access (virtual method)"),
   SM(NAME_checkObject, 0, NULL, checkObjectSourceSink,

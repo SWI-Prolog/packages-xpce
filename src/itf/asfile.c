@@ -150,7 +150,9 @@ pceOpen_nolock(Any obj, int flags, void *encoding)
   h->point = 0L;
   h->my_flags = 0;
 
-  if ( instanceOfObject(obj, ClassStream) )
+  if ( instanceOfObject(obj, ClassStream) ||
+       ( instanceOfObject(obj, ClassSourceSink) &&
+	 ((SourceSink)obj)->encoding == NAME_octet ) )
   { h->my_flags |= MY_ISSTREAM;
     h->encoding = ENC_OCTET;
   } else
@@ -187,7 +189,11 @@ pceClose_nolock(int handle)
 
   if ( handle >= 0 && handle < max_handles &&
        (h = handles[handle]) )
-  { delRefObject(NIL, h->object);	/* handles deferred unalloc() */
+  { if ( (h->flags & (PCE_RDWR|PCE_WRONLY)) &&	/* tell the end of the data */
+	 !isFreedObj(h->object) &&
+	 hasSendMethodObject(h->object, NAME_closeAsFile) )
+      send(h->object, NAME_closeAsFile, EAV);
+    delRefObject(NIL, h->object);	/* handles deferred unalloc() */
     h->magic = 0;
     unalloc(sizeof(struct pce_file_handle), h);
     handles[handle] = NULL;
@@ -275,7 +281,8 @@ pceWrite_nolock(int handle, const char *buf, size_t size)
     ca = StringToScratchCharArray(&s);
 
     if ( (rval = send(h->object, NAME_writeAsFile, where, ca, EAV)) )
-      h->point += (long)size/sizeof(wchar_t);
+      h->point += (h->my_flags & MY_ISSTREAM) ? (long)size
+					      : (long)size/sizeof(wchar_t);
     doneScratchCharArray(ca);
 
     if ( rval )
