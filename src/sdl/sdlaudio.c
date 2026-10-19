@@ -186,6 +186,16 @@ init_sound_decoders(void)
   return done;
 }
 
+/* SDL_sound's CoreAudio decoder (macOS) crashes on a NULL extension,
+ * so we pass "" if there is none.  An extension that matches no
+ * decoder makes SDL_sound try all decoders, as NULL does.
+ */
+
+static Sound_Sample *
+new_sample(SDL_IOStream *io, const char *ext, Uint32 bufsize)
+{ return Sound_NewSample(io, ext ? ext : "", NULL, bufsize);
+}
+
 static bool
 decode_file(const char *fn, SDL_AudioSpec *spec, Uint8 **data, Uint32 *len,
 	    const char **err)
@@ -194,7 +204,14 @@ decode_file(const char *fn, SDL_AudioSpec *spec, Uint8 **data, Uint32 *len,
     return false;
   }
 
-  Sound_Sample *smp = Sound_NewSampleFromFile(fn, NULL, 65536);
+  SDL_IOStream *io = SDL_IOFromFile(fn, "rb");
+  if ( !io )
+  { *err = SDL_GetError();
+    return false;
+  }
+
+  const char *ext = SDL_strrchr(fn, '.');
+  Sound_Sample *smp = new_sample(io, ext ? ext+1 : NULL, 65536);
   if ( !smp )
   { *err = Sound_GetError();
     return false;
@@ -1000,7 +1017,7 @@ dec_thread(void *udata)
     return 0;
   }
 
-  Sound_Sample *smp = Sound_NewSample(io, NULL, NULL, 16384);
+  Sound_Sample *smp = new_sample(io, NULL, 16384);
   if ( !smp )				/* disposed of `io` */
   { if ( !d->stop )
       dec_fail(d, Sound_GetError());

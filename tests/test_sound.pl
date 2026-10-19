@@ -238,6 +238,12 @@ test(load, [F-C-D == 8000-1-0.25]) :-
 test(load_error, fail) :-
     test_file('nonexistent.wav', File),
     new(_, sound(File)).
+test(load_garbage, fail) :-             % no extension: all decoders
+    test_file(garbage, File),
+    setup_call_cleanup(open(File, write, Out),
+                       format(Out, 'this is no sound file', []),
+                       close(Out)),
+    new(_, sound(File)).
 test(play, [Playing-Done == (@on)-(@off)]) :-
     test_file('tone.wav', File),
     write_tone(File, 0.2),
