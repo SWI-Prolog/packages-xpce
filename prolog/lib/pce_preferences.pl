@@ -42,6 +42,7 @@
 :- use_module(library(apply)).
 :- use_module(library(lists)).
 :- use_module(library(pairs)).
+:- autoload(library(pce_class_variable_editor), [class_variable_editor/1]).
 
 /** <module> Declare the preferences of a GUI component
 
@@ -80,6 +81,9 @@ edited as, for example to a range that is edited using a slider, and
 edit_item/4 provides a dedicated item.  The class variable editor calls
 class_variable_changed/3 after it changed a class variable, so a library
 can act on the new value.
+
+Control-comma (Command-comma on MacOS) opens the class variable editor
+on the object below the pointer in any xpce window.
 */
 
 :- multifile
@@ -90,6 +94,41 @@ can act on the new value.
     edit_type/3,
     edit_item/4,
     class_variable_changed/3.
+
+		 /*******************************
+		 *	       THE KEY		*
+		 *******************************/
+
+%   The usual key for the preferences: Control-comma or, on MacOS,
+%   Command-comma (`\s-,`).  The handler is called for the comma only,
+%   so other keys do not call Prolog.
+
+register_preferences_key :-
+    send(@display_manager, inspect_handler,
+         handler(0',, message(@prolog, preferences_key, @receiver, @event))).
+
+:- initialization
+   register_preferences_key.
+
+preferences_key(Gr, Ev) :-
+    get(Ev, key, Key),
+    memberchk(Key, ['\\C-,', '\\s-,']),
+    get(Gr, frame, Frame),
+    \+ is_editor(Frame),
+    (   get(@display_manager?frames, find,
+            message(@prolog, is_editor, @arg1), Editor)
+    ->  send(Editor, edit, Gr),
+        send(Editor, expose)
+    ;   class_variable_editor(Gr)
+    ).
+
+is_editor(Frame) :-
+    get(Frame, class_name, class_variable_editor).
+
+
+		 /*******************************
+		 *	   SPECIFICATIONS	*
+		 *******************************/
 
 %!  preferences(?Class, ?Spec) is nondet.
 %

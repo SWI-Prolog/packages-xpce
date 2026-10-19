@@ -233,10 +233,13 @@ get_pce_version :-
 %!  on_load is multi
 %
 %   This multifile predicate is  called   during  xpce initialization as
-%   forall(on_load, true).   The default initializes xpce's theme.
+%   forall(on_load, true).   The default initializes xpce's theme and
+%   the key that opens the preferences (see library(pce_preferences)).
 
 on_load :-
     use_module(library(pce_theme), []).
+on_load :-
+    use_module(library(pce_preferences), []).
 
 %!  run_on_load
 %

@@ -77,8 +77,9 @@ the object from the screen.  If the object is part of a component with
 a preferences specification (see library(pce_preferences)), the tool
 shows the preferences of this component.  Otherwise it shows the
 commonly used class variables of the object's class, grouped by the
-class that declares them.  Each value uses an editor that suits its
-type.  The component is shown in the first tab.  The other tabs show
+class that declares them.  All class variables of classes that are not
+part of xpce, such as the classes of an application, are commonly used.
+Each value uses an editor that suits its type.  The component is shown in the first tab.  The other tabs show
 the general preferences, such as the fonts and the layout of the
 windows (see pce_preferences:general/2).
 
@@ -2352,22 +2353,33 @@ declaring_class(Class, Name, Declarer) :-
 %   basic_class_variable(+Class, +CV) is semidet.
 %
 %   True if the manual classifies the class variable CV of Class or a
-%   super class of it as `basic`.
+%   super class of it as `basic`.  The class variables of classes that
+%   are not in the manual, i.e., the classes of an application, are
+%   all basic.
 
 basic_class_variable(Class, CV) :-
     get(CV, name, Name),
-    basic_class_variable_(Class, Name).
+    (   class_variable_scope(Class, Name, Scope)
+    ->  Scope == basic
+    ;   get(CV, context, Declarer),
+        \+ manual_class(Declarer)
+    ).
 
-basic_class_variable_(Class, Name) :-
+class_variable_scope(Class, Name, Scope) :-
     get(Class, name, ClassName),
     atomic_list_concat(['R', ClassName, Name], '.', Id),
     scope(Id, Scope),
-    !,
-    Scope == basic.
-basic_class_variable_(Class, Name) :-
+    !.
+class_variable_scope(Class, Name, Scope) :-
     get(Class, super_class, Super),
     Super \== @nil,
-    basic_class_variable_(Super, Name).
+    class_variable_scope(Super, Name, Scope).
+
+manual_class(Class) :-
+    get(Class, name, ClassName),
+    atom_concat('C.', ClassName, Id),
+    scope(Id, _),
+    !.
 
 %   append_groups(+Frame, +Class, +Declarer, +Seen)
 %

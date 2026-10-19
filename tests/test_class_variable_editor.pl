@@ -65,7 +65,8 @@ test_class_variable_editor :-
                 class_variable_editor_text,
                 class_variable_editor_file,
                 class_variable_editor_live,
-                class_variable_editor_doc
+                class_variable_editor_doc,
+                class_variable_editor_key
               ]).
 
 :- pce_begin_class(tcve_item, object).
@@ -1513,6 +1514,60 @@ test(value_set_cycle, [Class-Kind-Sel == menu-cycle-Value,
 %   default view.
 
 test(geometry_not_basic, fail) :-
-    pce_class_variable_editor:basic_class_variable_(class(frame), geometry).
+    basic(frame, geometry).
+
+%   The manual does not know the classes of an application: all their
+%   class variables are basic.
+
+test(application_basic) :-
+    basic(tcve_key, k).
 
 :- end_tests(class_variable_editor_doc).
+
+basic(Class, Name) :-
+    get(class(Class), class_variable, Name, CV),
+    pce_class_variable_editor:basic_class_variable(class(Class), CV).
+
+%   Control-comma opens the editor on the object below the pointer and
+%   reuses an editor that is open.  A plain comma is not handled.
+
+:- begin_tests(class_variable_editor_key).
+
+test(key, [ setup(new_key_frame(F, W)),
+            cleanup(free_key_frame(F)),
+            Counts == [0, 1, 1]
+          ]) :-
+    send(F, keyboard_focus, W),
+    comma(F, 0x0000), editors(N0),
+    comma(F, 0x0040), editors(N1),             % SDL_KMOD_LCTRL
+    comma(F, 0x0040), editors(N2),
+    get(@display_manager?frames, find,
+        @arg1?class_name == class_variable_editor, E),
+    get(E, object, Obj),
+    assertion(Obj == W),
+    Counts = [N0, N1, N2].
+
+:- end_tests(class_variable_editor_key).
+
+new_key_frame(F, W) :-
+    new(F, frame('Key test')),
+    send(F, append, new(W, window)),
+    send(F, open).
+
+free_key_frame(F) :-
+    get(@display_manager, frames, Frames),
+    send(Frames, for_all,
+         if(@arg1?class_name == class_variable_editor,
+            message(@arg1, destroy))),
+    send(F, destroy).
+
+comma(F, Mod) :-
+    Fields = sheet(attribute(key, 0',), attribute(scancode, 54),
+                   attribute(mod, Mod)),
+    send(F, sdl_test_event, key_down, Fields),
+    send(F, sdl_test_event, key_up, Fields).
+
+editors(N) :-
+    get(@display_manager?frames, find_all,
+        @arg1?class_name == class_variable_editor, Editors),
+    get(Editors, size, N).
