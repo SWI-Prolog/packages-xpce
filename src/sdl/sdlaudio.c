@@ -90,6 +90,24 @@ init_audio(void)
   return true;
 }
 
+/* True if there is a device to play sound on.  Unlike init_audio(), it
+ * does not print a message if the audio subsystem cannot be started.
+ */
+
+bool
+ws_has_audio(void)
+{ if ( !SDL_WasInit(SDL_INIT_AUDIO) &&
+       !SDL_InitSubSystem(SDL_INIT_AUDIO) )
+    return false;
+
+  int n = 0;
+  SDL_AudioDeviceID *ids = SDL_GetAudioPlaybackDevices(&n);
+
+  SDL_free(ids);
+
+  return n > 0;
+}
+
 static Uint32 SDLCALL
 media_tick(void *udata, SDL_TimerID id, Uint32 interval)
 { if ( !SDL_GetAtomicInt(&ticking) )
@@ -1648,9 +1666,35 @@ tick_astream(astream *a)
 		 *	      THE TICK		*
 		 *******************************/
 
+/* A playback device was added or removed: update
+ * display_manager<-audio_output.  These events only arrive after
+ * <-audio_output started the audio subsystem.
+ */
+
+static bool
+sdl_audio_device_event(SDL_Event *event)
+{ if ( event->type != SDL_EVENT_AUDIO_DEVICE_ADDED &&
+       event->type != SDL_EVENT_AUDIO_DEVICE_REMOVED )
+    return false;
+
+  if ( !event->adevice.recording )
+  { pceMTLock();
+    DisplayManager dm = TheDisplayManager();
+
+    if ( notDefault(dm->audio_output) )
+      assign(dm, audio_output, ws_has_audio() ? ON : OFF);
+    pceMTUnlock();
+  }
+
+  return true;
+}
+
+
 bool
 sdl_audio_event(SDL_Event *event)
-{ if ( event->type != MY_EVENT_MEDIA )
+{ if ( sdl_audio_device_event(event) )
+    return true;
+  if ( event->type != MY_EVENT_MEDIA )
     return false;
 
   pceMTLock();

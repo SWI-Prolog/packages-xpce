@@ -42,6 +42,7 @@ initialiseDisplayManager(DisplayManager dm)
   assign(dm, focus_message, NIL);
   assign(dm, system_colours_message, NIL);
   assign(dm, inspect_handlers, newObject(ClassChain, EAV));
+  assign(dm, audio_output, DEFAULT);
 
   obtainClassVariablesObject(dm);
   protectObject(dm);
@@ -485,6 +486,20 @@ hasVisibleFramesDisplayManager(DisplayManager dm, BoolObj keep_alive)
 
 
 
+/* <-audio_output starts the audio subsystem the first time.  From then
+ * on, SDL reports devices that are added and removed, which update the
+ * slot (see sdl_audio_device_event()).
+ */
+
+static BoolObj
+getAudioOutputDisplayManager(DisplayManager dm)
+{ if ( isDefault(dm->audio_output) )
+    assign(dm, audio_output, ws_has_audio() ? ON : OFF);
+
+  answer(dm->audio_output);
+}
+
+
 		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/
@@ -501,7 +516,9 @@ static vardecl var_displayManager[] =
   IV(NAME_systemColoursMessage, "code*", IV_BOTH,
      NAME_colour, "Sent after reloading the system colours"),
   IV(NAME_inspectHandlers, "chain", IV_GET,
-     NAME_event, "Handlers to support inspector tools (all displays)")
+     NAME_event, "Handlers to support inspector tools (all displays)"),
+  IV(NAME_audioOutput, "[bool]", IV_NONE,
+     NAME_sound, "@on if there is a device to play sound on")
 };
 
 static char *T_busyCursor[] =
@@ -546,7 +563,9 @@ static getdecl get_displayManager[] =
      NAME_organisation, "New chain with the frames of all displays"),
   GM(NAME_windowOfLastEvent, 0, "window", NULL,
      getWindowOfLastEventDisplayManager,
-     NAME_event, "Find window that received last event")
+     NAME_event, "Find window that received last event"),
+  GM(NAME_audioOutput, 0, "bool", NULL, getAudioOutputDisplayManager,
+     NAME_sound, "@on if there is a device to play sound on")
 };
 
 /* Resources */

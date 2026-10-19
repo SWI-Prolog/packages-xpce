@@ -45,6 +45,14 @@ created at boot time.  Its responsibilities are:
 
     @see display<-inspect_handlers
 
+- display_manager<-audio_output: [bool]
+    `@on` if there is a device to play sound on.  The slot is
+    `@default` until the first request, which starts the audio
+    subsystem.  From then on the value follows the
+    playback devices that are added and removed.  Use this to make
+    sound optional, as playing a `sound` or `audio_stream` without a
+    device prints an error.
+
 
 ## Send methods {#class-display_manager-send}
 

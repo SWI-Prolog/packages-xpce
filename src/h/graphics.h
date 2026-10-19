@@ -950,6 +950,7 @@ NewClass(display_manager)
   Code		system_colours_message;	/* Sent after reloading the
 					   system colours */
   Chain		inspect_handlers;	/* Shared by all displays */
+  BoolObj	audio_output;		/* [bool]: a device to play sound on */
 End;
 
 
