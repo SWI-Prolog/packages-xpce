@@ -648,12 +648,14 @@ imply X-specific semantics.
     `pen_proximity_out`, `pen_down`, `pen_up`, `pen_motion`,
     `pen_button_down`, `pen_button_up`, `pen_axis`, `finger_down`,
     `finger_up`, `finger_motion`, `finger_canceled`, `pinch_begin`,
-    `pinch_update` and `pinch_end`.  The attributes of `fields` are
-    named after the fields of the SDL event structure (e.g., `x`, `y`,
-    `which`, `button`, `pressure`); missing fields are 0.  Positions
+    `pinch_update`, `pinch_end`, `key_down` and `key_up`.  The
+    attributes of `fields` are named after the fields of the SDL event
+    structure (e.g., `x`, `y`, `which`, `button`, `pressure`); missing
+    fields are 0.  Positions
     are relative to the frame, except for the finger events, whose `x`
     and `y` are normalised to 0..1 as in SDL.  The wheel event takes
     `dx`, `dy` (precise) and `integer_x`, `integer_y` (whole notches).
+    The key events take `key` (the SDL keycode), `scancode` and `mod`.
 
 - frame->attach_transient: frame
 - frame->detach_transient: frame

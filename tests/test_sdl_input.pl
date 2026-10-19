@@ -63,6 +63,7 @@ test_sdl_input :-
                 sdl_pen,
                 sdl_touch,
                 sdl_pinch,
+                sdl_keyboard,
                 pan_zoom
               ]).
 
@@ -126,6 +127,52 @@ events(Ids) :-
 
 events(Kind, Events) :-
     findall(E, (seen(E), send(E, is_a, Kind)), Events).
+
+%!  pump_for(+Seconds) is det.
+%
+%   Dispatch events for Seconds, e.g., to let a timer fire.
+
+pump_for(Seconds) :-
+    get_time(T0),
+    repeat,
+    ignore(send(@display, dispatch)),
+    get_time(T),
+    T - T0 > Seconds,
+    !.
+
+%!  key_down(+Frame, +Key, +Scancode, +Mod) is det.
+
+key_down(F, Key, Scancode, Mod) :-
+    sdl(F, key_down, [key=Key, scancode=Scancode, mod=Mod]).
+
+:- begin_tests(sdl_keyboard, [cleanup(close_windows)]).
+
+%       A window without text input gets the characters of the keys
+%       from the key-down events, as soon as they arrive.  The keycode
+%       of SDL is the unshifted key; the keymap gives the shifted one.
+
+test(plain_window, Ids == [0'a, 0'A, 0'!, 'RET', 1]) :-
+    open_window(F, _),
+    key_down(F, 0'a, 4, 0),             % a
+    key_down(F, 0'a, 4, 0x1),           % Shift-a
+    key_down(F, 0'1, 30, 0x1),          % Shift-1
+    key_down(F, 13, 40, 0),             % Return
+    key_down(F, 0'a, 4, 0x40),          % Control-a
+    events(Ids).
+
+%       With text input the character comes from the text input event:
+%       the key-down that has none must not type it as well.
+
+test(text_input, Ids-Value == []-'') :-
+    open_window(F, W),
+    send(W, display, new(TI, text_item(name, ''))),
+    send(W, keyboard_focus, TI),
+    key_down(F, 0'a, 4, 0),
+    pump_for(0.2),
+    events(Ids),
+    get(TI, selection, Value).
+
+:- end_tests(sdl_keyboard).
 
 :- begin_tests(sdl_wheel, [cleanup(close_windows)]).
 

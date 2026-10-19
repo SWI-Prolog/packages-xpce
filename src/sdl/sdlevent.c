@@ -155,6 +155,23 @@ state_to_buttons(SDL_MouseButtonFlags flags, SDL_Keymod mod)
   return toInt(r);
 }
 
+/* Whether SDL reports text for the keys typed in the window.  If not,
+ * as in a window without a focused text_item or editor, SDL sends no
+ * SDL_EVENT_TEXT_INPUT and the key-down itself is all there is.
+ */
+
+static bool
+text_input_active(SDL_WindowID wid)
+{ SDL_Window *w = SDL_GetWindowFromID(wid);
+
+  return w && SDL_TextInputActive(w);
+}
+
+static bool
+is_printable_key(SDL_Keycode key)
+{ return key >= ' ' && key != DEL && !(key & SDLK_SCANCODE_MASK);
+}
+
 static Any
 keycode_to_name(SDL_Event *event)
 { if ( event->key.key >= 32 && event->key.key < DEL )
@@ -192,6 +209,21 @@ keycode_to_name(SDL_Event *event)
      */
     if ( event->key.mod & (SDL_KMOD_GUI|MetaMask) )
       return toInt(event->key.key);
+  }
+
+  /* Without text input, a printable key is the character it types,
+   * as the keymap says with the modifiers held: Shift and AltGr give
+   * the symbol on the key.  Dead keys and input methods need text
+   * input, so they do not compose here.
+   */
+  if ( is_printable_key(event->key.key) &&
+       !(event->key.mod & (ControlMask|SDL_KMOD_GUI)) &&
+       !text_input_active(event->key.windowID) )
+  { SDL_Keycode key = SDL_GetKeyFromScancode(event->key.scancode,
+					     event->key.mod, false);
+
+    if ( is_printable_key(key) )
+      return toInt(key);
   }
 
   switch(event->key.key)
@@ -1406,7 +1438,8 @@ CtoEvent(SDL_Event *event)
 	fail;
       }
 
-      if ( event->key.mod & isdown )
+      if ( (event->key.mod & isdown) ||
+	   !text_input_active(event->key.windowID) ) /* no text will follow */
 	goto immediate_down_event;
 
       keydown_event  = *event;
@@ -1914,6 +1947,8 @@ static const test_event_type test_event_types[] =
   { "pinch_update",	 SDL_EVENT_PINCH_UPDATE },
   { "pinch_end",	 SDL_EVENT_PINCH_END },
 #endif
+  { "key_down",		 SDL_EVENT_KEY_DOWN },
+  { "key_up",		 SDL_EVENT_KEY_UP },
   { NULL, 0 }
 };
 
@@ -2039,6 +2074,15 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
       ev.pinch.scale	 = F(scale);
       break;
 #endif
+    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_KEY_UP:
+      ev.key.timestamp = now;
+      ev.key.windowID  = wid;
+      ev.key.scancode  = (SDL_Scancode)F(scancode);
+      ev.key.key       = (SDL_Keycode)F(key);
+      ev.key.mod       = (SDL_Keymod)F(mod);
+      ev.key.down      = t->type == SDL_EVENT_KEY_DOWN;
+      break;
     default:
       fail;
   }
