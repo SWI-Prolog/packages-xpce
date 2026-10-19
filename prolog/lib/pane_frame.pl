@@ -2560,7 +2560,8 @@ prompter(D, Prompter:dialog_item*) :->
     ;   true
     ),
     (   Prompter == @nil
-    ->  send(Reporter, clear),
+    ->  send(Reporter, clear),          % nothing stands: anything may
+        send(D, report_type, @nil),     % report again
         send(Reporter, displayed, @on)
     ;   send(Reporter, displayed, @off),
         get(Prompter, height, H),
@@ -2728,6 +2729,22 @@ report(P, Kind:name, Fmt:[char_array], Args:any ...) :->
     ->  pane_status_bar(P),
         Msg =.. [report, Kind, Fmt|Args],
         send_super(P, Msg)
+    ;   true
+    ).
+
+%       A pane that starts something new, e.g., a hit list that runs
+%       another search, forgets what it said about the previous one:
+%       otherwise it is said again when the pane comes into view and
+%       stands in the way of what the new action reports.
+
+forget_report(P) :->
+    "Forget my last message; take it away if I am in view"::
+    ignore(send(P, delete_attribute, last_report)),
+    (   pane_in_view(P),
+        get(P, frame, Frame),
+        send(Frame, has_get_method, status_dialog),
+        get(Frame, status_dialog, SD)
+    ->  send(SD, clear)
     ;   true
     ).
 

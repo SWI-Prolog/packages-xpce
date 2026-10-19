@@ -62,6 +62,7 @@ max_title_length(500).
 variable(hits,     int := 0,     get, "Number of hits found").
 variable(messages, chain*,       get, "Output lines that are not hits").
 variable(done,     bool := @off, get, "All output has been processed").
+variable(reported, bool := @off, get, "The outcome has been reported").
 
 %!  run(+P, +Editor, +Dir)
 %
@@ -71,14 +72,35 @@ variable(done,     bool := @off, get, "All output has been processed").
 run(P, BM:emacs_bookmark_editor, Dir:directory) :->
     "Run, adding the hits to the hit list"::
     ignore(send(BM, send_hyper, grep_process, kill_if_running)),
+    send(BM, forget_report),            % the outcome of the previous run
     send(BM, delete_hypers, grep_process),
     new(_, hyper(BM, P, grep_process, editor)),
     send(P, slot, messages, new(chain)),
     send(P, directory, Dir),
     send(P, input_message, message(P, hit_line, @arg1)),
+    send(P, terminate_message, message(P, report_outcome)),
     send(P, open),
     send(BM, open),
     send(BM, report, progress, 'Searching ...').
+
+%   Errors of the process, e.g., that the command cannot be started,
+%   are reported in the editor rather than on the console.
+
+report_to(P, BM:emacs_bookmark_editor) :<-
+    "Report to the hit list"::
+    get(P, hypered, editor, BM).
+
+%   A non-zero exit status need not be an error: grep and git grep exit
+%   with status 1 if nothing matches.  The status is part of the outcome
+%   reported by ->report_outcome.
+
+error(P, Error:error, Context:any ...) :->
+    "Ignore the exit status: ->report_outcome reports it"::
+    (   get(Error, id, process_exit_status)
+    ->  true
+    ;   Msg =.. [error, Error|Context],
+        send_super(P, Msg)
+    ).
 
 kill_if_running(P) :->
     "Kill me if I am running"::
@@ -111,13 +133,35 @@ end_of_file(P) :->
     send_super(P, end_of_file),
     send(P, slot, done, @on),
     (   get(P, hypered, editor, BM)
-    ->  send(BM, sort),
+    ->  send(BM, sort)
+    ;   true
+    ),
+    send(P, report_outcome).
+
+%!  report_outcome(+P)
+%
+%   Report the outcome if all output is processed and the process has
+%   exited, which may happen in either order.  If there are no hits, the
+%   first line of output that is not a hit is the most useful message,
+%   e.g., git's "fatal: ..." line.  An exit status other than 0 or 1
+%   (nothing matches) without such a line is an error of its own.
+
+report_outcome(P) :->
+    "Report the hits or the error"::
+    (   get(P, done, @on),
+        get(P, status, exited),
+        get(P, reported, @off),
+        get(P, hypered, editor, BM)
+    ->  send(P, slot, reported, @on),
         get(P, hits, Hits),
         get(P, messages, Messages),
+        get(P, code, Code),
         (   Hits > 0
         ->  send(BM, report, status, 'Found %d matches', Hits)
         ;   get(Messages, head, First)
         ->  send(BM, report, warning, '%s', First)
+        ;   integer(Code), Code > 1
+        ->  send(BM, report, warning, 'Exit status %d', Code)
         ;   send(BM, report, status, 'No matches')
         )
     ;   true

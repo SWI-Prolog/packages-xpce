@@ -56,7 +56,7 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(emacs/bookmarks)).
 :- use_module(library(emacs/grep)).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, delete/3]).
 :- use_module(library(process), [process_which/2]).
 
 test_emacs_grep :-
@@ -108,6 +108,25 @@ test(long_line, [TextLen-Pos-Len == 500-0-(@default)]) :-
 has_grep :-
     process_which(path(grep), _).
 
+%   A hit list that remembers the reports it got.
+
+:- pce_begin_class(grep_test_editor, emacs_bookmark_editor).
+
+variable(reports, chain := new(chain), get, "Kind-Text of the reports").
+
+report(BM, Kind:name, Fmt:[char_array], Args:any ...) :->
+    (   Fmt == @default
+    ->  Text = ""
+    ;   Format =.. [format, Fmt|Args],
+        new(S, string),
+        send(S, Format),
+        get(S, value, Atom),
+        atom_string(Atom, Text)
+    ),
+    send(BM?reports, append, prolog(Kind-Text)).
+
+:- pce_end_class(grep_test_editor).
+
 :- begin_tests(grep_hit_list, [ condition(has_grep),
                                 setup(make_tree),
                                 cleanup(remove_tree)
@@ -141,12 +160,24 @@ write_file(Dir, Name, Content) :-
 %   test directory.
 
 grep(Args, Hits, Marks) :-
+    grep(grep, Args, Hits, Marks, _).
+
+%!  grep(+Command, +Args, -Hits, -Marks, -Reports) is det.
+%
+%   Reports is a list of Kind-Text of the reports on the hit list,
+%   except for the progress report that grep started.
+
+grep(Command, Args, Hits, Marks, Reports) :-
     test_dir(Dir),
-    new(BM, emacs_bookmark_editor("grep test", @off)),
-    Term =.. [emacs_grep_process, grep|Args],
+    new(BM, grep_test_editor("grep test", @off)),
+    Term =.. [emacs_grep_process, Command|Args],
     new(P, Term),
     send(P, run, BM, directory(Dir)),
     await_done(P),
+    assertion(get(P, report_to, BM)),
+    get(BM, reports, ReportChain),
+    chain_list(ReportChain, Reports0),
+    delete(Reports0, progress-_, Reports),
     get(P, hits, Hits),
     get(BM?tree?root, bookmarks, Chain),
     chain_list(Chain, List),
@@ -164,7 +195,7 @@ mark(Dir, B, Rel-Line-Pos-Len) :-
 await_done(P) :-
     get_time(T0),
     repeat,
-      (   get(P, done, @on)
+      (   get(P, reported, @on)
       ->  !
       ;   get_time(T),
           T-T0 > 10
@@ -185,6 +216,19 @@ test(no_colour, [ Marks == ["sub/b.txt"-1-0-(@nil)] ]) :-
     grep(['-rn', '--color=never', start, '.'], _, Marks).
 test(no_match, [Hits-Marks == 0-[]]) :-
     grep(['-rn', nomatch, '.'], Hits, Marks).
+
+%   grep exits with status 1 if nothing matches.  That is not an error.
+%   Otherwise we report the message of the command or, if it has none,
+%   its exit status.  Nothing is printed on the console.
+
+test(no_match_report, [Reports == [status-"No matches"]]) :-
+    grep(grep, ['-rn', nomatch, '.'], _, _, Reports).
+test(error_message, [ Kind == warning,
+                      true(sub_string(Text, _, _, _, "grep"))
+                    ]) :-
+    grep(grep, ['--no-such-option', foo, '.'], _, _, [Kind-Text]).
+test(exit_status, [Reports == [warning-"Exit status 3"]]) :-
+    grep(sh, ['-c', 'exit 3'], _, _, Reports).
 
 :- end_tests(grep_hit_list).
 

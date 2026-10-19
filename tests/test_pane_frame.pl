@@ -2382,6 +2382,38 @@ test(a_status_message_leaves_it, Text == 'Summary 42') :-
     show(F, P2),
     show(F, P1),
     status_text(F, Text).
+
+%       A warning stands until the user does something, e.g., answers a
+%       prompt for the next command.  The outcome of that command may
+%       then take its place.
+
+test(a_prompt_ends_a_warning, Text == 'Found 2 matches') :-
+    two_pane_frame(F, P1, _P2),
+    send(P1, report, warning, 'Trailing backslash'),
+    get(F, status_dialog, SD),
+    send(SD, prompter, new(Item, text_item(pattern))),
+    send(SD, prompter, @nil),
+    send(Item, free),
+    send(P1, report, status, 'Found %d matches', 2),
+    status_text(F, Text).
+%       A pane that starts something new forgets what it said about the
+%       previous one, e.g., a hit list that runs another search.
+
+test(a_forgotten_report_does_not_come_back, Text == '') :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, warning, 'Trailing backslash'),
+    show(F, P2),
+    send(P1, forget_report),
+    show(F, P1),
+    status_text(F, Text).
+test(forgetting_takes_it_off_the_bar, Texts == ['', 'Found 2 matches']) :-
+    two_pane_frame(F, P1, _P2),
+    send(P1, report, warning, 'Trailing backslash'),
+    send(P1, forget_report),
+    status_text(F, T0),
+    send(P1, report, status, 'Found %d matches', 2),
+    status_text(F, T1),
+    Texts = [T0, T1].
 test(progress_is_not_remembered, Text == 'Summary 42') :-
     two_pane_frame(F, P1, P2),
     send(P1, report, inform, 'Summary %d', 42),
