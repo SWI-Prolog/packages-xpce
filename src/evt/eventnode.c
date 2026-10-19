@@ -39,11 +39,15 @@ static EventTreeObj	getTreeEventNode(EventNodeObj n);
 static status		sonEventNode(EventNodeObj n, EventNodeObj son);
 
 static status
-initialiseEventNode(EventNodeObj n, Any value, EventNodeObj parent)
+initialiseEventNode(EventNodeObj n, Any value, EventNodeObj parent,
+		    StringObj summary)
 { if ( isDefault(parent) )
     parent = NIL;
+  if ( isDefault(summary) )
+    summary = NIL;
 
-  assign(n, value,  value);
+  assign(n, value,   value);
+  assign(n, summary, summary);
 
   if ( isName(parent) )
   { EventNodeObj p;
@@ -110,7 +114,7 @@ getTreeEventNode(EventNodeObj n)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "value=name", "parent=[name|event_node]*" };
+        { "value=name", "parent=[name|event_node]*", "summary=[string]*" };
 
 /* Instance Variables */
 
@@ -120,14 +124,16 @@ static vardecl var_eventNode[] =
   IV(NAME_parent, "event_node|event_tree", IV_GET,
      NAME_hierarchy, "Direct parent of the node"),
   IV(NAME_sons, "chain*", IV_GET,
-     NAME_hierarchy, "Chain of direct sons")
+     NAME_hierarchy, "Chain of direct sons"),
+  IV(NAME_summary, "string*", IV_BOTH,
+     NAME_manual, "What events of this type mean")
 };
 
 /* Send Methods */
 
 static senddecl send_eventNode[] =
-{ SM(NAME_initialise, 2, T_initialise, initialiseEventNode,
-     DEFAULT, "Create from value and parent"),
+{ SM(NAME_initialise, 3, T_initialise, initialiseEventNode,
+     DEFAULT, "Create from value, parent and summary"),
   SM(NAME_son, 1, "event_node", sonEventNode,
      NAME_edit, "Add a son to the node"),
   SM(NAME_isA, 1, "event_node", isAEventNode,

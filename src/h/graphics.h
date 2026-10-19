@@ -1143,6 +1143,7 @@ NewClass(event_nodeobj)
   Name		value;			/* value of the event_node */
   EventNodeObj	parent;			/* Super event_node */
   Chain		sons;			/* Sub event_nodes */
+  StringObj	summary;		/* What the event type means */
 End;
 
 

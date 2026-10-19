@@ -84,9 +84,18 @@ about(V) :->
 help(_) :->
     send(@helper, give_help, event_monitor).
 
-event_property(id, next_row, []).
-event_property(x,  next_row, [length(4)]).
-event_property(y,  right,    [length(4), alignment(left)]).
+%!  event_property(?Name, ?Where, ?Attributes)
+%
+%   The text items that show a property of the event.  Where says how
+%   the item is placed relative to the one before it.
+
+event_property(id,       next_row, [length(40)]).
+event_property(x,        next_row, [length(4)]).
+event_property(y,        right,    [length(4), alignment(left)]).
+event_property(button,   next_row, [length(7)]).
+event_property(click,    right,    [length(6), alignment(left)]).
+event_property(rotation, right,    [length(4), alignment(left)]).
+event_property(device,   next_row, [length(30)]).
 
 modifier('C(ontrol)', control).
 modifier('M(eta)',    meta).
@@ -108,17 +117,21 @@ fill_dialog(V) :->
     ),
     send(Dialog, append, new(I, menu(modifiers, marked))),
     forall(modifier(M, _),
-           send(I, append, menu_item(M, label:=M, mnemonic := @nil))).
+           send(I, append, menu_item(M, label:=M, mnemonic := @nil))),
+    send(Dialog, append, new(DB, list_browser(@default, 40, 5))),
+    send(DB, name, detail),
+    send(DB, label, 'Detail:'),
+    send(DB, tab_stops, vector(150)).
 
 update_dialog(V, Ev:event) :->
     get(V, member, dialog, Dialog),
-    (   event_property(Name, _, _),
-        get(Dialog, member, Name, Item),
-        get(Ev, Name, Value),
-        send(Item, selection, Value),
-        fail
-    ;   true
-    ),
+    forall(( event_property(Name, _, _),
+             get(Dialog, member, Name, Item)
+           ),
+           (   event_value(Name, Ev, Value)
+           ->  send(Item, selection, Value)
+           ;   send(Item, clear)
+           )),
     get(Dialog, member, modifiers, Menu),
     forall(modifier(M, Name),
            (   send(Ev, has_modifier, modifier(Name := down))
@@ -126,11 +139,83 @@ update_dialog(V, Ev:event) :->
            ;   send(Menu, selected, M, @off)
            )),
     get(Dialog, member, description, DI),
-    (   get(Ev, id, Id),
-        description(Id, Description)
+    (   description(Ev, Description)
     ->  send(DI, selection, Description)
     ;   send(DI, selection, '<no description>')
-    ).
+    ),
+    get(Dialog, member, detail, DB),
+    send(DB, clear),
+    forall(event_detail(Ev, Name, Value),
+           send(DB, append, string('%s\t%s', Name, Value))).
+
+%!  event_value(+Name, +Event, -Value) is semidet.
+%
+%   What the text item Name shows for Event.  Fails if the property does
+%   not apply to Event.
+
+event_value(button, Ev, Button) :-
+    !,
+    send(Ev, is_a, button),
+    get(Ev, button, Button).
+event_value(click, Ev, Click) :-
+    !,
+    (   send(Ev, is_down)
+    ;   send(Ev, is_up)
+    ),
+    get(Ev, multiclick, Click).
+event_value(rotation, Ev, Rotation) :-
+    !,
+    get(Ev, rotation, Rotation0),
+    Rotation0 \== @nil,
+    format_value(Rotation0, Rotation).
+event_value(device, Ev, Device) :-
+    !,
+    get(Ev, device, D),
+    get(D, kind, Kind),
+    get(D, name, Name),
+    format(atom(Device), '~w: ~w', [Kind, Name]).
+event_value(Name, Ev, Value) :-
+    get(Ev, Name, Value0),
+    format_value(Value0, Value).
+
+%!  event_detail(+Event, -Name, -Value) is nondet.
+%
+%   The properties of the device specific data of Event:  the pressure
+%   of a pen, the finger of a touch, the file of a drop, etc.  They are
+%   the instance variables of its event_detail.
+
+event_detail(Ev, Name, Value) :-
+    get(Ev, detail, Detail),
+    Detail \== @nil,
+    get(Detail?class, instance_variables, Vars),
+    get(Vars, low_index, Low),
+    get(Vars, high_index, High),
+    between(Low, High, I),
+    get(Vars, element, I, Var),
+    get(Var, name, Name),
+    get(Detail, Name, Value0),
+    format_value(Value0, Value).
+
+format_value(Value, Text) :-
+    float(Value),
+    !,
+    format(atom(Text), '~3f', [Value]).
+format_value(Value, Text) :-
+    atomic(Value),
+    !,
+    Text = Value.
+format_value(@nil, '') :-
+    !.
+format_value(@on, '@on') :-
+    !.
+format_value(@off, '@off') :-
+    !.
+format_value(Obj, Text) :-
+    send(Obj, instance_of, char_array),
+    !,
+    get(Obj, value, Text).
+format_value(Obj, Text) :-
+    format(atom(Text), '~p', [Obj]).
 
 show_event(V, Ev:event) :->
     "Show last event"::
@@ -284,83 +369,21 @@ event_label(Ev, Label) :-
 
 :- pce_end_class.
 
-description(any,                       'Root of event-hierarchy').
-description(mouse,                     'Mouse (-button) related event').
-description(keyboard,                  'Keyboard related event').
-description(focus,                     'Keyboard/pointer-focus related event').
-description(area,                      'Area-crossing event').
-description(area_enter,                'Pointer enters area (of graphical)').
-description(area_exit,                 'Pointer leaves area (of graphical)').
-description(area_cancel,               'Pointer leaves area with mouse-button down').
-description(area_resume,               'Pointer re-enters area with mouse-button down').
-description(position,                  'Pointer movement, no buttons depressed').
-description(loc_move,                  'Pointer moves, no buttons depressed').
-description(loc_still,                 'Pointer did not move for 3/4 second').
-description(release_focus,             'Graphical lost (pointer-) focus').
-description(obtain_focus,              'Graphical got (pointer-) focus').
-description(obtain_keyboard_focus,     'Graphical gets keyboard focus of window').
-description(activate_keyboard_focus,   'Graphical gets keyboard focus').
-description(deactivate_keyboard_focus, 'Window of graphical looses keyboard focus').
-description(release_keyboard_focus,    'Graphical looses keyboard focus of window').
-description(ascii,                     'Normal key-press event').
-description(meta,                      'Meta (ALT) key-press event').
-description(control,                   'Non-printable key-press event').
-description(printable,                 'Printable key-press event').
-description(function,                  'Function-key key-press event').
-description(function_key,              'The F<n> keys').
-description(cursor,                    'Cursor-keypad key-press event').
-description(named_function,            'Named function key-press event').
-description(cursor_up,                 'Cursor-up key-press event').
-description(cursor_down,               'Cursor-up key-press event').
-description(cursor_left,               'Cursor-left key-press event').
-description(cursor_right,              'Cursor-right key-press event').
-description(page_up,                   'Page-up key-press event').
-description(page_down,                 'Page-down key-press event').
-description(cursor_home,               '"Home" key-press event').
-description(end,                       '"End" key-press event').
-description(127,                       '"Delete" key-press event').
-description(NamedFunction, Description) :-
-    get(@event_tree, node, NamedFunction, Node),
-    get(Node, parent, Parent),
-    get(Parent, value, named_function),
-    !,
-    get(string('"%s" key-press event', NamedFunction?capitalise),
-        value,
-        Description).
-description(NamedFunction, Description) :-
-    get(@event_tree, node, NamedFunction, Node),
-    get(Node, parent, Parent),
-    get(Parent, value, named_function),
-    !,
-    get(string('"%s" key-press event', NamedFunction?capitalise),
-        value,
-        Description).
-description(ButtonDrag, Description) :-
-    new(Re, regex('ms_([a-z]+)_drag')),
-    send(Re, match, ButtonDrag),
-    !,
-    get(Re, register_value, ButtonDrag, 1, name, LR),
-    get(string('Move with %s mouse-button depressed', LR),
-        value,
-        Description).
-description(ButtonDown, Description) :-
-    new(Re, regex('ms_([a-z]+)_([a-z]+)')),
-    send(Re, match, ButtonDown),
-    !,
-    get(Re, register_value, ButtonDown, 1, name, LR),
-    get(Re, register_value, ButtonDown, 2, name, UD),
-    get(string('%s mouse-button %s', LR?capitalise, UD),
-        value,
-        Description).
-description(FunctionKey, Description) :-
-    new(Re, regex('key_([a-z]+)_([0-9]+)')),
-    send(Re, match, FunctionKey),
-    !,
-    get(Re, register_value, FunctionKey, 1, name, Set),
-    get(Re, register_value, FunctionKey, 2, int, N),
-    get(string('%s function-keypad "F%d" key-press event', Set?capitalise, N),
-        value,
-        Description).
+%!  description(+Event, -Description) is semidet.
+%
+%   The summary of the event_node of the type of Event.  A key that
+%   types a character has no node of its own; it has the summary of the
+%   kind of key it is.
 
-
-
+description(Ev, Description) :-
+    get(Ev, id, Id),
+    (   atom(Id),
+        get(@event_tree, node, Id, Node)
+    ->  true
+    ;   special(Kind),
+        send(Ev, is_a, Kind)
+    ->  get(@event_tree, node, Kind, Node)
+    ),
+    get(Node, summary, Summary),
+    Summary \== @nil,
+    get(Summary, value, Description).

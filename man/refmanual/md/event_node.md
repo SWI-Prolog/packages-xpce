@@ -16,16 +16,22 @@ purposes as it's definition is subject to change.
     Chain of event_node objects that represent the sons.  Ordering is
     not defined.
 
+- event_node<->summary: string*
+    One line on what events of this type mean, e.g., "Finger touches
+    the screen" for touch_down.  The event viewer of the manual shows
+    it.  All types defined by the system have a summary.
+
 - event_node<-value: event_id
     `event <-id` associated with this node.
 
 
 ## Send methods {#class-event_node-send}
 
-- event_node->initialise: value=name, parent=[name|event_node]*
+- event_node->initialise: value=name, parent=[name|event_node]*, summary=[string]*
     Create an event_node object below `parent`.   By creating a new
     event_node the set of valid names for the type `event_id` is
     extended and event objects of this new type can be created.
+    `summary` describes the new type; see <-summary.
 
     The system defines a node named `user` for user-defined
     event-types.
