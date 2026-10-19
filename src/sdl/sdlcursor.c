@@ -74,6 +74,8 @@ static standard_cursor x11_cursors[] =
   { NULL,		   0 }
 };
 
+#define CURSOR_NONE (-1)		/* Hide the pointer */
+
 static standard_cursor sdl_cursors[] =
 {					/* Native SDL names, in menu order */
   { "default",	   SDL_SYSTEM_CURSOR_DEFAULT,	  "Normal pointer" },
@@ -102,6 +104,8 @@ static standard_cursor sdl_cursors[] =
     "Resize at the bottom-right corner" },
   { "sw_resize",   SDL_SYSTEM_CURSOR_SW_RESIZE,
     "Resize at the bottom-left corner" },
+  { "none",	   CURSOR_NONE,
+    "No pointer, e.g., for a game played with the keyboard" },
   { NULL,	   0,				  NULL }
 };
 
@@ -138,8 +142,33 @@ restore_cursor(void)
   if ( sw && ws_created_window(sw) )
   { updateCursorWindow(sw);
   } else				/* pointer not in one of our */
-  { ASSERT_SDL_MAIN();			/* windows */
-    SDL_SetCursor(SDL_GetDefaultCursor());
+  { ws_set_cursor(NULL);		/* windows */
+  }
+}
+
+
+static bool
+is_hidden_cursor(CursorObj c)
+{ return ( c && notNil(c) && notDefault(c) && isNil(c->image) &&
+	   ws_cursor_font_index(c->name) == toInt(CURSOR_NONE) );
+}
+
+
+/* Make c the cursor of the application.  NULL, @nil and @default
+ * mean the default cursor.  The cursor `none` hides the pointer.
+ */
+
+void
+ws_set_cursor(CursorObj c)
+{ ASSERT_SDL_MAIN();
+
+  if ( is_hidden_cursor(c) )
+  { SDL_HideCursor();
+  } else
+  { SDL_Cursor *sc = pceCursor2SDL_Cursor(c);
+
+    SDL_SetCursor(sc ? sc : SDL_GetDefaultCursor());
+    SDL_ShowCursor();
   }
 }
 
@@ -158,6 +187,7 @@ ws_set_busy_cursor(CursorObj c)
     { ASSERT_SDL_MAIN();
       busy_cursor = sc;
       SDL_SetCursor(sc);
+      SDL_ShowCursor();
     }
   }
 }
@@ -307,6 +337,8 @@ ws_create_cursor(CursorObj c, DisplayObj d)
     } else if ( isNil(c->image) )
     { Int idx = ws_cursor_font_index(c->name);
       assert(idx);
+      if ( idx == toInt(CURSOR_NONE) )	/* see ws_set_cursor() */
+	succeed;
       ASSERT_SDL_MAIN();
       SDL_Cursor *cursor = SDL_CreateSystemCursor(valInt(idx));
       c->ws_ref = cursor;

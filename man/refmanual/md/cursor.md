@@ -72,6 +72,10 @@ of a predefined cursor to a cursor object.
 
     	send(DebugIcon, cursor, not_allowed).
 
+    The predefined cursor `none` hides the pointer while it is over
+    the graphical, for example in the field of a game that is played
+    with the keyboard.
+
     In its second form it allows the user the define a cursor.  Such a
     cursor consists of:
 

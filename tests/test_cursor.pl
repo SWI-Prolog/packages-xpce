@@ -66,6 +66,14 @@ test(standard, Kind == standard) :-
     kind(pointer, Kind).
 test(x11, Kind == x11) :-
     kind(hand2, Kind).
+test(none, Kind == standard) :-
+    kind(none, Kind).
+test(none_on_window, Name == none) :-
+    new(W, window),
+    send(W, cursor, none),
+    get(W?cursor, name, Name),
+    send(W, cursor, @nil),
+    free(W).
 test(image, Kind == image) :-
     new(C, cursor(@nil, @pce_image, point(0,0))),
     get(C, kind, Kind),

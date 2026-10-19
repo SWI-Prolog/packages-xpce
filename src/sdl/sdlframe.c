@@ -1439,9 +1439,7 @@ ws_frame_cursor(FrameObj fr, CursorObj cursor)
 { if ( ws_busy_cursor() )               /* covers every frame */
     return;
 
-  SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
-  ASSERT_SDL_MAIN();
-  SDL_SetCursor(c ? c : SDL_GetDefaultCursor()); /* the frame may have none */
+  ws_set_cursor(cursor);		/* the frame may have none */
 }
 
 /**

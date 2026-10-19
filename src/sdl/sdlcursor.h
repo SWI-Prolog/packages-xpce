@@ -39,6 +39,7 @@
 void ws_init_cursor_font(void);
 bool ws_busy_cursor(void);
 void ws_set_busy_cursor(CursorObj c);
+void ws_set_cursor(CursorObj c);
 Int ws_cursor_font_index(Name name);
 Name ws_cursor_kind(Name name);
 const char *ws_cursor_summary(Name name);
