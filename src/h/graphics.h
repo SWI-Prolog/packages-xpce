@@ -447,7 +447,9 @@ End;
   Int	     value_width;		/* Width of value-field in pixels */ \
   Int	     hor_stretch;		/* Horizontal stretchability */ \
   Name	     style;			/* normal, combo_box */ \
-  Image	     clear_image;		/* Optional clear-field image */
+  Image	     clear_image;		/* Optional clear-field image */ \
+  Image	     icon;			/* Clickable image right of the field */ \
+  Code	     icon_message;		/* Executed when <-icon is clicked */
 
 NewClass(textitem)
   ABSTRACT_TEXTITEM

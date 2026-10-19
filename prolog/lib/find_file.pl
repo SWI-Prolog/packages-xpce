@@ -36,16 +36,12 @@
 :- use_module(library(pce)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-This file defines the driver for prompting   files. Upto XPCE 6.0.5 this
-module defined class finder as a subclass  of class dialog prompting for
-files. If the display implemented  <-win_file_name (Windows), the <-file
-method of finder called this method.
-
-Now,  @finder  is  a  simple   autoload    object   that   either  loads
-find_file_dialog or used `display<-win_file_name'.   This approach makes
-the code more readable and reduces resources on the Windows version. Any
-version of the system can use class find_file_dialog to realise portable
-embedable file-prompters.
+This file defines the driver for prompting files.  @finder uses the file
+dialog of the desktop (`frame<-open_file`, `frame<-save_file` and
+`frame<-open_directory`) if the class variable display.native_file_dialog
+is @on (default) and there is a frame to show the dialog for.  Otherwise
+it uses class find_file_dialog, which can also be embedded in other
+windows.
 
 Typical usage:
 
@@ -71,18 +67,7 @@ See <-file below for all optios.
 
 :- pce_global(@finder, new(finder)).
 
-%       register_file_dialog
-%
-%       If the display doesn't implement <-win_file_name we register the
-%       autoload class find_file_dialog to do the job ourselves.
-
-register_file_dialog :-
-    (   send(@display, has_get_method, win_file_name)
-    ->  true
-    ;   pce_autoload(find_file_dialog, find_file_dialog)
-    ).
-
-:- register_file_dialog.
+:- pce_autoload(find_file_dialog, find_file_dialog).
 
 
                  /*******************************
@@ -106,17 +91,15 @@ file(F, Exists:exists=[bool|{open,save}], Ext0:extension='[name|chain|tuple]',
     get_file(F, Exists, Ext0, Dir, Default, File).
 
 get_file(F, Exists, Ext, Dir, Default, File) :-
-    send(@display, has_get_method, win_file_name),
+    native_dialog_frame(Frame),
     !,
     mode(Exists, Mode),
-    win_filter(Ext, Filters),
-    (   Dir == @default
-    ->  get(F, directory, DefDir)
-    ;   DefDir = Dir
+    sdl_filters(Ext, Filters),
+    default_location(F, Dir, Default, Location),
+    (   Mode == save
+    ->  get(Frame, save_file, Filters, Location, File)
+    ;   get(Frame, open_file, Filters, Location, @off, File)
     ),
-    get(F, label, Label),
-    get(@display, win_file_name, Mode, Filters,
-        Label, Default, DefDir, @default, chain(overwriteprompt), File),
     file_directory_name(File, NewDir),
     send(F, slot, directory, NewDir).
 get_file(F, Exists, Ext, Dir, Default, File) :-
@@ -138,6 +121,105 @@ get_file(F, Exists, Ext, Dir, Default, File) :-
     send(F, slot, directory, D?directory),
     send(D, destroy).
 
+native(_F) :->
+    "True if the dialog of the desktop is used"::
+    native_dialog_frame(_).
+
+%   Not <-directory: that is the slot used by default_location/4.
+
+select_directory(F, Dir:directory=[directory], Result:name) :<-
+    "Ask for a directory using the dialog of the desktop"::
+    native_dialog_frame(Frame),
+    default_location(F, Dir, @default, Location),
+    get(Frame, open_directory, Location, Result),
+    send(F, slot, directory, Result).
+
+%!  native_dialog_frame(-Frame) is semidet.
+%
+%   Frame is the frame to show the file dialog of the desktop for, if
+%   display.native_file_dialog is @on.  This is the frame of the object
+%   that receives the current event or else a frame that is shown.
+
+native_dialog_frame(Frame) :-
+    get(@display, class_variable_value, native_file_dialog, @on),
+    (   send(@event, instance_of, event),
+        get(@event, receiver, Receiver),
+        send(Receiver, has_get_method, frame),
+        get(Receiver, frame, Frame),
+        shown_frame(Frame)
+    ->  true
+    ;   get(@display, frames, Frames),
+        chain_list(Frames, List),
+        member(Frame, List),
+        shown_frame(Frame)
+    ->  true
+    ).
+
+shown_frame(Frame) :-
+    send(Frame, instance_of, frame),
+    get(Frame, status, Status),
+    memberchk(Status, [window, full_screen, open]).
+
+%   default_location(+Finder, +Dir, +Default, -Location)
+%
+%   The file or directory the dialog starts with.
+
+default_location(F, Dir, Default, Location) :-
+    (   Dir == @default
+    ->  get(F, directory, D)
+    ;   D = Dir
+    ),
+    get(D, path, DirPath),
+    (   Default == @default
+    ->  Location = DirPath
+    ;   directory_file_path(DirPath, Default, Location)
+    ).
+
+%!  sdl_filters(+Spec, -Filters)
+%
+%   Map the extension specification of <-file to the filters of
+%   `frame<-open_file`: a chain of tuple(Label, Extensions), where
+%   Extensions is separated by `;` and `*` matches any file.
+
+sdl_filters(@default, @default) :- !.
+sdl_filters(Spec, chain(Tuple)) :-
+    atom(Spec),
+    !,
+    sdl_filter(Spec, Tuple).
+sdl_filters(Spec, chain(Tuple)) :-
+    send(Spec, instance_of, tuple),
+    !,
+    sdl_filter(Spec, Tuple).
+sdl_filters(Chain, Filters) :-
+    chain_list(Chain, Specs),
+    maplist(sdl_filter, Specs, Tuples),
+    Filters =.. [chain|Tuples].
+
+sdl_filter(Tuple, tuple(Label, Pattern)) :-
+    send(Tuple, instance_of, tuple),
+    !,
+    get(Tuple, first, Label),
+    get(Tuple, second, Exts),
+    sdl_pattern(Exts, Pattern).
+sdl_filter(Ext0, tuple(Label, Ext)) :-
+    sdl_pattern(Ext0, Ext),
+    (   file_type(Ext, Label)
+    ->  true
+    ;   format(atom(Label), '~w files', [Ext])
+    ).
+
+sdl_pattern(Exts, Pattern) :-
+    atom(Exts),
+    !,
+    (   atom_concat('.', Pattern, Exts)
+    ->  true
+    ;   Pattern = Exts
+    ).
+sdl_pattern(Chain, Pattern) :-
+    chain_list(Chain, List),
+    maplist(sdl_pattern, List, Patterns),
+    atomic_list_concat(Patterns, ;, Pattern).
+
 %!  mode(+Exists, -Mode)
 %
 %   Map old boolean mode to new named mode.
@@ -147,54 +229,6 @@ mode(@off,     save).
 mode(@default, open).
 mode(save,     save).
 mode(open,     open).
-
-%!  win_filter(+Spec, -Filter)
-%
-%   Map abstract filter to a filter for `display<-win_file_name'.
-%   See find_file_dialog for details.
-
-win_filter(@default, @default) :- !.
-win_filter(Atom, chain(Tuple)) :-
-    atom(Atom),
-    !,
-    file_filter(Atom, Tuple).
-win_filter(Tuple, chain(Filter)) :-
-    send(Tuple, instance_of, tuple),
-    !,
-    file_filter(Tuple, Filter).
-win_filter(Chain, Filter) :-
-    get(Chain, map, ?(@prolog, file_filter, @arg1), Filter).
-
-file_filter(Tuple, tuple(Label, Pattern)) :-
-    send(Tuple, instance_of, tuple),
-    !,
-    get(Tuple, first, Label),
-    get(Tuple, second, ExtList),
-    to_pattern(ExtList, Pattern).
-file_filter(*, tuple(all_files, *)) :- !.
-file_filter(Ext0, Filter) :-
-    atom_concat('.', Ext, Ext0),
-    !,
-    file_filter(Ext, Filter).
-file_filter(Ext, tuple(Name, Pattern)) :-
-    file_type(Ext, Name),
-    !,
-    atom_concat('*.', Ext, Pattern).
-file_filter(Ext, Pattern) :-
-    atom_concat('*.', Ext, Pattern).
-
-to_pattern(*, '*.*') :- !.
-to_pattern(Ext, Pattern) :-
-    atom(Ext),
-    !,
-    (   sub_atom(Ext, 0, _, _, '.')
-    ->  atom_concat('*', Ext, Pattern)
-    ;   atom_concat('*.', Ext, Pattern)
-    ).
-to_pattern(Chain, Pattern) :-
-    chain_list(Chain, List),
-    maplist(to_pattern, List, Patterns),
-    atomic_list_concat(Patterns, ';', Pattern).
 
 %!  file_type(?Extension, ?Type) is nondet.
 %

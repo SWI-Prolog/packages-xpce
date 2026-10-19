@@ -92,6 +92,7 @@ initialise(D, Mode:mode=[{open,save}], Label:[char_array]) :->
     send_super(D, initialise, find_file?label_name),
     send(D, slot, message, @default),
     send(D, append, new(LookIn, finder_look_in_item(look_in))),
+    send(LookIn, icon, @nil),
     send(LookIn, message, message(D, directory, @arg1)),
     send(D, append, new(Up, button(up)), right),
     send(D, append, new(New, button(newdir)), right),
@@ -111,6 +112,7 @@ initialise(D, Mode:mode=[{open,save}], Label:[char_array]) :->
     send(Files, open_message, message(D, open_file, @arg1?key)),
     send(Files, popup, @finder_file_popup),
     send(D, append, new(File, file_item(file))),
+    send(File, icon, @nil),               % no browsing from the browser
     send(D, append, button(ok), right),
     send(D, append, finder_filter_item(filter)),
     send(D, append, button(cancel), right),

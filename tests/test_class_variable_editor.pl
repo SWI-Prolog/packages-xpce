@@ -1056,7 +1056,7 @@ test(requires, [ Active == [@off, @on, @on, @off],
 %   The bell only plays a tone of bell_pitch if it has no sound file.
 %   The sound file is edited using a file_item.
 
-test(requires_all, [ Active == [@on, @off, @on, @off, @on, @on],
+test(requires_all, [ Active == [@on, @off, @on, @off, @on],
                      cleanup(( send(class(graphical), class_variable_value,
                                     visual_bell, @on),
                                send(class(display), class_variable_value,
@@ -1072,8 +1072,6 @@ test(requires_all, [ Active == [@on, @off, @on, @off, @on, @on],
     send(class(graphical), class_variable_value, visual_bell, @on),
     send(Sound, sync),
     get(Sound?switch, active, S0),
-    get(Sound?browse, active, B0),
-    assertion(B0 == @off),
     send(class(graphical), class_variable_value, visual_bell, @off),
     send(class(display), class_variable_value, bell_sound,
          file('/no/such/bell.wav')),
@@ -1082,8 +1080,7 @@ test(requires_all, [ Active == [@on, @off, @on, @off, @on, @on],
     get(Pitch?item, active, A1),
     get(Sound?item, active, A2),
     get(Sound?switch, active, S1),
-    get(Sound?browse, active, B1),
-    Active = [A0, A1, A2, S0, S1, B1].
+    Active = [A0, A1, A2, S0, S1].
 %   The finder starts in the directory with the sounds of the desktop.
 %   Wine has no such directory.
 
@@ -1095,10 +1092,12 @@ test(bell_sound_browse, [ Dir == Expected ]) :-
     new(Sound, pce_class_variable_editor:cv_row(class(display),
                                                 class(display), bell_sound)),
     get(Sound?item, browse_directory, Dir).
-test(bell_sound_item, [ Class-Text == file_item-"'/tmp/bell.wav'" ]) :-
+test(bell_sound_item, [ Class-Text-Browse ==
+                         file_item-"'/tmp/bell.wav'"-message ]) :-
     new(Sound, pce_class_variable_editor:cv_row(class(display),
                                                 class(display), bell_sound)),
     get(Sound?item, class_name, Class),
+    get(Sound?item?icon_message, class_name, Browse),
     pce_class_variable_editor:value_to_defaults_text(file('/tmp/bell.wav'),
                                                      Text).
 

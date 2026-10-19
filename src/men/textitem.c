@@ -49,6 +49,7 @@ static status	resetTextItem(TextItem ti);
 static int	combo_flags(TextItem ti);
 static status	detachTimerTextItem(TextItem ti);
 static int	text_item_clear_width(TextItem ti);
+static int	text_item_icon_width(TextItem ti);
 static int	clear_icon_shown(TextItem ti);
 
 
@@ -80,6 +81,8 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
   assign(ti, auto_value_align, OFF);
   assign(ti, hor_stretch,      toInt(100));
   assign(ti, style,	       NAME_normal);
+  assign(ti, icon,	       NIL);
+  assign(ti, icon_message,     NIL);
 
   Colour c;
   if ( (c=getClassVariableValueObject(ti, NAME_textColour)) &&
@@ -172,6 +175,21 @@ RedrawAreaTextItem(TextItem ti, Area a)
     int iy = ty + (th-ih)/2;
 
     r_image(ci, 0, 0, ix, iy, iw, ih);
+  }
+
+  int icw = text_item_icon_width(ti);
+  if ( icw > 0 )
+  { Image ic = ti->icon;
+    int iw = valInt(ic->size->w);
+    int ih = valInt(ic->size->h);
+    int ix = tx + tw + text_item_combo_width(ti) + clrw + (icw-iw)/2;
+    int iy = ty + (th-ih)/2;
+
+    if ( ti->active == OFF )		/* greyed out, as a button */
+      r_push_group();
+    r_image(ic, 0, 0, ix, iy, iw, ih);
+    if ( ti->active == OFF )
+      r_pop_group_with_alpha(INACTIVE_ALPHA);
   }
 
   return RedrawAreaGraphical(ti, a);
@@ -269,13 +287,14 @@ computeTextItem(TextItem ti)
     Int b = getClassVariableValueObject(ti, NAME_border);
     int cwb = text_item_combo_width(ti);
     int clrw = text_item_clear_width(ti);
+    int icw = text_item_icon_width(ti);
     TextObj vt = ti->value_text;
 
     obtainClassVariablesObject(ti);
     fontText(vt, ti->value_font);
     borderText(vt, b);
     if ( notDefault(ti->value_width) )
-    { Int vw = toInt(valInt(ti->value_width) - cwb - clrw);
+    { Int vw = toInt(valInt(ti->value_width) - cwb - clrw - icw);
       marginText(vt, vw, NAME_clip);
     } else
       lengthText(vt, ti->length);
@@ -289,7 +308,7 @@ computeTextItem(TextItem ti)
     assign(vt->area, y, toInt(am-av));
 
     h = max(lh, valInt(vt->area->h));
-    w = lw + valInt(vt->area->w) + cwb + clrw;
+    w = lw + valInt(vt->area->w) + cwb + clrw + icw;
 
     if ( ti->pen != ZERO )
       h = max(h, am+1+valInt(ti->pen));
@@ -532,6 +551,8 @@ selectCompletionDialogItem(Any item, Chain matches,
   fw = valInt(di->area->w) - lw;
   if ( instanceOfObject(di, ClassMenu) )
     fw = combo_box_width_menu((Menu)di, fw);
+  else if ( instanceOfObject(di, ClassTextItem) )
+    fw -= text_item_icon_width((TextItem)di);	/* not below the icon */
   fw = max(fw, 50);
 
   if ( isDefault(searchstring) )
@@ -973,6 +994,30 @@ text_item_clear_width(TextItem ti)
 }
 
 
+/* Width of the area right of the field that shows <-icon.  Clicking
+   it runs <-icon_message, e.g., to browse for a file.
+*/
+
+static int
+text_item_icon_width(TextItem ti)
+{ if ( instanceOfObject(ti->icon, ClassImage) )
+    return icon_area_width(ti, ti->icon);
+
+  return 0;
+}
+
+
+static status
+iconTextItem(TextItem ti, Image image)
+{ if ( ti->icon != image )
+  { assign(ti, icon, image);
+    requestComputeGraphical(ti, DEFAULT);
+  }
+
+  succeed;
+}
+
+
 static int
 clear_icon_shown(TextItem ti)
 { return ( text_item_clear_width(ti) > 0 &&
@@ -1029,7 +1074,7 @@ getIncDecTextItem(TextItem ti, EventObj ev)
 { if ( ti->style == NAME_stepper )
   { Int X, Y;
     int x, y;
-    int r = valInt(ti->area->w);
+    int r = valInt(ti->area->w) - text_item_icon_width(ti);
 
     get_xy_event(ev, ti, OFF, &X, &Y);
     x = valInt(X);
@@ -1197,6 +1242,24 @@ eventTextItem(TextItem ti, EventObj ev)
   { if ( 1 /* WantsKeyboardFocusTextItem(ti) */ )
     { int cbw;
       int wasactive = (ti->status == NAME_active);
+      int icw = text_item_icon_width(ti);
+      int r = valInt(ti->area->w) - icw;	/* right of the field */
+
+      if ( icw > 0 )
+      { Int X, Y;
+	int x, y;
+
+	if ( get_xy_event(ev, ti, ON, &X, &Y) &&
+	     (x = valInt(X), y = valInt(Y),
+	      y >= 0 &&
+	      y <= valInt(ti->area->h) &&
+	      x <= valInt(ti->area->w) &&
+	      x > r) )
+	{ if ( notNil(ti->icon_message) )
+	    forwardReceiverCode(ti->icon_message, ti, ti, EAV);
+	  succeed;
+	}
+      }
 
       send(ti, NAME_keyboardFocus, ON, EAV);
 
@@ -1209,8 +1272,8 @@ eventTextItem(TextItem ti, EventObj ev)
 	     (x = valInt(X), y = valInt(Y),
 	      y >= 0 &&
 	      y <= valInt(ti->area->h) &&
-	      x <= valInt(ti->area->w) &&
-	      x >= valInt(ti->area->w) - cbw) )
+	      x <= r &&
+	      x >= r - cbw) )
 	{ BoolObj val = (completerShownDialogItem(ti) ? OFF : ON);
 
 	  send(ti, NAME_showComboBox, val, EAV);
@@ -1227,8 +1290,8 @@ eventTextItem(TextItem ti, EventObj ev)
 	     (x = valInt(X), y = valInt(Y),
 	      y >= 0 &&
 	      y <= valInt(ti->area->h) &&
-	      x <= valInt(ti->area->w) &&
-	      x >= valInt(ti->area->w) - clrw) )
+	      x <= r &&
+	      x >= r - clrw) )
 	{ send(ti, NAME_clear, EAV);
 	  succeed;
 	}
@@ -1694,7 +1757,8 @@ valueWidthTextItem(TextItem ti, Int val)
 
   if ( notDefault(val) && instanceOfObject(ti->value_font, ClassFont) )
   { Int ex = getAvgCharWidthFont(ti->value_font);
-    int chars = (valInt(val) - text_item_combo_width(ti)) / valInt(ex);
+    int chars = (valInt(val) - text_item_combo_width(ti) -
+		 text_item_icon_width(ti)) / valInt(ex);
 
     if ( chars < 2 )
       chars = 2;
@@ -1877,7 +1941,11 @@ static vardecl var_textItem[] =
   IV(NAME_style, "{normal,combo_box,stepper}", IV_GET,
      NAME_appearance, "Show plain/combo-box/stepper"),
   SV(NAME_clearImage, "[image]*", IV_GET|IV_STORE, clearImageTextItem,
-     NAME_appearance, "Image at the right that clears the field when clicked")
+     NAME_appearance, "Image at the right that clears the field when clicked"),
+  SV(NAME_icon, "image*", IV_GET|IV_STORE, iconTextItem,
+     NAME_appearance, "Image right of the field that runs <-icon_message"),
+  IV(NAME_iconMessage, "code*", IV_BOTH,
+     NAME_action, "Executed with the item when <-icon is clicked")
 };
 
 /* Send Methods */

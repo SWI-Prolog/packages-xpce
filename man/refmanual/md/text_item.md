@@ -92,6 +92,16 @@ method.
 
     **Defaults**: @on
 
+- text_item<->icon: image*
+    Image shown right of the entry field.  Clicking it executes
+    <-icon_message.  Class `file_item` uses it for the icon that runs
+    `file_item->browse`.  The icon is greyed out if the item is not
+    <-active.
+
+- text_item<->icon_message: code*
+    Executed with the item as `@receiver` when <-icon is clicked.  The
+    click does not give the item the keyboard focus.
+
 - text_item<-style: {normal,combo_box,stepper}
     Class text item can represent a <-value_set or do completion on
     the basis of their associated <-type.  In both cases,

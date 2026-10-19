@@ -37,6 +37,7 @@
           ]).
 :- use_module(library(pce)).
 :- autoload(library(http/http_open), [http_open/3]).
+:- use_module(library(file_item)).
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
 
@@ -105,7 +106,11 @@ fill_dialog(F, D:dialog) :->
     send(D, append, button(load, message(F, load)), right),
     send(D, append, button(save, message(F, save)), right),
     send(D, append, button(quit, message(F, destroy)), right),
-    send(D, append, new(Loc, text_item(location, ''))),
+    send(D, append, new(Loc, file_item(location, '')), next_row),
+    send(Loc, alignment, left),
+    send(Loc, exists, open),
+    get(@display, sound_file_extensions, Exts),
+    send(Loc, filter, tuple('Sound files', Exts)),
     send(Loc, width, 40),
     send(D, append, button(stream, message(F, stream)), right),
     send(D, append, button(record_to_file, message(F, record_to_file)),
@@ -187,12 +192,12 @@ record_to_file(F) :->
 stream(F) :->
     "Play the URL or file of the location item while reading it"::
     get(F, member, controls, D),
-    get(D?location_member, selection, Location0),
-    (   Location0 == ''
-    ->  get(@display, sound_file_extensions, Exts),
-        get(@finder, file, open, tuple('Sound files', Exts), Location),
-        send(D?location_member, selection, Location)
-    ;   Location = Location0
+    get(D?location_member, displayed_value, Location0),   % may be a URL
+    get(Location0, value, Location),
+    (   Location == ''
+    ->  send(F, report, warning, 'Enter a URL or select a file'),
+        fail
+    ;   true
     ),
     send(F, stop),
     get(D?volume_member, selection, Volume),
@@ -305,7 +310,7 @@ update(F) :->
     ->  get(S, duration, T),
         send(L, format, 'Recording %.1f s', T)
     ;   Streaming
-    ->  get(D?location_member, selection, Loc),
+    ->  get(D?location_member, displayed_value, Loc),
         send(L, format, 'Streaming %s', Loc)
     ;   Playing
     ->  send(L, format, 'Playing %.1f s', Dur)

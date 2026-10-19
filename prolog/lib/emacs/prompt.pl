@@ -345,12 +345,7 @@ fill(D, Mode:emacs_mode, Impl:any, Argv:vector) :->
         ;   true
         ),
         send(Item, attribute, argn, ArgN),
-        send(D, append, Item),
-        (   send(Item, instance_of, file_item)
-        ->  send(D, append, button('Browse ...',
-                                   message(Item, browse)), right)
-        ;   true
-        ),
+        send(D, append, Item),             % a file_item has a browse icon
         fail
     ;   true
     ).

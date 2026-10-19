@@ -798,3 +798,7 @@ imply X-specific semantics.
 - frame<-save_file: filters=[chain], default=[char_array] -> name
     Use the OS file-save dialog.  Arguments as for `<-open_file`
     minus `allow_many`.
+
+- frame<-open_directory: default=[char_array] -> name
+    Use the OS dialog to prompt for a directory.  `default` is the
+    directory the dialog starts in.

@@ -59,15 +59,26 @@ convert(_, Name:name, SaveFile:save_file) :<-
 :- pce_begin_class(file_item, text_item,
                    "text_item with file-name completion").
 
+class_variable(browse_image, name*, 'tool/open.svg',
+               "Icon right of the field that runs ->browse; @nil: none").
+
 variable(exists,    'bool|{open,save}' := @off, both, "File must exist").
 variable(directory, directory*,                 both, "Relative to").
 variable(browse_directory, name*,               both,
          "Where ->browse starts if the item is empty").
+variable(filter,    '[name|chain|tuple]',       both,
+         "Extensions offered by ->browse; see finder<-file").
 
 initialise(FI, Name:[name], Def:[any|function], Msg:[code]*) :->
     clean_file_name(Def, Clean),
     send(FI, send_super, initialise, Name, Clean, Msg),
-    send(FI, style, combo_box).
+    send(FI, style, combo_box),
+    get(FI, class_variable_value, browse_image, Icon),
+    (   Icon == @nil
+    ->  true
+    ;   send(FI, icon, image(Icon, 22, 22)),
+        send(FI, icon_message, message(@receiver, browse))
+    ).
 
 
 activate(FI, Val:bool) :->
@@ -230,7 +241,8 @@ browse(FI) :->
     ;   file_directory_name(Sofar, Dir)
     ),
     get(FI, exists, Exists),
-    get(@finder, file, Exists, directory := Dir, New),
+    get(FI, filter, Filter),
+    get(@finder, file, Exists, Filter, directory := Dir, New),
     send(FI, value, New),
     send(FI, apply, @on).
 
@@ -261,10 +273,16 @@ browse(DI) :->
     ->  Sofar = '.'
     ;   Sofar = Sofar0
     ),
-    (   send(@display, has_get_method, win_directory)
-    ->  get(@display, win_directory, @default, Sofar, DirName),
-        send(DI, value, DirName),
-        send(DI, apply, @on)
+    (   send(@finder, native)
+    ->  (   exists_directory(Sofar)
+        ->  Dir = directory(Sofar)
+        ;   Dir = @default
+        ),
+        (   get(@finder, select_directory, Dir, DirName)
+        ->  send(DI, value, DirName),
+            send(DI, apply, @on)
+        ;   true                        % cancelled
+        )
     ;   send_super(DI, browse)
     ).
 

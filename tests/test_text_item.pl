@@ -60,6 +60,7 @@ Run with:
 
 test_text_item :-
     run_tests([ text_item_clear_button,
+                text_item_icon,
                 text_item_step,
                 float_item
               ]).
@@ -127,6 +128,79 @@ test(a_subclass_answers_the_same_way) :-
     assertion(Editable > ReadOnly).
 
 :- end_tests(text_item_clear_button).
+
+%       An <-icon right of the field runs <-icon_message when clicked,
+%       e.g., the browse icon of a file_item.
+
+:- dynamic icon_clicked/1.
+
+user:test_icon_clicked(Item) :-
+    assertz(test_text_item:icon_clicked(Item)).
+
+clicked(Item) :-
+    icon_clicked(Item).
+
+%   click(+Dialog, +Item, +FromRight)
+%
+%   Click Item FromRight pixels left of its right edge.
+
+click(D, Item, FromRight) :-
+    get(Item, area, area(X, Y, W, H)),
+    CX is X+W-FromRight,
+    CY is Y+H//2,
+    new(Ev, event(ms_left_down, D, CX, CY, 0, 1000)),
+    send(Ev, post, Item).
+
+icon_item(D, Item, Style) :-
+    new(Item, text_item(name, 'some text')),
+    send(Item, style, Style),
+    send(Item, icon, image('tool/open.svg', 22, 22)),
+    send(Item, icon_message, message(@prolog, test_icon_clicked, @receiver)),
+    new(D, dialog),
+    send(D, append, Item),
+    send(D, open).
+
+:- begin_tests(text_item_icon, [ setup(retractall(icon_clicked(_))) ]).
+
+test(room, [true(Extra > 22)]) :-
+    new(T, text_item(name, 'some text')),
+    item_width(T, Without),
+    send(T, icon, image('tool/open.svg', 22, 22)),
+    item_width(T, With),
+    Extra is With - Without.
+test(click_runs_message, [Clicked == true]) :-
+    retractall(icon_clicked(_)),
+    icon_item(D, Item, normal),
+    click(D, Item, 5),
+    ( clicked(Item) -> Clicked = true ; Clicked = false ),
+    send(D, destroy).
+test(click_in_field, [Clicked == false]) :-
+    retractall(icon_clicked(_)),
+    icon_item(D, Item, normal),
+    get(Item, width, W),
+    click(D, Item, W//2),
+    ( clicked(Item) -> Clicked = true ; Clicked = false ),
+    send(D, destroy).
+%   The combo box arrow is left of the icon.  Opening the combo box
+%   fails on the dummy driver, which we ignore.
+
+test(combo_box_icon, [Clicked == true]) :-
+    retractall(icon_clicked(_)),
+    icon_item(D, Item, combo_box),
+    click(D, Item, 5),
+    ( clicked(Item) -> Clicked = true ; Clicked = false ),
+    send(D, destroy).
+test(combo_box_arrow, [Clicked == false]) :-
+    retractall(icon_clicked(_)),
+    icon_item(D, Item, combo_box),
+    send(Item, value_set, chain(a, b)),
+    get(Item, icon, Icon),
+    get(Icon?size, width, IW),
+    catch(click(D, Item, IW+16), _, true),  % the combo arrow
+    ( clicked(Item) -> Clicked = true ; Clicked = false ),
+    send(D, destroy).
+
+:- end_tests(text_item_icon).
 
 %!  steps(+Item, +Keys, -Values) is det.
 %

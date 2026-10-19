@@ -42,6 +42,13 @@ See `display_manager <-current`.
     Settings/Theme menu of the IDE sets it for the running session.
     See `library(pce_theme)`.
 
+- display.native_file_dialog: bool = @on
+    If `@on`, `library(find_file)` (`@finder`, used by, e.g.,
+    `file_item->browse`) uses the file dialog of the desktop via
+    `frame<-open_file`, `frame<-save_file` and
+    `frame<-open_directory`.  If `@off`, or if no frame is shown, it
+    uses the dialog of xpce (class `find_file_dialog`).
+
 - display.volume: 0..100 = 20
     Default volume for `display ->bell`.
 

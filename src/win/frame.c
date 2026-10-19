@@ -2085,6 +2085,37 @@ getOpenFileFrame(FrameObj fr, Chain filters,
   return false;			/* error? */
 }
 
+/* Use the dialog of the desktop to ask for a directory */
+
+static Any
+getOpenDirectoryFrame(FrameObj fr, CharArray default_location)
+{ WsFrame wsf = sdl_frame(fr, false);
+
+  if ( wsf && wsf->ws_window )
+  { open_file_context ctx = {
+      .frame = fr,
+      .allow_many = false
+    };
+
+    SDL_ShowOpenFolderDialog(
+      open_file_callback, &ctx,
+      wsf->ws_window,
+      isDefault(default_location) ? NULL : charArrayToUTF8(default_location),
+      false);
+
+    Any rval = getWaitConfirmFrame(fr);
+    if ( !rval || rval == OFF )
+      fail;
+    if ( instanceOfObject(rval, ClassString) )
+      return errorPce(fr, NAME_SDLFileDialog, rval),NULL;
+
+    answer(rval);
+  }
+
+  return false;
+}
+
+
 static Any
 getSaveFileFrame(FrameObj fr, Chain filters, CharArray default_location)
 { WsFrame wsf = sdl_frame(fr, false);
@@ -2382,7 +2413,10 @@ static getdecl get_frame[] =
   GM(NAME_openFile, 3, "name|chain", T_openFile, getOpenFileFrame,
      NAME_dialog, "Use OS dialog to prompt for a file for reading"),
   GM(NAME_saveFile, 2, "name", T_saveFile, getSaveFileFrame,
-     NAME_dialog, "Use OS dialog to prompt for a file for writing")
+     NAME_dialog, "Use OS dialog to prompt for a file for writing"),
+  GM(NAME_openDirectory, 1, "name", "default=[char_array]",
+     getOpenDirectoryFrame,
+     NAME_dialog, "Use OS dialog to prompt for a directory")
 };
 
 /* Resources */

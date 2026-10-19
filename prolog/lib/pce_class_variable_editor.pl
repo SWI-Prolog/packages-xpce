@@ -333,6 +333,15 @@ browse_directory(Class, bell_sound, Dir) :-
     send(Class, is_a, display),
     system_sound_directory(Dir).
 
+%   browse_filter(+Class, +Name, -Filter) is semidet.
+%
+%   Browsing for the file class variable Name of Class offers the files
+%   of Filter (see `finder<-file`).
+
+browse_filter(Class, bell_sound, tuple('Sound files', Exts)) :-
+    send(Class, is_a, display),
+    get(@display, sound_file_extensions, Exts).
+
 %   system_sound_directory(-Dir) is semidet.
 %
 %   Dir is the directory holding the sounds of the desktop.
@@ -1022,7 +1031,6 @@ variable(special,  name*,        get, "Value if switched off: none or default").
 variable(switch,   bool_item,    get, "Off for @nil or @default").
 variable(revert,   link_label,   get, "Link to revert to the default").
 variable(help,     link_label,   get, "Link to the manual entry").
-variable(browse,   button*,      get, "Button to browse for a file").
 variable(saved,    any,          both, "Value in the Defaults file").
 variable(applied,  any,          both, "Value applied to the session").
 variable(relevant, bool := @on,  get, "Off if another value makes it unused").
@@ -1051,13 +1059,15 @@ initialise(R, Class:class, Declarer:class, Name:name, Scope:[name]) :->
     send(Item, message, message(R, item_changed)),
     (   send(Item, instance_of, file_item)
     ->  send(Item, exists, open),
-        send(Item, length, 18),
+        send(Item, length, 24),
         (   browse_directory(Class, Name, Dir)
         ->  send(Item, browse_directory, Dir)
         ;   true
         ),
-        send(R, slot, browse,
-             button('Browse ...', message(Item, browse)))
+        (   browse_filter(Class, Name, Filter)
+        ->  send(Item, filter, Filter)
+        ;   true
+        )
     ;   true
     ),
     send(R, slot, revert,
@@ -1333,10 +1343,6 @@ activate_item(R) :->
     ;   Active = @off
     ),
     send(R?item, active, Active),
-    (   get(R, browse, Browse), Browse \== @nil
-    ->  send(Browse, active, Active)
-    ;   true
-    ),
     (   get(R, special, Special), Special \== @nil  % else always inactive
     ->  send(Switch, active, Relevant)
     ;   true
@@ -1429,10 +1435,6 @@ append(R, D:dialog) :->
     ;   true
     ),
     send(G, append, Item, right),
-    (   get(R, browse, Browse), Browse \== @nil
-    ->  send(G, append, Browse, right)
-    ;   true
-    ),
     send(G, append, R?revert, right),      % acts on the value: next to it
     send(D, append, G),
     send(G, alignment, left),
