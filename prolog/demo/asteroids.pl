@@ -36,8 +36,6 @@
           [ asteroids/0
           ]).
 :- use_module(library(pce)).
-:- use_module(library(lists)).
-:- use_module(library(apply)).
 :- use_module(library(random)).
 
 /** <module> A game like Asteroids
@@ -52,12 +50,30 @@ p pauses and Enter starts a new game.  A gamepad works as well: the
 left stick rotates, the right trigger or `north` button thrusts and the
 `south` button fires.
 
-The game is driven by a timer.  On each tick the program polls the
-keyboard (`keyboard<-key_down`) and the gamepad, updates the state of
-the game, which is a Prolog term, and moves the graphicals.  The ship
-and the asteroids are figures holding a path, which are moved and
-rotated using `figure->transform`.  The sounds are generated as WAV
-files when the game starts.
+Everything on the field is a graphical object that holds its own state:
+the ship, the asteroids, the bullets, the particles of an explosion, the
+stars and the texts of the scoreboard.  The objects that move keep their
+position and velocity as floats, as rounding to pixels on every tick
+would make slow objects stick.  The window holds the state of the game
+as a whole: the score, the lives, the level and the duration of the
+current tick.  The parameters of the game are class variables of the
+classes they belong to, so they can be changed in the user's xpce
+defaults file.  A class variable with the same name as a variable
+provides the initial value of the variable.
+
+The game is driven by a timer.  On each tick the window sends `tick` to
+all its graphicals:
+
+    send(Window?graphicals, for_all, message(@arg1, tick))
+
+Each object then moves, checks whether it hits something and destroys
+itself when its time is up.  `chain->for_all` works on a copy of the
+chain and skips objects that are destroyed during the iteration, so a
+tick may freely add and remove graphicals.  The ship gets its controls
+from `window<-input`, which polls the keyboard (`keyboard<-key_down`)
+and the gamepad.  The ship and the asteroids are figures holding a
+path, which are moved and rotated using `figure->transform`.  The
+sounds are computed as samples that are played using an audio_stream.
 
 Run with:
 
@@ -65,59 +81,8 @@ Run with:
 */
 
 asteroids :-
-    init_gamepad,
     new(F, asteroids_game),
     send(F, open).
-
-%   Use the first gamepad that is connected when the game starts.
-
-init_gamepad :-
-    (   get(@display, gamepads, Pads),
-        get(Pads, head, Pad)
-    ->  true
-    ;   Pad = none
-    ),
-    nb_setval(asteroids_gamepad, Pad).
-
-		 /*******************************
-		 *	      PARAMETERS	*
-		 *******************************/
-
-%!  field(-Width, -Height) is det.
-%
-%   The size of the playing field.  This follows the size of the window;
-%   see resize/1.
-
-field(W, H) :-
-    (   nb_current(asteroids_field, W-H)
-    ->  true
-    ;   W = 800, H = 600
-    ).
-tick(0.02).				% seconds per tick
-
-rotate_speed(270).			% degrees/second
-thrust(350).				% pixels/second^2
-max_speed(450).
-friction(0.995).			% per tick
-bullet_speed(550).
-bullet_life(1.0).			% seconds
-max_bullets(6).
-fire_interval(0.18).			% seconds
-ship_radius(12).
-respawn_time(2.0).
-safe_time(2.5).				% invulnerable after a respawn
-
-asteroid_radius(large,  42).
-asteroid_radius(medium, 24).
-asteroid_radius(small,  13).
-
-asteroid_score(large,   20).
-asteroid_score(medium,  50).
-asteroid_score(small,  100).
-
-split(large,  medium).
-split(medium, small).
-
 
 		 /*******************************
 		 *	       THE GAME		*
@@ -125,216 +90,426 @@ split(medium, small).
 
 :- pce_begin_class(asteroids_game, frame, "A game like Asteroids").
 
-variable(timer, timer*, get, "Timer that drives the game").
-
 initialise(F) :->
     send_super(F, initialise, 'Asteroids'),
-    nb_setval(asteroids_field, 800-600),
-    field(W, H),
-    send(F, append, new(P, asteroids_window(W, H))),
-    send(P, name, field),
-    send(F, slot, timer, timer(0.02, message(F, tick))),
-    send(F, new_game),
-    send(F?timer, start).
-
-unlink(F) :->
-    send(F?timer, stop),
-    state_key(F, Key),
-    nb_delete(Key),
-    send_super(F, unlink).
-
-new_game(F) :->
-    "Start a new game"::
-    get(F, member, field, P),
-    send(P, clear),
-    nb_setval(asteroids_burst, []),
-    stars(P),
-    make_hud(P),
-    get_time(Now),
-    State0 = game{ ship:none, asteroids:[], bullets:[], particles:[],
-                   score:0, lives:3, level:0, mode:playing,
-                   respawn_at:0, safe_until:0, last_fire:0,
-                   time:Now, paused:false, pause_key:false
-                 },
-    new_level(P, State0, State1),
-    spawn_ship(P, Now, State1, State),
-    set_state(F, State),
-    hud(P, State).
-
-tick(F) :->
-    "Advance the game one tick"::
-    (   get_state(F, State0)
-    ->  get(F, member, field, P),
-        resize(P),
-        get_time(Now),
-        step(P, Now, State0, State),
-        set_state(F, State)
-    ;   true
-    ).
+    send(F, append, new(P, asteroids_window(size(800, 600)))),
+    send(P, new_game).
 
 :- pce_end_class(asteroids_game).
 
-state_key(F, Key) :-
-    format(atom(Key), 'asteroids_~w', [F]).
 
-get_state(F, State) :-
-    state_key(F, Key),
-    nb_current(Key, State).
+%   The window holds the state of the game as a whole and drives the
+%   game using a timer.  A key binding handles p (pause) and Enter (new
+%   game).  The controls of the ship are polled on each tick.
 
-set_state(F, State) :-
-    state_key(F, Key),
-    nb_setval(Key, State).
+:- pce_begin_class(asteroids_window(size), window,
+                   "The field of the game").
 
+variable(timer,        timer*, get, "Timer that drives the game").
+variable(score,        int,    get, "Score of the player").
+variable(lives,        int,    get, "Ships left").
+variable(level,        int,    get, "Current level").
+variable(mode,  {playing,respawn,game_over}, get, "State of the game").
+variable(respawn,      num,    get, "Seconds until the next ship appears").
+variable(level_break,  num,    get, "Seconds left of the break after a level").
+variable(paused,       bool,   get, "Game is paused").
+variable(time,         num,    get, "Time of the last tick").
+variable(dt,           num,    get, "Seconds since the last tick").
+variable(gamepad,      any*,   get, "Gamepad used to play").
 
-%   The window swallows the keyboard events: the game polls the keyboard
-%   and the cursor keys would otherwise scroll the window.  Enter
-%   starts a new game.
+class_variable(tick,           num, 0.02, "Seconds per tick").
+class_variable(lives,          int, 3,    "Ships at the start of a game").
+class_variable(respawn,        num, 2.0,  "Seconds until a new ship appears").
+class_variable(level_break,    num, 2.0,  "Seconds between two levels").
+class_variable(max_dt,         num, 0.05, "Longest tick in seconds").
+class_variable(base_asteroids, int, 3,    "Asteroids are this + level").
+class_variable(star_area,      int, 5000, "Square pixels per star").
+class_variable(volume,         '0.0..1.0', 0.4, "Volume of the sound effects").
 
-:- pce_begin_class(asteroids_window, picture, "The field of the game").
+initialise(P, Size:size=size) :->
+    send_super(P, initialise, 'Asteroids', Size),
+    send(P, background, colour(black)),
+    send(P, slot, paused, @off),
+    get_time(Now),
+    send(P, slot, time, Now),
+    send(P, slot, dt, 0.0),
+    (   get(@display, gamepads, Pads),  % the first connected gamepad
+        get(Pads, head, Pad)
+    ->  send(P, slot, gamepad, Pad)
+    ;   true
+    ),
+    send(P, recogniser, new(KB, key_binding)),
+    send(KB, function,  p,    message(@receiver, toggle_paused)),
+    send(KB, function, 'RET', message(@receiver, new_game)).
 
-initialise(P, W:int, H:int) :->
-    send_super(P, initialise, 'Asteroids', size(W, H)),
-    send(P, scrollbars, none),
-    send(P, background, colour(black)).
+unlink(P) :->
+    "Stop the timer"::
+    send(P?timer, stop),
+    send_super(P, unlink).
 
-event(P, Ev:event) :->
-    (   send(Ev, is_a, keyboard)
-    ->  (   get(Ev, id, Id),
-            memberchk(Id, ['RET', 13])      % Enter
-        ->  send(P?frame, new_game)
-        ;   true
-        )
-    ;   send_super(P, event, Ev)
+input(P, In:prolog) :<-
+    "Get action from the keyboard or gamepad"::
+    (   get(P, input_focus, @on)
+    ->  get(P, rotate, R),
+        get(P, thrust, T),
+        get(P, fire, Fire),
+        In = #{rotate:R, thrust:T, fire:Fire}
+    ;   In = #{rotate:0, thrust:false, fire:false}
     ).
 
-:- pce_end_class(asteroids_window).
-
-
-		 /*******************************
-		 *	      ONE STEP		*
-		 *******************************/
-
-step(P, Now, S0, S) :-
-    Dt is min(0.05, Now - S0.time),
-    pause(Now, S0, S1),
-    (   S1.paused == true
-    ->  S = S1.put(time, Now)
-    ;   input(Input),
-        S2 = S1.put(time, Now),
-        ship_step(P, Input, Now, Dt, S2, S3),
-        fire(P, Input, Now, S3, S4),
-        bullets_step(P, Dt, S4, S5),
-        asteroids_step(P, Dt, S5, S6),
-        particles_step(P, Dt, S6, S7),
-        collisions(P, Now, S7, S8),
-        respawn(P, Now, S8, S9),
-        next_level(P, Now, S9, S),
-        hud(P, S)
-    ).
-
-%!  input(-Input) is det.
-%
-%   Poll the keyboard and the gamepad.  Input is a dict with the keys
-%   rotate (-1..1), thrust and fire.
-
-input(input{rotate:R, thrust:T, fire:Fire}) :-
+rotate(P, R:num) :<-
+    "Get desired ship rotation"::
     key(cursor_left, L), key(cursor_right, Rt),
     KR is Rt - L,
-    pad_rotate(PR),
-    R is max(-1, min(1, KR + PR)),
-    (   ( key(cursor_up, 1) ; pad_thrust ) -> T = true ; T = false ),
-    (   ( key(space, 1) ; pad_button(south) ) -> Fire = true ; Fire = false ).
+    pad_rotate(P, PR),
+    R is max(-1, min(1, KR + PR)).
 
-key(Key, V) :-
-    (   get(@keyboard_device, key_down, Key, @on) -> V = 1 ; V = 0 ).
-
-%   The gamepad is only used if the user has one connected when the
-%   game starts; see init_gamepad/0.
-
-pad(Pad) :-
-    nb_current(asteroids_gamepad, Pad),
-    Pad \== none,
-    get(Pad, connected, @on).
-
-pad_rotate(R) :-
-    (   pad(Pad), get(Pad, axis, left_x, X), abs(X) > 0.25
+pad_rotate(P, R) :-
+    (   pad(P, Pad),
+        get(Pad, axis, left_x, X),
+        abs(X) > 0.25
     ->  R = X
     ;   R = 0
     ).
 
-pad_thrust :-
-    pad(Pad),
-    (   get(Pad, button, north, @on)
-    ;   get(Pad, axis, right_trigger, T), T > 0.3
-    ),
-    !.
+thrust(P, Thrust:{true,false}) :<-
+    "Should the ship accelerate?"::
+    (   key_down(cursor_up)
+    ->  Thrust = true
+    ;   pad_thrust(P)
+    ->  Thrust = true
+    ;   Thrust = false
+    ).
 
-pad_button(B) :-
-    pad(Pad),
+pad_thrust(P) :-
+    pad(P, Pad),
+    (   get(Pad, button, north, @on)
+    ->  true
+    ;   get(Pad, axis, right_trigger, T),
+        T > 0.3
+    ).
+
+fire(P, Fire:{true,false}) :<-
+    "Should the ship fire?"::
+    (   key_down(space)
+    ->  Fire = true
+    ;   pad_button(P, south)
+    ->  Fire = true
+    ;   Fire = false
+    ).
+
+pad_button(P, B) :-
+    pad(P, Pad),
     get(Pad, button, B, @on).
 
-pause(_Now, S0, S) :-
-    key(p, Down),
-    (   Down == 1, S0.pause_key == false
-    ->  ( S0.paused == true -> P = false ; P = true ),
-        S = S0.put(_{paused:P, pause_key:true})
-    ;   Down == 0
-    ->  S = S0.put(pause_key, false)
-    ;   S = S0
+pad(P, Pad) :-
+    get(P, gamepad, Pad),
+    Pad \== @nil,
+    get(Pad, connected, @on).
+
+new_game(P) :->
+    "Start a new game"::
+    send(P, start_ticking),
+    send(P, clear),
+    send(P, slot, score, 0),
+    get(P, class_variable_value, lives, Lives),
+    send(P, slot, lives, Lives),
+    send(P, slot, level, 0),
+    send(P, slot, respawn, 0.0),
+    send(P, slot, level_break, 0.0),
+    send(P, slot, paused, @off),
+    send(P, stars),
+    send(P, display, new(asteroids_score), point(10, 8)),
+    send(P, display, new(asteroids_banner)),
+    send(P, new_level),
+    send(P, spawn_ship).
+
+start_ticking(P) :->
+    "Start the game ticker"::
+    (   get(P, timer, @nil)
+    ->  get(P, tick, Tick),
+        send(P, slot, timer,
+             new(Timer, timer(Tick, message(P, tick)))),
+        send(Timer, start)
+    ;   true
     ).
+
+tick(P) :->
+    "Advance the game one tick"::
+    get_time(Now),
+    get(P, time, T0),
+    get(P, max_dt, MaxDt),
+    Dt is min(MaxDt, Now - T0),
+    send(P, slot, time, Now),
+    send(P, slot, dt, Dt),
+    (   get(P, paused, @on)
+    ->  get(P, member, banner, Banner),
+        send(Banner, tick)
+    ;   send(P?graphicals, for_all, message(@arg1, tick)),
+        respawn(P, Dt),
+        next_level(P)
+    ).
+
+new_level(P) :->
+    "Start the next level with more asteroids"::
+    get(P, level, Level0),
+    Level is Level0 + 1,
+    send(P, slot, level, Level),
+    get(P, base_asteroids, Base),
+    N is Base + Level,
+    forall(between(1, N, _), new_asteroid(P)).
+
+spawn_ship(P) :->
+    "Put a new ship in the middle of the field"::
+    get(P, width, W),
+    get(P, height, H),
+    X is W/2, Y is H/2,
+    send(P, display, asteroids_ship(X, Y)),
+    send(P, slot, mode, playing).
+
+ship_lost(P) :->
+    "The ship was destroyed"::
+    get(P, lives, Lives0),
+    Lives is Lives0 - 1,
+    send(P, slot, lives, Lives),
+    get(P, class_variable_value, respawn, RT),
+    send(P, slot, respawn, RT),
+    (   Lives > 0
+    ->  send(P, slot, mode, respawn)
+    ;   send(P, slot, mode, game_over)
+    ).
+
+add_score(P, Points:int) :->
+    "Add Points to the score"::
+    get(P, score, Score0),
+    Score is Score0 + Points,
+    send(P, slot, score, Score).
+
+toggle_paused(P) :->
+    "Pause the game on 'p'"::
+    send(P, slot, paused, P?paused?negate).
+
+respawn(P, Dt) :-
+    get(P, mode, respawn),
+    !,
+    get(P, respawn, Left0),
+    Left is Left0 - Dt,
+    (   Left =< 0
+    ->  send(P, spawn_ship)
+    ;   send(P, slot, respawn, Left)
+    ).
+respawn(_, _).
+
+%   The field is clear.  After a break of <-level_break seconds, during
+%   which the banner congratulates the player, the next level starts.
+
+next_level(P) :-
+    \+ get(P, mode, game_over),
+    \+ get(P?graphicals, find, message(@arg1, instance_of, asteroid), _),
+    !,
+    get(P, level_break, Left0),
+    (   Left0 > 0                       % in the break
+    ->  get(P, dt, Dt),
+        Left is Left0 - Dt,
+        (   Left > 0
+        ->  send(P, slot, level_break, Left)
+        ;   send(P, slot, level_break, 0.0),
+            start_level(P)
+        )
+    ;   get(P, class_variable_value, level_break, Break),
+        (   Break > 0
+        ->  send(P, slot, level_break, Break)
+        ;   start_level(P)
+        )
+    ).
+next_level(_).
+
+%   The new asteroids appear at the edge, so the ship gets a little time
+%   to get out of their way.
+
+start_level(P) :-
+    send(P, new_level),
+    (   get(P, member, ship, Ship)
+    ->  get(Ship, class_variable_value, safe, Safe),
+        send(Ship, slot, safe, Safe)
+    ;   true
+    ).
+
+%   A new large asteroid at the edge of the field, away from the ship.
+
+new_asteroid(P) :-
+    get(P, width, W),
+    get(P, height, H),
+    (   maybe
+    ->  X is random_float*W, Y = 0
+    ;   X = 0, Y is random_float*H
+    ),
+    send(P, display, asteroid(large, X, Y)).
+
+%!  ->resize
+%
+%   The user resized the window.  The starfield is made anew for the
+%   new size.  Objects outside a smaller field come back through the
+%   edges (see wrap/5).
+
+resize(P) :->
+    "Make a new starfield for the new size"::
+    send(P?graphicals, for_all,
+         if(message(@arg1, instance_of, asteroids_star),
+            message(@arg1, destroy))),
+    send(P, stars).
+
+%!  ->stars
+%
+%   The stars are put below everything. The   number of stars depends on
+%   the size of the field.
+
+stars(P) :->
+    "Add random stars below everything"::
+    get(P, size, size(W,H)),
+    get(P, star_area, Area),
+    N is W*H//Area,
+    forall(between(1, N, _),
+           ( X is random(W), Y is random(H),
+             random_member(Size, [1, 1, 2, 2, 3]),
+             send(P, display, new(Star, asteroids_star(Size)), point(X, Y)),
+             send(Star, hide)
+           )).
+
+%   Each play uses a new audio_stream that gets the samples of the
+%   effect and is freed after it is played.  The samples are computed
+%   the first time an effect is used.  Without an audio device, the
+%   game is silent.
+
+play(P, Effect:{fire,bang,bang_small,explosion}) :->
+    "Play a sound effect"::
+    (   get(@display_manager, audio_output, @on)
+    ->  rate(Rate),
+        effect_samples(Effect, Samples),
+        get(P, volume, Volume),
+        new(AS, audio_stream(s16, Rate, 1)),
+        send(AS, volume, Volume),
+        (   send(AS, append, Samples),
+            send(AS, close),
+            send(AS, play)
+        ->  true
+        ;   free(AS)
+        )
+    ;   true
+    ).
+
+effect(fire,       0.12, chirp(1400, 500)).
+effect(bang,       0.35, noise(0.6)).
+effect(bang_small, 0.20, noise(0.4)).
+effect(explosion,  0.9,  noise(0.9)).
+
+rate(22050).
+
+%!  effect_samples(+Effect, -Samples:string) is det.
+%
+%   Samples are the 16-bit mono samples of Effect as a string of bytes.
+%   audio_stream expects native byte order; we assume little endian.
+
+:- table effect_samples/2.
+
+effect_samples(Effect, Samples) :-
+    effect(Effect, Seconds, Gen),
+    rate(Rate),
+    N is round(Rate*Seconds),
+    findall(B,
+            ( between(0, N, I),
+              sample(Gen, I, N, Rate, V),
+              S is max(-32767, min(32767, round(V*32767))) /\ 0xffff,
+              (   B is S /\ 0xff
+              ;   B is S >> 8
+              )
+            ), Bytes),
+    string_codes(Samples, Bytes).
+
+%   A tone sweeping from F0 to F1 and noise, both fading out.
+
+sample(chirp(F0, F1), I, N, Rate, V) :-
+    T is I/Rate,
+    F is F0 + (F1-F0)*I/N,
+    V is 0.5*sin(2*pi*F*T)*(1-I/N).
+sample(noise(Level), I, N, _, V) :-
+    Fade is (1-I/N)**2,
+    V is Level*(random_float*2-1)*Fade.
+
+:- pce_end_class(asteroids_window).
 
 
 		 /*******************************
 		 *	       THE SHIP		*
 		 *******************************/
 
-ship_figure(P, Fig) :-
-    new(Fig, figure),
+:- pce_begin_class(asteroids_ship(px, py), figure, "The ship of the player").
+
+variable(px,     num, get, "X of the centre").
+variable(py,     num, get, "Y of the centre").
+variable(vx,     num, get, "Horizontal velocity").
+variable(vy,     num, get, "Vertical velocity").
+variable(angle,  num, get, "Heading in degrees").
+variable(safe,   num, get, "Seconds the ship remains invulnerable").
+variable(reload, num, get, "Seconds until the ship can fire again").
+
+class_variable(safe,            num, 2.5,   "Seconds safe after a respawn").
+class_variable(reload,          num, 0.18,  "Seconds between two shots").
+class_variable(rotate_speed,    num, 270,   "Degrees/second").
+class_variable(thrust,          num, 350,   "Pixels/second^2").
+class_variable(max_speed,       num, 450,   "Pixels/second").
+class_variable(friction,        num, 0.995, "Speed kept per tick").
+class_variable(bullet_speed,    num, 550,   "Pixels/second, relative to ship").
+class_variable(max_bullets,     int, 6,     "Bullets that can be in flight").
+class_variable(hit_radius,      num, 12,    "Radius for collisions").
+class_variable(burst_particles, int, 30,    "Particles of an explosion").
+
+initialise(S, X:num, Y:num) :->
+    send_super(S, initialise),
+    send(S, name, ship),
+    send(S, slot, px, X),
+    send(S, slot, py, Y),
+    set_velocity(S, 0.0, 0.0),
+    send(S, slot, angle, -90.0),
+    send(S, slot, reload, 0.0),
     Hull = [point(16, 0), point(-12, 10), point(-7, 0), point(-12, -10)],
     closed_path(Hull, Glow),                % a soft glow below the hull
     send(Glow, colour, colour(cyan)),
     send(Glow, pen, 7),
     send(Glow, opacity, 0.35),
-    send(Fig, display, Glow),
+    send(S, display, Glow),
     closed_path(Hull, Body),
     send(Body, colour, colour(white)),
     send(Body, fill, colour(midnight_blue)),
     send(Body, pen, 2),
-    send(Fig, display, Body),
+    send(S, display, Body),
     new(Flame, path),
     send_list(Flame, append, [point(-9, 5), point(-20, 0), point(-9, -5)]),
     send(Flame, colour, colour(orange)),
     send(Flame, pen, 2),
     send(Flame, name, flame),
     send(Flame, displayed, @off),
-    send(Fig, display, Flame),
-    send(Fig, transform, new(transform)),
-    send(P, display, Fig).
+    send(S, display, Flame),
+    place(S, X, Y, -90).
 
-spawn_ship(P, Now, S0, S) :-
-    field(W, H),
-    ship_figure(P, Fig),
-    X is W/2, Y is H/2,
-    Ship = ship{x:X, y:Y, vx:0, vy:0, angle:(-90), figure:Fig},
-    place(Fig, X, Y, -90),
-    safe_time(Safe),
-    SafeUntil is Now + Safe,
-    S = S0.put(_{ship:Ship, safe_until:SafeUntil, mode:playing}).
-
-ship_step(_, _, _, _, S, S) :-
-    S.ship == none,
-    !.
-ship_step(_P, In, Now, Dt, S0, S) :-
-    Ship0 = S0.ship,
-    rotate_speed(RS), thrust(Th), max_speed(Max), friction(Fr),
-    Angle is Ship0.angle + In.rotate*RS*Dt,
-    Rad is Angle*pi/180,
+tick(S) :->
+    "Steer, move, fire and check for a collision"::
+    get(S, device, P),
+    get(P, dt, Dt),
+    get(P, input, In),
+    get(S, rotate_speed, RS),
+    get(S, thrust, Th),
+    get(S, max_speed, Max),
+    get(S, friction, Fr),
+    get(S, angle, Angle0),
+    Angle is Angle0 + In.rotate*RS*Dt,
+    send(S, slot, angle, Angle),
+    get(S, vx, VX0), get(S, vy, VY0),
     (   In.thrust == true
-    ->  VX1 is Ship0.vx + cos(Rad)*Th*Dt,
-        VY1 is Ship0.vy + sin(Rad)*Th*Dt,
-        Flame = @on
-    ;   VX1 = Ship0.vx, VY1 = Ship0.vy,
-        Flame = @off
+    ->  Rad is Angle*pi/180,
+        VX1 is VX0 + cos(Rad)*Th*Dt,
+        VY1 is VY0 + sin(Rad)*Th*Dt
+    ;   VX1 = VX0, VY1 = VY0
     ),
     Speed is sqrt(VX1*VX1+VY1*VY1),
     (   Speed > Max
@@ -342,109 +517,175 @@ ship_step(_P, In, Now, Dt, S0, S) :-
     ;   VX2 = VX1, VY2 = VY1
     ),
     VX is VX2*Fr, VY is VY2*Fr,
-    wrap(Ship0.x + VX*Dt, Ship0.y + VY*Dt, X, Y),
-    Fig = Ship0.figure,
-    get(Fig, member, flame, FlameGr),
-    send(FlameGr, displayed, Flame),
-    (   Flame == @on                     % flicker
-    ->  random_member(FC, [orange, yellow, orange_red]),
-        send(FlameGr, colour, colour(FC))
-    ;   true
-    ),
-    (   Now < S0.safe_until             % blink while invulnerable
-    ->  Blink is truncate(Now*8) mod 2,
-        ( Blink == 0 -> send(Fig, displayed, @on)
-        ; send(Fig, displayed, @off)
+    set_velocity(S, VX, VY),
+    move(S, X, Y, Dt),
+    place(S, X, Y, Angle),
+    flame(S, In.thrust),
+    blink(S, Dt),
+    fire(S, In.fire, Dt),
+    collide(S).
+
+flame(S, Thrust) :-
+    get(S, member, flame, Flame),
+    (   Thrust == true
+    ->  send(Flame, displayed, @on),
+        random_member(FC, [orange, yellow, orange_red]),    % flicker
+        send(Flame, colour, colour(FC))
+    ;   send(Flame, displayed, @off)
+    ).
+
+%   Blink while invulnerable.
+
+blink(S, Dt) :-
+    get(S, safe, Safe0),
+    (   Safe0 > 0
+    ->  Safe is Safe0 - Dt,
+        send(S, slot, safe, Safe),
+        Blink is truncate(Safe*8) mod 2,
+        (   Blink == 0
+        ->  send(S, displayed, @on)
+        ;   send(S, displayed, @off)
         )
-    ;   send(Fig, displayed, @on)
-    ),
-    place(Fig, X, Y, Angle),
-    S = S0.put(ship, Ship0.put(_{x:X, y:Y, vx:VX, vy:VY, angle:Angle})).
+    ;   send(S, displayed, @on)
+    ).
+
+fire(S, Fire, Dt) :-
+    get(S, reload, Reload0),
+    Reload is Reload0 - Dt,
+    (   Fire == true,
+        Reload =< 0,
+        get(S, device, P),
+        get(P?graphicals, find_all,
+            message(@arg1, instance_of, asteroids_bullet), Bullets),
+        get(Bullets, size, NB),
+        get(S, max_bullets, Max),
+        NB < Max
+    ->  get(S, bullet_speed, BS),
+        get(S, angle, Angle),
+        get(S, px, X0), get(S, py, Y0),
+        get(S, vx, VX0), get(S, vy, VY0),
+        Rad is Angle*pi/180,
+        X is X0 + cos(Rad)*16, Y is Y0 + sin(Rad)*16,
+        VX is VX0 + cos(Rad)*BS, VY is VY0 + sin(Rad)*BS,
+        send(P, display, asteroids_bullet(X, Y, VX, VY)),
+        send(P, play, fire),
+        get(S, class_variable_value, reload, Interval),
+        send(S, slot, reload, Interval)
+    ;   Left is max(0, Reload),
+        send(S, slot, reload, Left)
+    ).
+
+collide(S) :-
+    get(S, safe, Safe),
+    Safe =< 0,
+    get(S, px, X), get(S, py, Y),
+    get(S, hit_radius, R),
+    hit_asteroid(S, X, Y, R, _),
+    !,
+    get(S, device, P),
+    get(S, burst_particles, NP),
+    burst(P, X, Y, NP),
+    send(P, play, explosion),
+    send(S, destroy),
+    send(P, ship_lost).
+collide(_).
+
+:- pce_end_class(asteroids_ship).
 
 
 		 /*******************************
 		 *	      BULLETS		*
 		 *******************************/
 
-fire(P, In, Now, S0, S) :-
-    In.fire == true,
-    Ship = S0.ship,
-    Ship \== none,
-    fire_interval(Int),
-    Now - S0.last_fire >= Int,
-    length(S0.bullets, NB),
-    max_bullets(Max),
-    NB < Max,
-    !,
-    bullet_speed(BS), bullet_life(Life),
-    Rad is Ship.angle*pi/180,
-    X is Ship.x + cos(Rad)*16, Y is Ship.y + sin(Rad)*16,
-    VX is Ship.vx + cos(Rad)*BS, VY is Ship.vy + sin(Rad)*BS,
-    new(C, circle(4)),
-    send(C, fill, colour(white)),
-    send(C, colour, colour(cyan)),
-    send(P, display, C),
-    move_circle(C, X, Y),
-    Until is Now + Life,
-    B = bullet{x:X, y:Y, vx:VX, vy:VY, until:Until, figure:C},
-    play(fire),
-    S = S0.put(_{bullets:[B|S0.bullets], last_fire:Now}).
-fire(_, _, _, S, S).
+:- pce_begin_class(asteroids_bullet(px, py, vx, vy), circle,
+                   "A bullet fired by the ship").
 
-bullets_step(_P, Dt, S0, S) :-
-    Now = S0.time,
-    foldl(bullet_step(Dt, Now), S0.bullets, [], Bullets),
-    S = S0.put(bullets, Bullets).
+variable(px,   num, get, "X of the centre").
+variable(py,   num, get, "Y of the centre").
+variable(vx,   num, get, "Horizontal velocity").
+variable(vy,   num, get, "Vertical velocity").
+variable(life, num, get, "Seconds until the bullet vanishes").
 
-bullet_step(_Dt, Now, B, Bs, Bs) :-
-    Now > B.until,
-    !,
-    send(B.figure, destroy).
-bullet_step(Dt, _Now, B0, Bs, [B|Bs]) :-
-    wrap(B0.x + B0.vx*Dt, B0.y + B0.vy*Dt, X, Y),
-    move_circle(B0.figure, X, Y),
-    B = B0.put(_{x:X, y:Y}).
+class_variable(life,       num, 1.0, "Seconds until the bullet vanishes").
+class_variable(hit_radius, num, 2,   "Radius for collisions").
 
-move_circle(C, X, Y) :-
-    CX is round(X)-2, CY is round(Y)-2,
-    send(C, set, CX, CY).
+initialise(B, X:num, Y:num, VX:num, VY:num) :->
+    send_super(B, initialise, 4),
+    send(B, fill, colour(white)),
+    send(B, colour, colour(cyan)),
+    send(B, slot, px, X),
+    send(B, slot, py, Y),
+    set_velocity(B, VX, VY),
+    move_circle(B, X, Y).
+
+%   A bullet destroys at most one asteroid.
+
+tick(B) :->
+    "Move and check whether we hit an asteroid"::
+    move(B, X, Y, Dt),
+    get(B, life, Life0),
+    Life is Life0 - Dt,
+    (   Life < 0
+    ->  send(B, destroy)
+    ;   get(B, hit_radius, R),
+        hit_asteroid(B, X, Y, R, A)
+    ->  send(B, destroy),
+        send(A, explode)
+    ;   send(B, slot, life, Life),
+        move_circle(B, X, Y)
+    ).
+
+:- pce_end_class(asteroids_bullet).
 
 
 		 /*******************************
 		 *	     ASTEROIDS		*
 		 *******************************/
 
-new_level(P, S0, S) :-
-    Level is S0.level + 1,
-    N is 3 + Level,
-    numlist(1, N, Is),
-    maplist(new_asteroid(P), Is, Asteroids),
-    S = S0.put(_{level:Level, asteroids:Asteroids}).
+:- pce_begin_class(asteroid(size, px, py), figure,
+                   "A rock floating through space").
 
-%   A new large asteroid at the edge of the field, away from the ship.
+variable(size,       {large,medium,small}, get, "Size class").
+variable(hit_radius, int, get, "Radius for collisions").
+variable(px,         num, get, "X of the centre").
+variable(py,         num, get, "Y of the centre").
+variable(vx,         num, get, "Horizontal velocity").
+variable(vy,         num, get, "Vertical velocity").
+variable(angle,      num, get, "Rotation in degrees").
+variable(spin,       num, get, "Rotation speed in degrees/second").
 
-new_asteroid(P, _, A) :-
-    field(W, H),
-    (   maybe
-    ->  X is random_float*W, Y = 0
-    ;   X = 0, Y is random_float*H
-    ),
-    random_velocity(large, VX, VY),
-    make_asteroid(P, large, X, Y, VX, VY, A).
+class_variable(large_hit_radius,  int, 42,  "Radius of a large rock").
+class_variable(medium_hit_radius, int, 24,  "Radius of a medium rock").
+class_variable(small_hit_radius,  int, 13,  "Radius of a small rock").
+class_variable(large_score,       int, 20,  "Points for a large rock").
+class_variable(medium_score,      int, 50,  "Points for a medium rock").
+class_variable(small_score,       int, 100, "Points for a small rock").
+class_variable(large_min_speed,   num, 30,  "Minimal speed of a large rock").
+class_variable(large_max_speed,   num, 70,  "Maximal speed of a large rock").
+class_variable(medium_min_speed,  num, 50,  "Minimal speed of a medium rock").
+class_variable(medium_max_speed,  num, 100, "Maximal speed of a medium rock").
+class_variable(small_min_speed,   num, 70,  "Minimal speed of a small rock").
+class_variable(small_max_speed,   num, 140, "Maximal speed of a small rock").
+class_variable(max_spin,          num, 60,  "Maximal spin in degrees/second").
+class_variable(corners,           int, 11,  "Corners of the outline").
+class_variable(burst_particles,   int, 10,  "Particles of an explosion").
 
-random_velocity(Size, VX, VY) :-
-    (   Size == large -> Min = 30, Max = 70
-    ;   Size == medium -> Min = 50, Max = 100
-    ;   Min = 70, Max = 140
-    ),
-    Speed is Min + random_float*(Max-Min),
-    Dir is random_float*2*pi,
-    VX is cos(Dir)*Speed, VY is sin(Dir)*Speed.
-
-make_asteroid(P, Size, X, Y, VX, VY, A) :-
-    asteroid_radius(Size, R),
-    new(Fig, figure),
-    N = 11,
+initialise(A, Size:{large,medium,small}, X:num, Y:num) :->
+    "Create a rock of Size at X,Y with a random velocity"::
+    send_super(A, initialise),
+    size_property(A, Size, hit_radius, R),
+    send(A, slot, size, Size),
+    send(A, slot, hit_radius, R),
+    send(A, slot, px, X),
+    send(A, slot, py, Y),
+    random_velocity(A, Size, VX, VY),
+    set_velocity(A, VX, VY),
+    get(A, max_spin, MaxSpin),
+    Spin is (random_float*2-1)*MaxSpin,
+    Angle is random_float*360,
+    send(A, slot, spin, Spin),
+    send(A, slot, angle, Angle),
+    get(A, corners, N),
     findall(point(PX, PY),
             ( between(1, N, I),
               Ang is 2*pi*I/N,
@@ -456,7 +697,7 @@ make_asteroid(P, Size, X, Y, VX, VY, A) :-
     send(Glow, colour, colour(Edge)),
     send(Glow, pen, 8),
     send(Glow, opacity, 0.3),
-    send(Fig, display, Glow),
+    send(A, display, Glow),
     closed_path(Outline, Rock),             % the shaded rock
     new(Shade, gradient(radial, point(0.3, 0.3), point(0.5, 0.5),
                         0, 0.6, units := bounding_box)),
@@ -465,170 +706,61 @@ make_asteroid(P, Size, X, Y, VX, VY, A) :-
     send(Rock, fill, Shade),
     send(Rock, colour, colour(Edge)),
     send(Rock, pen, 2),
-    send(Fig, display, Rock),
-    craters(Fig, R, Dark),
-    send(Fig, transform, new(transform)),
-    send(P, display, Fig),
-    Spin is (random_float-0.5)*120,
-    Angle is random_float*360,
-    place(Fig, X, Y, Angle),
-    A = asteroid{size:Size, r:R, x:X, y:Y, vx:VX, vy:VY,
-                 angle:Angle, spin:Spin, figure:Fig}.
+    send(A, display, Rock),
+    craters(A, R, Dark),
+    place(A, X, Y, Angle).
 
-asteroids_step(_P, Dt, S0, S) :-
-    maplist(asteroid_step(Dt), S0.asteroids, As),
-    S = S0.put(asteroids, As).
+tick(A) :->
+    "Float and spin"::
+    move(A, X, Y, Dt),
+    get(A, angle, Angle0),
+    get(A, spin, Spin),
+    Angle is Angle0 + Spin*Dt,
+    send(A, slot, angle, Angle),
+    place(A, X, Y, Angle).
 
-asteroid_step(Dt, A0, A) :-
-    wrap(A0.x + A0.vx*Dt, A0.y + A0.vy*Dt, X, Y),
-    Angle is A0.angle + A0.spin*Dt,
-    place(A0.figure, X, Y, Angle),
-    A = A0.put(_{x:X, y:Y, angle:Angle}).
-
-
-		 /*******************************
-		 *	     COLLISIONS		*
-		 *******************************/
-
-collisions(P, Now, S0, S) :-
-    bullet_hits(P, S0.bullets, S0.asteroids, Bullets, Asteroids, 0, Points),
-    Score is S0.score + Points,
-    S1 = S0.put(_{bullets:Bullets, asteroids:Asteroids, score:Score}),
-    ship_hit(P, Now, S1, S).
-
-%   Each bullet destroys at most one asteroid.
-
-bullet_hits(_, [], As, [], As, Points, Points).
-bullet_hits(P, [B|Bs0], As0, Bs, As, P0, Points) :-
-    (   select(A, As0, As1),
-        hit(B.x, B.y, 2, A)
-    ->  send(B.figure, destroy),
-        explode_asteroid(P, A, Pieces, Score),
-        append(Pieces, As1, As2),
-        P1 is P0 + Score,
-        bullet_hits(P, Bs0, As2, Bs, As, P1, Points)
-    ;   Bs = [B|Bs1],
-        bullet_hits(P, Bs0, As0, Bs1, As, P0, Points)
-    ).
-
-hit(X, Y, R, A) :-
-    DX is X - A.x, DY is Y - A.y,
-    D is A.r + R,
+hit(A, X:num, Y:num, R:num) :->
+    "Test whether a circle at X,Y with radius R touches the rock"::
+    get(A, px, AX), get(A, py, AY),
+    get(A, hit_radius, AR),
+    DX is X - AX, DY is Y - AY,
+    D is AR + R,
     DX*DX + DY*DY < D*D.
 
-explode_asteroid(P, A, Pieces, Score) :-
-    send(A.figure, destroy),
-    asteroid_score(A.size, Score),
-    burst(P, A.x, A.y, 10),
-    (   split(A.size, Smaller)
-    ->  play(bang),
-        findall(Piece,
-                ( between(1, 2, _),
-                  random_velocity(Smaller, VX, VY),
-                  make_asteroid(P, Smaller, A.x, A.y, VX, VY, Piece)
-                ), Pieces)
-    ;   play(bang_small),
-        Pieces = []
+explode(A) :->
+    "Hit by a bullet: score, burst and split into two smaller rocks"::
+    get(A, device, P),
+    get(A, size, Size),
+    get(A, px, X), get(A, py, Y),
+    size_property(A, Size, score, Score),
+    get(A, burst_particles, NP),
+    send(A, destroy),
+    send(P, add_score, Score),
+    burst(P, X, Y, NP),
+    (   split(Size, Smaller)
+    ->  send(P, play, bang),
+        forall(between(1, 2, _),
+               send(P, display, asteroid(Smaller, X, Y)))
+    ;   send(P, play, bang_small)
     ).
 
-ship_hit(P, Now, S0, S) :-
-    Ship = S0.ship,
-    Ship \== none,
-    Now >= S0.safe_until,
-    ship_radius(R),
-    member(A, S0.asteroids),
-    hit(Ship.x, Ship.y, R, A),
-    !,
-    send(Ship.figure, destroy),
-    burst(P, Ship.x, Ship.y, 30),
-    play(explosion),
-    Lives is S0.lives - 1,
-    respawn_time(RT),
-    At is Now + RT,
-    (   Lives > 0 -> Mode = respawn ; Mode = game_over ),
-    S = S0.put(_{ship:none, lives:Lives, respawn_at:At, mode:Mode}).
-ship_hit(_, _, S, S).
+%!  size_property(+Asteroid, +Size, +Property, -Value) is det.
+%
+%   Value is the class variable <Size>_<Property> of Asteroid.
 
-respawn(P, Now, S0, S) :-
-    S0.mode == respawn,
-    Now >= S0.respawn_at,
-    !,
-    spawn_ship(P, Now, S0, S).
-respawn(_, _, S, S).
+size_property(A, Size, Property, Value) :-
+    atomic_list_concat([Size, Property], '_', Name),
+    get(A, Name, Value).
 
-next_level(P, Now, S0, S) :-
-    S0.asteroids == [],
-    S0.mode \== game_over,
-    !,
-    new_level(P, S0, S1),
-    safe_time(Safe),
-    SafeUntil is Now + Safe,
-    S = S1.put(safe_until, SafeUntil).
-next_level(_, _, S, S).
+split(large,  medium).
+split(medium, small).
 
-
-		 /*******************************
-		 *	     PARTICLES		*
-		 *******************************/
-
-burst(P, X, Y, N) :-
-    get_time(Now),
-    (   nb_current(asteroids_burst, Bursts0)
-    ->  true
-    ;   Bursts0 = []
-    ),
-    findall(Part,
-            ( between(1, N, _),
-              Dir is random_float*2*pi,
-              Speed is 40 + random_float*160,
-              VX is cos(Dir)*Speed, VY is sin(Dir)*Speed,
-              Until is Now + 0.4 + random_float*0.6,
-              random_member(Colour, [white, yellow, gold, orange,
-                                     orange_red, red]),
-              new(C, circle(3)),
-              send(C, fill, colour(Colour)),
-              send(C, colour, colour(Colour)),
-              send(P, display, C),
-              move_circle(C, X, Y),
-              Part = particle{x:X, y:Y, vx:VX, vy:VY, born:Now,
-                              until:Until, figure:C}
-            ), New),
-    append(New, Bursts0, Bursts),
-    nb_setval(asteroids_burst, Bursts).
-
-%   New particles are collected in a global variable by burst/4, as
-%   they are created deep inside the collision handling.
-
-particles_step(_P, Dt, S0, S) :-
-    (   nb_current(asteroids_burst, New) -> true ; New = [] ),
-    nb_setval(asteroids_burst, []),
-    append(New, S0.particles, Parts0),
-    Now = S0.time,
-    foldl(particle_step(Dt, Now), Parts0, [], Parts),
-    S = S0.put(particles, Parts).
-
-%   Particles fade out during their life.
-
-particle_step(_Dt, Now, Pt, Ps, Ps) :-
-    Now > Pt.until,
-    !,
-    send(Pt.figure, destroy).
-particle_step(Dt, Now, Pt0, Ps, [Pt|Ps]) :-
-    wrap(Pt0.x + Pt0.vx*Dt, Pt0.y + Pt0.vy*Dt, X, Y),
-    move_circle(Pt0.figure, X, Y),
-    Opacity is max(0, (Pt0.until-Now)/(Pt0.until-Pt0.born)),
-    send(Pt0.figure, opacity, Opacity),
-    Pt = Pt0.put(_{x:X, y:Y}).
-
-
-		 /*******************************
-		 *	      DRAWING		*
-		 *******************************/
-
-closed_path(Points, Path) :-
-    new(Path, path),
-    send_list(Path, append, Points),
-    send(Path, closed, @on).
+random_velocity(A, Size, VX, VY) :-
+    size_property(A, Size, min_speed, Min),
+    size_property(A, Size, max_speed, Max),
+    Speed is Min + random_float*(Max-Min),
+    Dir is random_float*2*pi,
+    VX is cos(Dir)*Speed, VY is sin(Dir)*Speed.
 
 %!  rock_colours(-Light, -Dark, -Edge) is det.
 %
@@ -662,52 +794,229 @@ craters(Fig, R, Dark) :-
              send(Fig, display, C, point(CX, CY))
            )).
 
-%!  resize(+Picture) is det.
-%
-%   If the user resized the window, make the playing field the size of
-%   the window.  The starfield is made anew for the new size.  Objects
-%   outside a smaller field come back through the edges (see wrap/4).
+:- pce_end_class(asteroid).
 
-resize(P) :-
-    get(P, visible, Area),
-    get(Area, width, W),
-    get(Area, height, H),
-    field(W0, H0),
-    (   W-H == W0-H0
-    ;   W < 100
-    ;   H < 100
+
+		 /*******************************
+		 *	     PARTICLES		*
+		 *******************************/
+
+%   Particles fly from an explosion and fade out during their life.
+
+:- pce_begin_class(asteroids_particle(px, py), circle,
+                   "A spark of an explosion").
+
+variable(px,       num, get, "X of the centre").
+variable(py,       num, get, "Y of the centre").
+variable(vx,       num, get, "Horizontal velocity").
+variable(vy,       num, get, "Vertical velocity").
+variable(life,     num, get, "Seconds until the particle vanishes").
+variable(lifetime, num, get, "Total life time in seconds").
+
+class_variable(min_speed,    num, 40,  "Minimal speed in pixels/second").
+class_variable(max_speed,    num, 200, "Maximal speed in pixels/second").
+class_variable(min_lifetime, num, 0.4, "Minimal life time in seconds").
+class_variable(max_lifetime, num, 1.0, "Maximal life time in seconds").
+
+initialise(Pt, X:num, Y:num) :->
+    send_super(Pt, initialise, 3),
+    random_member(Colour, [white, yellow, gold, orange, orange_red, red]),
+    send(Pt, fill, colour(Colour)),
+    send(Pt, colour, colour(Colour)),
+    send(Pt, slot, px, X),
+    send(Pt, slot, py, Y),
+    Dir is random_float*2*pi,
+    get(Pt, min_speed, MinSpeed),
+    get(Pt, max_speed, MaxSpeed),
+    Speed is MinSpeed + random_float*(MaxSpeed-MinSpeed),
+    VX is cos(Dir)*Speed, VY is sin(Dir)*Speed,
+    set_velocity(Pt, VX, VY),
+    get(Pt, min_lifetime, MinLife),
+    get(Pt, max_lifetime, MaxLife),
+    Life is MinLife + random_float*(MaxLife-MinLife),
+    send(Pt, slot, life, Life),
+    send(Pt, slot, lifetime, Life),
+    move_circle(Pt, X, Y).
+
+tick(Pt) :->
+    "Fly and fade"::
+    move(Pt, X, Y, Dt),
+    get(Pt, life, Life0),
+    Life is Life0 - Dt,
+    (   Life < 0
+    ->  send(Pt, destroy)
+    ;   send(Pt, slot, life, Life),
+        move_circle(Pt, X, Y),
+        get(Pt, lifetime, Total),
+        Opacity is Life/Total,
+        send(Pt, opacity, Opacity)
+    ).
+
+:- pce_end_class(asteroids_particle).
+
+
+		 /*******************************
+		 *	       STARS		*
+		 *******************************/
+
+%   A star twinkles now and then: it dims for a moment.
+
+:- pce_begin_class(asteroids_star(width), box, "A star in the background").
+
+variable(twinkle, num, get, "Seconds left of the current twinkle").
+
+class_variable(twinkle,         num, 0.3,  "Duration of a twinkle in seconds").
+class_variable(twinkle_odds,    int, 1000, "Twinkle once in so many ticks").
+class_variable(twinkle_opacity, num, 0.3,  "Opacity of a twinkling star").
+
+initialise(S, Size:int) :->
+    send_super(S, initialise, Size, Size),
+    random_member(Colour, [grey40, grey60, grey80, white, light_sky_blue]),
+    send(S, pen, 0),
+    send(S, fill, colour(Colour)),
+    send(S, slot, twinkle, 0.0).
+
+tick(S) :->
+    "Maybe twinkle"::
+    get(S, twinkle, T0),
+    (   T0 > 0
+    ->  get(S?device, dt, Dt),
+        T is T0 - Dt,
+        (   T > 0
+        ->  send(S, slot, twinkle, T)
+        ;   send(S, slot, twinkle, 0.0),
+            send(S, opacity, 1)
+        )
+    ;   get(S, twinkle_odds, Odds),
+        random(Odds) =:= 0
+    ->  get(S, class_variable_value, twinkle, Time),
+        get(S, twinkle_opacity, Opacity),
+        send(S, slot, twinkle, Time),
+        send(S, opacity, Opacity)
+    ;   true
+    ).
+
+:- pce_end_class(asteroids_star).
+
+
+		 /*******************************
+		 *	    SCOREBOARD		*
+		 *******************************/
+
+:- pce_begin_class(asteroids_score, text, "Score, lives and level").
+
+class_variable(font, font, font(mono, bold, 16)).
+
+initialise(T) :->
+    send_super(T, initialise, ''),
+    send(T, colour, colour(white)).
+
+tick(T) :->
+    "Show the state of the game"::
+    get(T, device, P),
+    get(P, score, Score),
+    get(P, lives, Lives),
+    get(P, level, Level),
+    format(string(String), 'Score ~w   Lives ~w   Level ~w',
+           [Score, Lives, Level]),
+    send(T, string, String).
+
+:- pce_end_class(asteroids_score).
+
+:- pce_begin_class(asteroids_banner, text,
+                   "Message in the middle of the field").
+
+class_variable(font,   font, font(sans, bold, 28)).
+class_variable(format, name, center).
+
+initialise(T) :->
+    send_super(T, initialise, ''),
+    send(T, name, banner),
+    send(T, colour, colour(white)).
+
+tick(T) :->
+    "Show whether the game is over, paused or a level is done"::
+    get(T, device, P),
+    (   get(P, mode, game_over)
+    ->  String = 'GAME OVER\nPress Enter'
+    ;   get(P, paused, @on)
+    ->  String = 'PAUSED'
+    ;   get(P, level_break, Break),
+        Break > 0
+    ->  get(P, level, Level),
+        format(string(String), 'LEVEL ~w CLEARED', [Level])
+    ;   String = ''
     ),
-    !.
-resize(P) :-
-    get(P, visible, Area),
-    get(Area, width, W),
-    get(Area, height, H),
-    nb_setval(asteroids_field, W-H),
-    get(P?graphicals, find_all, @arg1?name == star, Old),
-    send(Old, for_all, message(@arg1, destroy)),
-    stars(P),
-    get(P, member, message, Msg),
-    CX is W//2, CY is H//2-60,
-    send(Msg, center, point(CX, CY)).
+    send(T, string, String),
+    send(T, center, P?center).
 
-%   A static starfield.  The stars are put below everything.  The number
-%   of stars depends on the size of the field.
+:- pce_end_class(asteroids_banner).
 
-stars(P) :-
-    field(W, H),
-    N is W*H//5000,
+
+		 /*******************************
+		 *	   SHARED HELPERS	*
+		 *******************************/
+
+%!  wrap(+Graphical, +X0, +Y0, -X, -Y) is det.
+%
+%   Objects leaving the field on one side come back on the other.
+
+wrap(Gr, X0, Y0, X, Y) :-
+    get(Gr, device, P),
+    get(P, width, W),
+    get(P, height, H),
+    X is X0 - W*floor(X0/W),
+    Y is Y0 - H*floor(Y0/H).
+
+%!  move(+Graphical, -X, -Y, -Dt) is det.
+%
+%   Move Graphical according to its velocity for the duration of this
+%   tick.  Graphical has the slots `px`, `py`, `vx` and `vy`.
+
+move(Gr, X, Y, Dt) :-
+    get(Gr?device, dt, Dt),
+    get(Gr, px, X0), get(Gr, py, Y0),
+    get(Gr, vx, VX), get(Gr, vy, VY),
+    wrap(Gr, X0 + VX*Dt, Y0 + VY*Dt, X, Y),
+    send(Gr, slot, px, X),
+    send(Gr, slot, py, Y).
+
+set_velocity(Gr, VX, VY) :-
+    send(Gr, slot, vx, VX),
+    send(Gr, slot, vy, VY).
+
+move_circle(C, X, Y) :-
+    CX is round(X)-2, CY is round(Y)-2,
+    send(C, set, CX, CY).
+
+key_down(Key) :-
+    get(@keyboard_device, key_down, Key, @on).
+
+key(Key, V) :-
+    (   key_down(Key)
+    ->  V = 1
+    ;   V = 0
+    ).
+
+%!  hit_asteroid(+Graphical, +X, +Y, +R, -Asteroid) is semidet.
+%
+%   True when a circle at X,Y with radius R on the device of Graphical
+%   touches Asteroid.
+
+hit_asteroid(Gr, X, Y, R, A) :-
+    get(Gr?device?graphicals, find,
+        and(message(@arg1, instance_of, asteroid),
+            message(@arg1, hit, X, Y, R)),
+        A).
+
+burst(P, X, Y, N) :-
     forall(between(1, N, _),
-           ( X is random(W), Y is random(H),
-             random_member(Colour, [grey40, grey60, grey80, white,
-                                    light_sky_blue]),
-             random_member(Size, [1, 1, 2, 2, 3]),
-             new(Star, box(Size, Size)),
-             send(Star, name, star),
-             send(Star, pen, 0),
-             send(Star, fill, colour(Colour)),
-             send(P, display, Star, point(X, Y)),
-             send(Star, hide)
-           )).
+           send(P, display, asteroids_particle(X, Y))).
+
+closed_path(Points, Path) :-
+    new(Path, path),
+    send_list(Path, append, Points),
+    send(Path, closed, @on).
 
 %!  place(+Figure, +X, +Y, +Angle) is det.
 %
@@ -721,116 +1030,3 @@ place(Fig, X, Y, Angle) :-
     new(T, transform),
     send(T, set, C, NS, S, C, X, Y),
     send(Fig, transform, T).
-
-wrap(X0, Y0, X, Y) :-
-    field(W, H),
-    X is X0 - W*floor(X0/W),
-    Y is Y0 - H*floor(Y0/H).
-
-make_hud(P) :-
-    send(P, display, new(Score, text('', left, font(mono, bold, 16))), point(10, 8)),
-    send(Score, name, score),
-    send(Score, colour, colour(white)),
-    send(P, display, new(Msg, text('', center, font(sans, bold, 28)))),
-    send(Msg, name, message),
-    send(Msg, colour, colour(white)).
-
-hud(P, S) :-
-    format(atom(Score), 'Score ~w   Lives ~w   Level ~w',
-           [S.score, S.lives, S.level]),
-    ignore(set_text(P, score, Score)),
-    (   S.mode == game_over
-    ->  Msg = 'GAME OVER\nPress Enter'
-    ;   S.paused == true
-    ->  Msg = 'PAUSED'
-    ;   Msg = ''
-    ),
-    (   set_text(P, message, Msg)
-    ->  field(W, H),
-        CX is W//2, CY is H//2-60,
-        get(P, member, message, MsgText),
-        send(MsgText, center, point(CX, CY))
-    ;   true
-    ).
-
-%!  set_text(+Picture, +Name, +Text) is semidet.
-%
-%   Change the text Name if it differs from Text.  Fails if the text
-%   did not change, avoiding a repaint on each tick.
-
-set_text(P, Name, Text) :-
-    get(P, member, Name, T),
-    get(T?string, value, Old),
-    Old \== Text,
-    send(T, string, Text).
-
-
-		 /*******************************
-		 *	       SOUNDS		*
-		 *******************************/
-
-%!  play(+Effect) is det.
-%
-%   Play a sound effect.  The sounds are generated as WAV files the
-%   first time they are used.  Without audio, the game is silent.
-
-play(Effect) :-
-    (   catch(effect_sound(Effect, Sound), _, fail)
-    ->  ignore(send(Sound, play, 0.4))
-    ;   true
-    ).
-
-:- dynamic sound_cache/2.
-
-effect_sound(Effect, Sound) :-
-    sound_cache(Effect, Sound),
-    !.
-effect_sound(Effect, Sound) :-
-    effect(Effect, Seconds, Generator),
-    tmp_file_stream(binary, File, Out),
-    write_wav(Out, Seconds, Generator),
-    close(Out),
-    new(Sound, sound(File)),
-    send(Sound, lock_object, @on),
-    delete_file(File),
-    assertz(sound_cache(Effect, Sound)).
-
-effect(fire,       0.12, chirp(1400, 500)).
-effect(bang,       0.35, noise(0.6)).
-effect(bang_small, 0.20, noise(0.4)).
-effect(explosion,  0.9,  noise(0.9)).
-
-rate(22050).
-
-write_wav(Out, Seconds, Gen) :-
-    rate(Rate),
-    N is round(Rate*Seconds),
-    DataLen is N*2,
-    format(Out, "RIFF", []), le(Out, 36+DataLen, 4),
-    format(Out, "WAVEfmt ", []), le(Out, 16, 4),
-    le(Out, 1, 2), le(Out, 1, 2), le(Out, Rate, 4),
-    le(Out, Rate*2, 4), le(Out, 2, 2), le(Out, 16, 2),
-    format(Out, "data", []), le(Out, DataLen, 4),
-    forall(between(0, N, I),
-           ( sample(Gen, I, N, Rate, V),
-             S is max(-32767, min(32767, round(V*32767))),
-             le(Out, S, 2)
-           )).
-
-%   A tone sweeping from F0 to F1 and noise, both fading out.
-
-sample(chirp(F0, F1), I, N, Rate, V) :-
-    T is I/Rate,
-    F is F0 + (F1-F0)*I/N,
-    V is 0.5*sin(2*pi*F*T)*(1-I/N).
-sample(noise(Level), I, N, _, V) :-
-    Fade is (1-I/N)**2,
-    V is Level*(random_float*2-1)*Fade.
-
-le(Out, V0, Bytes) :-
-    V is V0,
-    Max is Bytes-1,
-    forall(between(0, Max, I),
-           ( B is (V >> (8*I)) /\ 0xff,
-             put_byte(Out, B)
-           )).
