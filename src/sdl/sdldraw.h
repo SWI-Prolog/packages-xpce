@@ -80,6 +80,7 @@ DisplayObj d_display(DisplayObj d);
 void d_ensure_display(void);
 status d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit);
 status d_image(Image i, int x, int y, int w, int h);
+status d_surface(cairo_surface_t *s, int x, int y, int w, int h);
 status d_pdf(const char *file, int w, int h, double scale);
 status d_svg(const char *file, int w, int h, double scale);
 

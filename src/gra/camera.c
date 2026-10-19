@@ -37,7 +37,9 @@
 
 /* A camera delivers video as an image.  ->open starts the camera;
  * each new frame is copied into <-image, so a bitmap that displays
- * this image shows the video, and <-message is executed.  The user may
+ * this image shows the video, and <-message is executed.  If
+ * <-texture is an sdl_texture, frames go there instead, in the format
+ * of the camera, and an sdl_layer shows them without using Cairo.  The user may
  * have to give permission to use the camera: <-status is `waiting`
  * until this is decided.
  */
@@ -50,6 +52,7 @@ initialiseCamera(Camera c, Name name)
   assign(c, status,	    NAME_closed);
   assign(c, message,	    NIL);
   assign(c, status_message, NIL);
+  assign(c, texture,	    NIL);
   c->ws_ref = NULL;
 
   succeed;
@@ -107,6 +110,8 @@ static vardecl var_camera[] =
      NAME_video, "Executed with the camera for each new frame"),
   IV(NAME_statusMessage, "code*", IV_BOTH,
      NAME_status, "Executed with the camera and status if it changes"),
+  IV(NAME_texture, "sdl_texture*", IV_BOTH,
+     NAME_video, "If not @nil, receives the frames instead of <-image"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_internal, "SDL camera")
 };

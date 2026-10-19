@@ -5,6 +5,7 @@
         ?- gamepad_example.
         ?- record_example.
         ?- camera_example.
+        ?- sdl_camera_example.
         ?- new(F, frame('Tray example')), send(F, open), tray_example(F).
 */
 
@@ -14,6 +15,7 @@
             move_box/2,
             record_example/0,
             camera_example/0,
+            sdl_camera_example/0,
             paste/1,
             tray_example/1
           ]).
@@ -117,6 +119,18 @@ camera_example :-
     send(P, open),
     send(C, open, size(640, 480)),
     send(P, attribute, camera, C).          % freed with the picture
+
+sdl_camera_example :-
+    new(C, camera),
+    send(C, texture, new(T, sdl_texture)),
+    new(W, sdl_window('Camera', size(640, 480))),
+    send(W, background, black),
+    send(W, append, new(L, sdl_layer(T))),  % fit the window
+    send(L, flip, horizontal),              % as a mirror
+    send(W, display, text('Live'), point(10, 10)),
+    send(W, open),
+    send(C, open, size(640, 480)),
+    send(W, attribute, camera, C).
 
 
 		 /*******************************

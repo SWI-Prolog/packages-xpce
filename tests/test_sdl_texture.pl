@@ -1,0 +1,480 @@
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
+
+    Author:        Jan Wielemaker
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2026, SWI-Prolog Solutions b.v.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
+:- module(test_sdl_texture, [test_sdl_texture/0]).
+
+/** <module> SDL textures, layers and windows
+
+Layers are drawn twice: by the renderer when the frame goes to the
+screen and with Cairo for frame <-image.  frame <-sdl_test_image reads
+back what the renderer draws; both should show the same.
+
+Run with:
+
+    swipl -g test_sdl_texture -t halt packages/xpce/tests/test_sdl_texture.pl
+*/
+
+%   SDL copies the environment when it is initialised, i.e., when
+%   library(pce) is loaded.
+
+:- initialization(setenv('SDL_CAMERA_DRIVER', dummy), now).
+
+:- use_module(library(pce)).
+:- use_module(library(plunit)).
+
+setup_headless :-
+    set_prolog_flag('SDL_VIDEODRIVER', dummy).
+:- initialization(setup_headless, now).
+
+test_sdl_texture :-
+    run_tests([ sdl_texture,
+                sdl_texture_image,
+                sdl_layer,
+                sdl_sprite
+              ]).
+
+%!  colour_image(+Colours, -Image) is det.
+%
+%   An image of 10x10 pixel blocks, one for each colour in Colours, from
+%   left to right.
+
+colour_image(Colours, Image) :-
+    length(Colours, N),
+    W is N*10,
+    new(Image, image(@nil, W, 10, pixmap)),
+    forall(nth0(I, Colours, C),
+           ( X is I*10,
+             send(Image, fill, colour(C), area(X, 0, 10, 10)) )).
+
+name_of(Image, X, Y, Name) :-
+    get(Image, pixel, X, Y, Colour),
+    get(Colour, red, R), get(Colour, green, G), get(Colour, blue, B),
+    rgb_name(R, G, B, Name).
+
+rgb_name(R, G, B, Name) :-
+    (   nearest(R-G-B, Name)
+    ->  true
+    ;   Name = rgb(R,G,B)
+    ).
+
+nearest(R-G-B, Name) :-
+    member(Name-(R0-G0-B0),
+           [ red-(255-0-0), green-(0-255-0), blue-(0-0-255),
+             white-(255-255-255), black-(0-0-0) ]),
+    abs(R-R0) < 16, abs(G-G0) < 16, abs(B-B0) < 16,
+    !.
+
+%!  sdl_window(+Size, -Window) is det.
+%
+%   A blue sdl_window of Size x Size in a frame.
+
+sdl_window(Size, W) :-
+    new(W, sdl_window),
+    send(W, size, size(Size, Size)),
+    send(W, background, colour(blue)).
+
+%!  pixels(+Window, +Points, -Names) is det.
+%
+%   Colours of Points (X-Y in window coordinates) as drawn by the
+%   renderer and as drawn by Cairo for frame <-image.  Fails if the
+%   two differ.
+
+pixels(W, Points, Names) :-
+    send(W, open),
+    get(W, frame, F),
+    get(W?area, x, OX), get(W?area, y, OY),
+    get(F, sdl_test_image, GPU),
+    get(F, image, Cairo),
+    maplist(pixel(GPU, OX, OY), Points, Names),
+    maplist(pixel(Cairo, OX, OY), Points, CairoNames),
+    send(F, destroy),
+    assertion(Names == CairoNames).
+
+pixel(Image, OX, OY, X-Y, Name) :-
+    IX is OX+X, IY is OY+Y,
+    name_of(Image, IX, IY, Name).
+
+:- begin_tests(sdl_texture).
+
+test(empty, [W-H-Format == 0-0-(@nil)]) :-
+    new(T, sdl_texture),
+    get(T, size, size(W, H)),
+    get(T, format, Format),
+    free(T).
+test(from_image, [W-H-Format-Name == 20-10-argb8888-green]) :-
+    colour_image([red,green], I),
+    new(T, sdl_texture(I)),
+    get(T, size, size(W, H)),
+    get(T, format, Format),
+    get(T, image, I2),
+    name_of(I2, 15, 5, Name),
+    free(T).
+test(from_size, [W-H-Alpha == 8-4-0]) :-
+    new(T, sdl_texture(size(8,4))),
+    get(T, size, size(W, H)),
+    get(T?image, pixel, 1, 1, C),
+    get(C, alpha, Alpha),
+    free(T).
+test(replace_image, [W-H-Name == 10-10-blue]) :-
+    colour_image([red,green], I),
+    new(T, sdl_texture(I)),
+    colour_image([blue], I2),
+    send(T, image, I2),
+    get(T, size, size(W, H)),
+    name_of(T?image, 5, 5, Name),
+    free(T).
+
+:- end_tests(sdl_texture).
+
+:- begin_tests(sdl_texture_image).
+
+filled_box(Size, Colour, Box) :-
+    new(Box, box(Size, Size)),
+    send(Box, pen, 0),
+    send(Box, fill, Colour).
+
+rgba(Image, X, Y, rgba(R,G,B,A)) :-
+    get(Image, pixel, X, Y, C),
+    get(C, red, R), get(C, green, G), get(C, blue, B), get(C, alpha, A).
+
+test(copy_into_image, [Same-W-H-Name == true-20-10-green]) :-
+    colour_image([red,green], I0),
+    new(T, sdl_texture(I0)),
+    new(I, image(@nil, 4, 4, pixmap)),
+    send(I, copy, T),
+    get(I, size, size(W, H)),
+    name_of(I, 15, 5, Name),
+    get(I, self, I1),
+    (I1 == I -> Same = true ; Same = false),
+    free(T).
+test(copy_resizes_bitmap, [W-H == 20-10]) :-
+    colour_image([red,green], I0),
+    new(T, sdl_texture(I0)),
+    new(I, image(@nil, 4, 4, pixmap)),
+    new(B, bitmap(I)),
+    send(I, copy, T),
+    get(B, size, size(W, H)),
+    free(T).
+test(copy_empty, fail) :-
+    new(T, sdl_texture),
+    new(I, image(@nil, 4, 4, pixmap)),
+    send(I, copy, T).
+test(translucent_round_trip, [RGBA1-RGBA2 == rgba(255,0,0,128)-RGBA1]) :-
+    new(T, sdl_texture(size(4, 4))),
+    filled_box(4, colour(@default, 255, 0, 0, 128), Box),
+    send(T, draw_in, Box, point(0, 0)),
+    get(T, image, I1),
+    rgba(I1, 1, 1, RGBA1),
+    new(T2, sdl_texture(I1)),           % and back via an image
+    get(T2, image, I2),
+    rgba(I2, 1, 1, RGBA2).
+test(draw_in, [In-Out == rgba(255,0,0,255)-rgba(0,0,0,0)]) :-
+    new(T, sdl_texture(size(20, 20))),
+    filled_box(10, colour(red), Box),
+    send(T, draw_in, Box, point(5, 5)),
+    get(T, image, I),
+    rgba(I, 8, 8, In),
+    rgba(I, 2, 2, Out).
+test(draw_in_rendered, [Names == [blue, red]]) :-
+    new(T, sdl_texture(size(20, 20))),  % transparent where nothing is drawn
+    filled_box(10, colour(red), Box),
+    send(T, draw_in, Box, point(10, 0)),
+    sdl_window(40, W),
+    send(W, append, sdl_layer(T, area(0,0,20,20), stretch)),
+    pixels(W, [5-5, 15-5], Names).
+test(draw_in_converts, [Before-After-Names == yuy2-argb8888-[red, blue]]) :-
+    new(C, camera),                     % YUV pixels become ARGB
+    send(C, texture, new(T, sdl_texture)),
+    send(C, sdl_test_frame, 8, 8, colour(blue)),
+    get(T, format, Before),
+    filled_box(4, colour(red), Box),
+    send(T, draw_in, Box, point(0, 0)),
+    get(T, format, After),
+    get(T, image, I),
+    name_of(I, 1, 1, N1),
+    name_of(I, 6, 6, N2),
+    Names = [N1, N2].
+
+test(draw_in_twice, [RGBA == rgba(255,0,0,128)]) :-
+    new(T, sdl_texture(size(8, 8))),    % drawing again keeps the pixels
+    filled_box(4, colour(@default, 255, 0, 0, 128), Box1),
+    send(T, draw_in, Box1, point(0, 0)),
+    filled_box(2, colour(green), Box2),
+    send(T, draw_in, Box2, point(6, 6)),
+    get(T, image, I),
+    rgba(I, 1, 1, RGBA).
+test(translucent_rendered, [RGB == rgb(128,0,128)]) :-
+    new(T, sdl_texture(size(10, 10))),  % half red over blue
+    filled_box(10, colour(@default, 255, 0, 0, 128), Box),
+    send(T, draw_in, Box, point(0, 0)),
+    sdl_window(40, W),
+    send(W, append, sdl_layer(T, @default, stretch)),
+    send(W, open),
+    get(W?frame, sdl_test_image, I),
+    get(W?area, x, X0), get(W?area, y, Y0),
+    X is X0+20, Y is Y0+20,
+    get(I, pixel, X, Y, C),
+    get(C, red, R0), get(C, green, G0), get(C, blue, B0),
+    R is round(R0/8)*8, G is round(G0/8)*8, B is round(B0/8)*8,
+    RGB = rgb(R,G,B),
+    send(W?frame, destroy).
+
+:- end_tests(sdl_texture_image).
+
+:- begin_tests(sdl_layer).
+
+test(defaults, [Scale-Flip-Win == fit-none-(@nil), Alpha =:= 1]) :-
+    new(L, sdl_layer),
+    get(L, scale, Scale),
+    get(L, alpha, Alpha),
+    get(L, flip, Flip),
+    get(L, window, Win).
+test(append_delete, [Before-W1-After-W2 == [L]-W-[]-(@nil)]) :-
+    sdl_window(20, W),
+    new(L, sdl_layer),
+    send(W, append, L),
+    get(L, window, W1),
+    chain_list(W?layers, Before),
+    send(W, delete, L),
+    chain_list(W?layers, After),
+    get(L, window, W2),
+    free(W).
+test(move_to_other_window, [L1-L2 == []-[L]]) :-
+    sdl_window(20, W1),
+    sdl_window(20, W2),
+    new(L, sdl_layer),
+    send(W1, append, L),
+    send(W2, append, L),
+    chain_list(W1?layers, L1),
+    chain_list(W2?layers, L2),
+    free(W1), free(W2).
+test(free_layer, [Layers == []]) :-
+    sdl_window(20, W),
+    send(W, append, new(L, sdl_layer)),
+    free(L),
+    chain_list(W?layers, Layers),
+    free(W).
+test(stacking, [Top-Bottom-Above-Below == [B,C,A]-[A,B,C]-[A,C,B]-[C,A,B]]) :-
+    sdl_window(20, W),
+    send_list(W, append, [new(A, sdl_layer), new(B, sdl_layer),
+                          new(C, sdl_layer)]),
+    send(A, expose),
+    chain_list(W?layers, Top),
+    send(A, hide),
+    chain_list(W?layers, Bottom),
+    send(B, expose, C),
+    chain_list(W?layers, Above),
+    send(C, hide, A),
+    chain_list(W?layers, Below),
+    free(W).
+test(stacking_not_shown, fail) :-
+    new(L, sdl_layer),
+    send(L, expose).
+test(free_window, [Win == @nil]) :-
+    sdl_window(20, W),
+    send(W, append, new(L, sdl_layer)),
+    free(W),
+    get(L, window, Win).
+test(background, [Names == [blue]]) :-
+    sdl_window(40, W),
+    pixels(W, [20-20], Names).
+test(stretch, [Names == [red, green, blue]]) :-
+    colour_image([red,green], I),
+    new(T, sdl_texture(I)),
+    sdl_window(60, W),
+    send(W, append, sdl_layer(T, area(0,0,40,40), stretch)),
+    pixels(W, [10-30, 30-30, 50-30], Names).
+test(fit, [Names == [blue, red, green, blue]]) :-
+    colour_image([red,green], I),       % 20x10 in 60x60: 60x30, centred
+    new(T, sdl_texture(I)),
+    sdl_window(60, W),
+    send(W, append, sdl_layer(T)),
+    pixels(W, [10-5, 10-30, 50-30, 50-55], Names).
+test(fill, [Names == [green, green, green]]) :-
+    colour_image([red,green,blue], I),  % 30x10 in 60x60: middle 10x10
+    new(T, sdl_texture(I)),
+    sdl_window(60, W),
+    send(W, append, sdl_layer(T, @default, fill)),
+    pixels(W, [5-5, 30-30, 55-55], Names).
+test(flip, [Names == [green, red]]) :-
+    colour_image([red,green], I),
+    new(T, sdl_texture(I)),
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, area(0,0,40,20), stretch))),
+    send(L, flip, horizontal),
+    pixels(W, [10-10, 30-10], Names).
+test(rotate, [Names == [red, green, blue]]) :-
+    colour_image([red,green], I),       % 40x20 at 10,20 turned 90 degrees
+    new(T, sdl_texture(I)),
+    sdl_window(60, W),
+    send(W, append, new(L, sdl_layer(T, area(10,20,40,20), stretch))),
+    send(L, angle, 90),
+    pixels(W, [30-15, 30-45, 5-30], Names).
+test(source, [Names == [green, green]]) :-
+    colour_image([red,green], I),
+    new(T, sdl_texture(I)),
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, area(0,0,40,20), stretch))),
+    send(L, source, area(10,0,10,10)),
+    pixels(W, [5-10, 35-10], Names).
+test(hidden, [Names == [blue]]) :-
+    colour_image([red], I),
+    new(T, sdl_texture(I)),
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, @default, stretch))),
+    send(L, displayed, @off),
+    pixels(W, [20-20], Names).
+test(order, [Names == [green]]) :-
+    colour_image([red], I1),
+    colour_image([green], I2),
+    sdl_window(40, W),
+    send(W, append, sdl_layer(sdl_texture(I1), @default, stretch)),
+    send(W, append, sdl_layer(sdl_texture(I2), @default, stretch)),
+    pixels(W, [20-20], Names).
+test(changed, [Before-After == red-green]) :-
+    colour_image([red], I1),
+    new(T, sdl_texture(I1)),
+    sdl_window(40, W),
+    send(W, append, sdl_layer(T, @default, stretch)),
+    send(W, open),
+    get(W, frame, F),
+    get(W?area, x, X0), get(W?area, y, Y0),
+    X is X0+20, Y is Y0+20,
+    get(F, sdl_test_image, GPU1),
+    name_of(GPU1, X, Y, Before),
+    colour_image([green], I2),
+    send(T, image, I2),
+    get(F, sdl_test_image, GPU2),
+    name_of(GPU2, X, Y, After),
+    send(F, destroy).
+
+:- end_tests(sdl_layer).
+
+%   Sprites: textures placed by their hot spot and mapped through a
+%   transform, as figure ->transform does for graphicals.
+
+:- begin_tests(sdl_sprite).
+
+%!  red_green(-Texture) is det.
+%
+%   A 20x10 texture, red left and green right, with its hot spot in the
+%   middle of the left edge.
+
+red_green(T) :-
+    colour_image([red,green], I),
+    new(T, sdl_texture(I)),
+    send(T, hot_spot, point(0, 5)).
+
+%!  place(+X, +Y, +Angle, -Transform) is det.
+%
+%   Transform that rotates by Angle degrees and moves the origin to
+%   X,Y, as the Asteroids demo places its figures.
+
+place(X, Y, Angle, T) :-
+    Rad is Angle*pi/180,
+    C is cos(Rad), S is sin(Rad), NS is -S,
+    new(T, transform),
+    send(T, set, C, NS, S, C, X, Y).
+
+test(hot_spot_placement, [Names == [blue, red, green, blue]]) :-
+    red_green(T),                       % hot spot at 10,20
+    sdl_window(40, W),
+    send(W, append, sdl_layer(T, area(10, 20, 0, 0), none)),
+    pixels(W, [5-20, 15-20, 25-20, 15-10], Names).
+test(transform, [Names == [red, green, blue, blue]]) :-
+    red_green(T),                       % turned 90 degrees at 30,10
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, @nil, none))),
+    place(30, 10, 90, Tr),
+    send(L, transform, Tr),
+    pixels(W, [30-15, 30-25, 30-35, 20-15], Names).
+test(angle_around_hot_spot, [Names == [red, green, blue]]) :-
+    red_green(T),                       % as above, using <-angle
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, area(30, 10, 0, 0), none))),
+    send(L, angle, 90),
+    pixels(W, [30-15, 30-25, 20-15], Names).
+test(zoom, [Names == [red, green, blue]]) :-
+    red_green(T),                       % twice as large: 40x20
+    sdl_window(60, W),
+    send(W, append, new(L, sdl_layer(T, @nil, none))),
+    new(Tr, transform),
+    send(Tr, set, 2, 0, 0, 2, 10, 30),
+    send(L, transform, Tr),
+    pixels(W, [15-30, 45-30, 55-30], Names).
+test(shear, [Names == [red, green, red, red, blue]]) :-
+    red_green(T),                       % lines of the texture slant
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, @nil, none))),
+    new(Tr, transform),
+    send(Tr, set, 1, 0.5, 0, 1, 10, 10),
+    send(L, transform, Tr),
+    pixels(W, [15-10, 25-10, 21-14, 9-6, 5-10], Names).
+test(singular_transform, [Names == [green]]) :-
+    red_green(T),                       % shows nothing, but the next
+    colour_image([green], I),           % layer is drawn
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, @nil, none))),
+    new(Tr, transform),
+    send(Tr, set, 0, 0, 0, 0, 10, 10),
+    send(L, transform, Tr),
+    send(W, append, sdl_layer(sdl_texture(I), @default, stretch)),
+    pixels(W, [20-20], Names).
+test(from_graphical, [W-H-HX-HY == 20-20-10-10]) :-
+    new(Fig, figure),                   % a circle around the origin
+    send(Fig, display, new(C, circle(20)), point(-10, -10)),
+    send(C, pen, 0),
+    send(C, fill, colour(red)),
+    new(T, sdl_texture(Fig)),
+    get(T, size, size(W, H)),
+    get(T, hot_spot, point(HX, HY)).
+test(graphical_sprite, [Names == [red, blue, blue]]) :-
+    new(Fig, figure),                   % centred on its origin at 20,20
+    send(Fig, display, new(C, circle(10)), point(-5, -5)),
+    send(C, pen, 0),
+    send(C, fill, colour(red)),
+    new(T, sdl_texture(Fig)),
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, @nil, none))),
+    place(20, 20, 45, Tr),
+    send(L, transform, Tr),
+    pixels(W, [20-20, 10-10, 30-30], Names).
+test(graphical_no_origin, [HS == @nil]) :-
+    new(B, box(10, 10)),                % (0,0) is outside the box
+    send(B, position, point(20, 20)),
+    new(T, sdl_texture(B)),
+    get(T, hot_spot, HS).
+
+:- end_tests(sdl_sprite).

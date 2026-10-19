@@ -772,6 +772,16 @@ getImageFrame(FrameObj fr)
 }
 
 
+static Image
+getSdlTestImageFrame(FrameObj fr)
+{ if ( createdFrame(fr) )
+    answer(ws_rendered_image_frame(fr));
+
+  errorPce(fr, NAME_mustBeCreatedBefore, NAME_sdlTestImage);
+  fail;
+}
+
+
 static status
 geometryFrame(FrameObj fr, Name spec, DisplayObj dsp)
 { assign(fr, geometry, spec);
@@ -2396,6 +2406,8 @@ static getdecl get_frame[] =
      NAME_organisation, "@on if the application must not end while I am visible"),
   GM(NAME_image, 0, "image", NULL, getImageFrame,
      NAME_conversion, "Image with the pixels of the frame"),
+  GM(NAME_sdlTestImage, 0, "image", NULL, getSdlTestImageFrame,
+     NAME_test, "Image of what the renderer draws (testing)"),
   GM(NAME_keyboardFocus, 0, "window", NULL, getKeyboardFocusFrame,
      NAME_focus, "Window for default keyboard input"),
   GM(NAME_nextFocus, 0, "frame", NULL, getNextFocusFrame,

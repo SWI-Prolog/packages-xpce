@@ -63,5 +63,6 @@ void ws_move_pointer(PceWindow sw, int x, int y);
 void ws_window_cursor(PceWindow sw, CursorObj cursor);
 void ws_dirty_window(PceWindow sw, int x, int y, int w, int h);
 void ws_dirty_all_window(PceWindow sw);
+void ws_present_window(PceWindow sw);
 
 #endif /* RAYWINDOW_H */

@@ -556,8 +556,8 @@ jpeg_has_dht(const Uint8 *d, size_t len)
  * tables if it has none.
  */
 
-static SDL_Surface *
-decode_mjpg(const Uint8 *d, size_t len)
+SDL_Surface *
+ws_decode_mjpg(const Uint8 *d, size_t len)
 { Uint8 *buf = NULL;
 
   if ( len > 2 && !jpeg_has_dht(d, len) )
@@ -590,7 +590,7 @@ ws_set_image_pixels(Image image, SDL_Surface *surf)
 { SDL_Surface *decoded = NULL;
 
   if ( surf->format == SDL_PIXELFORMAT_MJPG )
-  { if ( !(decoded = decode_mjpg(surf->pixels, (size_t)surf->pitch)) )
+  { if ( !(decoded = ws_decode_mjpg(surf->pixels, (size_t)surf->pitch)) )
     { Cprintf("Failed to decode MJPG frame for %s: %s\n",
 	      pp(image), SDL_GetError());
       fail;

@@ -88,12 +88,17 @@ ws_uncreate_window(PceWindow sw)
 
 /* What a new backing is filled with.  A popup starts transparent: it
  * may have rounded corners, and its window is shown before the popup
- * has drawn itself.  See draw_popup_frame() in men/menu.c.
+ * has drawn itself.  See draw_popup_frame() in men/menu.c.  The
+ * backing of an sdl_window is always transparent: its layers and
+ * background are drawn below it.  See sdl_draw_layers().
  */
 
 static Any
 initial_background(PceWindow sw)
 { FrameObj fr = sw->frame;
+
+  if ( instanceOfObject(sw, ClassSdlWindow) )
+    return NIL;
 
   if ( notNil(fr) && fr->kind == NAME_popup && ws_rounded_popups(fr) )
     return NIL;
@@ -180,6 +185,18 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
       addChain(ChangedWindows, sw);
     }
   }
+}
+
+/**
+ * Get the frame of `sw` on the screen again without redrawing any of
+ * its Cairo backing, e.g., because a layer of an sdl_window changed.
+ */
+void
+ws_present_window(PceWindow sw)
+{ FrameObj fr = getFrameWindow(sw, OFF);
+
+  if ( fr && ws_created_frame(fr) && ChangedFrames )
+    addChain(ChangedFrames, fr);
 }
 
 		 /*******************************

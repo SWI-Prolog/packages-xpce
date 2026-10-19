@@ -118,4 +118,41 @@ test(bitmap_follows_size, [Sizes == [64-48, 32-24]]) :-
     get(B, size, size(W2, H2)),
     Sizes = [W1-H1, W2-H2].
 
+test(texture, [W-H-Format-RGB-ImageW == 64-48-yuy2-rgb(256, 0, 0)-1]) :-
+    new(C, camera),                     % frames keep the camera's format
+    send(C, texture, new(T, sdl_texture)),
+    send(C, sdl_test_frame, 64, 48, colour(red)),
+    get(T, size, size(W, H)),
+    get(T, format, Format),
+    rgb(T?image, 10, 10, RGB),
+    get(C?image, size, size(ImageW, _)).
+test(texture_reused, [W-H-RGB == 32-24-rgb(0, 0, 256)]) :-
+    new(C, camera),
+    send(C, texture, new(T, sdl_texture)),
+    send(C, sdl_test_frame, 64, 48, colour(red)),
+    send(C, sdl_test_frame, 32, 24, colour(green)),
+    send(C, sdl_test_frame, 32, 24, colour(blue)),
+    get(T, size, size(W, H)),
+    rgb(T?image, 10, 10, RGB).
+test(texture_mjpg, [W-H-RGB == 64-48-rgb(256, 0, 0)]) :-
+    new(C, camera),                     % JPEG is decoded
+    send(C, texture, new(T, sdl_texture)),
+    send(C, sdl_test_frame, 64, 48, colour(red), mjpg),
+    get(T, size, size(W, H)),
+    assertion(\+ get(T, format, mjpg)),
+    rgb(T?image, 10, 10, RGB).
+test(texture_rendered, [RGB == rgb(256, 0, 0)]) :-
+    new(C, camera),                     % the renderer draws the YUY2
+    send(C, texture, new(T, sdl_texture)),
+    send(C, sdl_test_frame, 64, 48, colour(red)),
+    new(W, sdl_window),
+    send(W, size, size(64, 48)),
+    send(W, append, sdl_layer(T, @default, stretch)),
+    send(W, open),
+    get(W?frame, sdl_test_image, I),
+    get(W?area, x, X0), get(W?area, y, Y0),
+    X is X0+10, Y is Y0+10,
+    rgb(I, X, Y, RGB),
+    send(W?frame, destroy).
+
 :- end_tests(camera).

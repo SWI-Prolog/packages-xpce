@@ -48,9 +48,12 @@ copied to the clipboard.  The status line shows the status of the
 camera (e.g., waiting for permission), the frame size and the number
 of frames per second.
 
-The video is shown by displaying the camera's image using a bitmap:
-the camera copies each frame into this image, after which the bitmap
-shows the new frame.  The camera's message counts the frames.
+The camera delivers its frames to an sdl_texture, which an sdl_layer
+shows in an sdl_window.  The frames keep the format of the camera:
+the renderer converts them to RGB and scales them, so they do not go
+through Cairo.  Graphicals in this window are drawn on top of the
+video, as the frames per second in the corner show.  The camera's
+message counts the frames.
 
 Run with:
 
@@ -65,16 +68,21 @@ camera_demo :-
                    "Show and capture the video of a camera").
 
 variable(camera,   camera*, get, "The running camera").
+variable(texture,  sdl_texture, get, "Receives the frames").
 variable(frames,   int := 0, both, "Frames since the last status update").
 variable(timer,    timer*,  get, "Timer to update the status").
 variable(snapshot, image*,  get, "The last snapshot").
 
 initialise(F) :->
     send_super(F, initialise, 'Camera'),
-    send(F, append, new(V, picture('Video', size(640, 480)))),
+    send(F, append, new(V, sdl_window('Video', size(640, 480)))),
     send(V, name, video),
-    send(V, scrollbars, none),
-    send(V, display, new(_, bitmap), point(0, 0)),
+    send(V, background, black),
+    send(F, slot, texture, new(T, sdl_texture)),
+    send(V, append, sdl_layer(T, @default, fit)),
+    send(V, display, new(FPS, text('', left, bold)), point(8, 8)),
+    send(FPS, name, fps),
+    send(FPS, colour, yellow),
     send(new(S, picture('Snapshot', size(320, 240))), right, V),
     send(S, name, snapshot),
     send(S, scrollbars, none),
@@ -82,8 +90,8 @@ initialise(F) :->
     send(new(D, dialog), below, V),
     send(D, name, controls),
     send(F, fill_dialog, D),
-    send(F, slot, timer, new(T, timer(1, message(F, update_status)))),
-    send(T, start),
+    send(F, slot, timer, new(Timer, timer(1, message(F, update_status)))),
+    send(Timer, start),
     send(F, update_status).
 
 fill_dialog(F, D:dialog) :->
@@ -104,6 +112,10 @@ fill_dialog(F, D:dialog) :->
     send(D, append, button(save, message(F, save_snapshot)), right),
     send(D, append, button(copy, message(F, copy_snapshot)), right),
     send(D, append, button(quit, message(F, destroy)), right),
+    send(D, append, new(Mirror, menu(mirror, toggle,
+                                     message(F, mirror, @arg2))), right),
+    send(Mirror, append, mirror),
+    send(Mirror, show_label, @off),
     send(D, append, new(Status, label(status, ''))),
     send(Status, alignment, left),
     (   send(Cameras, empty)
@@ -139,10 +151,14 @@ unlink(F) :->
     send(F, stop),
     send_super(F, unlink).
 
-video_bitmap(F, BM:bitmap) :<-
-    "The bitmap that shows the video"::
+mirror(F, Mirror:bool) :->
+    "Show the video mirrored, as in a mirror"::
     get(F, member, video, V),
-    get(V?graphicals, head, BM).
+    get(V?layers, head, L),
+    (   Mirror == @on
+    ->  send(L, flip, horizontal)
+    ;   send(L, flip, none)
+    ).
 
 snapshot_bitmap(F, BM:bitmap) :<-
     "The bitmap that shows the snapshot"::
@@ -167,8 +183,7 @@ use_camera(F, C:camera) :->
     send(F, frames, 0),
     send(C, message, message(F, frames, F?frames+1)),
     send(C, status_message, message(F, update_status)),
-    get(F, video_bitmap, BM),
-    send(BM, image, C?image),
+    send(C, texture, F?texture),
     send(F, update_buttons),
     send(F, update_status).
 
@@ -177,7 +192,7 @@ stop(F) :->
     get(F, camera, C),
     (   C \== @nil
     ->  send(F, slot, camera, @nil),
-        send(C, free)                   % the bitmap keeps the last frame
+        send(C, free)                   % the texture keeps the last frame
     ;   true
     ),
     send(F, update_buttons),
@@ -185,8 +200,7 @@ stop(F) :->
 
 snapshot(F) :->
     "Copy the current frame into the snapshot view"::
-    get(F, video_bitmap, Video),
-    get(Video, image, Frame),
+    get(F?texture, image, Frame),
     get(Frame, size, size(W, H)),
     new(Snap, image(@nil, W, H, pixmap)),
     send(Snap, copy, Frame),
@@ -231,17 +245,21 @@ update_status(F) :->
     "Show the status, frame size and frames per second"::
     get(F, member, controls, D),
     get(D, status_member, L),
+    get(F, member, video, V),
+    get(V, member, fps, FPS),
     get(F, camera, C),
     (   C == @nil
     ->  (   get(@display, cameras, Cs), send(Cs, empty)
         ->  send(L, selection, 'No camera found')
         ;   send(L, selection, 'Stopped')
-        )
+        ),
+        send(FPS, string, '')
     ;   get(C, status, Status),
-        get(C?image, size, size(W, H)),
+        get(F?texture, size, size(W, H)),
         get(F, frames, N),
         send(F, frames, 0),
-        send(L, format, '%s, %dx%d, %d frames/second', Status, W, H, N)
+        send(L, format, '%s, %dx%d, %d frames/second', Status, W, H, N),
+        send(FPS, string, string('%d fps', N))
     ).
 
 :- pce_end_class(camera_demo).

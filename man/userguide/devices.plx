@@ -373,6 +373,49 @@ status changes.  The demo \textsf{Camera} of the demo browser
 (\exam{?- manpce.}, menu \textsf{File/Demo programs}) shows the video,
 takes snapshots and saves them or copies them to the clipboard.
 
+\subsection{Showing video without Cairo}	\label{sec:sdl-window}
+
+\index{sdl_texture}\index{sdl_window}\index{GPU}%
+Copying each frame into an \class{image} converts it to RGB and has
+Cairo draw it, which is expensive for large frames.  If `camera
+<->texture' is an \class{sdl_texture}, the frames go there instead,
+keeping the format of the camera.  An \class{sdl_layer} shows the
+texture in an \class{sdl_window}.  The SDL renderer of the frame then
+converts and scales the video, on the GPU if it can.  The layers are
+drawn below the graphicals of the window, so these can annotate the
+video without being redrawn for each frame:
+
+\begin{code}
+sdl_camera_example :-
+    new(C, camera),
+    send(C, texture, new(T, sdl_texture)),
+    new(W, sdl_window('Camera', size(640, 480))),
+    send(W, background, black),
+    send(W, append, new(L, sdl_layer(T))),  % fit the window
+    send(L, flip, horizontal),              % as a mirror
+    send(W, display, text('Live'), point(10, 10)),
+    send(W, open),
+    send(C, open, size(640, 480)),
+    send(W, attribute, camera, C).
+\end{code}
+
+An \class{sdl_layer} places its texture in an area of the window and
+can scale, rotate, flip and fade it.  `sdl_texture <-image' converts
+the pixels to a new \class{image}, e.g., to save a snapshot, and
+`image ->copy' copies them into an existing image, e.g., to analyse
+each frame.  An \class{sdl_texture} can also be made from an image,
+which allows for fast moving sprites, and `sdl_texture ->draw_in'
+paints a graphical on its pixels, as `image ->draw_in' does.
+
+\index{sprite}%
+A layer becomes a \jargon{sprite} using scale \const{none} and a
+\class{transform}: `sdl_layer <->transform' moves and rotates the
+texture around its `sdl_texture <->hot_spot', as `figure ->transform'
+does for a figure.  Creating an \class{sdl_texture} from a graphical
+draws it once with Cairo and makes the origin of the graphical the hot
+spot.  Moving many such sprites costs the renderer little, while
+moving as many figures has Cairo draw each of them for every move.
+
 
 \section{The desktop}				\label{sec:desktop}
 
@@ -473,6 +516,10 @@ SDL generates the same events for it as for a real gamepad.
 it.
     \tick{`camera ->sdl_test_frame'}
 Delivers a frame of a given size and colour, as a camera does.
+    \tick{`frame <-sdl_test_image'}
+Reads back what the SDL renderer draws for the frame, including the
+layers of an \class{sdl_window}.  `frame <-image' composites the
+windows using Cairo instead.
     \tick{SDL drivers}
 SDL selects its drivers from environment variables, which must be set
 before \pllib{pce} is loaded.  The \const{disk} audio driver

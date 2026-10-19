@@ -730,6 +730,12 @@ imply X-specific semantics.
 
     @see window<-image for the pixels of a single window.
 
+- frame<-sdl_test_image: -> image
+    For testing only.  Image of what the SDL renderer draws for the
+    frame, read back from the renderer.  frame<-image composites the
+    windows using Cairo instead.  The two differ if the renderer draws
+    differently, e.g., for the sdl_layer objects of an sdl_window.
+
 - frame<-keyboard_focus: -> window
     Window currently designated to receive keyboard input.
 

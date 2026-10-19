@@ -171,6 +171,7 @@ ws_uncreate_frame(FrameObj fr)
     bool had_focus = SDL_GetKeyboardFocus() == f->ws_window;
 #endif
     deleteChain(ChangedFrames, fr);
+    sdl_frame_free_textures(fr);
     SDL_DestroyRenderer(f->ws_renderer);
     SDL_DestroyWindow(f->ws_window);
     unalloc(sizeof(*f), f);
@@ -916,6 +917,8 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off, double opacity)
     }
     wsw->ndirty = 0;
 
+    if ( instanceOfObject(sw, ClassSdlWindow) )	/* GPU layers under Cairo */
+      sdl_draw_layers(fr, (SdlWindow)sw, &dstrect, scale, opacity);
     SDL_SetTextureAlphaModFloat(wsw->texture, (float)opacity);
     SDL_RenderTexture(wfr->ws_renderer, wsw->texture, NULL, &dstrect);
     if ( wfr->flash_end_ms && SDL_GetTicks() < wfr->flash_end_ms )
@@ -1010,6 +1013,7 @@ ws_reset_textures(void)
       if ( !ws_created_frame(fr) )
 	continue;
 
+      sdl_frame_free_textures(fr);
       for_cell(c3, fr->members)
 	reset_texture_window(c3->value);
 
@@ -1019,13 +1023,11 @@ ws_reset_textures(void)
 }
 
 
-bool
-ws_draw_frame(FrameObj fr)
-{ if ( !ws_created_frame(fr) )
-    return false;
+/* Render the frame without presenting it */
 
-  WsFrame wfr = fr->ws_ref;
-  ASSERT_SDL_MAIN();
+static void
+render_frame(FrameObj fr)
+{ WsFrame wfr = fr->ws_ref;
 
   DEBUG(NAME_sdl,
 	Cprintf("BEGIN ws_draw_frame(%s)\n", pp(fr)));
@@ -1055,11 +1057,53 @@ ws_draw_frame(FrameObj fr)
     ws_draw_window(fr, sw, &off, window_group_opacity(sw));
   }
   ws_draw_resize_frame(fr);
+}
+
+
+bool
+ws_draw_frame(FrameObj fr)
+{ if ( !ws_created_frame(fr) )
+    return false;
+
+  WsFrame wfr = fr->ws_ref;
+  ASSERT_SDL_MAIN();
+
+  render_frame(fr);
   SDL_RenderPresent(wfr->ws_renderer);
   DEBUG(NAME_sdl,
 	Cprintf("END ws_draw_frame(%s)\n", pp(fr)));
 
   return true;
+}
+
+
+/**
+ * What the renderer draws for the frame, read back from it.  Unlike
+ * <-image, which composites the windows using Cairo, this shows what
+ * goes to the screen, including sdl_layer objects drawn by the GPU.
+ * Used for testing.
+ */
+Image
+ws_rendered_image_frame(FrameObj fr)
+{ if ( !ws_created_frame(fr) )
+    return NULL;
+
+  WsFrame wfr = fr->ws_ref;
+  ASSERT_SDL_MAIN();
+
+  render_frame(fr);
+  SDL_Surface *s = SDL_RenderReadPixels(wfr->ws_renderer, NULL);
+  SDL_RenderPresent(wfr->ws_renderer);
+  if ( !s )
+  { errorPce(fr, NAME_cannotCreate, CtoName(SDL_GetError()));
+    return NULL;
+  }
+
+  Image image = newObject(ClassImage, NIL, ONE, ONE, NAME_pixmap, EAV);
+  status rc = ws_set_image_pixels(image, s);
+  SDL_DestroySurface(s);
+
+  return rc ? image : NULL;
 }
 
 
@@ -1753,6 +1797,8 @@ composite_window_to_cairo(cairo_t *cr, PceWindow sw,
 
   float wx = (ox + valInt(sw->area->x)) * scale;
   float wy = (oy + valInt(sw->area->y)) * scale;
+  if ( instanceOfObject(sw, ClassSdlWindow) )
+    sdl_cairo_layers(cr, (SdlWindow)sw, wx, wy, scale, opacity);
   cairo_surface_flush(wsw->backing);
   cairo_set_source_surface(cr, wsw->backing, wx, wy);
   cairo_paint_with_alpha(cr, opacity);

@@ -266,12 +266,18 @@ ws_close_camera(Camera c)
 }
 
 
-/* Copy a frame into the image of `c` and run <-message */
+/* Copy a frame into the texture or image of `c` and run <-message */
 
 static void
 deliver_frame(Camera c, SDL_Surface *frame)
-{ if ( ws_set_image_pixels(c->image, frame) &&
-       notNil(c->message) )
+{ status rc;
+
+  if ( notNil(c->texture) )
+    rc = ws_sdl_texture_set_surface(c->texture, frame);
+  else
+    rc = ws_set_image_pixels(c->image, frame);
+
+  if ( rc && notNil(c->message) )
     forwardReceiverCode(c->message, c, c, EAV);
 }
 

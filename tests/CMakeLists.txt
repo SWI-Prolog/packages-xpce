@@ -78,6 +78,7 @@ test_libs(animation            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(image_save           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_init           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(camera               OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(sdl_texture          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(clipboard_media      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(display_info         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tray_icon            OPTIONS ${XPCE_TEST_OPTIONS})
@@ -177,6 +178,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:image_save
                      xpce:emacs_init
                      xpce:camera
+                     xpce:sdl_texture
                      xpce:clipboard_media
                      xpce:display_info
                      xpce:tray_icon

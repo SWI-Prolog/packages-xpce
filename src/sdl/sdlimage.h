@@ -60,6 +60,7 @@ void ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int 
 status ws_has_alpha_image(Image image);
 
 status	ws_set_image_pixels(Image image, SDL_Surface *surf);
+SDL_Surface *ws_decode_mjpg(const Uint8 *data, size_t len);
 
 bool	ws_image_to_png(Image image, void **data, size_t *size);
 status	ws_image_from_data(Image image, const void *data, size_t size);

@@ -10,11 +10,15 @@ A camera delivers video from a camera, e.g., a webcam, as an image.
 	send(C, open).
 
 The image is replaced by the frame, so its size is the size of the
-frames.  The user may have to give permission to use the camera.  Until
+frames.  If <-texture is an sdl_texture, the frames go there instead.
+They keep the format of the camera and an sdl_layer shows them in an
+sdl_window without converting them on the CPU, which is much cheaper
+for large frames.  The user may have to give permission to use the camera.  Until
 this is decided, <-status is `waiting`.
 
 @see display<-cameras
 @see class image
+@see class sdl_texture
 
 
 ## Instance variables {#class-camera-instvars}
@@ -36,6 +40,10 @@ this is decided, <-status is `waiting`.
 
 - camera<->status_message: code*
     Executed with the camera and the new <-status when it changes.
+
+- camera<->texture: sdl_texture*
+    If not @nil, the frames are copied into this texture rather than
+    into <-image, keeping their format.  Motion JPEG frames are decoded.
 
 
 ## Send methods {#class-camera-send}

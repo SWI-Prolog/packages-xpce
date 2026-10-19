@@ -433,7 +433,14 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 
   clip_rectangle(x, y, w, h);		/* outermost: see d_clip() */
   if ( clear )
-    r_fill(x, y, w, h, context.background);
+  { if ( instanceOfObject(sw, ClassSdlWindow) ) /* layers show through */
+    { cairo_save(CR);
+      cairo_set_operator(CR, CAIRO_OPERATOR_CLEAR);
+      cairo_paint(CR);
+      cairo_restore(CR);
+    } else
+      r_fill(x, y, w, h, context.background);
+  }
 
   succeed;
 }
@@ -449,10 +456,20 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
  */
 status
 d_image(Image i, int x, int y, int w, int h)
+{ ws_open_image(i);
+
+  return d_surface(i->ws_ref, x, y, w, h);
+}
+
+/**
+ * Draw into a Cairo image surface, e.g., the pixels of an image or
+ * an sdl_texture.  See d_image().
+ */
+status
+d_surface(cairo_surface_t *s, int x, int y, int w, int h)
 { DisplayObj d = CurrentDisplay(NIL);
   Any colour, background;
 
-  ws_open_image(i);
   if ( d )
   { colour     = d->foreground;
     background = d->background;
@@ -467,7 +484,7 @@ d_image(Image i, int x, int y, int w, int h)
 
   context.type               = DCTX_IMAGE;
   context.display            = d;
-  context.target             = i->ws_ref;
+  context.target             = s;
   context.cr                 = cairo_create(context.target);
   context.background         = background;
   context.colour             = colour;

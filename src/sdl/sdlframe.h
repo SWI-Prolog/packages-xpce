@@ -44,6 +44,9 @@ typedef struct
   SDL_FRect	 flash_rect;	/* overlay area (renderer coords); zero = full frame */
   Uint64	 live_ts;	/* timestamp of last live-resize event handled */
   bool		 text_input;	/* xpce asked for text input on this frame */
+  struct frame_texture *textures; /* sdl_texture objects drawn here */
+  int		 ntextures;
+  int		 atextures;	/* allocated size of `textures` */
 #ifdef __WINDOWS__
   HWND		hwnd;		/* Windows handle */
 #endif
@@ -77,6 +80,7 @@ void ws_frame_cursor(FrameObj fr, CursorObj cursor);
 void ws_status_frame(FrameObj fr, Name status);
 void ws_set_label_frame(FrameObj fr);
 Image ws_image_of_frame(FrameObj fr);
+Image ws_rendered_image_frame(FrameObj fr);
 Image ws_image_of_window(PceWindow sw);
 
 #endif /* RAYFRAME_H */

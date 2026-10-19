@@ -436,8 +436,13 @@ resizeImage(Image image, Int w, Int h)
  */
 
 static status
-copyImage(Image image, Image i2)
+copyImage(Image image, Any from)
 { TRY(verifyAccessImage(image, NAME_copy));
+
+  if ( instanceOfObject(from, ClassSdlTexture) )
+    return ws_sdl_texture_to_image(from, image);
+
+  Image i2 = from;
 
   CHANGING_IMAGE(image,
     TRY(ws_copy_image(image, i2));
@@ -447,18 +452,20 @@ copyImage(Image image, Image i2)
 }
 
 
-static status
-drawInImage(Image image, Graphical gr, Point pos)
+/* Paint `gr` onto pixels of `iw` x `ih`, at `pos` if given.  `paint`
+ * is called with the area of the pixels to draw, after clipping.  It
+ * opens a drawing context on the pixels, redraws `gr` and closes the
+ * context.  Shared by image->draw_in and sdl_texture->draw_in.
+ */
+
+status
+drawInGraphical(Graphical gr, Point pos, int iw, int ih,
+		draw_in_func paint, void *closure)
 { Int oldx, oldy;
   Device dev;
   int x, y, w, h;
-  int iw = valInt(image->size->w);
-  int ih = valInt(image->size->h);
   int m;
-  Area a;
   BoolObj olddisplayed = gr->displayed;
-
-  TRY(verifyAccessImage(image, NAME_drawIn));
 
   if ( notDefault(pos) )
   { oldx = gr->area->x;
@@ -503,15 +510,8 @@ drawInImage(Image image, Graphical gr, Point pos)
   { x -= m; y -= m; w += m*2; h += 2*m;
   }
 
-  a = answerObject(ClassArea, toInt(x), toInt(y), toInt(w), toInt(h), EAV);
-  CHANGING_IMAGE(image,
-    d_image(image, x, y, w, h);
-    d_modify();
-    RedrawArea(gr, a);			/* Was gr->area */
-    d_done();
-    if ( notNil(image->bitmap) )
-      changedImageGraphical(image->bitmap,
-			    toInt(x), toInt(y), toInt(w), toInt(h)););
+  Area a = answerObject(ClassArea, toInt(x), toInt(y), toInt(w), toInt(h), EAV);
+  (*paint)(gr, a, closure);
   doneObject(a);
 
 out:
@@ -522,6 +522,33 @@ out:
   }
 
   succeed;
+}
+
+
+static void
+paint_in_image(Graphical gr, Area a, void *closure)
+{ Image image = closure;
+  int x = valInt(a->x), y = valInt(a->y);
+  int w = valInt(a->w), h = valInt(a->h);
+
+  CHANGING_IMAGE(image,
+    d_image(image, x, y, w, h);
+    d_modify();
+    RedrawArea(gr, a);			/* Was gr->area */
+    d_done();
+    if ( notNil(image->bitmap) )
+      changedImageGraphical(image->bitmap,
+			    toInt(x), toInt(y), toInt(w), toInt(h)););
+}
+
+
+static status
+drawInImage(Image image, Graphical gr, Point pos)
+{ TRY(verifyAccessImage(image, NAME_drawIn));
+
+  return drawInGraphical(gr, pos,
+			 valInt(image->size->w), valInt(image->size->h),
+			 paint_in_image, image);
 }
 
 		/********************************
@@ -854,7 +881,7 @@ static senddecl send_image[] =
      DEFAULT, "Destroy private memory and window-system resources"),
   SM(NAME_hasAlpha, 0, NULL, hasAlphaImage,
      NAME_colour, "True if the image is not completely opaque"),
-  SM(NAME_copy, 1, "from=image", copyImage,
+  SM(NAME_copy, 1, "from=image|sdl_texture", copyImage,
      NAME_copy, "Copy contents of argument in image"),
   SM(NAME_drawIn, 2, T_drawIn, drawInImage,
      NAME_copy, "Paint graphical in image [at point]"),

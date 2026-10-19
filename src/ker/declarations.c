@@ -230,6 +230,12 @@ static struct class_definition classdefs[] =
   { NAME_trayIcon, NAME_object, makeClassTrayIcon,
     &ClassTrayIcon, "Icon with a menu in the system tray" },
 
+  { NAME_sdlTexture, NAME_object, makeClassSdlTexture,
+    &ClassSdlTexture, "Pixels the SDL renderer draws without Cairo" },
+
+  { NAME_sdlLayer, NAME_object, makeClassSdlLayer,
+    &ClassSdlLayer, "Placement of an sdl_texture in an sdl_window" },
+
   { NAME_dropData, NAME_eventDetail, makeClassDropData,
     &ClassDropData, "Data of a drop_* event" },
 
@@ -619,6 +625,9 @@ static struct class_definition classdefs[] =
 
   { NAME_window, NAME_device, makeClassWindow,
     &ClassWindow, "Scrollable device with its own coordinate system" },
+
+  { NAME_sdlWindow, NAME_window, makeClassSdlWindow,
+    &ClassSdlWindow, "Window showing sdl_layer objects below its graphicals" },
 
   { NAME_windowDecorator, NAME_window, makeClassWindowDecorator,
     &ClassWindowDecorator, "Attach scrollbars and label to a window" },

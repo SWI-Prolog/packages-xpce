@@ -153,9 +153,12 @@ PNG output.
     overlapping pixels.  Newly-exposed area is cleared to the
     background.  See also `<-scale`.
 
-- image->copy: from=image
+- image->copy: from=image|sdl_texture
     Replace the receiver's pixels with an exact copy of the
-    argument.  Use `->draw_in` to *blit* an image into a sub-area
+    argument.  The size of the receiver becomes the size of the
+    argument.  The pixels of an sdl_texture are converted to RGB, so
+    this copies, e.g., the current frame of a camera into an existing
+    image.  Use `->draw_in` to *blit* an image into a sub-area
     instead.
 
 - image->draw_in: graphical, at=[point]

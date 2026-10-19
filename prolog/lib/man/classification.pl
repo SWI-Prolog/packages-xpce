@@ -214,6 +214,9 @@ scope('C.resize_table_slice_gesture', basic).
 scope('C.resource', basic).
 scope('C.rubber', basic).
 scope('C.scroll_bar', basic).
+scope('C.sdl_layer', basic).
+scope('C.sdl_texture', basic).
+scope('C.sdl_window', basic).
 scope('C.send_method', basic).
 scope('C.sheet', basic).
 scope('C.size', basic).

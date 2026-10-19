@@ -1029,7 +1029,30 @@ NewClass(camera)
   Name		status;			/* closed, waiting, open, denied */
   Code		message;		/* Executed for each frame */
   Code		status_message;		/* Executed if <-status changes */
+  SdlTexture	texture;		/* Receives frames instead of image */
   WsRef		ws_ref;			/* SDL_Camera */
+End;
+
+/* SDL graphics.  The resources are typed C pointers that are created
+ * when first needed rather than a ws_ref.
+ */
+
+NewClass(sdl_texture)
+  Point		hot_spot;		/* Origin for placing it, or @nil */
+  struct SDL_Surface *surface;		/* Pixels in their own format */
+End;
+
+NewClass(sdl_layer)
+  SdlTexture	texture;		/* What is shown, or @nil */
+  Area		source;			/* Part of the texture or @nil */
+  Area		area;			/* Where in the window or @nil */
+  Name		scale;			/* stretch, fit, fill, none */
+  Any		alpha;			/* Opacity (0.0..1.0) */
+  Any		angle;			/* Clockwise rotation in degrees */
+  Name		flip;			/* none, horizontal, vertical, both */
+  Transform	transform;		/* Final mapping or @nil */
+  BoolObj	displayed;		/* Visible? */
+  SdlWindow	window;			/* Window showing it or @nil */
 End;
 
 NewClass(audio_recorder)
@@ -1182,6 +1205,11 @@ NewClass(dialog)
   Size		gap;			/* X-Y gap between items */
   Size		border;			/* border around objects */
   Name		size_given;		/* Size given by user: no recompute */
+End;
+
+NewClass(sdl_window)
+  ABSTRACT_WINDOW
+  Chain		layers;			/* sdl_layer objects, bottom first */
 End;
 
 NewClass(view)
