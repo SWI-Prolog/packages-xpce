@@ -162,8 +162,8 @@ load(F, File:name) :->
     send(V, status_message, message(F, video_status, @arg2)),
     get(F, member, controls, D),
     send(V, volume, D?volume_member?selection),
+    send(F, slot, video, V),            % ->open may call ->video_status
     send(V, open),
-    send(F, slot, video, V),
     get(F, member, screen, W),
     send(W, append, sdl_layer(V?texture, @default, fit)),
     file_base_name(File, Base),
