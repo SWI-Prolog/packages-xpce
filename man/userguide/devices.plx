@@ -416,6 +416,130 @@ draws it once with Cairo and makes the origin of the graphical the hot
 spot.  Moving many such sprites costs the renderer little, while
 moving as many figures has Cairo draw each of them for every move.
 
+\subsection{Playing and recording video}		\label{sec:video}
+
+\index{video}\index{MP4}%
+A \class{video} plays a video file or stream, e.g., an MP4, MKV or WebM
+file, with its sound.  Its frames go into `video <-texture', an
+\class{sdl_texture}, which is shown using an \class{sdl_layer} as
+above.  `video ->play', `video ->pause' and `video ->stop' control it
+and `video <->position' tells and changes the time.  The sound plays on
+the default playback device and keeps the frames in time.  The example
+plays a file in a window and plays or pauses when the window is
+clicked:
+
+\begin{code}
+video_example(File) :-
+    new(V, video(File)),
+    new(W, sdl_window('Video', size(640, 360))),
+    send(W, background, black),
+    send(W, append, sdl_layer(V?texture)),  % fit the window
+    send(W, recogniser,                     % click to play or pause
+         click_gesture(left, '', single,
+                       if(V?status == playing,
+                          message(V, pause),
+                          message(V, play)))),
+    send(W, open),
+    send(W, attribute, video, V),           % freed with the window
+    send(V, play).
+\end{code}
+
+`video <-image' copies the current frame or, given a time, the frame at
+that time, e.g., to make a thumbnail.  A \class{video_writer} writes a
+video file from images, textures, frames and windows, by default as
+H.264 in MP4.  `video_writer ->append' adds a frame and `video_writer
+->append_audio' adds samples to its sound.  It can also record: `video_writer
+->record' appends the image of a window or frame at its frame rate,
+`camera <->writer' makes a camera append its frames and `audio_recorder
+->record' with a \class{video_writer} adds the sound of the microphone.
+The example starts recording a window.  `video_writer ->close' stops
+recording and finishes the file:
+
+\begin{code}
+record_window_example(Window, File, Writer) :-
+    get(Window, size, Size),
+    new(Writer, video_writer(File, Size, 25)),
+    send(Writer, record, Window).
+\end{code}
+
+Videos are decoded and encoded using ffmpeg on Linux, AVFoundation on
+macOS and Media Foundation on Windows.  `display
+<-video_decoders' and `display <-video_encoders' list the codecs that
+are available.  The demo \textsf{Video player} plays files and network
+streams, and the demo \textsf{Camera} records the camera and the
+microphone or streams them to a URL.
+
+\subsection{Streaming video}			\label{sec:video-stream}
+
+\index{streaming}\index{live video}%
+The source of a \class{video} may be a URL, e.g., \exam{https://...},
+an HLS playlist (\exam{.m3u8}), an IP camera (\exam{rtsp://...}) or
+\exam{udp://...}.  A network stream is opened in the background:
+`video <-status' is \const{opening} until it is open, which `video
+<->status_message' tells.  A live stream (`video <-live') cannot seek;
+if playing falls behind, frames are dropped so the delay stays small.
+`video ->option' passes options to the backend, e.g., \exam{rtsp_transport
+tcp} for an IP camera.
+
+A \class{video} without a source plays the encoded data written to it,
+e.g., using pce_open/3.  This plays video that arrives on a Prolog
+stream, e.g., from an HTTP request or a WebSocket.  Formats such as
+MPEG-TS, WebM and fragmented MP4 play while the data arrives.
+
+The target of a \class{video_writer} may also be a URL, which streams
+the video live: \exam{rtmp://...} for streaming services, and
+\exam{srt://}, \exam{udp://}, \exam{tcp://} or \exam{rtp://} for
+MPEG-TS.  A target ending in \exam{.m3u8} writes HLS segments that a
+web server can serve to browsers.  Finally, the target may be code that
+receives the encoded data.  library(pce_video) uses this to write to a
+Prolog stream.  The example serves a window live over HTTP using the
+HTTP server of SWI-Prolog.  The writer gives the data to a message
+queue in the GUI thread; the thread of the HTTP request copies it to
+the client.  \exam{video('http://localhost:8080/live.ts')}, VLC or ffplay
+show it.
+
+\begin{code}
+stream_window(Window, Port) :-
+    http_handler(root('live.ts'), send_window(Window), [spawn([])]),
+    http_server(http_dispatch, [port(Port)]).
+
+send_window(Window, _Request) :-
+    message_queue_create(Queue),
+    format('Content-type: video/mp2t~n'),
+    format('Transfer-encoding: chunked~n~n'),
+    in_pce_thread_sync(start_stream(Window, Queue, Writer)),
+    call_cleanup(relay(Queue),
+                 in_pce_thread(stop_stream(Writer, Queue))).
+
+start_stream(Window, Queue, Writer) :-
+    get(Window, size, Size),
+    new(Writer, video_writer(message(@prolog, queue_data,
+                                     prolog(Queue), @arg1),
+                             Size, 25)),
+    send(Writer, format, mpegts),
+    send(Writer, live, @on),
+    send(Writer, record, Window).
+
+queue_data(Queue, Data) :-
+    get(Data, value, String),
+    thread_send_message(Queue, String).
+
+relay(Queue) :-
+    thread_get_message(Queue, String),
+    write(String),
+    flush_output,
+    relay(Queue).
+
+stop_stream(Writer, Queue) :-
+    send(Writer, close),
+    free(Writer),
+    message_queue_destroy(Queue).
+\end{code}
+
+Streaming needs the ffmpeg backend.  Media Foundation and AVFoundation
+play files and progressive downloads over http(s), but cannot read
+written data or write to anything but a file.
+
 
 \section{The desktop}				\label{sec:desktop}
 

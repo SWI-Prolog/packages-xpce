@@ -23,7 +23,7 @@ set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c gradient.c
 		joint.c line.c link.c listbrowser.c node.c path.c pathseg.c strokestyle.c markuptext.c canvas.c
 		scrollbar.c text.c transform.c tree.c visual.c
 		pixmap.c elevation.c shadow.c pen.c draw.c bezier.c hsv.c
-		sound.c camera.c animation.c sdlgraphics.c)
+		sound.c camera.c animation.c sdlgraphics.c video.c)
 
 set(ITF_SRC	host.c interface.c asfile.c console.c
 		stub.c xmalloc.c iostream.c srcsink.c rc.c hostdata.c)
@@ -74,7 +74,14 @@ set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c
 		sdlgamepad.c sdlaudio.c sdlcamera.c sdltray.c sdltexture.c
-		sdlmenubar.c)
+		sdlmenubar.c sdlvideo.c)
+if(HAVE_VIDEO_FFMPEG)
+  list(APPEND SDL_SRC vid_ffmpeg.c)
+elseif(HAVE_VIDEO_MF)
+  list(APPEND SDL_SRC vid_mf.c)
+elseif(HAVE_VIDEO_AVF)
+  list(APPEND SDL_SRC vid_avf.m)
+endif()
 if(APPLE)
   # The Cocoa halves of the native menu bar and the system colours.
   # They must be separate translation units: in Objective-C `Class' is
@@ -167,7 +174,8 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pce_server.pl pce_set_item.pl pce_shell.pl pce_style_item.pl
     pce_symbol_picker.pl
     pce_tagged_connection.pl pce_template.pl pce_tick_box.pl pce_toc.pl
-    pce_type.pl pce_unclip.pl pce_util.pl pce_xref.pl persistent_frame.pl
+    pce_type.pl pce_unclip.pl pce_util.pl pce_video.pl pce_xref.pl
+    persistent_frame.pl
     portray_object.pl print_graphics.pl
     prolog_predicate_item.pl prolog_predicate.pl qrecompile.pl
     scaledbitmap.pl scan_arguments.pl splash_screen.pl
@@ -273,7 +281,7 @@ set(XPCE_DATA_prolog_contrib contrib.pl README)
 set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
 
 set(XPCE_DATA_prolog_demo animation_demo.pl beach_ball.png
-    arc.pl asteroids.pl camera_demo.pl canvas_demo.pl
+    arc.pl asteroids.pl camera_demo.pl canvas_demo.pl video_player.pl
     charts.pl chess.pl colour.pl compose.pl constraint.pl cursor.pl
     demo_gallery.pl dialog_gallery.pl dragdrop_file.pl event_hierarchy.pl
     fontviewer.pl graph.pl hsvcolour.pl imageviewer.pl ispell.pl juggler.pl

@@ -224,10 +224,21 @@ unlinkAudioRecorder(AudioRecorder r)
 }
 
 
+/* Record into <-sound or `to`.  If `to` is a video_writer, it gets an
+ * audio track for the recorded samples if it has none.
+ */
+
 static status
-recordAudioRecorder(AudioRecorder r, SourceSink to)
+recordAudioRecorder(AudioRecorder r, Any to)
 { if ( r->recording == ON )
     succeed;
+  if ( instanceOfObject(to, ClassVideoWriter) )
+  { VideoWriter vw = to;
+
+    if ( vw->status == NAME_new && isNil(vw->audio_frequency) )
+      TRY(send(vw, NAME_audio, toInt(ws_recording_frequency()),
+	       toInt(ws_recording_channels()), EAV));
+  }
   assign(r, sink, isDefault(to) ? NIL : to);
   TRY(ws_start_recording(r));
   assign(r, recording, ON);
@@ -256,7 +267,7 @@ static vardecl var_audio_recorder[] =
      NAME_action, "Executed with the recorder and the input level"),
   IV(NAME_recording, "bool", IV_GET,
      NAME_action, "@on while recording"),
-  IV(NAME_sink, "source_sink*", IV_GET,
+  IV(NAME_sink, "source_sink|video_writer*", IV_GET,
      NAME_storage, "Where ->record writes the samples, or @nil"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_internal, "Window system data")
@@ -269,8 +280,8 @@ static senddecl send_audio_recorder[] =
      DEFAULT, "Create, optionally with a level message"),
   SM(NAME_unlink, 0, NULL, unlinkAudioRecorder,
      DEFAULT, "Stop recording"),
-  SM(NAME_record, 1, "to=[source_sink]", recordAudioRecorder,
-     NAME_action, "Start recording into <-sound or to a sink"),
+  SM(NAME_record, 1, "to=[source_sink|video_writer]", recordAudioRecorder,
+     NAME_action, "Start recording into <-sound, a sink or a video"),
   SM(NAME_stop, 0, NULL, stopAudioRecorder,
      NAME_action, "Stop recording")
 };

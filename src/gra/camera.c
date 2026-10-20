@@ -53,6 +53,7 @@ initialiseCamera(Camera c, Name name)
   assign(c, message,	    NIL);
   assign(c, status_message, NIL);
   assign(c, texture,	    NIL);
+  assign(c, writer,	    NIL);
   c->ws_ref = NULL;
 
   succeed;
@@ -112,6 +113,8 @@ static vardecl var_camera[] =
      NAME_status, "Executed with the camera and status if it changes"),
   IV(NAME_texture, "sdl_texture*", IV_BOTH,
      NAME_video, "If not @nil, receives the frames instead of <-image"),
+  IV(NAME_writer, "video_writer*", IV_BOTH,
+     NAME_video, "If not @nil, the frames are also appended to it"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_internal, "SDL camera")
 };

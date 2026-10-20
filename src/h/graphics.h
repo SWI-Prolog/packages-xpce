@@ -1030,12 +1030,50 @@ NewClass(camera)
   Code		message;		/* Executed for each frame */
   Code		status_message;		/* Executed if <-status changes */
   SdlTexture	texture;		/* Receives frames instead of image */
+  VideoWriter	writer;			/* Also gets the frames */
   WsRef		ws_ref;			/* SDL_Camera */
 End;
 
 /* SDL graphics.  The resources are typed C pointers that are created
  * when first needed rather than a ws_ref.
  */
+
+/* Video files.  See gra/video.c and sdl/sdlvideo.c */
+
+NewClass(video)
+  ABSTRACT_SOURCE_SINK
+  Any		source;			/* File or URL, @nil: written to */
+  SdlTexture	texture;		/* Shows the current frame */
+  Name		status;			/* closed, paused, playing, finished */
+  BoolObj	loop;			/* Start again at the end */
+  Code		message;		/* Executed at the end */
+  BoolObj	audio;			/* Play the audio */
+  Num		volume;			/* Gain of the audio */
+  Code		status_message;		/* Executed if <-status changes */
+  Sheet		options;		/* Options for opening, or @nil */
+  struct ws_video *ws;			/* Reader and frame queue */
+End;
+
+NewClass(video_writer)
+  Any		target;			/* File, URL or code */
+  Size		size;			/* Size of the frames */
+  Num		frame_rate;		/* Frames per second */
+  Name		codec;			/* Encoder or @nil */
+  Int		quality;		/* 0..100 or @nil */
+  Int		frames;			/* Frames appended */
+  Int		audio_frequency;	/* Samples/second or @nil */
+  Int		audio_channels;		/* Channels or @nil */
+  Name		audio_codec;		/* Audio encoder or @nil */
+  Name		status;			/* new, open, closed */
+  Name		format;			/* Container or @nil */
+  BoolObj	live;			/* Drop frames rather than wait */
+  Int		bitrate;		/* Bits/second or @nil */
+  Int		dropped;		/* Frames dropped (live) */
+  Any		recording;		/* Frame or window recorded */
+  Timer		timer;			/* Records frames */
+  Num		record_start;		/* Time at frame 0 when recording */
+  struct ws_video_writer *ws;		/* Encoder and frame queue */
+End;
 
 NewClass(sdl_texture)
   Point		hot_spot;		/* Origin for placing it, or @nil */
@@ -1059,7 +1097,7 @@ NewClass(audio_recorder)
   Sound		sound;			/* Recorded sound */
   Code		level_message;		/* Executed with the input level */
   BoolObj	recording;		/* Currently recording */
-  SourceSink	sink;			/* Where the samples go, or @nil */
+  Any		sink;			/* Where the samples go, or @nil */
   WsRef		ws_ref;			/* Recording stream */
 End;
 

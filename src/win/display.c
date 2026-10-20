@@ -718,6 +718,21 @@ getImageSaveFormatsDisplay(DisplayObj d)
 { answer(ws_image_save_formats());
 }
 
+static Chain
+getVideoDecodersDisplay(DisplayObj d)
+{ answer(ws_video_codecs(false));
+}
+
+static Chain
+getVideoEncodersDisplay(DisplayObj d)
+{ answer(ws_video_codecs(true));
+}
+
+static Name
+getVideoBackendDisplay(DisplayObj d)
+{ answer(ws_video_backend());
+}
+
 static char *T_sdlTestGamepad[] =
         { "action={attach,detach,button,axis}", "control=[name]",
 	  "value=[num]" };
@@ -818,6 +833,12 @@ static getdecl get_display[] =
      NAME_sound, "Extensions of the sound files that can be loaded"),
   GM(NAME_imageSaveFormats, 0, "chain", NULL, getImageSaveFormatsDisplay,
      NAME_image, "Formats image->save can write"),
+  GM(NAME_videoDecoders, 0, "chain", NULL, getVideoDecodersDisplay,
+     NAME_video, "Common codecs class video can play"),
+  GM(NAME_videoEncoders, 0, "chain", NULL, getVideoEncodersDisplay,
+     NAME_video, "Common codecs class video_writer can write"),
+  GM(NAME_videoBackend, 0, "name*", NULL, getVideoBackendDisplay,
+     NAME_video, "Library used for video: ffmpeg, media_foundation, ..."),
   GM(NAME_cameras, 0, "chain", NULL, getCamerasDisplay,
      NAME_video, "Names of the available cameras"),
   GM(NAME_gamepads, 0, "chain", NULL, getGamepadsDisplay,

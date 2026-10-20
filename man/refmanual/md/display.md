@@ -360,6 +360,20 @@ See `display_manager <-current`.
     `jpeg` and `gif`.  Whether `webp` and `avif` are included depends
     on how SDL_image was built.
 
+- display<-video_decoders: -> chain
+    New chain with the names of the common video codecs class video
+    can play, e.g., `h264`, `hevc`, `av1` and `vp9`.  Empty if xpce is
+    built without video support.
+
+- display<-video_encoders: -> chain
+    New chain with the names of the common video codecs class
+    video_writer can write.  This depends on how the video library was
+    built.
+
+- display<-video_backend: -> name*
+    The library used for video: `ffmpeg`, `media_foundation` or
+    `avfoundation`, or @nil if xpce is built without video support.
+
 - display<-cameras: -> chain
     New chain holding the names of the available cameras.  The first
     call starts the support for cameras, which may ask the user for

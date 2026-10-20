@@ -44,7 +44,12 @@
 Opens a window that shows the video of a camera.  The menu selects
 one of the cameras of `display<-cameras`.  Snapshot copies the current
 frame into the snapshot view, from where it can be saved as PNG or
-copied to the clipboard.  The status line shows the status of the
+copied to the clipboard.  Record writes the video and the sound of the
+microphone to an MP4 file until Stop recording is pressed: the camera
+appends its frames to a video_writer and an audio_recorder its
+samples.  Stream does the same, but sends them live to a URL, e.g.,
+`udp://127.0.0.1:5000`, which the Video player demo can open, or an
+`rtmp://` URL of a streaming service.  The status line shows the status of the
 camera (e.g., waiting for permission), the frame size and the number
 of frames per second.
 
@@ -72,6 +77,8 @@ variable(texture,  sdl_texture, get, "Receives the frames").
 variable(frames,   int := 0, both, "Frames since the last status update").
 variable(timer,    timer*,  get, "Timer to update the status").
 variable(snapshot, image*,  get, "The last snapshot").
+variable(writer,   video_writer*, get, "Writes the recording").
+variable(recorder, audio_recorder*, get, "Records the microphone").
 
 initialise(F) :->
     send_super(F, initialise, 'Camera'),
@@ -111,6 +118,8 @@ fill_dialog(F, D:dialog) :->
     send(D, append, button(snapshot, message(F, snapshot)), right),
     send(D, append, button(save, message(F, save_snapshot)), right),
     send(D, append, button(copy, message(F, copy_snapshot)), right),
+    send(D, append, button(record, message(F, toggle_recording)), right),
+    send(D, append, button(stream, message(F, toggle_streaming)), right),
     send(D, append, button(quit, message(F, destroy)), right),
     send(D, append, new(Mirror, menu(mirror, toggle,
                                      message(F, mirror, @arg2))), right),
@@ -189,6 +198,7 @@ use_camera(F, C:camera) :->
 
 stop(F) :->
     "Stop the camera"::
+    send(F, stop_recording),
     get(F, camera, C),
     (   C \== @nil
     ->  send(F, slot, camera, @nil),
@@ -230,6 +240,87 @@ copy_snapshot(F) :->
     send(@display, copy, Image),
     send(F, report, status, 'Copied the snapshot to the clipboard').
 
+toggle_recording(F) :->
+    "Start or stop recording"::
+    (   get(F, writer, @nil)
+    ->  send(F, start_recording)
+    ;   send(F, stop_recording)
+    ).
+
+toggle_streaming(F) :->
+    "Start or stop streaming"::
+    (   get(F, writer, @nil)
+    ->  send(F, start_streaming)
+    ;   send(F, stop_recording)
+    ).
+
+start_recording(F) :->
+    "Record the video and the sound to an MP4 file"::
+    get(@finder, file, save, mp4, File),
+    send(F, start_writer, File).
+
+start_streaming(F) :->
+    "Send the video and the sound live to a URL"::
+    new(D, dialog('Stream to')),
+    send(D, append, new(TI, text_item(url, 'udp://127.0.0.1:5000'))),
+    send(TI, width, 50),
+    send(D, append, button(stream, message(D, return, TI?selection))),
+    send(D, append, button(cancel, message(D, return, @nil))),
+    send(D, default_button, stream),
+    send(D, transient_for, F),
+    get(D, confirm_centered, F?area?center, URL),
+    send(D, destroy),
+    URL \== @nil,
+    send(F, start_writer, URL).
+
+%   The microphone is optional: without one, the video has no sound.  A
+%   writer for a URL is live.
+
+start_writer(F, Target:name) :->
+    "Write the video and the sound to a file or URL"::
+    get(F, camera, C),
+    C \== @nil,
+    get(F, member, controls, D),
+    get(D?size_member, selection, Size),
+    new(W, video_writer(Target, Size, 30)),
+    new(R, audio_recorder),
+    (   send(R, record, W)
+    ->  send(F, slot, recorder, R)
+    ;   free(R)
+    ),
+    send(F, slot, writer, W),
+    send(C, writer, W),
+    send(F, update_buttons).
+
+stop_recording(F) :->
+    "Stop recording and finish the file"::
+    get(F, writer, W),
+    (   W == @nil
+    ->  true
+    ;   get(F, camera, C),
+        (   C \== @nil
+        ->  send(C, writer, @nil)
+        ;   true
+        ),
+        get(F, recorder, R),
+        (   R \== @nil
+        ->  send(R, stop),
+            send(F, slot, recorder, @nil),
+            free(R)
+        ;   true
+        ),
+        send(F, slot, writer, @nil),
+        get(W, target, Target),
+        get(W, live, Live),
+        send(W, close),
+        free(W),
+        (   Live == @on
+        ->  send(F, report, status, 'Stopped streaming to %s', Target)
+        ;   send(F, report, status, 'Saved the recording in %s', Target)
+        )
+    ),
+    send(F, update_buttons).
+
 update_buttons(F) :->
     "Make the buttons (in)active"::
     get(F, member, controls, D),
@@ -237,6 +328,18 @@ update_buttons(F) :->
     (   C == @nil -> Running = @off ; Running = @on ),
     send(D?stop_member, active, Running),
     send(D?snapshot_member, active, Running),
+    get(F, writer, W),
+    (   W == @nil
+    ->  send(D?record_member, active, Running),
+        send(D?stream_member, active, Running),
+        send(D?record_member, label, 'Record'),
+        send(D?stream_member, label, 'Stream')
+    ;   get(W, live, @on)
+    ->  send(D?record_member, active, @off),
+        send(D?stream_member, label, 'Stop streaming')
+    ;   send(D?stream_member, active, @off),
+        send(D?record_member, label, 'Stop recording')
+    ),
     (   get(F, snapshot_image, _) -> Snap = @on ; Snap = @off ),
     send(D?save_member, active, Snap),
     send(D?copy_member, active, Snap).

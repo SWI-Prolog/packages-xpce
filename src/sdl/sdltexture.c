@@ -470,6 +470,23 @@ ws_sdl_texture_set_surface(SdlTexture t, SDL_Surface *surf)
 }
 
 
+/* Make `surf` the pixels of `t`, without copying, and return the
+ * surface it had, which the caller now owns.  Used to show the frames
+ * of a video, which recycles the surfaces it gets back.
+ */
+
+SDL_Surface *
+ws_sdl_texture_swap_surface(SdlTexture t, SDL_Surface *surf)
+{ SDL_Surface *old = t->surface;
+
+  t->surface = surf;
+  set_premultiplied(surf, false);
+  ws_sdl_texture_changed(t);
+
+  return old;
+}
+
+
 status
 ws_sdl_texture_from_image(SdlTexture t, Image image)
 { SDL_Surface *s = image_surface(image);

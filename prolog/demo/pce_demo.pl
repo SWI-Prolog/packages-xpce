@@ -177,7 +177,7 @@ demo_group('Graphics',
              'HSV Colours', 'Constraints'
            ]).
 demo_group('Media and devices',
-           [ 'Camera', 'Sound'
+           [ 'Camera', 'Video player', 'Sound'
            ]).
 demo_group('Games and animation',
            [ 'Asteroids', 'Animated images', 'Kangaroo', 'Juggler'
@@ -229,6 +229,11 @@ demo('Camera',
      'Show and capture the video of a camera',
      demo(camera_demo),
      camera_demo).
+
+demo('Video player',
+     'Play video files (MP4, MKV, WebM, ...) with sound',
+     demo(video_player),
+     video_player).
 
 demo('Sound',
      'Record, replay and load sound (WAV, MP3, Ogg, FLAC, ...)',

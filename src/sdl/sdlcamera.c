@@ -45,6 +45,9 @@ typedef struct open_camera
 { struct open_camera *next;
   Camera	camera;			/* we hold a code reference */
   SDL_Camera   *sdl;
+  VideoWriter	writer;			/* writer that writer_t0 is for */
+  Uint64	writer_t0;		/* timestamp of its first frame */
+  double	writer_at;		/* time in the video at writer_t0 */
 } open_camera;
 
 static open_camera *cameras = NULL;
@@ -227,6 +230,7 @@ ws_open_camera(Camera c, Size size)
   cameras    = oc;
   c->ws_ref  = oc;
   addCodeReference(c);
+  sdl_add_media_source(sdl_camera_tick);
 
   switch(SDL_GetCameraPermissionState(cam))
   { case SDL_CAMERA_PERMISSION_STATE_APPROVED:
@@ -266,17 +270,46 @@ ws_close_camera(Camera c)
 }
 
 
-/* Copy a frame into the texture or image of `c` and run <-message */
+/* Append the frame, now in the texture or image of the camera, to
+ * <-writer.  The frames get the time of the camera's timestamps, which
+ * start at the next frame of the writer.
+ */
 
 static void
-deliver_frame(Camera c, SDL_Surface *frame)
-{ status rc;
+write_frame(open_camera *oc, Uint64 ts)
+{ Camera c = oc->camera;
+  VideoWriter vw = c->writer;
+
+  if ( oc->writer != vw )
+  { oc->writer	  = vw;
+    oc->writer_t0 = ts;
+    oc->writer_at = valInt(vw->frames)/valNum(vw->frame_rate);
+  }
+
+  double at = oc->writer_at + (double)(ts-oc->writer_t0)/1e9;
+  Any frame = notNil(c->texture) ? (Any)c->texture : (Any)c->image;
+
+  if ( !send(vw, NAME_append, frame, toNum(at), EAV) )
+    assign(c, writer, NIL);		/* do not repeat the error */
+}
+
+
+/* Copy a frame into the texture or image of `c`, append it to the
+ * writer and run <-message
+ */
+
+static void
+deliver_frame(open_camera *oc, SDL_Surface *frame, Uint64 ts)
+{ Camera c = oc->camera;
+  status rc;
 
   if ( notNil(c->texture) )
     rc = ws_sdl_texture_set_surface(c->texture, frame);
   else
     rc = ws_set_image_pixels(c->image, frame);
 
+  if ( rc && notNil(c->writer) )
+    write_frame(oc, ts);
   if ( rc && notNil(c->message) )
     forwardReceiverCode(c->message, c, c, EAV);
 }
@@ -295,7 +328,7 @@ sdl_camera_tick(void)
       if ( frame )
       { addCodeReference(c);
 	SDL_Camera *cam = oc->sdl;
-	deliver_frame(c, frame);
+	deliver_frame(oc, frame, ts);
 	SDL_ReleaseCameraFrame(cam, frame);
 	delCodeReference(c);
 	freeableObj(c);
@@ -412,9 +445,11 @@ ws_test_camera_frame(Camera c, int w, int h, Colour colour, Name format)
 					(Uint8)valInt(getGreenColour(colour)),
 					(Uint8)valInt(getBlueColour(colour))));
   void *data = NULL;
-  SDL_Surface *frame = ( format == NAME_mjpg
+  SDL_Surface *frame = ( format == NAME_mjpg	/* BT.709, as many webcams */
 			 ? mjpg_surface(rgb, &data)
-			 : SDL_ConvertSurface(rgb, SDL_PIXELFORMAT_YUY2) );
+			 : SDL_ConvertSurfaceAndColorspace(
+			     rgb, SDL_PIXELFORMAT_YUY2, NULL,
+			     SDL_COLORSPACE_BT709_LIMITED, 0) );
   SDL_DestroySurface(rgb);
   if ( !frame )
   { Cprintf("Cannot create %s frame: %s\n", pp(format), SDL_GetError());
@@ -422,7 +457,15 @@ ws_test_camera_frame(Camera c, int w, int h, Colour colour, Name format)
     fail;
   }
 
-  deliver_frame(c, frame);
+  static open_camera closed_camera;	/* for a camera that is not open */
+  open_camera *oc = c->ws_ref;
+
+  if ( !oc )
+  { if ( closed_camera.camera != c )
+      closed_camera = (open_camera){ .camera = c };
+    oc = &closed_camera;
+  }
+  deliver_frame(oc, frame, SDL_GetTicksNS());
   SDL_DestroySurface(frame);
   SDL_free(data);
 

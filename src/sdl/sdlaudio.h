@@ -57,8 +57,12 @@ double	ws_queued_audio_stream(AudioStream as);
 void	ws_free_audio_stream(AudioStream as);
 bool	sdl_audio_event(SDL_Event *event);
 void	sdl_start_media_tick(void);
+typedef bool (*media_source_tick)(void);
+void	sdl_add_media_source(media_source_tick tick);
 Chain	ws_sound_file_extensions(void);
 bool	ws_has_audio(void);
 bool	ws_sound_peaks(Sound s, int n, double *peaks);
+SDL_AudioFormat sdl_audio_format(Name name);
+const Uint8 *sdl_data_bytes(CharArray data, size_t *len, Uint8 **tmp);
 
 #endif /*SDLAUDIO_H*/

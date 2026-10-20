@@ -233,6 +233,12 @@ static struct class_definition classdefs[] =
   { NAME_sdlTexture, NAME_object, makeClassSdlTexture,
     &ClassSdlTexture, "Pixels the SDL renderer draws without Cairo" },
 
+  { NAME_video, NAME_sourceSink, makeClassVideo,
+    &ClassVideo, "Play a video file" },
+
+  { NAME_videoWriter, NAME_object, makeClassVideoWriter,
+    &ClassVideoWriter, "Write a video file" },
+
   { NAME_sdlLayer, NAME_object, makeClassSdlLayer,
     &ClassSdlLayer, "Placement of an sdl_texture in an sdl_window" },
 

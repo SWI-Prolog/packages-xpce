@@ -6,6 +6,10 @@
         ?- record_example.
         ?- camera_example.
         ?- sdl_camera_example.
+        ?- video_example('movie.mp4').
+        ?- record_window_example(@my_window, 'window.mp4', W).
+        ?- send(W, close).
+        ?- stream_window(@my_window, 8080).
         ?- new(F, frame('Tray example')), send(F, open), tray_example(F).
 */
 
@@ -16,10 +20,15 @@
             record_example/0,
             camera_example/0,
             sdl_camera_example/0,
+            video_example/1,
+            record_window_example/3,
+            stream_window/2,
             paste/1,
             tray_example/1
           ]).
 :- use_module(library(pce)).
+:- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_dispatch)).
 
 		 /*******************************
 		 *	       PENS		*
@@ -131,6 +140,71 @@ sdl_camera_example :-
     send(W, open),
     send(C, open, size(640, 480)),
     send(W, attribute, camera, C).
+
+
+		 /*******************************
+		 *	       VIDEO		*
+		 *******************************/
+
+video_example(File) :-
+    new(V, video(File)),
+    new(W, sdl_window('Video', size(640, 360))),
+    send(W, background, black),
+    send(W, append, sdl_layer(V?texture)),  % fit the window
+    send(W, recogniser,                     % click to play or pause
+         click_gesture(left, '', single,
+                       if(V?status == playing,
+                          message(V, pause),
+                          message(V, play)))),
+    send(W, open),
+    send(W, attribute, video, V),           % freed with the window
+    send(V, play).
+
+record_window_example(Window, File, Writer) :-
+    get(Window, size, Size),
+    new(Writer, video_writer(File, Size, 25)),
+    send(Writer, record, Window).
+
+%   Serve Window live as MPEG-TS at http://localhost:Port/live.ts.  The
+%   writer gives the data to a message queue from the GUI thread; the
+%   thread of the HTTP request copies it to the client until the client
+%   disconnects.
+
+stream_window(Window, Port) :-
+    http_handler(root('live.ts'), send_window(Window), [spawn([])]),
+    http_server(http_dispatch, [port(Port)]).
+
+send_window(Window, _Request) :-
+    message_queue_create(Queue),
+    format('Content-type: video/mp2t~n'),
+    format('Transfer-encoding: chunked~n~n'),
+    in_pce_thread_sync(start_stream(Window, Queue, Writer)),
+    call_cleanup(relay(Queue),
+                 in_pce_thread(stop_stream(Writer, Queue))).
+
+start_stream(Window, Queue, Writer) :-
+    get(Window, size, Size),
+    new(Writer, video_writer(message(@prolog, queue_data,
+                                     prolog(Queue), @arg1),
+                             Size, 25)),
+    send(Writer, format, mpegts),
+    send(Writer, live, @on),
+    send(Writer, record, Window).
+
+queue_data(Queue, Data) :-
+    get(Data, value, String),
+    thread_send_message(Queue, String).
+
+relay(Queue) :-
+    thread_get_message(Queue, String),
+    write(String),
+    flush_output,
+    relay(Queue).
+
+stop_stream(Writer, Queue) :-
+    send(Writer, close),
+    free(Writer),
+    message_queue_destroy(Queue).
 
 
 		 /*******************************

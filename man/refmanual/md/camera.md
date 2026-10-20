@@ -45,6 +45,11 @@ this is decided, <-status is `waiting`.
     If not @nil, the frames are copied into this texture rather than
     into <-image, keeping their format.  Motion JPEG frames are decoded.
 
+- camera<->writer: video_writer*
+    If not @nil, each frame is also appended to this video_writer.  The
+    frames get the time of the camera, starting at the next frame of
+    the writer.  The writer is reset to @nil if appending fails.
+
 
 ## Send methods {#class-camera-send}
 

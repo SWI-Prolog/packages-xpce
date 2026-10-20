@@ -39,7 +39,7 @@ The system may ask the user for permission to use the microphone.
 - audio_recorder<-recording: bool
     `@on` while recording.
 
-- audio_recorder<-sink: source_sink*
+- audio_recorder<-sink: source_sink|video_writer*
     Where ->record writes the samples, or `@nil` if it records into
     <-sound.
 
@@ -49,10 +49,13 @@ The system may ask the user for permission to use the microphone.
 - audio_recorder->initialise: level_message=[code]*
     Create a recorder.
 
-- audio_recorder->record: to=[source_sink]
+- audio_recorder->record: to=[source_sink|video_writer]
     Start recording.  Without `to`, this replaces the audio of
     <-sound.  Otherwise the samples are written to `to` while
-    recording, as described above.
+    recording, as described above.  If `to` is a video_writer, the
+    samples are added to its audio using video_writer->append_audio.
+    If the video_writer has no audio yet, it gets an audio track with
+    the frequency and channels of the recorder.
 
 - audio_recorder->stop
     Stop recording.

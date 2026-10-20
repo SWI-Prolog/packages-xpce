@@ -60,6 +60,27 @@ elseif(NOT WIN32)
   endif()
 endif()
 
+# Video: XPCE_VIDEO is auto, native, ffmpeg or off.  auto uses Media
+# Foundation on Windows, AVFoundation on macOS and ffmpeg elsewhere, if
+# it is found.
+set(XPCE_VIDEO auto CACHE STRING "Video backend: auto, native, ffmpeg or off")
+if(WIN32 AND (XPCE_VIDEO STREQUAL "auto" OR XPCE_VIDEO STREQUAL "native"))
+  set(HAVE_VIDEO_MF 1)
+  list(APPEND GUI_LIBRARIES mfplat mfreadwrite mfuuid ole32)
+elseif(APPLE AND (XPCE_VIDEO STREQUAL "auto" OR XPCE_VIDEO STREQUAL "native"))
+  set(HAVE_VIDEO_AVF 1)
+  list(APPEND GUI_LIBRARIES "-framework AVFoundation" "-framework CoreMedia"
+			    "-framework CoreVideo" "-framework VideoToolbox")
+elseif(XPCE_VIDEO STREQUAL "auto" OR XPCE_VIDEO STREQUAL "ffmpeg")
+  pkg_check_modules(FFMPEG IMPORTED_TARGET libavformat libavcodec libavutil)
+  if(FFMPEG_FOUND)
+    set(HAVE_VIDEO_FFMPEG 1)
+    list(APPEND GUI_LIBRARIES PkgConfig::FFMPEG)
+  elseif(XPCE_VIDEO STREQUAL "ffmpeg")
+    message(FATAL_ERROR "XPCE_VIDEO=ffmpeg, but ffmpeg was not found")
+  endif()
+endif()
+
 if(WIN32)
   set(O_XOS 1)
   set(O_DOSFILENAMES 1)

@@ -50,6 +50,7 @@ typedef struct frame_texture
 status	ws_init_sdl_texture(SdlTexture t, Any from);
 void	ws_destroy_sdl_texture(SdlTexture t);
 status	ws_sdl_texture_set_surface(SdlTexture t, SDL_Surface *surf);
+SDL_Surface *ws_sdl_texture_swap_surface(SdlTexture t, SDL_Surface *surf);
 status	ws_sdl_texture_from_image(SdlTexture t, Image image);
 status	ws_sdl_texture_to_image(SdlTexture t, Image image);
 status	ws_sdl_texture_draw_in(SdlTexture t, Graphical gr, Point pos);

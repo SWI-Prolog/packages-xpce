@@ -44,10 +44,12 @@
 /* Audio for class sound and class audio_recorder.  SDL calls its audio
  * callbacks from its own thread, where we cannot run xpce code.
  * Instead, a timer pushes MY_EVENT_MEDIA while sounds are playing,
- * recorders are recording or cameras are open.  sdl_audio_event()
- * handles this event in the main loop: it finishes plays whose audio
- * was consumed, moves the recorded audio into the sound of each
- * recorder and lets sdl_camera_tick() deliver camera frames.
+ * recorders are recording or other media sources are active.
+ * sdl_audio_event() handles this event in the main loop: it finishes
+ * plays whose audio was consumed, moves the recorded audio into the
+ * sound of each recorder and calls the tick function of the media
+ * sources registered with sdl_add_media_source(), such as cameras and
+ * videos.
  */
 
 #define MEDIA_TICK_MS 15		/* poll interval */
@@ -78,6 +80,24 @@ static play	*plays = NULL;
 static recorder *recorders = NULL;
 static struct astream *astreams = NULL;
 static SDL_AtomicInt ticking;		/* the timer is running */
+
+#define MAX_MEDIA_SOURCES 8
+static media_source_tick media_sources[MAX_MEDIA_SOURCES];
+static int nmedia_sources = 0;
+
+/* Call `tick` from the media tick.  It returns true while the source
+ * needs more ticks.
+ */
+
+void
+sdl_add_media_source(media_source_tick tick)
+{ for(int i=0; i<nmedia_sources; i++)
+  { if ( media_sources[i] == tick )
+      return;
+  }
+  assert(nmedia_sources < MAX_MEDIA_SOURCES);
+  media_sources[nmedia_sources++] = tick;
+}
 
 static bool
 init_audio(void)
@@ -643,11 +663,15 @@ write_to_sink(recorder *rec, const Uint8 *data, int len)
     }
   } else
   { string str;
+    status rc;
 
     str_set_n_ascii(&str, len, (char*)data);
     CharArray ca = StringToScratchCharArray(&str);
-    status rc = send(r->sink, NAME_writeAsFile,
-		     toInt(rec->written), ca, EAV);
+    if ( instanceOfObject(r->sink, ClassVideoWriter) )
+      rc = send(r->sink, NAME_appendAudio, ca, NAME_s16,
+		toInt(record_spec.freq), toInt(record_spec.channels), EAV);
+    else
+      rc = send(r->sink, NAME_writeAsFile, toInt(rec->written), ca, EAV);
     doneScratchCharArray(ca);
     if ( !rc )
       return;
@@ -818,8 +842,8 @@ typedef struct astream
   Uint64	ended_at;		/* ticks when all was consumed */
 } astream;
 
-static SDL_AudioFormat
-audio_format(Name name)
+SDL_AudioFormat
+sdl_audio_format(Name name)
 { if ( name == NAME_u8 )  return SDL_AUDIO_U8;
   if ( name == NAME_s8 )  return SDL_AUDIO_S8;
   if ( name == NAME_s32 ) return SDL_AUDIO_S32;
@@ -1249,7 +1273,7 @@ open_device(astream *a)
 				   &spec, NULL) )
       spec = (SDL_AudioSpec){ SDL_AUDIO_F32, 2, 48000 };
   } else
-    spec = (SDL_AudioSpec){ audio_format(as->format),
+    spec = (SDL_AudioSpec){ sdl_audio_format(as->format),
 			    valInt(as->channels), valInt(as->frequency) };
 
   SDL_AudioStream *stream =
@@ -1289,8 +1313,8 @@ close_device(astream *a)
  * audio_stream is an 8-bit string.  A wide string must hold bytes.
  */
 
-static const Uint8 *
-data_bytes(CharArray data, size_t *len, Uint8 **tmp)
+const Uint8 *
+sdl_data_bytes(CharArray data, size_t *len, Uint8 **tmp)
 { PceString str = &data->data;
 
   *len = str->s_size;
@@ -1398,7 +1422,7 @@ ws_write_audio_stream(AudioStream as, CharArray data)
     fail;
   if ( a->encoded && a->closed )
     return errorPce(as, NAME_cannotPlay, CtoName("the data has ended"));
-  if ( !(bytes = data_bytes(data, &len, &tmp)) )
+  if ( !(bytes = sdl_data_bytes(data, &len, &tmp)) )
     return errorPce(as, NAME_cannotPlay, CtoName("data is not binary"));
 
   addCodeReference(as);
@@ -1741,9 +1765,13 @@ sdl_audio_event(SDL_Event *event)
     a = next;
   }
 
-  bool cameras = sdl_camera_tick();
+  bool sources = false;
+  for(int i=0; i<nmedia_sources; i++)
+  { if ( media_sources[i]() )
+      sources = true;
+  }
 
-  if ( !plays && !recorders && !streaming && !cameras )
+  if ( !plays && !recorders && !streaming && !sources )
     SDL_SetAtomicInt(&ticking, 0);
   pceMTUnlock();
 

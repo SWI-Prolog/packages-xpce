@@ -261,6 +261,8 @@ scope('C.type', basic).
 scope('C.var', basic).
 scope('C.variable', basic).
 scope('C.vector', basic).
+scope('C.video', basic).
+scope('C.video_writer', basic).
 scope('C.view', basic).
 scope('C.visual', basic).
 scope('C.wheel_data', basic).

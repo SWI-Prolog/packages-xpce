@@ -285,6 +285,8 @@ static const error_def errors[] =
     "%N: No such camera" },
   { NAME_cannotOpen,		EF_REPORT,
     "%N: Cannot open: %s" },
+  { NAME_cannotSeek,		EF_REPORT,
+    "%N: Cannot seek in a live stream" },
   { NAME_cannotCreate,		EF_REPORT,
     "%N: Cannot create: %s" },
   { NAME_notSupported,		EF_REPORT,
