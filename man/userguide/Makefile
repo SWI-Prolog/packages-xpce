@@ -11,7 +11,9 @@ LOG=$(DOC).log
 PDF=$(DOC).pdf
 RERUN="Rerun to get cross-references right"
 CLHIER=figs/pceclasshierarchy.pdf
-PCEVERSION=../../VERSION
+PCEVERSIONFILE=../../VERSION
+PCEVERSION := $(shell cat $(PCEVERSIONFILE))
+DOWNLOADFILE=srv/plweb/data/download/devel/doc/XPCE-userguide-$(PCEVERSION).pdf
 
 COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
 	interface.tex graphics.tex drawing.tex devices.tex pceprolog.tex \
@@ -61,7 +63,7 @@ tex:	$(XPCETEX)
 # only rewritten if its content changes.
 
 version.tex: FORCE
-	@v=`tr -d ' \t\r\n' < $(PCEVERSION)`; \
+	@v=`tr -d ' \t\r\n' < $(PCEVERSIONFILE)`; \
 	m=`LANG=POSIX date '+%B'`; \
 	y=`date '+%Y'`; \
 	printf '\\newcommand{\\productversion}{%s}\n\\newcommand{\\productdate}{%s}\n\\newcommand{\\productyear}{%s}\n' \
@@ -122,5 +124,5 @@ distclean: clean
 	rm -f $(PDF)
 
 upload:
-	rsync -P $(PDF) plweb@oehoe:srv/plweb/data/download/xpce/doc/prolog/userguide.pdf
-	rsync -P $(PDF) plweb@us:srv/plweb/data/download/xpce/doc/prolog/userguide.pdf
+	rsync -P $(PDF) plweb@oehoe:$(DOWNLOADFILE)
+	rsync -P $(PDF) plweb@us:$(DOWNLOADFILE)
