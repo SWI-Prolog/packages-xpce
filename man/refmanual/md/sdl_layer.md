@@ -29,6 +29,7 @@ is: changing it later is not noticed, so send the area again after
 changing it.
 
 @see class sdl_texture
+@see class sdl_mesh
 @see class transform
 @see class sdl_window
 
@@ -124,6 +125,12 @@ changing it.
     corners, they are shrunk.  Other scales ignore the slices.  With
     <-scale_mode `linear`, a stretched part blends with the pixels of
     its neighbours at its border; use `nearest` if this is a problem.
+
+- sdl_layer<->mesh: sdl_mesh*
+    If not @nil, the layer draws the triangles of this mesh instead
+    of placing <-texture in <-area.  The texture is then mapped onto
+    the triangles as their vertices say; without a texture, the
+    triangles show the colours of the vertices.  See class sdl_mesh.
 
 - sdl_layer<->displayed: bool
     If @off, the layer is not shown.

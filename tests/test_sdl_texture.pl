@@ -62,7 +62,8 @@ test_sdl_texture :-
     run_tests([ sdl_texture,
                 sdl_texture_image,
                 sdl_layer,
-                sdl_sprite
+                sdl_sprite,
+                sdl_mesh
               ]).
 
 %!  colour_image(+Colours, -Image) is det.
@@ -702,3 +703,191 @@ test(graphical_no_origin, [HS == @nil]) :-
 
 :- end_tests(sdl_sprite).
 
+
+%   Meshes: triangles drawn using SDL_RenderGeometry().  Without a
+%   texture, the vertices have colours.  Texture coordinates are in
+%   pixels of the texture.
+
+:- begin_tests(sdl_mesh).
+
+%!  mesh_window(+Vertices, +Indices, +Texture, -Layer, -Window) is det.
+%
+%   A blue 60x60 window showing a mesh.
+
+mesh_window(Vertices, Indices, Texture, L, W) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, Vertices, Indices),
+    sdl_window(60, W),
+    send(W, append, new(L, sdl_layer(Texture))),
+    send(L, mesh, M).
+
+%!  quad(+X, +Y, +W, +H, +UV, +Colour, -Vertices, -Indices) is det.
+%
+%   A rectangle as two triangles, showing the part UV = U0-V0-U1-V1 of
+%   the texture.
+
+quad(X, Y, W, H, U0-V0-U1-V1, C,
+     [ v(X,Y,U0,V0,C), v(X2,Y,U1,V0,C), v(X2,Y2,U1,V1,C), v(X,Y2,U0,V1,C) ],
+     [0,1,2, 0,2,3]) :-
+    X2 is X+W, Y2 is Y+H.
+
+red_green_texture(T) :-
+    colour_image([red, green], I),
+    new(T, sdl_texture(I)).
+
+%!  rgb_pixels(+Window, +Points, -GPU, -Cairo) is det.
+%
+%   As pixels/3, but give the rgb(R,G,B) of the renderer and Cairo, for
+%   interpolated colours that need not be exactly the same.
+
+rgb_pixels(W, Points, GPU, Cairo) :-
+    send(W, open),
+    get(W, frame, F),
+    get(W?area, x, OX), get(W?area, y, OY),
+    get(F, sdl_test_image, GI),
+    get(F, image, CI),
+    maplist(rgb_at(GI, OX, OY), Points, GPU),
+    maplist(rgb_at(CI, OX, OY), Points, Cairo),
+    send(F, destroy).
+
+rgb_at(Image, OX, OY, X-Y, rgb(R,G,B)) :-
+    IX is OX+X, IY is OY+Y,
+    get(Image, pixel, IX, IY, C),
+    get(C, red, R), get(C, green, G), get(C, blue, B).
+
+near(rgb(R1,G1,B1), rgb(R2,G2,B2)) :-
+    abs(R1-R2) =< 24, abs(G1-G2) =< 24, abs(B1-B2) =< 24.
+
+test(empty, [N == 0]) :-
+    new(M, sdl_mesh),
+    get(M, count, N).
+test(append, [Names == [red, red, blue]]) :-
+    new(M, sdl_mesh),
+    forall(member(X-Y, [0-0, 40-0, 40-20, 0-20]),
+           send(M, append, point(X, Y), @default, colour(red))),
+    send(M, triangle, 0, 1, 2),
+    send(M, triangle, 0, 2, 3),
+    sdl_window(60, W),
+    send(W, append, new(L, sdl_layer)),
+    send(L, mesh, M),
+    pixels(W, [5-15, 35-5, 50-50], Names).
+test(count, [N == 4]) :-
+    quad(0, 0, 10, 10, 0-0-0-0, rgba(255,0,0,255), Vs, Is),
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, Vs, Is),
+    get(M, count, N).
+test(no_indices, [Names == [green, blue]]) :-
+    mesh_window([ v(0,0,0,0,rgba(0,255,0,255)), v(60,0,0,0,rgba(0,255,0,255)),
+                  v(0,60,0,0,rgba(0,255,0,255)) ], [], @nil, _, W),
+    pixels(W, [10-10, 50-50], Names).
+test(gradient, [true(maplist(near, GPU, [rgb(255,0,0), rgb(85,85,85)])),
+                true(maplist(near, Cairo, GPU))]) :-
+    mesh_window([ v(0,0,0,0,rgba(255,0,0,255)), v(60,0,0,0,rgba(0,255,0,255)),
+                  v(0,60,0,0,rgba(0,0,255,255)) ], [], @nil, _, W),
+    rgb_pixels(W, [0-0, 20-20], GPU, Cairo).
+test(textured, [Names == [red, green, blue]]) :-
+    red_green_texture(T),
+    quad(0, 0, 40, 20, 0-0-20-10, rgba(255,255,255,255), Vs, Is),
+    mesh_window(Vs, Is, T, _, W),
+    pixels(W, [10-10, 30-10, 50-50], Names).
+test(uv_in_pixels, [Names == [red, red]]) :-
+    red_green_texture(T),               % only the red half
+    quad(0, 0, 40, 20, 0-0-10-10, rgba(255,255,255,255), Vs, Is),
+    mesh_window(Vs, Is, T, _, W),
+    pixels(W, [10-10, 30-10], Names).
+test(vertex_colour_on_texture, [Names == [red, black]]) :-
+    red_green_texture(T),               % multiplied by red
+    quad(0, 0, 40, 20, 0-0-20-10, rgba(255,0,0,255), Vs, Is),
+    mesh_window(Vs, Is, T, _, W),
+    send(W, background, colour(black)),
+    pixels(W, [10-10, 30-10], Names).
+test(translucent_texture, [RGB == rgb(128,0,128)]) :-
+    new(T, sdl_texture(size(10, 10))), % premultiplied half red
+    filled_box(10, colour(@default, 255, 0, 0, 128), Box),
+    send(T, draw_in, Box, point(0, 0)),
+    quad(0, 0, 60, 60, 0-0-10-10, rgba(255,255,255,255), Vs, Is),
+    mesh_window(Vs, Is, T, _, W),
+    pixels(W, [30-30], [RGB0]),
+    round8(RGB0, RGB).
+test(vertex_alpha, [RGB == rgb(128,0,128)]) :-
+    red_green_texture(T),
+    quad(0, 0, 60, 60, 0-0-10-10, rgba(255,255,255,128), Vs, Is),
+    mesh_window(Vs, Is, T, _, W),
+    pixels(W, [30-30], [RGB0]),
+    round8(RGB0, RGB).
+test(layer_alpha, [RGB == rgb(128,0,128)]) :-
+    quad(0, 0, 60, 60, 0-0-0-0, rgba(255,0,0,255), Vs, Is),
+    mesh_window(Vs, Is, @nil, L, W),
+    send(L, alpha, 0.5),
+    pixels(W, [30-30], [RGB0]),
+    round8(RGB0, RGB).
+test(tint, [Names == [red]]) :-
+    quad(0, 0, 60, 60, 0-0-0-0, rgba(255,255,255,255), Vs, Is),
+    mesh_window(Vs, Is, @nil, L, W),
+    send(W, background, colour(black)),
+    send(L, tint, colour(red)),
+    pixels(W, [30-30], Names).
+test(blend_add, [Names == [rgb(255,0,255)]]) :-
+    quad(0, 0, 60, 60, 0-0-0-0, rgba(255,0,0,255), Vs, Is),
+    mesh_window(Vs, Is, @nil, L, W),
+    send(L, blend, add),
+    pixels(W, [30-30], Names).
+test(transform, [Names == [blue, red]]) :-
+    quad(0, 0, 20, 20, 0-0-0-0, rgba(255,0,0,255), Vs, Is),
+    mesh_window(Vs, Is, @nil, L, W),
+    new(Tr, transform),
+    send(Tr, set, 1, 0, 0, 1, 30, 30),
+    send(L, transform, Tr),
+    pixels(W, [10-10, 40-40], Names).
+test(changed, [Before-After == red-green]) :-
+    quad(0, 0, 60, 60, 0-0-0-0, rgba(255,0,0,255), Vs, Is),
+    mesh_window(Vs, Is, @nil, L, W),
+    send(W, open),
+    get(W, frame, F),
+    get(W?area, x, X0), get(W?area, y, Y0),
+    X is X0+30, Y is Y0+30,
+    get(F, sdl_test_image, GPU1),
+    name_of(GPU1, X, Y, Before),
+    quad(0, 0, 60, 60, 0-0-0-0, rgba(0,255,0,255), Vs2, Is2),
+    get(L, mesh, M),
+    pce_sdl_mesh_set(M, Vs2, Is2),
+    get(F, sdl_test_image, GPU2),
+    name_of(GPU2, X, Y, After),
+    send(F, destroy).
+test(clear, [Names == [blue]]) :-
+    quad(0, 0, 60, 60, 0-0-0-0, rgba(255,0,0,255), Vs, Is),
+    mesh_window(Vs, Is, @nil, L, W),
+    get(L, mesh, M),
+    send(M, clear),
+    pixels(W, [30-30], Names).
+test(free_mesh, [Mesh == @nil]) :-
+    new(M, sdl_mesh),
+    new(L, sdl_layer),
+    send(L, mesh, M),
+    free(M),
+    get(L, mesh, Mesh).
+test(layers, [Before-After == [L]-[]]) :-
+    new(M, sdl_mesh),
+    new(L, sdl_layer),
+    send(L, mesh, M),
+    chain_list(M?layers, Before),
+    send(L, mesh, @nil),
+    chain_list(M?layers, After).
+test(bad_index, error(domain_error(vertex_indices, _))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0), v(1,0), v(0,1)], [0,1,3]).
+test(not_triangles, error(domain_error(triangles, _))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0), v(1,0)], []).
+test(not_a_mesh, error(type_error(sdl_mesh, _))) :-
+    new(B, box),
+    pce_sdl_mesh_set(B, [], []).
+test(bad_vertex, error(type_error(mesh_vertex, _))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [p(0,0), v(1,0), v(0,1)], []).
+test(triangle_bad_index, fail) :-
+    new(M, sdl_mesh),
+    send(M, append, point(0, 0)),
+    catch(send(M, triangle, 0, 0, 1), _, fail).
+
+:- end_tests(sdl_mesh).

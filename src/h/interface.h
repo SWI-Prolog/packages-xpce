@@ -311,6 +311,21 @@ __pce_export bool	pceSnapshotNext(PceSnapshot snapshot, PceObject *e);
 __pce_export bool	pceSnapshotEnd(PceSnapshot snapshot);
 __pce_export void	pceFreeSnapshot(PceSnapshot snapshot);
 
+/* Replace the triangles of an sdl_mesh.  `vertices` holds 8 floats per
+ * vertex: x, y, red, green, blue, alpha (0.0..1.0), u, v.  No indices
+ * means consecutive triples of vertices.  Call holding the XPCE lock.
+ */
+
+#define PCE_MESH_OK		0
+#define PCE_MESH_NOT_A_MESH	(-1)
+#define PCE_MESH_BAD_INDEX	(-2)
+#define PCE_MESH_NOT_TRIANGLES	(-3)
+#define PCE_MESH_NO_MEMORY	(-4)
+
+__pce_export int	pceSdlMeshSet(PceObject mesh,
+				      const float *vertices, int nvertices,
+				      const int *indices, int nindices);
+
 
 		 /*******************************
 		 *    MULTI-THREADING SUPPORT	*

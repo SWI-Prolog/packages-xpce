@@ -431,6 +431,14 @@ a background that scrolls by changing `sdl_layer <->offset', and
 `sdl_layer <->slices' scales a texture as nine parts that keep the
 size of its corners, as is common for the frames of buttons and panels.
 
+An \class{sdl_mesh} holds triangles whose corners have a position, a
+colour and a position in the texture.  A layer whose `sdl_layer
+<->mesh' is set draws these triangles, interpolating the colours and
+mapping its texture onto them.  This makes gradients, warps a texture,
+e.g., a camera image, and draws many particles using a single layer.
+pce_sdl_mesh_set/3 replaces all triangles in one call, which is fast
+enough to rebuild a mesh of thousands of triangles on every frame.
+
 \subsection{Playing and recording video}		\label{sec:video}
 
 \index{video}\index{MP4}%

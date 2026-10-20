@@ -24,6 +24,7 @@ COMMON(status)	makeClassSound(Class class);
 COMMON(status)	makeClassCamera(Class class);
 COMMON(status)	makeClassSdlTexture(Class class);
 COMMON(status)	makeClassSdlLayer(Class class);
+COMMON(status)	makeClassSdlMesh(Class class);
 COMMON(status)	makeClassVideo(Class class);
 COMMON(status)	setStatusVideo(Video v, Name status);
 COMMON(status)	makeClassVideoWriter(Class class);

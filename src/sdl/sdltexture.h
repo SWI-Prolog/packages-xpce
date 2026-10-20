@@ -48,6 +48,20 @@ typedef struct frame_texture
   bool		stale;			/* owner changed since the upload */
 } frame_texture;
 
+/* The triangles of an sdl_mesh.  Positions are in the coordinates of
+ * the window, colours have straight alpha and texture coordinates are
+ * in pixels of the texture.  No indices means consecutive triples.
+ */
+
+typedef struct sdl_mesh_data
+{ SDL_Vertex   *vertices;
+  int		nvertices;
+  int		avertices;		/* allocated */
+  int	       *indices;
+  int		nindices;
+  int		aindices;		/* allocated */
+} sdl_mesh_data;
+
 status	ws_init_sdl_texture(SdlTexture t, Any from);
 void	ws_destroy_sdl_texture(SdlTexture t);
 status	ws_sdl_texture_set_surface(SdlTexture t, SDL_Surface *surf);
@@ -59,6 +73,15 @@ void	ws_sdl_texture_changed(SdlTexture t);
 Image	ws_sdl_texture_image(SdlTexture t);
 Size	ws_sdl_texture_size(SdlTexture t);
 Name	ws_sdl_texture_format(SdlTexture t);
+
+void	ws_destroy_sdl_mesh(SdlMesh m);
+void	ws_sdl_mesh_clear(SdlMesh m);
+int	ws_sdl_mesh_append(SdlMesh m, float x, float y, float u, float v,
+			   Colour c);
+status	ws_sdl_mesh_triangle(SdlMesh m, int i0, int i1, int i2);
+status	ws_sdl_mesh_set(SdlMesh m, const SDL_Vertex *v, int nv,
+			const int *idx, int ni);
+int	ws_sdl_mesh_count(SdlMesh m);
 
 void	sdl_frame_free_textures(FrameObj fr);
 void	sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,

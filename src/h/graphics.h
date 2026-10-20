@@ -1080,6 +1080,11 @@ NewClass(sdl_texture)
   struct SDL_Surface *surface;		/* Pixels in their own format */
 End;
 
+NewClass(sdl_mesh)
+  Chain		layers;			/* sdl_layer objects showing it */
+  struct sdl_mesh_data *data;		/* Vertices and indices */
+End;
+
 NewClass(sdl_layer)
   SdlTexture	texture;		/* What is shown, or @nil */
   Area		source;			/* Part of the texture or @nil */
@@ -1094,6 +1099,7 @@ NewClass(sdl_layer)
   Name		scale_mode;		/* linear, nearest, pixelart */
   Point		offset;			/* Shift of the tiles or @nil */
   Area		slices;			/* Centre part for 9-grid or @nil */
+  SdlMesh	mesh;			/* Triangles to draw or @nil */
   BoolObj	displayed;		/* Visible? */
   SdlWindow	window;			/* Window showing it or @nil */
 End;

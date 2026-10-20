@@ -193,6 +193,8 @@ static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
 static foreign_t	pl_pce_dispatch_event(term_t Fd, term_t timeout);
 static foreign_t	pl_pce_open_terminal_image(term_t ti, term_t in,
 						   term_t out, term_t err);
+static foreign_t	pl_pce_sdl_mesh_set(term_t mesh, term_t vertices,
+					    term_t indices);
 
 extern install_t	install_pcecall(void);
 
@@ -673,6 +675,8 @@ install_pl2xpce(void)
 		      pl_pce_dispatch_event, 0);
   PL_register_foreign("pce_open_terminal_image", 4,
 		      pl_pce_open_terminal_image, 0);
+  PL_register_foreign("pce_sdl_mesh_set", 3,
+		      pl_pce_sdl_mesh_set, 0);
 
   PL_license("lgplv2+", "xpce (pango library)");
 
@@ -2613,6 +2617,133 @@ pl_chain_list(term_t chain, term_t list)
   UNLOCK();
 
   return rc && PL_unify_nil(tail);
+}
+
+
+		 /*******************************
+		 *	     SDL MESHES		*
+		 *******************************/
+
+/* Get v(X,Y), v(X,Y,U,V) or v(X,Y,U,V,rgba(R,G,B,A)) into the 8 floats
+ * of a vertex for pceSdlMeshSet(): x, y, r, g, b, a, u, v.  `a` and `c`
+ * are scratch term references.
+ */
+
+static bool
+get_mesh_vertex(term_t t, float *f, term_t a, term_t c)
+{ static atom_t ATOM_v, ATOM_rgba;
+  static const int at[] = {0, 1, 6, 7};
+  atom_t name;
+  size_t arity;
+  double d;
+
+  if ( !ATOM_v )
+  { ATOM_v    = PL_new_atom("v");
+    ATOM_rgba = PL_new_atom("rgba");
+  }
+  if ( !PL_get_name_arity(t, &name, &arity) || name != ATOM_v ||
+       !(arity == 2 || arity == 4 || arity == 5) )
+    return PL_type_error("mesh_vertex", t);
+
+  f[2] = f[3] = f[4] = f[5] = 1.0f;
+  f[6] = f[7] = 0.0f;
+  for(size_t i=0; i<arity && i<4; i++)
+  { _PL_get_arg(i+1, t, a);
+    if ( !PL_get_float_ex(a, &d) )
+      return false;
+    f[at[i]] = (float)d;
+  }
+  if ( arity == 5 )
+  { _PL_get_arg(5, t, c);
+    if ( !PL_get_name_arity(c, &name, &arity) || name != ATOM_rgba ||
+	 arity != 4 )
+      return PL_type_error("rgba", c);
+    for(int i=0; i<4; i++)
+    { int v;
+
+      _PL_get_arg(i+1, c, a);
+      if ( !PL_get_integer_ex(a, &v) )
+	return false;
+      if ( v < 0 || v > 255 )
+	return PL_domain_error("colour_component", a);
+      f[2+i] = v/255.0f;
+    }
+  }
+
+  return true;
+}
+
+
+/* pce_sdl_mesh_set(+Mesh, +Vertices, +Indices) is det.
+   Replace the vertices and triangles of an sdl_mesh in one call.  See
+   pceSdlMeshSet() and the documentation of class sdl_mesh.
+*/
+
+static foreign_t
+pl_pce_sdl_mesh_set(term_t mesh, term_t vertices, term_t indices)
+{ size_t nv, ni;
+  term_t tail = PL_copy_term_ref(vertices);
+  term_t head = PL_new_term_ref();
+  term_t a = PL_new_term_ref();
+  term_t c = PL_new_term_ref();
+  float *v = NULL;
+  int *idx = NULL;
+  bool rc = false;
+
+  if ( PL_skip_list(vertices, 0, &nv) != PL_LIST )
+    return PL_type_error("list", vertices);
+  if ( PL_skip_list(indices, 0, &ni) != PL_LIST )
+    return PL_type_error("list", indices);
+  if ( nv > INT_MAX/8 || ni > INT_MAX )
+    return PL_resource_error("memory");
+  if ( !(v = malloc((nv ? nv : 1)*8*sizeof(float))) ||
+       !(idx = malloc((ni ? ni : 1)*sizeof(int))) )
+  { rc = PL_resource_error("memory");
+    goto out;
+  }
+
+  for(size_t i=0; PL_get_list(tail, head, tail); i++)
+  { if ( !get_mesh_vertex(head, &v[i*8], a, c) )
+      goto out;
+  }
+  tail = PL_copy_term_ref(indices);
+  for(size_t i=0; PL_get_list(tail, head, tail); i++)
+  { if ( !PL_get_integer_ex(head, &idx[i]) )
+      goto out;
+  }
+
+  PceObject obj;
+  int status;
+
+  LOCK();
+  pceDrainHostReferences();
+  if ( (obj = termToObject(mesh, NULL, NULLATOM, FALSE)) )
+    status = pceSdlMeshSet(obj, v, (int)nv, idx, (int)ni);
+  else
+    status = PCE_MESH_NOT_A_MESH;
+  UNLOCK();
+
+  switch(status)
+  { case PCE_MESH_OK:
+      rc = true;
+      break;
+    case PCE_MESH_NOT_A_MESH:
+      rc = PL_type_error("sdl_mesh", mesh);
+      break;
+    case PCE_MESH_BAD_INDEX:
+      rc = PL_domain_error("vertex_indices", indices);
+      break;
+    case PCE_MESH_NOT_TRIANGLES:
+      rc = PL_domain_error("triangles", ni ? indices : vertices);
+      break;
+    default:
+      rc = PL_resource_error("memory");
+  }
+
+out:
+  free(v);
+  free(idx);
+  return rc;
 }
 
 

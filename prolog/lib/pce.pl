@@ -89,6 +89,7 @@ reexports the content of these files.
 	    pce_dispatch/0,
 
             pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
+            pce_sdl_mesh_set/3,         % +Mesh, +Vertices, +Indices
 
 	    op(200, fy,  @),
 	    op(250, yfx, ?),

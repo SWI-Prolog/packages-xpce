@@ -64,6 +64,7 @@
             pce_dispatch/0,
 
             pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
+            pce_sdl_mesh_set/3,         % +Mesh, +Vertices, +Indices
 
             '$chain_list'/2,            % +Chain, -List (for pce_util)
             '$member_chain'/2,          % ?Elem, +Chain (for pce_util)

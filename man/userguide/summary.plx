@@ -1609,6 +1609,12 @@ An \class{sdl_layer} shows an \class{sdl_texture} in an
 moved, rotated and scaled using a \class{transform}.  The renderer draws
 it without Cairo, below the graphicals of the window.
 
+#class sdl_mesh "sdl_mesh()"
+An \class{sdl_mesh} holds triangles with coloured corners that an
+\class{sdl_layer} draws, possibly mapping its texture onto them.  It is
+used for gradients, warping a texture and many particles in a single
+layer.  pce_sdl_mesh_set/3 replaces all triangles in one call.
+
 #class sdl_texture "sdl_texture(from)"
 An \class{sdl_texture} holds pixels for the SDL renderer in their own
 format, e.g., the frames of a \class{camera} or \class{video}.  It can

@@ -1090,6 +1090,138 @@ layer_scale_mode(SdlLayer l)
 }
 
 
+/* The map from the coordinates of a mesh to device pixels: through
+ * <-transform, scrolling and the position and pixel density of the
+ * window.
+ */
+
+static void
+mesh_map(SdlWindow sw, SdlLayer l, float ox, float oy, float scale,
+	 layer_map *m)
+{ Transform tr = l->transform;
+
+  *m = (layer_map){1, 0, 0, 1, 0, 0};
+  if ( notNil(tr) )
+    map_then(m, valNum(tr->xx), valNum(tr->xy), valNum(tr->yx),
+	     valNum(tr->yy), valNum(tr->tx), valNum(tr->ty));
+  map_then(m, 1, 0, 0, 1,
+	   valNum(sw->scroll_offset->x), valNum(sw->scroll_offset->y));
+  map_then(m, scale, 0, 0, scale, ox, oy);
+}
+
+
+/* The texture of a mesh layer or NULL if it has none */
+
+static SDL_Surface *
+mesh_surface(SdlLayer l)
+{ SDL_Surface *s;
+
+  if ( notNil(l->texture) && (s = l->texture->surface) &&
+       s->w > 0 && s->h > 0 )
+    return s;
+
+  return NULL;
+}
+
+
+/* A white pixel, the texture of meshes without a texture.  See
+ * render_mesh().
+ */
+
+static SdlTexture
+white_texture(void)
+{ static SdlTexture white = NULL;
+
+  if ( !white )
+  { SdlTexture t = newObject(ClassSdlTexture,
+			     newObject(ClassSize, ONE, ONE, EAV), EAV);
+
+    if ( t && t->surface )
+    { SDL_FillSurfaceRect(t->surface, NULL,
+			  SDL_MapSurfaceRGBA(t->surface, 255, 255, 255, 255));
+      protectObject(t);
+      white = t;
+    }
+  }
+
+  return white;
+}
+
+
+/* Draw the mesh of layer `l`.  SDL_RenderGeometry() ignores the colour
+ * and alpha mod of the texture, so <-alpha and <-tint go into the
+ * colours of the vertices.  With a premultiplied texture, these must
+ * be premultiplied as well.
+ *
+ * The software renderer draws triangles that form a rectangle as a
+ * rectangle, ignoring the blend mode if the texture coordinates are
+ * clamped (SDL 3.4).  We avoid this by repeating the texture there,
+ * and by always using a texture: a white pixel if the layer has none.
+ */
+
+static void
+render_mesh(FrameObj fr, SdlWindow sw, SdlLayer l, SDL_Renderer *r,
+	    float ox, float oy, float scale, double opacity)
+{ sdl_mesh_data *md = l->mesh->data;
+  SDL_Surface *surf = mesh_surface(l);
+  SdlTexture t = surf ? l->texture : white_texture();
+  frame_texture *ft;
+
+  if ( l->displayed != ON || !md || md->nvertices < 3 || !t ||
+       !(ft = sdl_frame_texture(fr, t)) )
+    return;
+
+  SDL_Vertex *v = SDL_malloc(md->nvertices*sizeof(*v));
+  if ( !v )
+    return;
+
+  bool pm = ft->premultiplied && !ft->straight;
+  bool none = (l->blend == NAME_none);
+  float alpha = (float)(valNum(l->alpha)*opacity);
+  float tr = 1.0f, tg = 1.0f, tb = 1.0f;
+  layer_map m;
+
+  if ( notNil(l->tint) )
+  { SDL_Color c = pceColour2SDL_Color(l->tint);
+
+    tr = c.r/255.0f; tg = c.g/255.0f; tb = c.b/255.0f;
+  }
+  mesh_map(sw, l, ox, oy, scale, &m);
+  for(int i=0; i<md->nvertices; i++)
+  { const SDL_Vertex *s = &md->vertices[i];
+    float a = none ? s->color.a : s->color.a*alpha;
+    float k = pm && !none ? a : 1.0f;
+
+    v[i].position = map_point(&m, s->position.x, s->position.y);
+    v[i].color = (SDL_FColor){ s->color.r*tr*k, s->color.g*tg*k,
+			       s->color.b*tb*k, a };
+    v[i].tex_coord = surf ? (SDL_FPoint){ s->tex_coord.x/surf->w,
+					  s->tex_coord.y/surf->h }
+			  : (SDL_FPoint){0.5f, 0.5f};
+  }
+
+  SDL_SetTextureBlendMode(ft->texture, layer_blend_mode(l, pm));
+  SDL_SetTextureScaleMode(ft->texture, layer_scale_mode(l));
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+  bool wrap = is_software_renderer(r);
+  if ( wrap )
+    SDL_SetRenderTextureAddressMode(r, SDL_TEXTURE_ADDRESS_WRAP,
+				    SDL_TEXTURE_ADDRESS_WRAP);
+#endif
+  if ( md->nindices > 0 )
+    SDL_RenderGeometry(r, ft->texture, v, md->nvertices,
+		       md->indices, md->nindices);
+  else
+    SDL_RenderGeometry(r, ft->texture, v, md->nvertices/3*3, NULL, 0);
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+  if ( wrap )
+    SDL_SetRenderTextureAddressMode(r, SDL_TEXTURE_ADDRESS_AUTO,
+				    SDL_TEXTURE_ADDRESS_AUTO);
+#endif
+  SDL_free(v);
+}
+
+
 /* Draw the background and layers of `sw` in the renderer of `fr`.
  * `dstrect` is the area of the window in device pixels.
  */
@@ -1118,6 +1250,10 @@ sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
     frame_texture *ft;
     layer_layout ly;
 
+    if ( notNil(l->mesh) )
+    { render_mesh(fr, sw, l, r, dstrect->x, dstrect->y, scale, opacity);
+      continue;
+    }
     if ( isNil(l->texture) || !l->texture->surface ||
 	 !layer_geometry(sw, l, l->texture->surface,
 			 dstrect->x, dstrect->y, scale, &ly) ||
@@ -1218,6 +1354,160 @@ cairo_quad(const layer_quad *q, void *closure)
 }
 
 
+/* The affine map that takes the texture coordinates `uv` of a
+ * triangle to its corners `p`.  False if the texture coordinates are
+ * on a line.
+ */
+
+static bool
+triangle_matrix(const SDL_FPoint uv[3], const SDL_FPoint p[3],
+		cairo_matrix_t *m)
+{ double du1 = uv[1].x-uv[0].x, dv1 = uv[1].y-uv[0].y;
+  double du2 = uv[2].x-uv[0].x, dv2 = uv[2].y-uv[0].y;
+  double det = du1*dv2 - du2*dv1;
+
+  if ( fabs(det) < 1e-9 )
+    return false;
+
+  double dx1 = p[1].x-p[0].x, dy1 = p[1].y-p[0].y;
+  double dx2 = p[2].x-p[0].x, dy2 = p[2].y-p[0].y;
+  double a = (dx1*dv2 - dx2*dv1)/det, b = (dx2*du1 - dx1*du2)/det;
+  double d = (dy1*dv2 - dy2*dv1)/det, e = (dy2*du1 - dy1*du2)/det;
+
+  cairo_matrix_init(m, a, d, b, e,
+		    p[0].x - a*uv[0].x - b*uv[0].y,
+		    p[0].y - d*uv[0].x - e*uv[0].y);
+  return true;
+}
+
+
+/* Draw the mesh of `l` with Cairo, one triangle at a time.  Colours
+ * are interpolated using a mesh pattern.  A textured triangle is
+ * painted through the map its texture coordinates define.  If its
+ * vertices are not white, the texture is multiplied by their average
+ * colour, which is exact for triangles of one colour.  As the
+ * renderer, we do not anti-alias the edges, which would show seams
+ * between triangles.
+ */
+
+static void
+cairo_mesh(cairo_t *cr, SdlWindow sw, SdlLayer l, float wx, float wy,
+	   float scale, double opacity)
+{ sdl_mesh_data *md = l->mesh->data;
+  SDL_Surface *surf = mesh_surface(l);
+  SDL_Surface *argb = NULL;
+  cairo_surface_t *cs = NULL;
+
+  if ( l->displayed != ON || !md || md->nvertices < 3 )
+    return;
+  if ( surf )
+  { if ( !(argb = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_ARGB8888)) )
+      return;
+    if ( !is_premultiplied(surf) )
+      SDL_PremultiplySurfaceAlpha(argb, false);
+    cs = cairo_image_surface_create_for_data(argb->pixels,
+					     CAIRO_FORMAT_ARGB32,
+					     argb->w, argb->h, argb->pitch);
+  }
+
+  bool none = (l->blend == NAME_none);
+  float alpha = (float)(valNum(l->alpha)*opacity);
+  float tr = 1.0f, tg = 1.0f, tb = 1.0f;
+  int nt = (md->nindices > 0 ? md->nindices : md->nvertices)/3;
+  layer_map m;
+
+  if ( notNil(l->tint) )
+  { SDL_Color c = pceColour2SDL_Color(l->tint);
+
+    tr = c.r/255.0f; tg = c.g/255.0f; tb = c.b/255.0f;
+  }
+  mesh_map(sw, l, wx, wy, scale, &m);
+
+  for(int t=0; t<nt; t++)
+  { SDL_FPoint p[3], uv[3];
+    SDL_FColor c[3];
+    SDL_FColor avg = {0, 0, 0, 0};
+
+    for(int k=0; k<3; k++)
+    { int i = md->nindices > 0 ? md->indices[t*3+k] : t*3+k;
+      const SDL_Vertex *s = &md->vertices[i];
+
+      p[k]  = map_point(&m, s->position.x, s->position.y);
+      uv[k] = s->tex_coord;
+      c[k]  = (SDL_FColor){ s->color.r*tr, s->color.g*tg, s->color.b*tb,
+			    none ? s->color.a : s->color.a*alpha };
+      avg.r += c[k].r/3; avg.g += c[k].g/3; avg.b += c[k].b/3;
+      avg.a += c[k].a/3;
+    }
+
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_move_to(cr, p[0].x, p[0].y);
+    cairo_line_to(cr, p[1].x, p[1].y);
+    cairo_line_to(cr, p[2].x, p[2].y);
+    cairo_close_path(cr);
+    cairo_clip(cr);
+    cairo_set_operator(cr, layer_cairo_operator(l));
+
+    if ( !cs )
+    { cairo_pattern_t *pat = cairo_pattern_create_mesh();
+
+      cairo_mesh_pattern_begin_patch(pat);
+      cairo_mesh_pattern_move_to(pat, p[0].x, p[0].y);
+      cairo_mesh_pattern_line_to(pat, p[1].x, p[1].y);
+      cairo_mesh_pattern_line_to(pat, p[2].x, p[2].y);
+      for(int k=0; k<3; k++)
+	cairo_mesh_pattern_set_corner_color_rgba(pat, k, c[k].r, c[k].g,
+						 c[k].b, c[k].a);
+      cairo_mesh_pattern_end_patch(pat);
+      cairo_set_source(cr, pat);
+      cairo_paint(cr);
+      cairo_pattern_destroy(pat);
+    } else
+    { cairo_matrix_t tm;
+
+      if ( triangle_matrix(uv, p, &tm) &&
+	   cairo_matrix_invert(&tm) == CAIRO_STATUS_SUCCESS )
+      { cairo_pattern_t *tex = cairo_pattern_create_for_surface(cs);
+	bool white = avg.r > 0.999f && avg.g > 0.999f && avg.b > 0.999f;
+
+	cairo_pattern_set_matrix(tex, &tm);
+	cairo_pattern_set_filter(tex, l->scale_mode == NAME_linear
+					? CAIRO_FILTER_BILINEAR
+					: CAIRO_FILTER_NEAREST);
+	if ( !white )			/* texture * colour, in a group */
+	{ cairo_push_group(cr);
+	  cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+	  cairo_set_source(cr, tex);
+	  cairo_paint(cr);
+	  cairo_set_operator(cr, CAIRO_OPERATOR_MULTIPLY);
+	  cairo_set_source_rgb(cr, avg.r, avg.g, avg.b);
+	  cairo_paint(cr);
+	  cairo_set_operator(cr, CAIRO_OPERATOR_DEST_IN);
+	  cairo_set_source(cr, tex);
+	  cairo_paint(cr);
+	  cairo_pop_group_to_source(cr);
+	  cairo_set_operator(cr, layer_cairo_operator(l));
+	} else
+	{ cairo_set_source(cr, tex);
+	}
+	if ( none )
+	  cairo_paint(cr);
+	else
+	  cairo_paint_with_alpha(cr, avg.a);
+	cairo_pattern_destroy(tex);
+      }
+    }
+    cairo_restore(cr);
+  }
+
+  if ( cs )
+  { cairo_surface_destroy(cs);
+    SDL_DestroySurface(argb);
+  }
+}
+
+
 /* As sdl_draw_layers(), drawing onto a Cairo context for <-image of
  * a frame or window.  The window is at `wx`,`wy` in device pixels.
  */
@@ -1241,6 +1531,11 @@ sdl_cairo_layers(cairo_t *cr, SdlWindow sw, float wx, float wy,
   { SdlLayer l = cell->value;
     SDL_Surface *argb;
     layer_layout ly;
+
+    if ( notNil(l->mesh) )
+    { cairo_mesh(cr, sw, l, wx, wy, scale, opacity);
+      continue;
+    }
 
     if ( isNil(l->texture) || !l->texture->surface ||
 	 !layer_geometry(sw, l, l->texture->surface, wx, wy, scale, &ly) ||
@@ -1301,3 +1596,126 @@ sdl_cairo_layers(cairo_t *cr, SdlWindow sw, float wx, float wy,
   cairo_restore(cr);
 }
 
+
+		 /*******************************
+		 *	      MESHES		*
+		 *******************************/
+
+static sdl_mesh_data *
+mesh_data(SdlMesh m)
+{ if ( !m->data )
+    m->data = SDL_calloc(1, sizeof(*m->data));
+
+  return m->data;
+}
+
+
+static bool
+mesh_room(sdl_mesh_data *md, int nv, int ni)
+{ if ( nv > md->avertices )
+  { int n = SDL_max(nv, md->avertices*2);
+    SDL_Vertex *new = SDL_realloc(md->vertices, (size_t)n*sizeof(*new));
+
+    if ( !new )
+      return false;
+    md->vertices = new;
+    md->avertices = n;
+  }
+  if ( ni > md->aindices )
+  { int n = SDL_max(ni, md->aindices*2);
+    int *new = SDL_realloc(md->indices, (size_t)n*sizeof(*new));
+
+    if ( !new )
+      return false;
+    md->indices = new;
+    md->aindices = n;
+  }
+
+  return true;
+}
+
+
+void
+ws_destroy_sdl_mesh(SdlMesh m)
+{ sdl_mesh_data *md = m->data;
+
+  if ( md )
+  { m->data = NULL;
+    SDL_free(md->vertices);
+    SDL_free(md->indices);
+    SDL_free(md);
+  }
+}
+
+
+void
+ws_sdl_mesh_clear(SdlMesh m)
+{ sdl_mesh_data *md = m->data;
+
+  if ( md )
+    md->nvertices = md->nindices = 0;
+}
+
+
+/* Append a vertex and return its index or -1 if there is no memory */
+
+int
+ws_sdl_mesh_append(SdlMesh m, float x, float y, float u, float v, Colour c)
+{ sdl_mesh_data *md = mesh_data(m);
+
+  if ( !md || !mesh_room(md, md->nvertices+1, 0) )
+    return -1;
+
+  SDL_Vertex *vx = &md->vertices[md->nvertices];
+  vx->position  = (SDL_FPoint){x, y};
+  vx->tex_coord = (SDL_FPoint){u, v};
+  if ( notDefault(c) )
+  { SDL_Color sc = pceColour2SDL_Color(c);
+
+    vx->color = (SDL_FColor){sc.r/255.0f, sc.g/255.0f, sc.b/255.0f,
+			     sc.a/255.0f};
+  } else
+  { vx->color = (SDL_FColor){1, 1, 1, 1};
+  }
+
+  return md->nvertices++;
+}
+
+
+status
+ws_sdl_mesh_triangle(SdlMesh m, int i0, int i1, int i2)
+{ sdl_mesh_data *md = mesh_data(m);
+
+  if ( !md || !mesh_room(md, 0, md->nindices+3) )
+    fail;
+  md->indices[md->nindices++] = i0;
+  md->indices[md->nindices++] = i1;
+  md->indices[md->nindices++] = i2;
+
+  succeed;
+}
+
+
+/* Replace the vertices and indices.  The caller checks them */
+
+status
+ws_sdl_mesh_set(SdlMesh m, const SDL_Vertex *v, int nv, const int *idx, int ni)
+{ sdl_mesh_data *md = mesh_data(m);
+
+  if ( !md || !mesh_room(md, nv, ni) )
+    fail;
+  if ( nv > 0 )
+    memcpy(md->vertices, v, (size_t)nv*sizeof(*v));
+  if ( ni > 0 )
+    memcpy(md->indices, idx, (size_t)ni*sizeof(*idx));
+  md->nvertices = nv;
+  md->nindices  = ni;
+
+  succeed;
+}
+
+
+int
+ws_sdl_mesh_count(SdlMesh m)
+{ return m->data ? m->data->nvertices : 0;
+}
