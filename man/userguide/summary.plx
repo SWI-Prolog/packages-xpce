@@ -147,7 +147,7 @@ send(Frame, attribute, visualises, bicycle24)
 #class audio_recorder "audio_recorder(level_message)"
 An \class{audio_recorder} records from the default audio input,
 normally the microphone, into its <-sound or to a file or other
-\class{source_sink}.  While recording, its <-level_message is executed
+\class{source_sink}, or into the sound of a \class{video_writer}.  While recording, its <-level_message is executed
 regularly with the input level, e.g., to show a level meter.
 
 #class audio_stream "audio_stream(format, frequency, channels)"
@@ -288,7 +288,9 @@ starts a destructive action.
 #class camera "camera(name)"
 A \class{camera} delivers video from a camera as an \class{image}:
 each frame is copied into its <-image, so a \class{bitmap} that shows
-this image shows the video, and its <-message is executed.
+this image shows the video, and its <-message is executed.  If its
+<-texture is an \class{sdl_texture}, the frames go there instead,
+without Cairo, and its <-writer, a \class{video_writer}, records them.
 `display <-cameras' lists the available cameras.
 
 #class canvas "canvas(width, height)"
@@ -1601,6 +1603,22 @@ send(Window, scrollbars, vertical),
 ...
 \end{code}
 
+#class sdl_layer "sdl_layer(texture, area, scale)"
+An \class{sdl_layer} shows an \class{sdl_texture} in an
+\class{sdl_window}, scaled to an area or as a \jargon{sprite} that is
+moved, rotated and scaled using a \class{transform}.  The renderer draws
+it without Cairo, below the graphicals of the window.
+
+#class sdl_texture "sdl_texture(from)"
+An \class{sdl_texture} holds pixels for the SDL renderer in their own
+format, e.g., the frames of a \class{camera} or \class{video}.  It can
+be made from an \class{image} or drawn from a graphical, e.g., to make
+a sprite.
+
+#class sdl_window "sdl_window(label, size, display)"
+A \class{window} that shows \class{sdl_layer} objects below its
+graphicals.  It is the place to show video and fast moving sprites.
+
 #class send_method "send_method(name, types, message, summary, source)"
 A \class{send_method} maps the name of a method {\em selector} onto an
 implementation and defines various attributes of the method, such as
@@ -2036,6 +2054,16 @@ of \product{}'s programming world: specifying the types of methods, the
 instance variables of a class, to pack the arguments for
 variable-argument methods, etc.  They share a lot of behaviour with
 \class{chain} can sometimes be an attractive alternative.
+
+#class video "video(source)"
+A \class{video} plays a video file, a network stream or encoded data
+written to it, with its sound.  Its frames go into an
+\class{sdl_texture}, shown using an \class{sdl_layer}.
+
+#class video_writer "video_writer(target, size, frame_rate, codec, quality)"
+A \class{video_writer} encodes images, windows, a \class{camera} and
+the microphone into a video file, streams them live to a URL or gives
+the encoded data to code, e.g., to write it to a Prolog stream.
 
 #class view "view(label)"
 A \class{view} is a \class{window} displaying an \class{editor}.  View

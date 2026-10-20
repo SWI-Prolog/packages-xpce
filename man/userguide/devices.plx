@@ -339,7 +339,8 @@ record_example :-
 
 The system may ask the user for permission to use the microphone.
 `sound <-peaks' returns the peak level of a given number of parts of
-the sound, which is useful to draw its waveform.
+the sound, which is useful to draw its waveform.  The demo
+\textsf{Sound} records, plays, opens and streams sound.
 
 
 \section{Video from a camera}			\label{sec:camera}
@@ -415,6 +416,10 @@ does for a figure.  Creating an \class{sdl_texture} from a graphical
 draws it once with Cairo and makes the origin of the graphical the hot
 spot.  Moving many such sprites costs the renderer little, while
 moving as many figures has Cairo draw each of them for every move.
+Layers are drawn in the order of `sdl_window <-layers'; `sdl_layer
+->expose' and `sdl_layer ->hide' move a layer to the top or the bottom,
+as for graphicals.  The demo \textsf{Asteroids} draws its ship, rocks,
+bullets and stars as sprites.
 
 \subsection{Playing and recording video}		\label{sec:video}
 
@@ -463,9 +468,11 @@ record_window_example(Window, File, Writer) :-
 \end{code}
 
 Videos are decoded and encoded using ffmpeg on Linux, AVFoundation on
-macOS and Media Foundation on Windows.  `display
-<-video_decoders' and `display <-video_encoders' list the codecs that
-are available.  The demo \textsf{Video player} plays files and network
+macOS and Media Foundation on Windows.  \product{} built with
+\exam{-DXPCE_VIDEO=ffmpeg} uses ffmpeg on all platforms; it then
+encodes using the encoders of the operating system.  `display
+<-video_backend' tells which is used, and `display <-video_decoders'
+and `display <-video_encoders' list the codecs that are available.  The demo \textsf{Video player} plays files and network
 streams, and the demo \textsf{Camera} records the camera and the
 microphone or streams them to a URL.
 
@@ -536,9 +543,10 @@ stop_stream(Writer, Queue) :-
     message_queue_destroy(Queue).
 \end{code}
 
-Streaming needs the ffmpeg backend.  Media Foundation and AVFoundation
-play files and progressive downloads over http(s), but cannot read
-written data or write to anything but a file.
+Streaming needs the ffmpeg backend.  Media Foundation plays files and
+progressive downloads over http(s) and AVFoundation plays files, but
+neither reads written data or writes to anything but a file.  See
+\exam{-DXPCE_VIDEO=ffmpeg} above to stream on Windows and macOS.
 
 
 \section{The desktop}				\label{sec:desktop}

@@ -833,8 +833,10 @@ the resize cursors \const{ew_resize}, \const{ns_resize},
 \const{e_resize}, etc.  For compatibility, the most commonly used names
 of the old X11 cursor font, such as \const{top_left_arrow},
 \const{watch} or \const{xterm}, are mapped to the closest standard
-cursor.  `cursor <-kind' is \const{standard}, \const{x11} or
-\const{image} and `cursor <-summary' describes a standard cursor.  The
+cursor.  The standard cursor \const{none} hides the pointer, e.g., while
+a game that is played with the keyboard has the focus.  `cursor <-kind'
+is \const{standard}, \const{x11} or \const{image} and `cursor
+<-summary' describes a standard cursor.  The
 cursor demo shows all cursors.  A cursor is created from an image using
 the image and its hot-spot, the point that is the actual pointer
 location:
