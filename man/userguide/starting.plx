@@ -19,27 +19,10 @@ explicitly using
 
 \product{} can be used from \program{swipl} running in a terminal as
 well as from \program{swipl-win}, which runs the Prolog toplevel in an
-\jargon{Epilog} console window.  On MS-Windows, Prolog programs are
-normally loaded and started by double-clicking a \fileext{.pl} file,
-which starts \program{swipl-win}.  \product{}, being
-a normal library, does not change this.  Loading \product{} does not
-print a banner.  The version and platform may be obtained using
-`pce->banner':
-
-\begin{code}
-1 ?- send(@pce, banner).
-XPCE 9.0.0 for x86_64-linux-Linux and SDL3.4.18 on wayland
-Copyright (C) 1993-2026 University of Amsterdam, SWI-Prolog Solutions b.v.
-XPCE comes with ABSOLUTELY NO WARRANTY. This is free software,
-and you are welcome to redistribute it under certain conditions.
-The host-language is SWI-Prolog version 10.1.17
-\end{code}
-
-\index{version}%
-SWI-Prolog's prompt is ``<n> ?-'' where <n> is the history-number of the
-command. The banner indicates the \product{} version, the version of the SDL
-library and the SDL video driver used (see \appref{sdl-driver}).  The
-version is also available as `pce <-version'.
+\jargon{Epilog} console window. On Windows, Prolog programs are normally
+loaded and started by double-clicking a \fileext{.pl} file, which starts
+\program{swipl-win}. \product{}, being a normal library, does not change
+this.
 \end{xpceonly}
 
 
