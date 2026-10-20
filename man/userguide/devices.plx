@@ -374,6 +374,13 @@ status changes.  The demo \textsf{Camera} of the demo browser
 (\exam{?- manpce.}, menu \textsf{File/Demo programs}) shows the video,
 takes snapshots and saves them or copies them to the clipboard.
 
+On Linux, SDL uses the V4L2 camera driver by default.  Its PipeWire
+driver (\verb$SDL_CAMERA_DRIVER=pipewire$) is broken in current SDL
+versions (up to at least 3.4): the camera stays \const{waiting} without
+delivering frames and `camera ->close' hangs.  This also affects
+sandboxed installations such as Flatpak, which cannot access the V4L2
+devices (\file{/dev/video*}) and must use PipeWire.
+
 \subsection{Showing video without Cairo}	\label{sec:sdl-window}
 
 \index{sdl_texture}\index{sdl_window}\index{GPU}%
