@@ -1,4 +1,4 @@
-# class sdl_canvas {#class-sdl-canvas}
+# class sdl_canvas {#class-sdl_canvas}
 
 An sdl_canvas holds sdl_layer objects as an sdl_window does, but the
 SDL renderer draws them into a texture of the size of the canvas
@@ -37,7 +37,7 @@ a warning is printed.
 @see class sdl_texture
 
 
-## Instance variables {#class-sdl-canvas-instvars}
+## Instance variables {#class-sdl_canvas-instvars}
 
 - sdl_canvas<->size: size
     Size of the canvas in pixels.
@@ -57,7 +57,7 @@ a warning is printed.
     <-background colour to make old pixels fade.
 
 
-## Send methods {#class-sdl-canvas-send}
+## Send methods {#class-sdl_canvas-send}
 
 - sdl_canvas->initialise: size=size, background=[colour*]
     Create a canvas of the given size.
@@ -77,7 +77,7 @@ a warning is printed.
     The same as ->render.
 
 
-## Get methods {#class-sdl-canvas-get}
+## Get methods {#class-sdl_canvas-get}
 
 - sdl_canvas<-image: -> image
     New image holding the pixels, read back from the renderer.  If no

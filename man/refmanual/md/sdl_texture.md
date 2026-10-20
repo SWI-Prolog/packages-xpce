@@ -1,7 +1,8 @@
 # class sdl_texture {#class-sdl_texture}
 
 An sdl_texture holds pixels that the SDL renderer draws itself,
-without Cairo.  An sdl_layer places it in an sdl_window.  The pixels
+without Cairo.  An sdl_layer places it in an sdl_window or
+sdl_canvas, or maps it onto the triangles of an sdl_mesh.  The pixels
 keep the format they arrived in: camera->texture stores the frames of
 a camera in, e.g., YUY2, and the renderer converts them to RGB when it
 draws them, on the GPU if it can.  This makes it suitable for video.
@@ -20,6 +21,7 @@ drawn again; the Cairo drawings of the windows are not redrawn.
 
 @see class sdl_layer
 @see class sdl_window
+@see class sdl_mesh
 @see camera<->texture
 
 

@@ -408,8 +408,12 @@ each frame.  An \class{sdl_texture} can also be made from an image,
 which allows for fast moving sprites, and `sdl_texture ->draw_in'
 paints a graphical on its pixels, as `image ->draw_in' does.
 
-\index{sprite}%
-A layer becomes a \jargon{sprite} using scale \const{none} and a
+\subsection{Drawing with the GPU}		\label{sec:sdl-gpu}
+
+\index{sprite}\index{GPU}%
+Layers are not limited to video.  The renderer draws them without
+Cairo, so they are suitable for anything that changes on every frame,
+such as games and animations.  A layer becomes a \jargon{sprite} using scale \const{none} and a
 \class{transform}: `sdl_layer <->transform' moves and rotates the
 texture around its `sdl_texture <->hot_spot', as `figure ->transform'
 does for a figure.  Creating an \class{sdl_texture} from a graphical
@@ -431,21 +435,78 @@ a background that scrolls by changing `sdl_layer <->offset', and
 `sdl_layer <->slices' scales a texture as nine parts that keep the
 size of its corners, as is common for the frames of buttons and panels.
 
-An \class{sdl_mesh} holds triangles whose corners have a position, a
-colour and a position in the texture.  A layer whose `sdl_layer
-<->mesh' is set draws these triangles, interpolating the colours and
-mapping its texture onto them.  This makes gradients, warps a texture,
-e.g., a camera image, and draws many particles using a single layer.
-pce_sdl_mesh_set/3 replaces all triangles in one call, which is fast
-enough to rebuild a mesh of thousands of triangles on every frame.
+\index{mesh}%
+An \class{sdl_mesh} holds triangles whose corners (\jargon{vertices})
+have a position, a colour and a position in the texture.  A layer whose
+`sdl_layer <->mesh' is set draws these triangles, interpolating the
+colours and mapping its texture onto them.  This makes gradients,
+warps a texture, e.g., a camera image, and draws many particles using
+a single layer.  Small meshes are built using `sdl_mesh ->append' and
+`sdl_mesh ->triangle'.  The predicate below replaces all triangles in
+one call, which is fast enough to rebuild a mesh of a few thousand
+triangles on every frame.  The demo \textsf{Particles} uses it.
 
+\begin{description}
+    \predicate{pce_sdl_mesh_set}{3}{+Mesh, +Vertices, +Indices}
+Replace the vertices and triangles of the \class{sdl_mesh}
+\arg{Mesh}.  \arg{Vertices} is a list of terms \term{v}{X,Y},
+\term{v}{X,Y,U,V} or \term{v}{X,Y,U,V,rgba(R,G,B,A)}.  X,Y is the
+position in the window, U,V the position in the texture in its pixels
+and R, G, B and A are integers 0..255.  The default colour is opaque
+white.  \arg{Indices} is a list of indices in \arg{Vertices},
+counting from 0, three for each triangle.  If \arg{Indices} is
+\const{[]}, each three consecutive vertices make a triangle.
+\end{description}
+
+The example draws a rectangle as two triangles with a colour in each
+corner:
+
+\begin{code}
+gradient_example :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M,
+                     [ v(0,   0,   0, 0, rgba(255,0,0,255)),
+                       v(300, 0,   0, 0, rgba(255,255,0,255)),
+                       v(300, 200, 0, 0, rgba(0,0,255,255)),
+                       v(0,   200, 0, 0, rgba(0,255,0,255))
+                     ],
+                     [0,1,2, 0,2,3]),       % two triangles
+    new(W, sdl_window('Gradient', size(300, 200))),
+    send(W, append, new(L, sdl_layer)),
+    send(L, mesh, M),
+    send(W, open).
+\end{code}
+
+\index{canvas}%
 An \class{sdl_canvas} holds layers as an \class{sdl_window} does, but
 the renderer draws them into a texture of the size of the canvas.  A
 layer shows the canvas as it shows an \class{sdl_texture}: this moves
 or rotates many sprites as one, shows the same layers again at
 another scale, e.g., as a minimap, or leaves trails if `sdl_canvas
 <->clear' is \const{@off}.  The canvas is drawn again only after it
-changed.
+changed.  The demo \textsf{Asteroids} draws the exhaust trail of the
+ship this way.  The example draws a ring of dots into a canvas and
+shows it twice: rotated and as a small copy.
+
+\begin{code}
+canvas_example :-
+    new(Dot, circle(16)),
+    send(Dot, fill, colour(orange)),
+    send(Dot, pen, 0),
+    new(T, sdl_texture(Dot)),               % hot spot at its top-left
+    new(C, sdl_canvas(size(200, 200), colour(navy))),
+    forall(between(0, 11, I),               % a ring of 12 dots
+           ( A is I*pi/6,
+             X is 100+70*cos(A)-8, Y is 100+70*sin(A)-8,
+             send(C, append, sdl_layer(T, area(X, Y, 0, 0), none))
+           )),
+    new(W, sdl_window('Canvas', size(400, 300))),
+    send(W, background, black),
+    send(W, append, new(Big, sdl_layer(C, area(40, 40, 220, 220)))),
+    send(Big, angle, 15),                   % rotates the ring as one
+    send(W, append, sdl_layer(C, area(310, 20, 80, 80))), % a minimap
+    send(W, open).
+\end{code}
 
 \subsection{Playing and recording video}		\label{sec:video}
 

@@ -20,8 +20,15 @@ window<-background is drawn below the layers.  The window has no
 scrollbars and its layers do not scroll.  To scroll, display the
 sdl_window on a picture.
 
+Besides video, the layers are suitable for sprites, tiled backgrounds
+and other graphics that change on every frame.  A layer may also draw
+the triangles of an sdl_mesh or show an sdl_canvas, an off-screen
+set of layers.
+
 @see class sdl_layer
 @see class sdl_texture
+@see class sdl_mesh
+@see class sdl_canvas
 @see frame<-sdl_test_image
 
 

@@ -1,4 +1,4 @@
-# class sdl_mesh {#class-sdl-mesh}
+# class sdl_mesh {#class-sdl_mesh}
 
 An sdl_mesh holds triangles that the SDL renderer draws without Cairo,
 using SDL_RenderGeometry().  An sdl_layer shows it if it is the
@@ -55,14 +55,14 @@ different colours is drawn using their average colour.
 @see class sdl_texture
 
 
-## Instance variables {#class-sdl-mesh-instvars}
+## Instance variables {#class-sdl_mesh-instvars}
 
 - sdl_mesh<-layers: chain
     The sdl_layer objects that show the mesh.  Changing the mesh shows
     their windows again.
 
 
-## Send methods {#class-sdl-mesh-send}
+## Send methods {#class-sdl_mesh-send}
 
 - sdl_mesh->initialise
     Create an empty mesh.
@@ -86,7 +86,7 @@ different colours is drawn using their average colour.
     that change the mesh.
 
 
-## Get methods {#class-sdl-mesh-get}
+## Get methods {#class-sdl_mesh-get}
 
 - sdl_mesh<-count: -> int
     Number of vertices.

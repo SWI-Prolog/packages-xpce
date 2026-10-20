@@ -6,6 +6,8 @@
         ?- record_example.
         ?- camera_example.
         ?- sdl_camera_example.
+        ?- gradient_example.
+        ?- canvas_example.
         ?- video_example('movie.mp4').
         ?- record_window_example(@my_window, 'window.mp4', W).
         ?- send(W, close).
@@ -20,6 +22,8 @@
             record_example/0,
             camera_example/0,
             sdl_camera_example/0,
+            gradient_example/0,
+            canvas_example/0,
             video_example/1,
             record_window_example/3,
             stream_window/2,
@@ -140,6 +144,43 @@ sdl_camera_example :-
     send(W, open),
     send(C, open, size(640, 480)),
     send(W, attribute, camera, C).
+
+
+		 /*******************************
+		 *	   GPU DRAWING		*
+		 *******************************/
+
+gradient_example :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M,
+                     [ v(0,   0,   0, 0, rgba(255,0,0,255)),
+                       v(300, 0,   0, 0, rgba(255,255,0,255)),
+                       v(300, 200, 0, 0, rgba(0,0,255,255)),
+                       v(0,   200, 0, 0, rgba(0,255,0,255))
+                     ],
+                     [0,1,2, 0,2,3]),       % two triangles
+    new(W, sdl_window('Gradient', size(300, 200))),
+    send(W, append, new(L, sdl_layer)),
+    send(L, mesh, M),
+    send(W, open).
+
+canvas_example :-
+    new(Dot, circle(16)),
+    send(Dot, fill, colour(orange)),
+    send(Dot, pen, 0),
+    new(T, sdl_texture(Dot)),               % hot spot at its top-left
+    new(C, sdl_canvas(size(200, 200), colour(navy))),
+    forall(between(0, 11, I),               % a ring of 12 dots
+           ( A is I*pi/6,
+             X is 100+70*cos(A)-8, Y is 100+70*sin(A)-8,
+             send(C, append, sdl_layer(T, area(X, Y, 0, 0), none))
+           )),
+    new(W, sdl_window('Canvas', size(400, 300))),
+    send(W, background, black),
+    send(W, append, new(Big, sdl_layer(C, area(40, 40, 220, 220)))),
+    send(Big, angle, 15),                   % rotates the ring as one
+    send(W, append, sdl_layer(C, area(310, 20, 80, 80))), % a minimap
+    send(W, open).
 
 
 		 /*******************************
