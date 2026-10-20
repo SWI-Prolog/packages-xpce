@@ -336,6 +336,8 @@ static const error_def errors[] =
     "%N: Not enough memory" },
   { NAME_noVertex,		EF_REPORT,
     "%N: No vertex %d" },
+  { NAME_noRenderer,		EF_REPORT,
+    "%N: No frame is open to draw with" },
   { NAME_representation,	0,
     "%O: cannot represent due to %s" },
 					/* Sockets  */

@@ -1603,6 +1603,13 @@ send(Window, scrollbars, vertical),
 ...
 \end{code}
 
+#class sdl_canvas "sdl_canvas(size, background)"
+An \class{sdl_canvas} holds \class{sdl_layer} objects as an
+\class{sdl_window} does, but draws them into a texture of its own
+rather than on the screen.  A layer shows the canvas as it shows an
+\class{sdl_texture}, e.g., to move many sprites as one, for a minimap
+or for trails.
+
 #class sdl_layer "sdl_layer(texture, area, scale)"
 An \class{sdl_layer} shows an \class{sdl_texture} in an
 \class{sdl_window}, scaled to an area or as a \jargon{sprite} that is

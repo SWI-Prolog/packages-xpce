@@ -68,31 +68,13 @@ unlinkSdlWindow(SdlWindow sw)
 
 static status
 appendSdlWindow(SdlWindow sw, SdlLayer l)
-{ if ( l->device == sw )
-    succeed;
-  if ( notNil(l->device) )
-    send(l->device, NAME_delete, l, EAV);
-
-  appendChain(sw->layers, l);
-  assign(l, device, sw);
-  ws_present_window((PceWindow) sw);
-
-  succeed;
+{ return attachSdlLayer(sw, sw->layers, l);
 }
 
 
 static status
 deleteSdlWindow(SdlWindow sw, SdlLayer l)
-{ if ( l->device != sw )
-    fail;
-
-  addCodeReference(l);
-  deleteChain(sw->layers, l);
-  assign(l, device, NIL);
-  delCodeReference(l);
-  ws_present_window((PceWindow) sw);
-
-  succeed;
+{ return detachSdlLayer(sw, sw->layers, l);
 }
 
 

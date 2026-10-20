@@ -216,6 +216,7 @@ scope('C.rubber', basic).
 scope('C.scroll_bar', basic).
 scope('C.sdl_layer', basic).
 scope('C.sdl_mesh', basic).
+scope('C.sdl_canvas', basic).
 scope('C.sdl_texture', basic).
 scope('C.sdl_window', basic).
 scope('C.send_method', basic).

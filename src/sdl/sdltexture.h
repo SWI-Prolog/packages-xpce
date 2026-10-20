@@ -37,15 +37,18 @@
 #include <SDL3/SDL.h>
 #include <cairo/cairo.h>
 
-/* An sdl_texture in the renderer of a frame.  See sdl_frame_texture() */
+/* An sdl_texture or sdl_canvas in the renderer of a frame.  See
+ * sdl_frame_texture() and render_canvas().
+ */
 
 typedef struct frame_texture
-{ SdlTexture	owner;			/* No reference: removed on unlink */
+{ Any		owner;			/* No reference: removed on unlink */
   SDL_Texture  *texture;		/* NULL: not yet created */
   SDL_PixelFormat made_for;		/* format of the surface it shows */
   bool		premultiplied;		/* and whether it is premultiplied */
   bool		straight;		/* texture holds straight alpha */
   bool		stale;			/* owner changed since the upload */
+  intptr_t	generation;		/* sdl_canvas<-generation drawn */
 } frame_texture;
 
 /* The triangles of an sdl_mesh.  Positions are in the coordinates of
@@ -83,6 +86,11 @@ status	ws_sdl_mesh_set(SdlMesh m, const SDL_Vertex *v, int nv,
 			const int *idx, int ni);
 int	ws_sdl_mesh_count(SdlMesh m);
 
+void	ws_sdl_canvas_changed(SdlCanvas c);
+void	ws_destroy_sdl_canvas(SdlCanvas c);
+Image	ws_sdl_canvas_image(SdlCanvas c);
+
+void	sdl_render_canvases(FrameObj fr);
 void	sdl_frame_free_textures(FrameObj fr);
 void	sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
 			float scale, double opacity);

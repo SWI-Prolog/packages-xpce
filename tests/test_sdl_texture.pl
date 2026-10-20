@@ -63,7 +63,8 @@ test_sdl_texture :-
                 sdl_texture_image,
                 sdl_layer,
                 sdl_sprite,
-                sdl_mesh
+                sdl_mesh,
+                sdl_canvas
               ]).
 
 %!  colour_image(+Colours, -Image) is det.
@@ -891,3 +892,176 @@ test(triangle_bad_index, fail) :-
     catch(send(M, triangle, 0, 0, 1), _, fail).
 
 :- end_tests(sdl_mesh).
+
+
+%   Canvases: layers drawn into an off-screen texture that a layer
+%   shows.  pixels/3 compares the renderer with Cairo, which reads the
+%   canvas back from the renderer.
+
+:- begin_tests(sdl_canvas).
+
+%!  canvas_window(+Canvas, -Window) is det.
+%
+%   A blue 40x40 window showing Canvas stretched over the window.
+
+canvas_window(C, W) :-
+    sdl_window(40, W),
+    send(W, append, sdl_layer(C, @default, stretch)).
+
+%!  colour_layer(+Colours, -Layer) is det.
+%
+%   A layer showing colour blocks, stretched over its device.
+
+colour_layer(Colours, L) :-
+    colour_image(Colours, I),
+    new(L, sdl_layer(sdl_texture(I), @default, stretch)).
+
+frame_pixels(W, Points, Names) :-
+    get(W, frame, F),
+    get(W?area, x, OX), get(W?area, y, OY),
+    get(F, sdl_test_image, GPU),
+    maplist(pixel(GPU, OX, OY), Points, Names).
+
+test(defaults, [Layers-Clear-BG == []-(@on)-(@nil)]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    chain_list(C?layers, Layers),
+    get(C, clear, Clear),
+    get(C, background, BG).
+test(device, [Dev == C]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    send(C, append, new(L, sdl_layer)),
+    get(L, device, Dev).
+test(move_from_window, [WL-CL == []-[L]]) :-
+    sdl_window(20, W),
+    new(C, sdl_canvas(size(10, 10))),
+    send(W, append, new(L, sdl_layer)),
+    send(C, append, L),
+    chain_list(W?layers, WL),
+    chain_list(C?layers, CL),
+    free(W).
+test(stacking, [Layers == [B, A]]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    send(C, append, new(A, sdl_layer)),
+    send(C, append, new(B, sdl_layer)),
+    send(A, expose),
+    chain_list(C?layers, Layers).
+test(free_canvas, [Dev == @nil]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    send(C, append, new(L, sdl_layer)),
+    free(C),
+    get(L, device, Dev).
+test(shows_layers, [Names == [red, green]]) :-
+    new(C, sdl_canvas(size(20, 10))),
+    colour_layer([red, green], L),
+    send(C, append, L),
+    canvas_window(C, W),
+    pixels(W, [10-20, 30-20], Names).
+test(background, [Names == [green]]) :-
+    new(C, sdl_canvas(size(10, 10), colour(green))),
+    canvas_window(C, W),
+    pixels(W, [20-20], Names).
+test(transparent, [Names == [blue]]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    canvas_window(C, W),
+    pixels(W, [20-20], Names).
+test(translucent, [RGB == rgb(128,0,128)]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    colour_layer([red], L),
+    send(L, alpha, 0.5),
+    send(C, append, L),
+    canvas_window(C, W),
+    pixels(W, [20-20], [RGB0]),
+    round8(RGB0, RGB).
+test(mesh, [Names == [red, blue]]) :-
+    new(C, sdl_canvas(size(40, 40))),
+    new(M, sdl_mesh),
+    R = rgba(255,0,0,255),
+    pce_sdl_mesh_set(M, [v(0,0,0,0,R), v(40,0,0,0,R), v(0,40,0,0,R)], []),
+    send(C, append, new(L, sdl_layer)),
+    send(L, mesh, M),
+    canvas_window(C, W),
+    pixels(W, [5-5, 35-35], Names).
+test(nested, [Names == [red, green]]) :-
+    new(Inner, sdl_canvas(size(20, 10))),
+    colour_layer([red, green], L),
+    send(Inner, append, L),
+    new(Outer, sdl_canvas(size(20, 20))),
+    send(Outer, append, sdl_layer(Inner, @default, stretch)),
+    canvas_window(Outer, W),
+    pixels(W, [10-20, 30-20], Names).
+test(layer_changed, [Before-After == [red]-[green]]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    colour_layer([red], L),
+    send(C, append, L),
+    canvas_window(C, W),
+    send(W, open),
+    frame_pixels(W, [20-20], Before),
+    colour_image([green], I),
+    send(L, texture, sdl_texture(I)),
+    frame_pixels(W, [20-20], After),
+    send(W?frame, destroy).
+test(texture_changed, [Before-After == [red]-[green]]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    colour_layer([red], L),
+    send(C, append, L),
+    new(Outer, sdl_canvas(size(10, 10))),
+    send(Outer, append, sdl_layer(C, @default, stretch)),
+    canvas_window(Outer, W),
+    send(W, open),
+    frame_pixels(W, [20-20], Before),
+    colour_image([green], I),
+    get(L, texture, T),
+    send(T, image, I),
+    frame_pixels(W, [20-20], After),
+    send(W?frame, destroy).
+test(keep_pixels, [Names == [red, red, blue]]) :-
+    new(C, sdl_canvas(size(40, 40))),
+    send(C, clear, @off),               % a trail
+    colour_image([red], I),
+    send(C, append, new(L, sdl_layer(sdl_texture(I), area(0,0,10,10),
+                                      stretch))),
+    canvas_window(C, W),
+    send(W, open),
+    frame_pixels(W, [5-5], _),
+    send(L, area, area(20, 0, 10, 10)),
+    frame_pixels(W, [5-5, 25-5, 35-35], Names),
+    send(W?frame, destroy).
+test(clear, [Names == [blue, red]]) :-
+    new(C, sdl_canvas(size(40, 40))),
+    colour_image([red], I),
+    send(C, append, new(L, sdl_layer(sdl_texture(I), area(0,0,10,10),
+                                      stretch))),
+    canvas_window(C, W),
+    send(W, open),
+    frame_pixels(W, [5-5], _),
+    send(L, area, area(20, 0, 10, 10)),
+    frame_pixels(W, [5-5, 25-5], Names),
+    send(W?frame, destroy).
+test(resize, [Names == [red, green]]) :-
+    new(C, sdl_canvas(size(10, 10))),
+    colour_layer([red, green], L),
+    send(C, append, L),
+    canvas_window(C, W),
+    send(W, open),
+    frame_pixels(W, [20-20], _),
+    send(C, size, size(20, 10)),
+    pixels(W, [10-20, 30-20], Names).
+test(image, [W-H-Names == 20-10-[red, green]]) :-
+    new(C, sdl_canvas(size(20, 10))),
+    colour_layer([red, green], L),
+    send(C, append, L),
+    canvas_window(C, Win),
+    send(Win, open),
+    get(C, image, I),
+    get(I, size, size(W, H)),
+    name_of(I, 5, 5, N1),
+    name_of(I, 15, 5, N2),
+    Names = [N1, N2],
+    send(Win?frame, destroy).
+test(cycle, [Names == [green]]) :-
+    new(C, sdl_canvas(size(10, 10), colour(green))),
+    send(C, append, sdl_layer(C, @default, stretch)),
+    canvas_window(C, W),
+    pixels(W, [20-20], Names).
+
+:- end_tests(sdl_canvas).

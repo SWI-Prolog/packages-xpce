@@ -38,7 +38,7 @@ sdl_window on a picture.
 
 - sdl_window->append: sdl_layer
     Show the layer above the other layers.  If it is shown by another
-    window, it is deleted from there.
+    window or sdl_canvas, it is deleted from there.
 
 - sdl_window->delete: sdl_layer
     Stop showing the layer.  Fails if it is not a layer of this window.

@@ -1085,8 +1085,16 @@ NewClass(sdl_mesh)
   struct sdl_mesh_data *data;		/* Vertices and indices */
 End;
 
+NewClass(sdl_canvas)
+  Size		size;			/* Size in pixels */
+  Chain		layers;			/* sdl_layer objects, bottom first */
+  Any		background;		/* Colour or @nil */
+  BoolObj	clear;			/* Clear before drawing the layers */
+  intptr_t	generation;		/* Incremented on each change */
+End;
+
 NewClass(sdl_layer)
-  SdlTexture	texture;		/* What is shown, or @nil */
+  Any		texture;		/* sdl_texture, sdl_canvas or @nil */
   Area		source;			/* Part of the texture or @nil */
   Area		area;			/* Where in the window or @nil */
   Name		scale;			/* stretch, fit, fill, none, tile */
@@ -1101,7 +1109,7 @@ NewClass(sdl_layer)
   Area		slices;			/* Centre part for 9-grid or @nil */
   SdlMesh	mesh;			/* Triangles to draw or @nil */
   BoolObj	displayed;		/* Visible? */
-  SdlWindow	device;			/* Window showing it or @nil */
+  Any		device;			/* sdl_window, sdl_canvas or @nil */
 End;
 
 NewClass(audio_recorder)

@@ -30,14 +30,16 @@ changing it.
 
 @see class sdl_texture
 @see class sdl_mesh
+@see class sdl_canvas
 @see class transform
 @see class sdl_window
 
 
 ## Instance variables {#class-sdl_layer-instvars}
 
-- sdl_layer<->texture: sdl_texture*
-    What is shown.  Nothing is shown if this is @nil.
+- sdl_layer<->texture: sdl_texture|sdl_canvas*
+    What is shown: the pixels of a texture or what the layers of a
+    canvas draw.  Nothing is shown if this is @nil.
 
 - sdl_layer<->source: area*
     Part of the texture that is shown, in pixels of the texture.  @nil
@@ -135,14 +137,15 @@ changing it.
 - sdl_layer<->displayed: bool
     If @off, the layer is not shown.
 
-- sdl_layer<-device: sdl_window*
-    The window showing the layer, as graphical<-device is the device
-    showing a graphical.  See sdl_window->append.
+- sdl_layer<-device: sdl_window|sdl_canvas*
+    The window or canvas showing the layer, as graphical<-device is
+    the device showing a graphical.  See sdl_window->append and
+    sdl_canvas->append.
 
 
 ## Send methods {#class-sdl_layer-send}
 
-- sdl_layer->initialise: texture=[sdl_texture*], area=[area*], scale=[{stretch,fit,fill,none,tile}]
+- sdl_layer->initialise: texture=[sdl_texture|sdl_canvas*], area=[area*], scale=[{stretch,fit,fill,none,tile}]
     Create to show texture in area of the window, scaled as described
     with <-scale (default `fit`).  If area is omitted, the layer uses
     the whole window.

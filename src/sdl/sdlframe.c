@@ -1031,6 +1031,7 @@ render_frame(FrameObj fr)
 
   DEBUG(NAME_sdl,
 	Cprintf("BEGIN ws_draw_frame(%s)\n", pp(fr)));
+  sdl_render_canvases(fr);		/* off-screen first */
   if ( SDL_GetWindowFlags(wfr->ws_window) & SDL_WINDOW_TRANSPARENT )
   { SDL_SetRenderDrawColor(wfr->ws_renderer, 0, 0, 0, 0);
   } else

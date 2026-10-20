@@ -164,17 +164,73 @@ makeClassSdlTexture(Class class)
 		 *	     SDL_LAYER		*
 		 *******************************/
 
+/* Show the device of a layer again: an sdl_window or sdl_canvas */
+
 static status
-presentSdlLayer(SdlLayer l)
-{ if ( notNil(l->device) )
-    ws_present_window((PceWindow)l->device);
+presentSdlDevice(Any device)
+{ if ( instanceOfObject(device, ClassSdlCanvas) )
+  { SdlCanvas c = device;
+
+    c->generation++;
+    ws_sdl_canvas_changed(c);
+  } else if ( notNil(device) )
+  { ws_present_window(device);
+  }
 
   succeed;
 }
 
 
 static status
-initialiseSdlLayer(SdlLayer l, SdlTexture texture, Area area, Name scale)
+presentSdlLayer(SdlLayer l)
+{ return presentSdlDevice(l->device);
+}
+
+
+static Chain
+deviceLayers(Any device)
+{ if ( instanceOfObject(device, ClassSdlCanvas) )
+    return ((SdlCanvas)device)->layers;
+
+  return ((SdlWindow)device)->layers;
+}
+
+
+/* Show `l` on `device`, whose layers are `layers`, on top of the other
+ * layers.  The layer is removed from where it was shown.  Used by
+ * sdl_window->append and sdl_canvas->append.
+ */
+
+status
+attachSdlLayer(Any device, Chain layers, SdlLayer l)
+{ if ( l->device == device )
+    succeed;
+  if ( notNil(l->device) )
+    send(l->device, NAME_delete, l, EAV);
+
+  appendChain(layers, l);
+  assign(l, device, device);
+
+  return presentSdlDevice(device);
+}
+
+
+status
+detachSdlLayer(Any device, Chain layers, SdlLayer l)
+{ if ( l->device != device )
+    fail;
+
+  addCodeReference(l);
+  deleteChain(layers, l);
+  assign(l, device, NIL);
+  delCodeReference(l);
+
+  return presentSdlDevice(device);
+}
+
+
+static status
+initialiseSdlLayer(SdlLayer l, Any texture, Area area, Name scale)
 { assign(l, texture,   isDefault(texture) ? NIL : texture);
   assign(l, source,    NIL);
   assign(l, area,      isDefault(area) ? NIL : area);
@@ -228,23 +284,24 @@ meshSdlLayer(SdlLayer l, SdlMesh mesh)
 
 static status
 restackSdlLayer(SdlLayer l, SdlLayer l2, bool top)
-{ SdlWindow sw = l->device;
+{ Any dev = l->device;
 
-  if ( isNil(sw) || l == l2 || (notDefault(l2) && l2->device != sw) )
+  if ( isNil(dev) || l == l2 || (notDefault(l2) && l2->device != dev) )
     fail;
 
+  Chain layers = deviceLayers(dev);
   if ( isDefault(l2) )
   { addCodeReference(l);
-    deleteChain(sw->layers, l);
+    deleteChain(layers, l);
     if ( top )
-      appendChain(sw->layers, l);
+      appendChain(layers, l);
     else
-      prependChain(sw->layers, l);
+      prependChain(layers, l);
     delCodeReference(l);
   } else if ( top )
-  { moveAfterChain(sw->layers, l, l2);
+  { moveAfterChain(layers, l, l2);
   } else
-  { moveBeforeChain(sw->layers, l, l2);
+  { moveBeforeChain(layers, l, l2);
   }
 
   return presentSdlLayer(l);
@@ -289,7 +346,7 @@ LAYER_SLOT(displayed, displayedSdlLayer)
 /* Instance Variables */
 
 static vardecl var_sdl_layer[] =
-{ SV(NAME_texture, "sdl_texture*", IV_GET|IV_STORE, textureSdlLayer,
+{ SV(NAME_texture, "sdl_texture|sdl_canvas*", IV_GET|IV_STORE, textureSdlLayer,
      NAME_appearance, "What is shown"),
   SV(NAME_source, "area*", IV_GET|IV_STORE, sourceSdlLayer,
      NAME_area, "Part of the texture shown; @nil: all of it"),
@@ -321,14 +378,14 @@ static vardecl var_sdl_layer[] =
      NAME_appearance, "Draw these triangles instead of placing <-texture"),
   SV(NAME_displayed, "bool", IV_GET|IV_STORE, displayedSdlLayer,
      NAME_visibility, "Whether the layer is shown"),
-  IV(NAME_device, "sdl_window*", IV_GET,
-     NAME_organisation, "Window showing the layer")
+  IV(NAME_device, "sdl_window|sdl_canvas*", IV_GET,
+     NAME_organisation, "Window or canvas showing the layer")
 };
 
 /* Send Methods */
 
 static char *T_initialiseSdlLayer[] =
-        { "texture=[sdl_texture*]", "area=[area*]",
+        { "texture=[sdl_texture|sdl_canvas*]", "area=[area*]",
 	  "scale=[{stretch,fit,fill,none,tile}]" };
 
 static senddecl send_sdl_layer[] =
@@ -531,4 +588,150 @@ pceSdlMeshSet(PceObject mesh, const float *vertices, int nvertices,
   changedSdlMesh(mesh);
 
   return PCE_MESH_OK;
+}
+
+
+		 /*******************************
+		 *	     SDL_CANVAS		*
+		 *******************************/
+
+/* An sdl_canvas holds layers as an sdl_window does, but draws them into
+ * a texture of its own size rather than on the screen.  A layer can show
+ * the canvas as it shows an sdl_texture.  The renderer of each frame
+ * that shows it keeps a texture that is drawn again after the canvas
+ * changed.  See sdl/sdltexture.c.
+ */
+
+static status
+changedSdlCanvas(SdlCanvas c)
+{ return presentSdlDevice(c);
+}
+
+
+static status
+initialiseSdlCanvas(SdlCanvas c, Size size, Any background)
+{ assign(c, size,       newObject(ClassSize, size->w, size->h, EAV));
+  assign(c, layers,     newObject(ClassChain, EAV));
+  assign(c, background, isDefault(background) ? NIL : background);
+  assign(c, clear,      ON);
+  c->generation = 0;
+
+  succeed;
+}
+
+
+static status
+unlinkSdlCanvas(SdlCanvas c)
+{ Cell cell;
+
+  for_cell(cell, c->layers)
+  { SdlLayer l = cell->value;
+
+    assign(l, device, NIL);
+  }
+  clearChain(c->layers);
+  ws_destroy_sdl_canvas(c);
+
+  succeed;
+}
+
+
+static status
+appendSdlCanvas(SdlCanvas c, SdlLayer l)
+{ return attachSdlLayer(c, c->layers, l);
+}
+
+
+static status
+deleteSdlCanvas(SdlCanvas c, SdlLayer l)
+{ return detachSdlLayer(c, c->layers, l);
+}
+
+
+static status
+sizeSdlCanvas(SdlCanvas c, Size size)
+{ if ( !equalSize(c->size, size) )
+  { assign(c, size, newObject(ClassSize, size->w, size->h, EAV));
+    changedSdlCanvas(c);
+  }
+
+  succeed;
+}
+
+
+static status
+backgroundSdlCanvas(SdlCanvas c, Any background)
+{ assign(c, background, background);
+
+  return changedSdlCanvas(c);
+}
+
+
+static status
+clearSdlCanvas(SdlCanvas c, BoolObj clear)
+{ assign(c, clear, clear);
+
+  return changedSdlCanvas(c);
+}
+
+
+static Image
+getImageSdlCanvas(SdlCanvas c)
+{ answer(ws_sdl_canvas_image(c));
+}
+
+
+/* Instance Variables */
+
+static vardecl var_sdl_canvas[] =
+{ SV(NAME_size, "size", IV_GET|IV_STORE, sizeSdlCanvas,
+     NAME_area, "Size in pixels"),
+  IV(NAME_layers, "chain", IV_GET,
+     NAME_organisation, "sdl_layer objects, bottom first"),
+  SV(NAME_background, "colour*", IV_GET|IV_STORE, backgroundSdlCanvas,
+     NAME_appearance, "Colour drawn below the layers or @nil"),
+  SV(NAME_clear, "bool", IV_GET|IV_STORE, clearSdlCanvas,
+     NAME_appearance, "If @off, keep the pixels when drawing again"),
+  IV(NAME_generation, "alien:intptr_t", IV_NONE,
+     NAME_update, "Incremented on each change")
+};
+
+/* Send Methods */
+
+static char *T_initialiseSdlCanvas[] =
+	{ "size=size", "background=[colour*]" };
+
+static senddecl send_sdl_canvas[] =
+{ SM(NAME_initialise, 2, T_initialiseSdlCanvas, initialiseSdlCanvas,
+     DEFAULT, "Create from size and background"),
+  SM(NAME_unlink, 0, NULL, unlinkSdlCanvas,
+     DEFAULT, "Detach the layers and free the textures"),
+  SM(NAME_append, 1, "sdl_layer", appendSdlCanvas,
+     NAME_organisation, "Draw a layer above the others"),
+  SM(NAME_delete, 1, "sdl_layer", deleteSdlCanvas,
+     NAME_organisation, "Stop drawing a layer"),
+  SM(NAME_render, 0, NULL, changedSdlCanvas,
+     NAME_update, "Draw the layers again"),
+  SM(NAME_changed, 0, NULL, changedSdlCanvas,
+     NAME_update, "Draw the layers again")
+};
+
+/* Get Methods */
+
+static getdecl get_sdl_canvas[] =
+{ GM(NAME_image, 0, "image", NULL, getImageSdlCanvas,
+     NAME_conversion, "New image holding the pixels")
+};
+
+/* Class Declaration */
+
+static Name sdl_canvas_termnames[] = { NAME_size };
+
+ClassDecl(sdl_canvas_decls,
+          var_sdl_canvas, send_sdl_canvas, get_sdl_canvas, NULL,
+          1, sdl_canvas_termnames);
+
+status
+makeClassSdlCanvas(Class class)
+{ return declareClass(class, &sdl_canvas_decls);
 }

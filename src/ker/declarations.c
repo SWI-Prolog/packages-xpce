@@ -245,6 +245,9 @@ static struct class_definition classdefs[] =
   { NAME_sdlMesh, NAME_object, makeClassSdlMesh,
     &ClassSdlMesh, "Triangles drawn by the SDL renderer" },
 
+  { NAME_sdlCanvas, NAME_object, makeClassSdlCanvas,
+    &ClassSdlCanvas, "Off-screen sdl_layer objects drawn into a texture" },
+
   { NAME_dropData, NAME_eventDetail, makeClassDropData,
     &ClassDropData, "Data of a drop_* event" },
 

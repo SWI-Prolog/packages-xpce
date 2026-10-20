@@ -439,6 +439,14 @@ e.g., a camera image, and draws many particles using a single layer.
 pce_sdl_mesh_set/3 replaces all triangles in one call, which is fast
 enough to rebuild a mesh of thousands of triangles on every frame.
 
+An \class{sdl_canvas} holds layers as an \class{sdl_window} does, but
+the renderer draws them into a texture of the size of the canvas.  A
+layer shows the canvas as it shows an \class{sdl_texture}: this moves
+or rotates many sprites as one, shows the same layers again at
+another scale, e.g., as a minimap, or leaves trails if `sdl_canvas
+<->clear' is \const{@off}.  The canvas is drawn again only after it
+changed.
+
 \subsection{Playing and recording video}		\label{sec:video}
 
 \index{video}\index{MP4}%

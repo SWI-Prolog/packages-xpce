@@ -93,7 +93,7 @@ for_created_frames(frame_func func, void *closure)
 
 
 static frame_texture *
-find_frame_texture(WsFrame wfr, SdlTexture t)
+find_frame_texture(WsFrame wfr, Any t)
 { for(int i=0; i<wfr->ntextures; i++)
   { if ( wfr->textures[i].owner == t )
       return &wfr->textures[i];
@@ -104,7 +104,7 @@ find_frame_texture(WsFrame wfr, SdlTexture t)
 
 
 static frame_texture *
-add_frame_texture(WsFrame wfr, SdlTexture t)
+add_frame_texture(WsFrame wfr, Any t)
 { if ( wfr->ntextures == wfr->atextures )
   { int n = wfr->atextures ? wfr->atextures*2 : 4;
     frame_texture *new = SDL_realloc(wfr->textures, n*sizeof(*new));
@@ -122,6 +122,7 @@ add_frame_texture(WsFrame wfr, SdlTexture t)
   ft->premultiplied = false;
   ft->straight = false;
   ft->stale    = true;
+  ft->generation = -1;
 
   return ft;
 }
@@ -220,10 +221,10 @@ sdl_frame_texture(FrameObj fr, SdlTexture t)
   SDL_Surface *surf = t->surface;
   frame_texture *ft;
 
-  if ( !surf || surf->w <= 0 || surf->h <= 0 )
+  if ( !(ft = find_frame_texture(wfr, t)) &&	/* also if empty, so */
+       !(ft = add_frame_texture(wfr, t)) )	/* ->changed redraws us */
     return NULL;
-  if ( !(ft = find_frame_texture(wfr, t)) &&
-       !(ft = add_frame_texture(wfr, t)) )
+  if ( !surf || surf->w <= 0 || surf->h <= 0 )
     return NULL;
 
   if ( ft->texture &&
@@ -685,6 +686,106 @@ ws_sdl_texture_format(SdlTexture t)
  * finally the position and pixel density of the window.
  */
 
+/* What layers are drawn on: the layers, the background, the size and
+ * the scroll offset.  See window_canvas().
+ */
+
+typedef struct
+{ Chain		layers;			/* sdl_layer objects, bottom first */
+  Any		background;		/* colour or not */
+  float		w, h;			/* size */
+  float		sx, sy;			/* scroll offset */
+} layer_canvas;
+
+static void
+window_canvas(SdlWindow sw, layer_canvas *cv)
+{ cv->layers     = sw->layers;
+  cv->background = sw->background;
+  cv->w          = valNum(sw->area->w);
+  cv->h          = valNum(sw->area->h);
+  cv->sx         = valNum(sw->scroll_offset->x);
+  cv->sy         = valNum(sw->scroll_offset->y);
+}
+
+
+/* A layer shows an sdl_texture or an sdl_canvas.  The functions below
+ * hide the difference.
+ */
+
+static frame_texture *canvas_frame_texture(FrameObj fr, SdlCanvas c);
+static SDL_Surface   *canvas_surface(SdlCanvas c);
+
+static bool
+canvas_size(SdlCanvas c, int *w, int *h)
+{ *w = (int)valInt(c->size->w);
+  *h = (int)valInt(c->size->h);
+
+  return *w > 0 && *h > 0;
+}
+
+
+/* The size of what layer `l` shows.  False if it shows no pixels. */
+
+static bool
+layer_source_size(SdlLayer l, int *w, int *h)
+{ if ( instanceOfObject(l->texture, ClassSdlCanvas) )
+    return canvas_size(l->texture, w, h);
+  if ( isNil(l->texture) )
+    return false;
+
+  SdlTexture t = l->texture;
+  SDL_Surface *s = t->surface;
+
+  if ( !s || s->w <= 0 || s->h <= 0 )
+    return false;
+  *w = s->w;
+  *h = s->h;
+
+  return true;
+}
+
+
+static Point
+layer_hot_spot(SdlLayer l)
+{ if ( instanceOfObject(l->texture, ClassSdlTexture) )
+    return ((SdlTexture)l->texture)->hot_spot;
+
+  return NIL;
+}
+
+
+/* The GPU texture of what layer `l` shows in frame `fr`.  A canvas has
+ * been drawn by sdl_render_canvases().
+ */
+
+static frame_texture *
+layer_frame_texture(FrameObj fr, SdlLayer l)
+{ if ( instanceOfObject(l->texture, ClassSdlCanvas) )
+    return canvas_frame_texture(fr, l->texture);
+
+  return sdl_frame_texture(fr, l->texture);
+}
+
+
+/* What layer `l` shows as a new ARGB8888 surface with premultiplied
+ * alpha, for drawing with Cairo.
+ */
+
+static SDL_Surface *
+layer_argb_surface(SdlLayer l)
+{ if ( instanceOfObject(l->texture, ClassSdlCanvas) )
+    return canvas_surface(l->texture);
+
+  SDL_Surface *s = ((SdlTexture)l->texture)->surface;
+  SDL_Surface *argb = SDL_ConvertSurface(s, SDL_PIXELFORMAT_ARGB8888);
+
+  if ( argb && !is_premultiplied(s) )
+    SDL_PremultiplySurfaceAlpha(argb, false);
+
+  return argb;
+}
+
+
 typedef struct
 { double xx, xy, yx, yy, tx, ty;	/* x' = xx*x + xy*y + tx, ... */
 } layer_map;
@@ -747,20 +848,20 @@ tile_start(float from, float size, float offset)
 }
 
 
-/* Compute the layout of `l` in `sw`, whose top-left is at `ox`,`oy` in
- * device pixels with `scale` device pixels per window pixel.  False if
+/* Compute the layout of `l` on `cv`, whose top-left is at `ox`,`oy` in
+ * device pixels with `scale` device pixels per pixel of `cv`.  False if
  * nothing is shown.
  */
 
 static bool
-layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf,
+layer_geometry(const layer_canvas *cv, SdlLayer l,
 	       float ox, float oy, float scale, layer_layout *ly)
 { SDL_FRect base, *src = &ly->src, *dst = &ly->dst;
-  int tw = surf->w, th = surf->h;
-  SdlTexture t = l->texture;
+  int tw, th;
 
-  if ( l->displayed != ON || tw <= 0 || th <= 0 )
+  if ( l->displayed != ON || !layer_source_size(l, &tw, &th) )
     return false;
+  Point hot_spot = layer_hot_spot(l);
 
   if ( isNil(l->source) )
   { *src = (SDL_FRect){0, 0, (float)tw, (float)th};
@@ -774,7 +875,7 @@ layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf,
   }
 
   if ( isNil(l->area) )
-  { base = (SDL_FRect){0, 0, valNum(sw->area->w), valNum(sw->area->h)};
+  { base = (SDL_FRect){0, 0, cv->w, cv->h};
   } else
   { base = (SDL_FRect){ valNum(l->area->x), valNum(l->area->y),
 			valNum(l->area->w), valNum(l->area->h) };
@@ -784,9 +885,9 @@ layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf,
     return false;
 
   ly->tiled = (l->scale == NAME_tile);
-  bool hot = !ly->tiled && notNil(t->hot_spot);
-  float hx = hot ? valNum(t->hot_spot->x) - src->x : src->w/2;
-  float hy = hot ? valNum(t->hot_spot->y) - src->y : src->h/2;
+  bool hot = !ly->tiled && notNil(hot_spot);
+  float hx = hot ? valNum(hot_spot->x) - src->x : src->w/2;
+  float hy = hot ? valNum(hot_spot->y) - src->y : src->h/2;
 
   if ( l->scale == NAME_none )
   { *dst = (SDL_FRect){base.x - (hot ? hx : 0), base.y - (hot ? hy : 0),
@@ -851,8 +952,7 @@ layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf,
     map_then(m, valNum(tr->xx), valNum(tr->xy), valNum(tr->yx),
 	     valNum(tr->yy), valNum(tr->tx), valNum(tr->ty));
   if ( notNil(l->area) || notNil(tr) )
-    map_then(m, 1, 0, 0, 1,
-	     valNum(sw->scroll_offset->x), valNum(sw->scroll_offset->y));
+    map_then(m, 1, 0, 0, 1, cv->sx, cv->sy);
   map_then(m, scale, 0, 0, scale, ox, oy);
 
   return true;
@@ -1096,7 +1196,7 @@ layer_scale_mode(SdlLayer l)
  */
 
 static void
-mesh_map(SdlWindow sw, SdlLayer l, float ox, float oy, float scale,
+mesh_map(const layer_canvas *cv, SdlLayer l, float ox, float oy, float scale,
 	 layer_map *m)
 { Transform tr = l->transform;
 
@@ -1104,24 +1204,10 @@ mesh_map(SdlWindow sw, SdlLayer l, float ox, float oy, float scale,
   if ( notNil(tr) )
     map_then(m, valNum(tr->xx), valNum(tr->xy), valNum(tr->yx),
 	     valNum(tr->yy), valNum(tr->tx), valNum(tr->ty));
-  map_then(m, 1, 0, 0, 1,
-	   valNum(sw->scroll_offset->x), valNum(sw->scroll_offset->y));
+  map_then(m, 1, 0, 0, 1, cv->sx, cv->sy);
   map_then(m, scale, 0, 0, scale, ox, oy);
 }
 
-
-/* The texture of a mesh layer or NULL if it has none */
-
-static SDL_Surface *
-mesh_surface(SdlLayer l)
-{ SDL_Surface *s;
-
-  if ( notNil(l->texture) && (s = l->texture->surface) &&
-       s->w > 0 && s->h > 0 )
-    return s;
-
-  return NULL;
-}
 
 
 /* A white pixel, the texture of meshes without a texture.  See
@@ -1160,16 +1246,24 @@ white_texture(void)
  */
 
 static void
-render_mesh(FrameObj fr, SdlWindow sw, SdlLayer l, SDL_Renderer *r,
+render_mesh(FrameObj fr, const layer_canvas *cv, SdlLayer l, SDL_Renderer *r,
 	    float ox, float oy, float scale, double opacity)
 { sdl_mesh_data *md = l->mesh->data;
-  SDL_Surface *surf = mesh_surface(l);
-  SdlTexture t = surf ? l->texture : white_texture();
+  int tw = 0, th = 0;
+  bool textured = layer_source_size(l, &tw, &th);
   frame_texture *ft;
 
-  if ( l->displayed != ON || !md || md->nvertices < 3 || !t ||
-       !(ft = sdl_frame_texture(fr, t)) )
+  if ( l->displayed != ON || !md || md->nvertices < 3 )
     return;
+  if ( textured )
+  { if ( !(ft = layer_frame_texture(fr, l)) )
+      return;
+  } else
+  { SdlTexture white = white_texture();
+
+    if ( !white || !(ft = sdl_frame_texture(fr, white)) )
+      return;
+  }
 
   SDL_Vertex *v = SDL_malloc(md->nvertices*sizeof(*v));
   if ( !v )
@@ -1186,7 +1280,7 @@ render_mesh(FrameObj fr, SdlWindow sw, SdlLayer l, SDL_Renderer *r,
 
     tr = c.r/255.0f; tg = c.g/255.0f; tb = c.b/255.0f;
   }
-  mesh_map(sw, l, ox, oy, scale, &m);
+  mesh_map(cv, l, ox, oy, scale, &m);
   for(int i=0; i<md->nvertices; i++)
   { const SDL_Vertex *s = &md->vertices[i];
     float a = none ? s->color.a : s->color.a*alpha;
@@ -1195,9 +1289,9 @@ render_mesh(FrameObj fr, SdlWindow sw, SdlLayer l, SDL_Renderer *r,
     v[i].position = map_point(&m, s->position.x, s->position.y);
     v[i].color = (SDL_FColor){ s->color.r*tr*k, s->color.g*tg*k,
 			       s->color.b*tb*k, a };
-    v[i].tex_coord = surf ? (SDL_FPoint){ s->tex_coord.x/surf->w,
-					  s->tex_coord.y/surf->h }
-			  : (SDL_FPoint){0.5f, 0.5f};
+    v[i].tex_coord = textured ? (SDL_FPoint){ s->tex_coord.x/tw,
+					      s->tex_coord.y/th }
+			      : (SDL_FPoint){0.5f, 0.5f};
   }
 
   SDL_SetTextureBlendMode(ft->texture, layer_blend_mode(l, pm));
@@ -1222,21 +1316,21 @@ render_mesh(FrameObj fr, SdlWindow sw, SdlLayer l, SDL_Renderer *r,
 }
 
 
-/* Draw the background and layers of `sw` in the renderer of `fr`.
- * `dstrect` is the area of the window in device pixels.
+/* Draw the background and layers of `cv` in the renderer of `fr`.
+ * `dstrect` is the area of `cv` in device pixels.
  */
 
-void
-sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
-		float scale, double opacity)
+static void
+draw_layers(FrameObj fr, const layer_canvas *cv, const SDL_FRect *dstrect,
+	    float scale, double opacity)
 { WsFrame wfr = fr->ws_ref;
   SDL_Renderer *r = wfr->ws_renderer;
   SDL_Rect clip = { (int)floorf(dstrect->x), (int)floorf(dstrect->y),
 		    (int)ceilf(dstrect->w), (int)ceilf(dstrect->h) };
 
   SDL_SetRenderClipRect(r, &clip);
-  if ( instanceOfObject(sw->background, ClassColour) )
-  { SDL_Color c = pceColour2SDL_Color(sw->background);
+  if ( instanceOfObject(cv->background, ClassColour) )
+  { SDL_Color c = pceColour2SDL_Color(cv->background);
 
     SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(r, c.r, c.g, c.b, (Uint8)(c.a*opacity));
@@ -1245,19 +1339,17 @@ sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
   }
 
   Cell cell;
-  for_cell(cell, sw->layers)
+  for_cell(cell, cv->layers)
   { SdlLayer l = cell->value;
     frame_texture *ft;
     layer_layout ly;
 
     if ( notNil(l->mesh) )
-    { render_mesh(fr, sw, l, r, dstrect->x, dstrect->y, scale, opacity);
+    { render_mesh(fr, cv, l, r, dstrect->x, dstrect->y, scale, opacity);
       continue;
     }
-    if ( isNil(l->texture) || !l->texture->surface ||
-	 !layer_geometry(sw, l, l->texture->surface,
-			 dstrect->x, dstrect->y, scale, &ly) ||
-	 !(ft = sdl_frame_texture(fr, l->texture)) )
+    if ( !layer_geometry(cv, l, dstrect->x, dstrect->y, scale, &ly) ||
+	 !(ft = layer_frame_texture(fr, l)) )
       continue;
 
     /* The texture is shared by all layers that show it, so we set its
@@ -1283,6 +1375,16 @@ sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
       for_layer_quads(&ly, render_quad, &(render_target){r, tex});
   }
   SDL_SetRenderClipRect(r, NULL);
+}
+
+
+void
+sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
+		float scale, double opacity)
+{ layer_canvas cv;
+
+  window_canvas(sw, &cv);
+  draw_layers(fr, &cv, dstrect, scale, opacity);
 }
 
 
@@ -1391,20 +1493,18 @@ triangle_matrix(const SDL_FPoint uv[3], const SDL_FPoint p[3],
  */
 
 static void
-cairo_mesh(cairo_t *cr, SdlWindow sw, SdlLayer l, float wx, float wy,
-	   float scale, double opacity)
+cairo_mesh(cairo_t *cr, const layer_canvas *cv, SdlLayer l,
+	   float wx, float wy, float scale, double opacity)
 { sdl_mesh_data *md = l->mesh->data;
-  SDL_Surface *surf = mesh_surface(l);
   SDL_Surface *argb = NULL;
   cairo_surface_t *cs = NULL;
+  int tw, th;
 
   if ( l->displayed != ON || !md || md->nvertices < 3 )
     return;
-  if ( surf )
-  { if ( !(argb = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_ARGB8888)) )
+  if ( layer_source_size(l, &tw, &th) )
+  { if ( !(argb = layer_argb_surface(l)) )
       return;
-    if ( !is_premultiplied(surf) )
-      SDL_PremultiplySurfaceAlpha(argb, false);
     cs = cairo_image_surface_create_for_data(argb->pixels,
 					     CAIRO_FORMAT_ARGB32,
 					     argb->w, argb->h, argb->pitch);
@@ -1421,7 +1521,7 @@ cairo_mesh(cairo_t *cr, SdlWindow sw, SdlLayer l, float wx, float wy,
 
     tr = c.r/255.0f; tg = c.g/255.0f; tb = c.b/255.0f;
   }
-  mesh_map(sw, l, wx, wy, scale, &m);
+  mesh_map(cv, l, wx, wy, scale, &m);
 
   for(int t=0; t<nt; t++)
   { SDL_FPoint p[3], uv[3];
@@ -1508,43 +1608,38 @@ cairo_mesh(cairo_t *cr, SdlWindow sw, SdlLayer l, float wx, float wy,
 }
 
 
-/* As sdl_draw_layers(), drawing onto a Cairo context for <-image of
- * a frame or window.  The window is at `wx`,`wy` in device pixels.
+/* As draw_layers(), drawing onto a Cairo context for <-image of a
+ * frame or window.  `cv` is at `wx`,`wy` in device pixels.
  */
 
-void
-sdl_cairo_layers(cairo_t *cr, SdlWindow sw, float wx, float wy,
-		 float scale, double opacity)
+static void
+cairo_layers(cairo_t *cr, const layer_canvas *cv, float wx, float wy,
+	     float scale, double opacity)
 { cairo_save(cr);
-  cairo_rectangle(cr, wx, wy,
-		  valNum(sw->area->w)*scale, valNum(sw->area->h)*scale);
+  cairo_rectangle(cr, wx, wy, cv->w*scale, cv->h*scale);
   cairo_clip(cr);
-  if ( instanceOfObject(sw->background, ClassColour) )
-  { SDL_Color c = pceColour2SDL_Color(sw->background);
+  if ( instanceOfObject(cv->background, ClassColour) )
+  { SDL_Color c = pceColour2SDL_Color(cv->background);
 
     cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
     cairo_paint_with_alpha(cr, opacity);
   }
 
   Cell cell;
-  for_cell(cell, sw->layers)
+  for_cell(cell, cv->layers)
   { SdlLayer l = cell->value;
     SDL_Surface *argb;
     layer_layout ly;
 
     if ( notNil(l->mesh) )
-    { cairo_mesh(cr, sw, l, wx, wy, scale, opacity);
+    { cairo_mesh(cr, cv, l, wx, wy, scale, opacity);
       continue;
     }
 
-    if ( isNil(l->texture) || !l->texture->surface ||
-	 !layer_geometry(sw, l, l->texture->surface, wx, wy, scale, &ly) ||
-	 !(argb = SDL_ConvertSurface(l->texture->surface,
-				     SDL_PIXELFORMAT_ARGB8888)) )
+    if ( !layer_geometry(cv, l, wx, wy, scale, &ly) ||
+	 !(argb = layer_argb_surface(l)) )
       continue;
 
-    if ( !is_premultiplied(l->texture->surface) )
-      SDL_PremultiplySurfaceAlpha(argb, false);
     if ( notNil(l->tint) )
       tint_surface(argb, l->tint);
     cairo_surface_t *cs =
@@ -1594,6 +1689,16 @@ sdl_cairo_layers(cairo_t *cr, SdlWindow sw, float wx, float wy,
     SDL_DestroySurface(argb);
   }
   cairo_restore(cr);
+}
+
+
+void
+sdl_cairo_layers(cairo_t *cr, SdlWindow sw, float wx, float wy,
+		 float scale, double opacity)
+{ layer_canvas cv;
+
+  window_canvas(sw, &cv);
+  cairo_layers(cr, &cv, wx, wy, scale, opacity);
 }
 
 
@@ -1718,4 +1823,412 @@ ws_sdl_mesh_set(SdlMesh m, const SDL_Vertex *v, int nv, const int *idx, int ni)
 int
 ws_sdl_mesh_count(SdlMesh m)
 { return m->data ? m->data->nvertices : 0;
+}
+
+
+		 /*******************************
+		 *	      CANVASES		*
+		 *******************************/
+
+/* Each frame that shows an sdl_canvas keeps a target texture of the
+ * size of the canvas.  sdl_render_canvases() draws the canvases that
+ * changed before the frame is drawn, a canvas shown by another canvas
+ * first.  A canvas is drawn again if its generation differs from the
+ * one drawn, or if what it shows changed: an sdl_texture that is stale
+ * in this frame or a canvas drawn in this pass.  The pixels drawn are
+ * premultiplied.
+ *
+ * Note that the software renderer ignores premultiplied blending for
+ * triangles: a translucent canvas on a sheared layer or mesh is drawn
+ * incorrectly there.
+ */
+
+static frame_texture *
+canvas_frame_texture(FrameObj fr, SdlCanvas c)
+{ frame_texture *ft = find_frame_texture(fr->ws_ref, c);
+
+  return ft && ft->texture ? ft : NULL;
+}
+
+
+/* Does a layer of `c` show something that changed in this frame?
+ * `drawn` holds the canvases drawn in this pass.
+ */
+
+static bool
+canvas_inputs_changed(WsFrame wfr, SdlCanvas c, SdlCanvas *drawn, int ndrawn)
+{ Cell cell;
+
+  for_cell(cell, c->layers)
+  { SdlLayer l = cell->value;
+
+    if ( instanceOfObject(l->texture, ClassSdlCanvas) )
+    { for(int i=0; i<ndrawn; i++)
+      { if ( drawn[i] == l->texture )
+	  return true;
+      }
+    } else if ( notNil(l->texture) )
+    { frame_texture *ft = find_frame_texture(wfr, l->texture);
+
+      if ( !ft || ft->stale )
+	return true;
+    }
+  }
+
+  return false;
+}
+
+
+/* Draw the layers of `c` into its texture in `fr` */
+
+static bool
+render_canvas(FrameObj fr, SdlCanvas c, bool force)
+{ WsFrame wfr = fr->ws_ref;
+  SDL_Renderer *r = wfr->ws_renderer;
+  frame_texture *ft;
+  int w, h;
+
+  if ( !canvas_size(c, &w, &h) ||
+       (!(ft = find_frame_texture(wfr, c)) &&
+	!(ft = add_frame_texture(wfr, c))) )
+    return false;
+
+  bool fresh = false;
+  if ( ft->texture && (ft->texture->w != w || ft->texture->h != h) )
+  { SDL_DestroyTexture(ft->texture);
+    ft->texture = NULL;
+  }
+  if ( !ft->texture )
+  { if ( !(ft->texture = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888,
+					   SDL_TEXTUREACCESS_TARGET, w, h)) )
+    { Cprintf("%s: cannot create texture: %s\n", pp(c), SDL_GetError());
+      return false;
+    }
+    ft->made_for = SDL_PIXELFORMAT_ARGB8888;
+    ft->premultiplied = true;
+    ft->straight = false;
+    fresh = true;
+  }
+  if ( !fresh && !force && ft->generation == c->generation )
+    return false;
+
+  SDL_Texture *prev = SDL_GetRenderTarget(r);
+  SDL_SetRenderTarget(r, ft->texture);
+  if ( fresh || c->clear != OFF )
+  { SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_NONE);
+    SDL_SetRenderDrawColor(r, 0, 0, 0, 0);
+    SDL_RenderClear(r);
+  }
+  layer_canvas cv = { c->layers, c->background, (float)w, (float)h, 0, 0 };
+  SDL_FRect all = { 0, 0, (float)w, (float)h };
+  draw_layers(fr, &cv, &all, 1.0f, 1.0);
+  SDL_SetRenderTarget(r, prev);
+  ft->generation = c->generation;
+  ft->stale = false;
+
+  return true;
+}
+
+
+/* Collect the canvases shown by the sdl_window objects of `fr`, either
+ * directly or through other canvases, such that a canvas comes after
+ * the canvases it shows.  This is a depth-first search using an
+ * explicit stack.  A canvas that shows itself, directly or indirectly,
+ * is reported and the cycle is cut.
+ */
+
+typedef struct
+{ SdlCanvas	canvas;
+  int		state;			/* see below */
+} canvas_node;
+
+#define CN_PUSHED	1			/* on the stack */
+#define CN_EXPANDED	2			/* its canvases are pushed */
+#define CN_DONE		3			/* in the order */
+
+typedef struct
+{ canvas_node  *nodes;			/* canvases seen */
+  int		nnodes, anodes;
+  SdlCanvas    *stack;
+  int		nstack, astack;
+  SdlCanvas    *order;			/* result */
+  int		norder, aorder;
+} canvas_search;
+
+static bool
+grow(void **ptr, int *alloc, int need, size_t size)
+{ if ( need > *alloc )
+  { int n = SDL_max(need, *alloc ? *alloc*2 : 16);
+    void *new = SDL_realloc(*ptr, (size_t)n*size);
+
+    if ( !new )
+      return false;
+    *ptr = new;
+    *alloc = n;
+  }
+
+  return true;
+}
+
+
+static canvas_node *
+canvas_node_of(canvas_search *cs, SdlCanvas c)
+{ for(int i=0; i<cs->nnodes; i++)
+  { if ( cs->nodes[i].canvas == c )
+      return &cs->nodes[i];
+  }
+  if ( !grow((void**)&cs->nodes, &cs->anodes, cs->nnodes+1,
+	     sizeof(*cs->nodes)) )
+    return NULL;
+  canvas_node *n = &cs->nodes[cs->nnodes++];
+  n->canvas = c;
+  n->state  = 0;
+
+  return n;
+}
+
+
+static bool
+push_canvas(canvas_search *cs, SdlCanvas c)
+{ canvas_node *n = canvas_node_of(cs, c);
+
+  if ( !n )
+    return false;
+  if ( n->state == CN_EXPANDED )
+  { Cprintf("%s: shows itself; not drawing it again\n", pp(c));
+    return true;
+  }
+  if ( n->state == CN_DONE )
+    return true;
+  if ( !grow((void**)&cs->stack, &cs->astack, cs->nstack+1,
+	     sizeof(*cs->stack)) )
+    return false;
+  n->state = CN_PUSHED;
+  cs->stack[cs->nstack++] = c;
+
+  return true;
+}
+
+
+static void
+push_layer_canvases(canvas_search *cs, Chain layers)
+{ Cell cell;
+
+  for_cell(cell, layers)
+  { SdlLayer l = cell->value;
+
+    if ( instanceOfObject(l->texture, ClassSdlCanvas) )
+      push_canvas(cs, l->texture);
+  }
+}
+
+
+static void
+order_canvases(canvas_search *cs)
+{ while( cs->nstack > 0 )
+  { SdlCanvas c = cs->stack[cs->nstack-1];
+    canvas_node *n = canvas_node_of(cs, c);
+
+    if ( !n )
+      return;
+    if ( n->state == CN_PUSHED )	/* first visit: push what it shows */
+    { n->state = CN_EXPANDED;
+      push_layer_canvases(cs, c->layers);
+    } else				/* all it shows is done */
+    { cs->nstack--;
+      if ( n->state == CN_EXPANDED &&
+	   grow((void**)&cs->order, &cs->aorder, cs->norder+1,
+		sizeof(*cs->order)) )
+      { n->state = CN_DONE;
+	cs->order[cs->norder++] = c;
+      }
+    }
+  }
+}
+
+
+static void
+free_canvas_search(canvas_search *cs)
+{ SDL_free(cs->nodes);
+  SDL_free(cs->stack);
+  SDL_free(cs->order);
+}
+
+
+/* Draw the canvases of `cs->order` that changed in `fr` */
+
+static void
+render_ordered_canvases(FrameObj fr, canvas_search *cs)
+{ SdlCanvas *drawn = SDL_malloc((cs->norder ? cs->norder : 1)*sizeof(*drawn));
+  int ndrawn = 0;
+
+  if ( !drawn )
+    return;
+  for(int i=0; i<cs->norder; i++)
+  { SdlCanvas c = cs->order[i];
+    bool force = canvas_inputs_changed(fr->ws_ref, c, drawn, ndrawn);
+
+    if ( render_canvas(fr, c, force) )
+      drawn[ndrawn++] = c;
+  }
+  SDL_free(drawn);
+}
+
+
+/* Push the canvases shown by the sdl_window objects in the window tree
+ * of `sw`.  Uses an explicit stack of windows.
+ */
+
+static void
+push_window_canvases(canvas_search *cs, PceWindow root)
+{ PceWindow *stack = NULL;
+  int n = 0, a = 0;
+
+  if ( !grow((void**)&stack, &a, 1, sizeof(*stack)) )
+    return;
+  stack[n++] = root;
+  while( n > 0 )
+  { PceWindow sw = stack[--n];
+
+    if ( instanceOfObject(sw, ClassSdlWindow) )
+      push_layer_canvases(cs, ((SdlWindow)sw)->layers);
+    if ( instanceOfObject(sw, ClassWindowDecorator) &&
+	 grow((void**)&stack, &a, n+1, sizeof(*stack)) )
+      stack[n++] = ((WindowDecorator)sw)->window;
+    if ( notNil(sw->subwindows) )
+    { Cell cell;
+
+      for_cell(cell, sw->subwindows)
+      { if ( grow((void**)&stack, &a, n+1, sizeof(*stack)) )
+	  stack[n++] = cell->value;
+      }
+    }
+  }
+  SDL_free(stack);
+}
+
+
+/* Draw the canvases shown in `fr` that changed.  Called before the
+ * frame is drawn.
+ */
+
+void
+sdl_render_canvases(FrameObj fr)
+{ canvas_search cs = {0};
+  Cell cell;
+
+  for_cell(cell, fr->members)
+    push_window_canvases(&cs, cell->value);
+  if ( cs.nstack > 0 )
+  { order_canvases(&cs);
+    render_ordered_canvases(fr, &cs);
+  }
+  free_canvas_search(&cs);
+}
+
+
+/* Make sure `c` and the canvases it shows are drawn in `fr` */
+
+static void
+render_canvas_in(FrameObj fr, SdlCanvas c)
+{ canvas_search cs = {0};
+
+  if ( push_canvas(&cs, c) )
+  { order_canvases(&cs);
+    render_ordered_canvases(fr, &cs);
+  }
+  free_canvas_search(&cs);
+}
+
+
+/* A created frame to read `c` from, preferably one that has drawn it */
+
+typedef struct
+{ SdlCanvas	canvas;
+  FrameObj	any;			/* some created frame */
+  FrameObj	has;			/* one that has drawn the canvas */
+} canvas_frame_search;
+
+static void
+find_canvas_frame(FrameObj fr, WsFrame wfr, void *closure)
+{ canvas_frame_search *s = closure;
+
+  if ( !s->any )
+    s->any = fr;
+  if ( !s->has && canvas_frame_texture(fr, s->canvas) )
+    s->has = fr;
+}
+
+
+/* Read the pixels of `c` as a new ARGB8888 surface with premultiplied
+ * alpha, drawing the canvas first if needed.  NULL if there is no
+ * created frame, i.e., no renderer.
+ */
+
+static SDL_Surface *
+canvas_surface(SdlCanvas c)
+{ canvas_frame_search s = { c, NULL, NULL };
+
+  for_created_frames(find_canvas_frame, &s);
+  FrameObj fr = s.has ? s.has : s.any;
+  if ( !fr )
+    return NULL;
+
+  render_canvas_in(fr, c);
+  frame_texture *ft = canvas_frame_texture(fr, c);
+  if ( !ft )
+    return NULL;
+
+  SDL_Renderer *r = ((WsFrame)fr->ws_ref)->ws_renderer;
+  SDL_Texture *prev = SDL_GetRenderTarget(r);
+  SDL_SetRenderTarget(r, ft->texture);
+  SDL_Surface *read = SDL_RenderReadPixels(r, NULL);
+  SDL_SetRenderTarget(r, prev);
+  if ( !read )
+    return NULL;
+
+  SDL_Surface *argb = SDL_ConvertSurface(read, SDL_PIXELFORMAT_ARGB8888);
+  SDL_DestroySurface(read);
+  if ( argb )
+    set_premultiplied(argb, true);
+
+  return argb;
+}
+
+
+Image
+ws_sdl_canvas_image(SdlCanvas c)
+{ SDL_Surface *s = canvas_surface(c);
+
+  if ( !s )
+  { errorPce(c, NAME_noRenderer);
+    return NULL;
+  }
+
+  Image image = newObject(ClassImage, NIL, ONE, ONE, NAME_pixmap, EAV);
+  status rc = image && ws_set_image_pixels(image, s);
+  SDL_DestroySurface(s);
+
+  return rc ? image : NULL;
+}
+
+
+/* `c` changed: redraw the frames that show it */
+
+static void
+changed_canvas(FrameObj fr, WsFrame wfr, void *closure)
+{ if ( find_frame_texture(wfr, closure) && ChangedFrames )
+    addChain(ChangedFrames, fr);
+}
+
+
+void
+ws_sdl_canvas_changed(SdlCanvas c)
+{ for_created_frames(changed_canvas, c);
+}
+
+
+void
+ws_destroy_sdl_canvas(SdlCanvas c)
+{ for_created_frames(forget_texture, c);
 }
