@@ -37,6 +37,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
+:- use_module(library(lists)).
 :- use_module(demo_buttons).
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
@@ -63,6 +64,10 @@ through Cairo.  Graphicals in this window are drawn on top of the
 video, as the frames per second in the corner show.  The camera's
 message counts the frames.
 
+The effects Ripple and Fisheye warp the video on the GPU: the layer
+then draws an sdl_mesh, a grid of triangles whose texture coordinates
+are moved on every tick of a timer.  See warp/1.
+
 Run with:
 
     ?- camera_demo.
@@ -82,6 +87,9 @@ variable(timer,    timer*,  get, "Timer to update the status").
 variable(snapshot, image*,  get, "The last snapshot").
 variable(writer,   video_writer*, get, "Writes the recording").
 variable(recorder, audio_recorder*, get, "Records the microphone").
+variable(mirror,   bool := @off, get, "Show the video mirrored").
+variable(effect,   {none,ripple,fisheye} := none, get, "Warp of the video").
+variable(warp_timer, timer*, get, "Timer that animates the warp").
 
 initialise(F) :->
     send_super(F, initialise, 'Camera'),
@@ -132,6 +140,11 @@ fill_dialog(F, D:dialog) :->
     send(Mirror, append, mirror),
     send(Mirror, show_label, @off),
     send(Mirror, help_message, tag, 'Show the video as in a mirror'),
+    send(D, append, new(Effect, menu(effect, cycle,
+                                     message(F, effect, @arg1))), right),
+    send_list(Effect, append, [none, ripple, fisheye]),
+    send(Effect, help_message, tag,
+         'Warp the video on the GPU using a mesh of triangles'),
 
     send(D, append, new(Snap, button(snapshot, message(F, snapshot))),
          right),
@@ -185,20 +198,127 @@ fill_sizes(F) :->
     send(D, layout).
 
 unlink(F) :->
-    "Stop the camera and the timer"::
+    "Stop the camera and the timers"::
     get(F, timer, T),
     send(T, stop),
+    send(F, effect, none),
     send(F, stop),
     send_super(F, unlink).
 
 mirror(F, Mirror:bool) :->
     "Show the video mirrored, as in a mirror"::
+    send(F, slot, mirror, Mirror),
     get(F, member, video, V),
     get(V?layers, head, L),
     (   Mirror == @on
     ->  send(L, flip, horizontal)
     ;   send(L, flip, none)
     ).
+
+%!  ->effect(+Effect)
+%
+%   Warp the video.  The layer draws a mesh instead of placing the
+%   texture.  A mesh ignores sdl_layer->flip, so warp/1 mirrors the
+%   texture coordinates itself.
+
+effect(F, Effect:{none,ripple,fisheye}) :->
+    "Select the warp of the video"::
+    send(F, slot, effect, Effect),
+    get(F, member, video, V),
+    get(V?layers, head, L),
+    get(F, warp_timer, T0),
+    (   Effect == none
+    ->  send(L, mesh, @nil),
+        (   T0 == @nil
+        ->  true
+        ;   send(T0, free),
+            send(F, slot, warp_timer, @nil)
+        )
+    ;   send(L, mesh, new(sdl_mesh)),
+        (   T0 == @nil
+        ->  send(F, slot, warp_timer,
+                 new(T, timer(0.03, message(F, warp)))),
+            send(T, start)
+        ;   true
+        ),
+        send(F, warp)
+    ).
+
+%!  ->warp
+%
+%   Rebuild the mesh: a grid over the area where `fit` would show the
+%   video.  The positions are fixed; the texture coordinates of each
+%   vertex are moved by the effect at the current time.
+
+warp_grid(32, 24).
+
+warp(F) :->
+    "Move the texture coordinates of the mesh"::
+    get(F, member, video, V),
+    get(V?layers, head, L),
+    get(L, mesh, M),
+    get(F?texture, size, size(TW, TH)),
+    (   TW =:= 0
+    ->  send(M, clear)                  % no frame yet
+    ;   get(V, size, size(W, H)),
+        S is min(W/TW, H/TH),
+        FW is TW*S, FH is TH*S,
+        X0 is (W-FW)/2, Y0 is (H-FH)/2,
+        get(F, effect, Effect),
+        get(F, mirror, Mirror),
+        get_time(Now),
+        T is Now - floor(Now/1000)*1000,
+        warp_grid(NX, NY),
+        findall(v(X,Y,U,Vt),
+                ( between(0, NY, J), between(0, NX, I),
+                  Sx is I/NX, Sy is J/NY,
+                  X is X0+Sx*FW, Y is Y0+Sy*FH,
+                  warp(Effect, T, Sx, Sy, Su, Sv),
+                  mirror_u(Mirror, Su, Su1),
+                  U is Su1*TW, Vt is Sv*TH
+                ),
+                Vertices),
+        grid_indices(NX, NY, Indices),
+        pce_sdl_mesh_set(M, Vertices, Indices)
+    ).
+
+%!  warp(+Effect, +Time, +S, +T, -U, -V) is det.
+%
+%   Where the point S,T (0..1) of the video shows the texture.
+
+warp(ripple, Time, S, T, U, V) :-
+    DX is S-0.5, DY is T-0.5,
+    R is sqrt(DX*DX+DY*DY),
+    (   R < 1.0e-6
+    ->  U = S, V = T
+    ;   Off is 0.02*sin(30*R - 6*Time),
+        U is min(1, max(0, S + DX/R*Off)),
+        V is min(1, max(0, T + DY/R*Off))
+    ).
+warp(fisheye, _, S, T, U, V) :-
+    DX is S-0.5, DY is T-0.5,
+    R is sqrt(DX*DX+DY*DY)/0.7071,      % 0..1 at the corners
+    F is sqrt(R),                       % magnify the centre
+    U is 0.5 + DX*F,
+    V is 0.5 + DY*F.
+
+mirror_u(@on, U0, U) :- !, U is 1-U0.
+mirror_u(_, U, U).
+
+%!  grid_indices(+NX, +NY, -Indices) is det.
+%
+%   Two triangles for each cell of a grid of (NX+1)*(NY+1) vertices,
+%   numbered row by row.
+
+grid_indices(NX, NY, Indices) :-
+    W is NX+1,
+    findall(I,
+            ( between(0, NY, J), J < NY,
+              between(0, NX, K), K < NX,
+              A is J*W+K, B is A+1, C is A+W, D is C+1,
+              member(I, [A,B,D, A,D,C])
+            ),
+            Indices).
 
 snapshot_bitmap(F, BM:bitmap) :<-
     "The bitmap that shows the snapshot"::

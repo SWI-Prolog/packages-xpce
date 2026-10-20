@@ -61,6 +61,11 @@ playing, the pointer is hidden.
 The field is an sdl_window.  Everything that moves is a sprite: an
 sdl_layer that holds its own state.  The sprites are the ship, the
 asteroids, the bullets, the particles of an explosion and the stars.
+Below the stars, two layers of dust repeat a small texture over the
+field (sdl_layer `scale` `tile`) and drift at different speeds by
+changing their offset.  The exhaust trail of the ship is drawn into an
+sdl_canvas that keeps its pixels, fading them on every tick.  The particles use additive blending
+(sdl_layer `blend` `add`), so they glow where they overlap.
 The renderer of the frame draws them on the GPU, so moving and rotating
 them costs no Cairo drawing.  Their looks are designed as figures that
 are drawn once into an sdl_texture.  The texts of the scoreboard are
@@ -133,6 +138,7 @@ variable(help,         bool,   get, "Show the controls").
 variable(time,         num,    get, "Time of the last tick").
 variable(dt,           num,    get, "Seconds since the last tick").
 variable(gamepad,      any*,   get, "Gamepad used to play").
+variable(trail,        sdl_canvas*, get, "Exhaust trail of the ship").
 
 class_variable(tick,           num, 0.02, "Seconds per tick").
 class_variable(lives,          int, 3,    "Ships at the start of a game").
@@ -259,6 +265,8 @@ reset(P) :->
     send(P, slot, paused, @off),
     send(P, slot, help, @off),
     send(P, stars),
+    send(P, dust),
+    send(P, trail),
     send(P, display, new(asteroids_score), point(10, 8)),
     send(P, display, new(asteroids_banner)),
     send(P, display, new(asteroids_panel(P))),
@@ -452,7 +460,15 @@ resize(P) :->
     send(P?layers, for_all,
          if(message(@arg1, instance_of, asteroids_star),
             message(@arg1, free))),
-    send(P, stars).
+    send(P, stars),
+    send(P?layers, for_all,             % keep the dust below the stars
+         if(message(@arg1, instance_of, asteroids_dust),
+            message(@arg1, hide))),
+    get(P, trail, Trail),
+    (   Trail == @nil
+    ->  true
+    ;   send(Trail, size, P?size)
+    ).
 
 %!  ->stars
 %
@@ -469,6 +485,37 @@ stars(P) :->
              random_member(Size, [1, 1, 2, 2, 3]),
              send(P, append, new(Star, asteroids_star(Size, X, Y))),
              send(Star, hide)
+           )).
+
+%!  ->trail
+%
+%   The exhaust trail of the ship is an sdl_canvas the size of the field
+%   that is not cleared (`clear` @off).  On every tick it is drawn
+%   again: a translucent black layer darkens the old pixels and a spark
+%   is drawn at the tail of the ship while it thrusts (see exhaust/2).
+%   The window shows the canvas using additive blending, so its black
+%   adds nothing.
+
+trail(P) :->
+    "Add the canvas of the exhaust trail"::
+    get(P, size, Size),
+    send(P, append, new(L, asteroids_trail(Size))),
+    get(L, texture, C),
+    send(P, slot, trail, C).
+
+%!  ->dust
+%
+%   Two layers of faint dust below the stars.  Each repeats a texture of
+%   random dots over the whole field (scale `tile`) and drifts by
+%   changing its offset.  The nearer layer is brighter and drifts
+%   faster, which suggests depth (parallax).  As the layers cover the
+%   window, they need not be made anew when it is resized.
+
+dust(P) :->
+    "Add two layers of drifting dust below everything"::
+    forall(member(Depth, [near, far]),
+           ( send(P, append, new(Dust, asteroids_dust(Depth))),
+             send(Dust, hide)
            )).
 
 %   Each play uses a new audio_stream that gets the samples of the
@@ -636,7 +683,25 @@ flame(S, Thrust) :-
     ;   FC = none
     ),
     texture(ship(FC), Texture),
-    send(S, texture, Texture).
+    send(S, texture, Texture),
+    exhaust(S, Thrust).
+
+%   While thrusting, draw a spark at the tail of the ship into the
+%   trail canvas.  The tail is 20 pixels behind the hot spot.
+
+exhaust(S, Thrust) :-
+    get(S, device, P),
+    get(P, trail, Trail),
+    get(Trail?layers, tail, Spark),
+    (   Thrust == true
+    ->  get(S, px, X), get(S, py, Y),
+        get(S, angle, Angle),
+        Rad is Angle*pi/180,
+        TX is X - 20*cos(Rad), TY is Y - 20*sin(Rad),
+        send(Spark, area, area(TX, TY, 0, 0)),
+        send(Spark, displayed, @on)
+    ;   send(Spark, displayed, @off)
+    ).
 
 %   Blink while invulnerable.
 
@@ -946,6 +1011,7 @@ initialise(Pt, X:num, Y:num) :->
     Life is MinLife + random_float*(MaxLife-MinLife),
     send(Pt, slot, life, Life),
     send(Pt, slot, lifetime, Life),
+    send(Pt, blend, add),               % overlapping sparks glow
     place(Pt, X, Y).
 
 tick(Pt) :->
@@ -1007,6 +1073,65 @@ tick(S) :->
     ).
 
 :- pce_end_class(asteroids_star).
+
+
+:- pce_begin_class(asteroids_trail, sdl_layer,
+                   "Shows the canvas of the exhaust trail").
+
+initialise(L, Size:size) :->
+    new(C, sdl_canvas(Size)),
+    send(C, clear, @off),
+    new(Black, image(@nil, 1, 1, pixmap)),
+    send(Black, fill, colour(black)),
+    send(C, append, new(Fade, sdl_layer(sdl_texture(Black), @nil, stretch))),
+    send(Fade, alpha, 0.12),
+    texture(exhaust, Spark),
+    send(C, append, new(S, sdl_layer(Spark, @nil, none))),
+    send(S, displayed, @off),
+    send_super(L, initialise, C, @nil, stretch),
+    send(L, blend, add).
+
+tick(L) :->
+    "Draw the trail again: fade and add a spark"::
+    get(L, texture, C),
+    send(C, render).
+
+:- pce_end_class(asteroids_trail).
+
+
+:- pce_begin_class(asteroids_dust, sdl_layer, "Drifting dust in the background").
+
+variable(ox, num, get, "Horizontal offset of the tiles").
+variable(oy, num, get, "Vertical offset of the tiles").
+variable(vx, num, get, "Horizontal drift in pixels/second").
+variable(vy, num, get, "Vertical drift in pixels/second").
+
+%   dust(Depth, Alpha, VX, VY)
+
+dust(near, 0.6, -9, 4).
+dust(far,  0.3, -3, 1.5).
+
+initialise(D, Depth:{near,far}) :->
+    dust(Depth, Alpha, VX, VY),
+    texture(dust(Depth), Texture),
+    send_super(D, initialise, Texture, @nil, tile),
+    send(D, alpha, Alpha),
+    send(D, slot, ox, 0.0),
+    send(D, slot, oy, 0.0),
+    send(D, slot, vx, VX),
+    send(D, slot, vy, VY).
+
+tick(D) :->
+    "Drift"::
+    get(D?device, dt, Dt),
+    get(D, ox, X0), get(D, oy, Y0),
+    get(D, vx, VX), get(D, vy, VY),
+    X is X0 + VX*Dt, Y is Y0 + VY*Dt,
+    send(D, slot, ox, X),
+    send(D, slot, oy, Y),
+    send(D, offset, point(X, Y)).
+
+:- pce_end_class(asteroids_dust).
 
 
 		 /*******************************
@@ -1309,11 +1434,30 @@ texture_figure(bullet, Fig) :-
     send(Fig, fill, colour(white)),
     send(Fig, colour, colour(cyan)),
     send(Fig, center, point(0, 0)).
+texture_figure(exhaust, Fig) :-
+    new(Fig, circle(8)),
+    send(Fig, pen, 0),
+    send(Fig, fill, colour(orange)),
+    send(Fig, center, point(0, 0)).
 texture_figure(particle(Colour), Fig) :-
     new(Fig, circle(3)),
     send(Fig, fill, colour(Colour)),
     send(Fig, colour, colour(Colour)),
     send(Fig, center, point(0, 0)).
+texture_figure(dust(Depth), Fig) :-
+    new(Fig, figure),                   % random dots on 256x256
+    send(Fig, display, new(Tile, box(256, 256))),
+    send(Tile, pen, 0),
+    (   Depth == near
+    ->  N = 25, Colour = grey60
+    ;   N = 60, Colour = grey40
+    ),
+    forall(between(1, N, _),
+           ( X is random(256), Y is random(256),
+             send(Fig, display, new(Dot, box(1, 1)), point(X, Y)),
+             send(Dot, pen, 0),
+             send(Dot, fill, colour(Colour))
+           )).
 texture_figure(star(Size, Colour), Fig) :-
     new(Fig, box(Size, Size)),
     send(Fig, pen, 0),

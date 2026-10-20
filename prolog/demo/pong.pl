@@ -60,7 +60,9 @@ The game is built like the Asteroids demo (see demo(asteroids)).
 The field is an sdl_window and everything that moves is a sprite: an
 sdl_layer that holds its own state.  The paddles, the ball, its trail,
 the sparks and the net are sprites; the scores, the banner and the
-buttons are ordinary graphicals.  A timer sends `tick` to all layers
+buttons are ordinary graphicals.  The sparks use additive blending,
+so they glow where they overlap.  The net is a single layer that
+repeats the texture of a dash over the height of the field.  A timer sends `tick` to all layers
 and graphicals of the window, which then move themselves.  The
 parameters of the game are class variables, which can be edited using
 the settings button.
@@ -383,10 +385,8 @@ net(P) :->
     "Add the net below everything"::
     get(P, size, size(W,H)),
     X is W//2 - 2,
-    forall(( between(0, H, Y), Y mod 24 =:= 6 ),
-           ( send(P, append, new(Dash, pong_net(X, Y))),
-             send(Dash, hide)
-           )).
+    send(P, append, new(Net, pong_net(X, H))),
+    send(Net, hide).
 
 %   Each play uses a new audio_stream that gets the samples of the
 %   effect and is freed after it is played.  The samples are computed
@@ -760,6 +760,7 @@ initialise(S, Look:prolog, X:num, Y:num, VX:num, VY:num) :->
     send(S, slot, life, Life),
     send(S, slot, lifetime, Life),
     send(S, alpha, 0.5),
+    send(S, blend, add),                % overlapping sparks glow
     place(S, X, Y).
 
 tick(S) :->
@@ -788,12 +789,16 @@ tick(S) :->
 		 *	        NET		*
 		 *******************************/
 
-:- pce_begin_class(pong_net, sdl_layer, "A dash of the net").
+%   The net is a single layer that repeats the texture of a dash and
+%   the gap below it over the height of the field (scale `tile`).  Its
+%   offset makes the first dash start 6 pixels from the top.
 
-initialise(N, X:int, Y:int) :->
+:- pce_begin_class(pong_net, sdl_layer, "The dashed net").
+
+initialise(N, X:int, H:int) :->
     texture(dash, Texture),
-    send_super(N, initialise, Texture, @nil, none),
-    place(N, X, Y).
+    send_super(N, initialise, Texture, area(X, 0, 4, H), tile),
+    send(N, offset, point(0, 6)).
 
 tick(_) :->
     "The net does not move"::
@@ -1098,6 +1103,9 @@ texture_figure(spark, Fig) :-
     send(Fig, fill, colour(gold)),
     send(Fig, center, point(0, 0)).
 texture_figure(dash, Fig) :-
-    new(Fig, box(4, 12)),
-    send(Fig, pen, 0),
-    send(Fig, fill, colour(grey50)).
+    new(Fig, figure),                   % a dash of 4x12 and a gap of 12
+    send(Fig, display, new(Gap, box(4, 24))),
+    send(Gap, pen, 0),
+    send(Fig, display, new(Dash, box(4, 12))),
+    send(Dash, pen, 0),
+    send(Dash, fill, colour(grey50)).

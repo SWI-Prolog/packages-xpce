@@ -255,6 +255,11 @@ demo('Pong',
      demo(pong),
      pong).
 
+demo('Particles',
+     'Thousands of glowing particles drawn by one sdl_mesh on the GPU',
+     demo(particles),
+     particles_demo).
+
 demo('Drag-and-drop File',
      'Receive files dropped from the desktop (drop_file/drop_text events)',
      demo(dragdrop_file),
