@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1995-2013, University of Amsterdam
+    Copyright (c)  1995-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -1258,7 +1259,7 @@ doc_summary(Lines, Summary) :-
 %   signature in the notation of the reference manual, without the
 %   class.
 
-member_signature((Head :-> _), '->', Name, VarNames, Signature) :-
+member_signature(:->(Head, _), '->', Name, VarNames, Signature) :-
     Head =.. [Name, _Receiver | Args],
     maplist(doc_arg(VarNames), Args, DocArgs),
     (   DocArgs == []
@@ -1266,7 +1267,7 @@ member_signature((Head :-> _), '->', Name, VarNames, Signature) :-
     ;   atomic_list_concat(DocArgs, ', ', ArgText),
         format(string(Signature), '->~w: ~w', [Name, ArgText])
     ).
-member_signature((Head :<- _), '<-', Name, VarNames, Signature) :-
+member_signature(:<-(Head, _), '<-', Name, VarNames, Signature) :-
     Head =.. [Name, _Receiver | Args0],
     append(Args, [_Return], Args0),
     return_type(Head, RType0),
