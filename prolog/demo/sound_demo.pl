@@ -36,8 +36,9 @@
           [ sound_demo/0
           ]).
 :- use_module(library(pce)).
+:- use_module(library(help_message)).
+:- use_module(demo_buttons).
 :- autoload(library(http/http_open), [http_open/3]).
-:- use_module(library(file_item)).
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
 
@@ -45,15 +46,16 @@
 
 Opens a window to record sound from the microphone and play it back.
 While recording, a meter shows the input level and the waveform grows.
-Load reads a sound file: WAV and, if xpce is built with SDL3_sound,
+The menu of Record records into a WAV file rather than into memory.
+Open reads a sound file: WAV and, if xpce is built with SDL3_sound,
 also MP3, Ogg Vorbis, FLAC, etc. (see `display<-sound_file_extensions`).
 Save writes the sound as a WAV file.
 
-Stream plays a URL or a file while it is read, using an audio_stream:
-a thread copies the data to the stream, which decodes and plays it.
-This works for WAV, MP3 and FLAC, but not for Ogg Vorbis.
-Record to file records into a WAV file while recording, rather than
-into memory.
+The menu of Open streams a file or URL: it plays while it is read, using
+an audio_stream.  A thread copies the data to the stream, which decodes
+and plays it.  This works for WAV, MP3 and FLAC, but not for Ogg Vorbis.
+Record and Play become Stop while recording and while playing or
+streaming.  All controls have a tooltip.
 
 The waveform is drawn from `sound<-peaks`, the peak level of each of a
 number of parts of the sound.
@@ -73,6 +75,7 @@ sound_demo :-
 variable(sound,    sound*,          get, "The current sound").
 variable(recorder, audio_recorder*, get, "Recorder while recording").
 variable(stream,   audio_stream*,   get, "Stream while streaming").
+variable(location, name*,           get, "File or URL being streamed").
 variable(timer,    timer,           get, "Redraws the waveform while recording").
 
 wave_width(600).
@@ -85,6 +88,7 @@ initialise(F) :->
     send(Wave, name, waveform),
     send(Wave, scrollbars, none),
     send(Wave, background, colour(white)),
+    send(Wave, help_message, tag, 'Waveform of the sound'),
     send(new(Meter, picture('Level', size(W, 14))), below, Wave),
     send(Meter, name, meter),
     send(Meter, scrollbars, none),
@@ -96,25 +100,43 @@ initialise(F) :->
     send(F, slot, timer, timer(0.25, message(F, draw_waveform))),
     send(F, update).
 
+%   Record and Open are split buttons: the button does the common
+%   action, the menu of its arrow the others.  Record and Play turn into
+%   Stop while they are busy.
+
 fill_dialog(F, D:dialog) :->
     "Create the controls"::
-    send(D, append, button(record, message(F, record))),
-    send(D, append, button(stop, message(F, stop)), right),
-    send(D, append, button(play, message(F, play)), right),
-    send(D, append, new(V, slider(volume, 0, 100, 80)), right),
+    send(D, append, new(Rec, state_button(record, message(F, record_button)))),
+    send(Rec, popup, new(RP, popup)),
+    send_list(RP, append,
+              [ menu_item(memory, message(F, record), 'Record',
+                          condition := message(F, idle)),
+                menu_item(file, message(F, record_to_file),
+                          'Record to a WAV file ...',
+                          condition := message(F, idle))
+              ]),
+    send(D, append, state_button(play, message(F, play_button)), right),
+    send(D, append, new(V, slider(volume, 0, 100, 80,
+                                  message(F, volume, @arg1))), right),
     send(V, width, 100),
-    send(D, append, button(load, message(F, load)), right),
-    send(D, append, button(save, message(F, save)), right),
-    send(D, append, button(quit, message(F, destroy)), right),
-    send(D, append, new(Loc, file_item(location, '')), next_row),
-    send(Loc, alignment, left),
-    send(Loc, exists, open),
-    get(@display, sound_file_extensions, Exts),
-    send(Loc, filter, tuple('Sound files', Exts)),
-    send(Loc, width, 40),
-    send(D, append, button(stream, message(F, stream)), right),
-    send(D, append, button(record_to_file, message(F, record_to_file)),
-         right),
+    send(V, show_value, @off),
+    send(V, help_message, tag, 'Volume of playing and streaming'),
+    send(D, append, new(Open, button(open, message(F, load))), right),
+    send(Open, help_message, tag,
+         'Open a sound file.\nThe menu also streams a file or a URL'),
+    send(Open, popup, new(OP, popup)),
+    send_list(OP, append,
+              [ menu_item(file, message(F, load), 'Open a file ...'),
+                menu_item(stream_file, message(F, stream_file),
+                          'Stream a file ...'),
+                menu_item(stream_url, message(F, stream_url),
+                          'Stream a URL ...')
+              ]),
+    send(D, append, new(Save, button(save, message(F, save))), right),
+    send(Save, label, 'Save ...'),
+    send(Save, help_message, tag, 'Save the sound as a WAV file'),
+    send(D, append, new(Q, button(quit, message(F, destroy))), right),
+    send(Q, help_message, tag, 'Close this window'),
     send(D, append, new(Status, label(status, ''))),
     send(Status, alignment, left).
 
@@ -157,7 +179,8 @@ stop(F) :->
     get(F, stream, AS),
     (   AS \== @nil
     ->  send(AS, stop),             % ends the thread that writes
-        send(F, slot, stream, @nil)
+        send(F, slot, stream, @nil),
+        send(F, slot, location, @nil)
     ;   true
     ),
     get(F, sound, S),
@@ -166,6 +189,41 @@ stop(F) :->
     ;   true
     ),
     send(F, update).
+
+record_button(F) :->
+    "Record into memory or stop recording"::
+    (   get(F, recorder, @nil)
+    ->  send(F, record)
+    ;   send(F, stop)
+    ).
+
+play_button(F) :->
+    "Play the sound or stop playing or streaming"::
+    (   send(F, busy_playing)
+    ->  send(F, stop)
+    ;   send(F, play)
+    ).
+
+idle(F) :->
+    "True if we are not recording (condition of the record menu)"::
+    get(F, recorder, @nil).
+
+busy_playing(F) :->
+    "True while playing or streaming"::
+    (   \+ get(F, stream, @nil)
+    ->  true
+    ;   get(F, sound, S),
+        S \== @nil,
+        get(S, playing, @on)
+    ).
+
+volume(F, Volume:int) :->
+    "Change the volume of what is streaming"::
+    get(F, stream, AS),
+    (   AS == @nil
+    ->  true
+    ;   send(AS, volume, Volume/100)
+    ).
 
 play(F) :->
     "Play the current sound"::
@@ -189,22 +247,38 @@ record_to_file(F) :->
     send(F, draw_waveform),
     send(F, update).
 
-stream(F) :->
-    "Play the URL or file of the location item while reading it"::
-    get(F, member, controls, D),
-    get(D?location_member, displayed_value, Location0),   % may be a URL
-    get(Location0, value, Location),
-    (   Location == ''
-    ->  send(F, report, warning, 'Enter a URL or select a file'),
-        fail
-    ;   true
-    ),
+stream_file(F) :->
+    "Ask for a sound file and play it while reading it"::
+    get(@display, sound_file_extensions, Exts),
+    get(@finder, file, open, tuple('Sound files', Exts), File),
+    send(F, stream, File).
+
+stream_url(F) :->
+    "Ask for a URL and play it while reading it"::
+    new(D, dialog('Stream a URL')),
+    send(D, append, new(TI, text_item(url, ''))),
+    send(TI, width, 50),
+    send(D, append, button(stream, message(D, return, TI?selection))),
+    send(D, append, button(cancel, message(D, return, @nil))),
+    send(D, default_button, stream),
+    send(D, transient_for, F),
+    get(D, confirm_centered, F?area?center, URL),
+    send(D, destroy),
+    URL \== @nil,
+    get(URL, strip, Stripped),
+    \+ get(Stripped, size, 0),
+    send(F, stream, Stripped).
+
+stream(F, Location:name) :->
+    "Play Location, a URL or file, while reading it"::
     send(F, stop),
+    get(F, member, controls, D),
     get(D?volume_member, selection, Volume),
     new(AS, audio_stream),
     send(AS, volume, Volume/100),
     send(AS, message, message(F, stream_done)),
     send(F, slot, stream, AS),
+    send(F, slot, location, Location),
     send(AS, play),
     thread_create(stream_source(AS, Location), _, [detached(true)]),
     send(F, update).
@@ -212,6 +286,7 @@ stream(F) :->
 stream_done(F) :->
     "The stream played all data"::
     send(F, slot, stream, @nil),
+    send(F, slot, location, @nil),
     send(F, update).
 
 load(F) :->
@@ -282,7 +357,8 @@ draw_waveform(F) :->
                  send(L, pen, 2)
                ))
     ;   true
-    ).
+    ),
+    send(F, update).                    % restores the REC/PLAY indicator
 
 update(F) :->
     "Update the buttons and the status"::
@@ -297,11 +373,27 @@ update(F) :->
     ;   HasSound = false
     ),
     (   S \== @nil, get(S, playing, @on) -> Playing = true ; Playing = false ),
-    active(D, record, \+ Recording),
-    active(D, record_to_file, \+ Recording),
-    active(D, stop, (Recording ; Playing ; Streaming)),
-    active(D, play, (HasSound, \+ Recording)),
+    get(D, record_member, Rec),
+    (   Recording
+    ->  send(Rec, label, '\u25A0 Stop'),
+        send(Rec, help_message, tag, 'Stop recording')
+    ;   send(Rec, label, '\u25CF Record'),
+        send(Rec, help_message, tag,
+             'Record from the microphone.\n\c
+              The menu records into a WAV file')
+    ),
+    active(D, record, \+ (Playing ; Streaming)),
+    get(D, play_member, Play),
+    (   (Playing ; Streaming)
+    ->  send(Play, label, '\u25A0 Stop'),
+        send(Play, help_message, tag, 'Stop playing')
+    ;   send(Play, label, '\u25B6 Play'),
+        send(Play, help_message, tag, 'Play the sound')
+    ),
+    active(D, play, (Playing ; Streaming ; HasSound, \+ Recording)),
+    active(D, open, \+ Recording),
     active(D, save, (HasSound, \+ Recording)),
+    indicator(F, Recording, Playing, Streaming),
     get(D, status_member, L),
     (   Recording, get(R, sink, Sink), Sink \== @nil
     ->  get(Sink, name, Name),
@@ -310,7 +402,7 @@ update(F) :->
     ->  get(S, duration, T),
         send(L, format, 'Recording %.1f s', T)
     ;   Streaming
-    ->  get(D?location_member, displayed_value, Loc),
+    ->  get(F, location, Loc),
         send(L, format, 'Streaming %s', Loc)
     ;   Playing
     ->  send(L, format, 'Playing %.1f s', Dur)
@@ -323,6 +415,29 @@ update(F) :->
         send(L, format, '%.1f s, %d Hz, %s', Dur, Hz, Chans)
     ;   send(L, selection, 'No sound')
     ).
+
+%   REC, PLAY or STREAM in the top-right of the waveform
+
+indicator(F, Recording, Playing, Streaming) :-
+    get(F, member, waveform, P),
+    (   get(P, member, indicator, T)
+    ->  true
+    ;   send(P, display, new(T, text('', right, bold))),
+        send(T, name, indicator)
+    ),
+    (   Recording
+    ->  send(T, colour, red),
+        send(T, string, '\u25CF REC')
+    ;   Streaming
+    ->  send(T, colour, forest_green),
+        send(T, string, '\u25B6 STREAM')
+    ;   Playing
+    ->  send(T, colour, forest_green),
+        send(T, string, '\u25B6 PLAY')
+    ;   send(T, string, '')
+    ),
+    wave_width(W),
+    send(T, position, point(W-T?width-8, 6)).
 
 :- pce_end_class(sound_demo).
 

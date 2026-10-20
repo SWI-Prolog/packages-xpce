@@ -283,7 +283,7 @@ set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
 set(XPCE_DATA_prolog_demo animation_demo.pl beach_ball.png
     arc.pl asteroids.pl camera_demo.pl canvas_demo.pl video_player.pl
     charts.pl chess.pl colour.pl compose.pl constraint.pl cursor.pl
-    demo_gallery.pl dialog_gallery.pl dragdrop_file.pl event_hierarchy.pl
+    demo_buttons.pl demo_gallery.pl dialog_gallery.pl dragdrop_file.pl event_hierarchy.pl
     fontviewer.pl graph.pl hsvcolour.pl imageviewer.pl ispell.pl juggler.pl
     kangaroo.pl opacity.pl paint.pl paths.pl pce_demo.pl sound_demo.pl
     tabframe.pl transform.pl tube_gui.pl tube.pl tube.json xdot_demo.pl

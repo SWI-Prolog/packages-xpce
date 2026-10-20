@@ -36,22 +36,25 @@
           [ camera_demo/0
           ]).
 :- use_module(library(pce)).
+:- use_module(library(help_message)).
+:- use_module(demo_buttons).
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
 
 /** <module> Show and capture the video of a camera
 
-Opens a window that shows the video of a camera.  The menu selects
-one of the cameras of `display<-cameras`.  Snapshot copies the current
-frame into the snapshot view, from where it can be saved as PNG or
-copied to the clipboard.  Record writes the video and the sound of the
-microphone to an MP4 file until Stop recording is pressed: the camera
-appends its frames to a video_writer and an audio_recorder its
-samples.  Stream does the same, but sends them live to a URL, e.g.,
-`udp://127.0.0.1:5000`, which the Video player demo can open, or an
-`rtmp://` URL of a streaming service.  The status line shows the status of the
-camera (e.g., waiting for permission), the frame size and the number
-of frames per second.
+Opens a window that shows the video of a camera.  The menus select one
+of the cameras of `display<-cameras` and the size of the frames, and
+Start starts the camera.  Snapshot copies the current frame into the
+snapshot view; its menu saves the snapshot as PNG or copies it to the
+clipboard.  Record writes the video and the sound of the microphone to
+an MP4 file until Stop is pressed: the camera appends its frames to a
+video_writer and an audio_recorder its samples.  Its menu also streams
+them live to a URL, e.g., `udp://127.0.0.1:5000`, which the Video player
+demo can open, or an `rtmp://` URL of a streaming service.  The video
+shows REC or LIVE while recording or streaming.  The status line shows
+the status of the camera (e.g., waiting for permission), the frame size
+and the number of frames per second.  All controls have a tooltip.
 
 The camera delivers its frames to an sdl_texture, which an sdl_layer
 shows in an sdl_window.  The frames keep the format of the camera:
@@ -90,6 +93,9 @@ initialise(F) :->
     send(V, display, new(FPS, text('', left, bold)), point(8, 8)),
     send(FPS, name, fps),
     send(FPS, colour, yellow),
+    send(V, display, new(Rec, text('', right, bold))),
+    send(Rec, name, rec),
+    send(Rec, colour, red),
     send(new(S, picture('Snapshot', size(320, 240))), right, V),
     send(S, name, snapshot),
     send(S, scrollbars, none),
@@ -101,36 +107,61 @@ initialise(F) :->
     send(Timer, start),
     send(F, update_status).
 
+%   The controls: the camera, its size and start/stop, the mirror toggle,
+%   snapshot and record.  Snapshot and Record are split buttons: the
+%   button does the common action, the menu of its arrow the others.
+
 fill_dialog(F, D:dialog) :->
     "Create the controls"::
     get(@display, cameras, Cameras),
     send(D, append, new(M, menu(camera, cycle, message(F, fill_sizes)))),
-    send(D, append, menu(size, cycle), right),
+    send(M, help_message, tag, 'Camera to use'),
+    send(D, append, new(Size, menu(size, cycle)), right),
+    send(Size, help_message, tag, 'Size of the frames to ask the camera for'),
     (   send(Cameras, empty)
     ->  send(M, append, menu_item(none, @default, 'No camera')),
         send(M, active, @off),
-        send(D?size_member, active, @off)
+        send(Size, active, @off)
     ;   send(Cameras, for_all, message(M, append, @arg1)),
         send(F, fill_sizes)
     ),
-    send(D, append, button(start, message(F, start)), right),
-    send(D, append, button(stop, message(F, stop)), right),
-    send(D, append, button(snapshot, message(F, snapshot)), right),
-    send(D, append, button(save, message(F, save_snapshot)), right),
-    send(D, append, button(copy, message(F, copy_snapshot)), right),
-    send(D, append, button(record, message(F, toggle_recording)), right),
-    send(D, append, button(stream, message(F, toggle_streaming)), right),
-    send(D, append, button(quit, message(F, destroy)), right),
+    send(D, append, state_button(camera_on_off, message(F, toggle_camera)),
+         right),
     send(D, append, new(Mirror, menu(mirror, toggle,
                                      message(F, mirror, @arg2))), right),
     send(Mirror, append, mirror),
     send(Mirror, show_label, @off),
+    send(Mirror, help_message, tag, 'Show the video as in a mirror'),
+
+    send(D, append, new(Snap, button(snapshot, message(F, snapshot))),
+         right),
+    send(Snap, help_message, tag,
+         'Copy the current frame into the snapshot view.\n\c
+          The menu saves or copies the snapshot'),
+    send(Snap, popup, new(SP, popup)),
+    send_list(SP, append,
+              [ menu_item(save, message(F, save_snapshot),
+                          'Save as PNG ...',
+                          condition := message(F, has_snapshot)),
+                menu_item(copy, message(F, copy_snapshot),
+                          'Copy to the clipboard',
+                          condition := message(F, has_snapshot))
+              ]),
+    send(D, append, new(Rec, state_button(record, message(F, record_button))),
+         right),
+    send(Rec, popup, new(RP, popup)),
+    send_list(RP, append,
+              [ menu_item(file, message(F, start_recording),
+                          'Record to a file ...',
+                          condition := message(F, can_record)),
+                menu_item(url, message(F, start_streaming),
+                          'Stream to a URL ...',
+                          condition := message(F, can_record))
+              ]),
+    send(D, append, new(Q, button(quit, message(F, destroy))), right),
+    send(Q, help_message, tag, 'Close this window'),
     send(D, append, new(Status, label(status, ''))),
     send(Status, alignment, left),
-    (   send(Cameras, empty)
-    ->  send(D?start_member, active, @off)
-    ;   true
-    ),
     send(F, update_buttons).
 
 fill_sizes(F) :->
@@ -240,17 +271,26 @@ copy_snapshot(F) :->
     send(@display, copy, Image),
     send(F, report, status, 'Copied the snapshot to the clipboard').
 
-toggle_recording(F) :->
-    "Start or stop recording"::
-    (   get(F, writer, @nil)
-    ->  send(F, start_recording)
-    ;   send(F, stop_recording)
+toggle_camera(F) :->
+    "Start or stop the camera"::
+    (   get(F, camera, @nil)
+    ->  send(F, start)
+    ;   send(F, stop)
     ).
 
-toggle_streaming(F) :->
-    "Start or stop streaming"::
+has_snapshot(F) :->
+    "True if there is a snapshot (condition of the snapshot menu)"::
+    get(F, snapshot_image, _).
+
+can_record(F) :->
+    "True if the camera runs and we are not recording"::
+    \+ get(F, camera, @nil),
+    get(F, writer, @nil).
+
+record_button(F) :->
+    "Record to a file or stop recording or streaming"::
     (   get(F, writer, @nil)
-    ->  send(F, start_streaming)
+    ->  send(F, start_recording)
     ;   send(F, stop_recording)
     ).
 
@@ -280,8 +320,7 @@ start_writer(F, Target:name) :->
     "Write the video and the sound to a file or URL"::
     get(F, camera, C),
     C \== @nil,
-    get(F, member, controls, D),
-    get(D?size_member, selection, Size),
+    get(F, frame_size, Size),
     new(W, video_writer(Target, Size, 30)),
     new(R, audio_recorder),
     (   send(R, record, W)
@@ -291,6 +330,18 @@ start_writer(F, Target:name) :->
     send(F, slot, writer, W),
     send(C, writer, W),
     send(F, update_buttons).
+
+%   The size of the frames the camera delivers, which may differ from
+%   the size we asked for.
+
+frame_size(F, Size:size) :<-
+    "Size of the frames of the camera"::
+    get(F?texture, size, Size0),
+    (   get(Size0, width, W), W > 0
+    ->  Size = Size0
+    ;   get(F, member, controls, D),
+        get(D?size_member, selection, Size)
+    ).
 
 stop_recording(F) :->
     "Stop recording and finish the file"::
@@ -321,28 +372,52 @@ stop_recording(F) :->
     ),
     send(F, update_buttons).
 
+%   The labels show what a button does now: start or stop the camera,
+%   record or stop recording.  The tooltips change with them.
+
 update_buttons(F) :->
-    "Make the buttons (in)active"::
+    "Show the state in the labels, tooltips and REC/LIVE indicator"::
     get(F, member, controls, D),
     get(F, camera, C),
-    (   C == @nil -> Running = @off ; Running = @on ),
-    send(D?stop_member, active, Running),
+    get(@display, cameras, Cameras),
+    get(D, camera_on_off_member, OnOff),
+    (   C == @nil
+    ->  Running = @off,
+        send(OnOff, label, '\u25B6 Start'),
+        send(OnOff, help_message, tag, 'Start the selected camera')
+    ;   Running = @on,
+        send(OnOff, label, '\u25A0 Stop'),
+        send(OnOff, help_message, tag, 'Stop the camera')
+    ),
+    (   send(Cameras, empty)
+    ->  send(OnOff, active, @off)
+    ;   true
+    ),
+    send(D?camera_member, active, Running?negate),
+    send(D?size_member, active, Running?negate),
     send(D?snapshot_member, active, Running),
+    get(D, record_member, Rec),
+    get(F, member, video, V),
+    get(V, member, rec, Indicator),
     get(F, writer, W),
     (   W == @nil
-    ->  send(D?record_member, active, Running),
-        send(D?stream_member, active, Running),
-        send(D?record_member, label, 'Record'),
-        send(D?stream_member, label, 'Stream')
-    ;   get(W, live, @on)
-    ->  send(D?record_member, active, @off),
-        send(D?stream_member, label, 'Stop streaming')
-    ;   send(D?stream_member, active, @off),
-        send(D?record_member, label, 'Stop recording')
+    ->  send(Rec, active, Running),
+        send(Rec, label, '\u25CF Record'),
+        send(Rec, help_message, tag,
+             'Record the video and the microphone to an MP4 file.\n\c
+              The menu also streams them live to a URL'),
+        send(Indicator, string, '')
+    ;   send(Rec, label, '\u25A0 Stop'),
+        (   get(W, live, @on)
+        ->  send(Rec, help_message, tag, 'Stop streaming'),
+            send(Indicator, string, '\u25CF LIVE')
+        ;   send(Rec, help_message, tag, 'Stop recording'),
+            send(Indicator, string, '\u25CF REC')
+        )
     ),
-    (   get(F, snapshot_image, _) -> Snap = @on ; Snap = @off ),
-    send(D?save_member, active, Snap),
-    send(D?copy_member, active, Snap).
+    get(V?visible, width, VW),
+    send(Indicator, position, point(VW-Indicator?width-8, 8)),
+    send(D, layout).
 
 update_status(F) :->
     "Show the status, frame size and frames per second"::
