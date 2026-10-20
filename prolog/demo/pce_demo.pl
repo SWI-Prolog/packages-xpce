@@ -180,7 +180,7 @@ demo_group('Media and devices',
            [ 'Camera', 'Video player', 'Sound'
            ]).
 demo_group('Games and animation',
-           [ 'Asteroids', 'Animated images', 'Kangaroo', 'Juggler'
+           [ 'Asteroids', 'Pong', 'Animated images', 'Kangaroo', 'Juggler'
            ]).
 
 demo('PceDraw',                         % Name
@@ -249,6 +249,11 @@ demo('Asteroids',
      'A game like Asteroids: GPU sprites, keyboard polling, gamepad and sound',
      demo(asteroids),
      asteroids).
+
+demo('Pong',
+     'The good old Pong for one or two players: GPU sprites, keyboard polling, gamepads and sound',
+     demo(pong),
+     pong).
 
 demo('Drag-and-drop File',
      'Receive files dropped from the desktop (drop_file/drop_text events)',

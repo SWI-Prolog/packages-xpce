@@ -285,7 +285,7 @@ set(XPCE_DATA_prolog_demo animation_demo.pl beach_ball.png
     charts.pl chess.pl colour.pl compose.pl constraint.pl cursor.pl
     demo_buttons.pl demo_gallery.pl dialog_gallery.pl dragdrop_file.pl event_hierarchy.pl
     fontviewer.pl graph.pl hsvcolour.pl imageviewer.pl ispell.pl juggler.pl
-    kangaroo.pl opacity.pl paint.pl paths.pl pce_demo.pl sound_demo.pl
+    kangaroo.pl opacity.pl paint.pl paths.pl pce_demo.pl pong.pl sound_demo.pl
     tabframe.pl transform.pl tube_gui.pl tube.pl tube.json xdot_demo.pl
     xdot_demo.dot random_terms_demo.pl)
 
