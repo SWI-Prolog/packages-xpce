@@ -275,8 +275,10 @@ computeSlider(Slider s)
     obtainClassVariablesObject(s);
     compute_slider(s, &ny, &vx, &vy, &lx, &ly, &sx, &sy, &hx, &hy);
     h = SLIDER_HEIGHT;
-    h = max(h, ly+valInt(getHeightFont(s->label_font)));
-    h = max(h, vy+valInt(getHeightFont(s->value_font)));
+    if ( s->show_label == ON )
+      h = max(h, ny+valInt(getHeightFont(s->label_font)));
+    if ( s->show_value == ON )
+      h = max(h, vy+valInt(getHeightFont(s->value_font)));
 
     if ( s->show_value == ON )
     { char buf[100];
@@ -310,9 +312,21 @@ getReferenceSlider(Slider s)
 
     ComputeGraphical(s);
     compute_slider(s, &ny, &vx, &vy, &lx, &ly, &sx, &sy, &hx, &hy);
-    ascent = valInt(getAscentFont(s->label_font));
 
-    ref = answerObject(ClassPoint, ZERO, toInt(ascent + ny), EAV);
+    if ( s->show_label == ON )		/* the baseline of the label */
+    { ascent = valInt(getAscentFont(s->label_font));
+      ref = answerObject(ClassPoint, ZERO, toInt(ascent + ny), EAV);
+    } else if ( s->show_value == ON )	/* the baseline of the values */
+    { ascent = valInt(getAscentFont(s->value_font));
+      ref = answerObject(ClassPoint, ZERO, toInt(ascent + vy), EAV);
+    } else				/* the bar at the middle of a text */
+    { int descent = valInt(getDescentFont(s->label_font));
+
+      ascent = valInt(getAscentFont(s->label_font));
+      ref = answerObject(ClassPoint, ZERO,
+			 toInt(sy + SLIDER_HEIGHT/2 + (ascent-descent)/2),
+			 EAV);
+    }
   }
 
   answer(ref);

@@ -64,6 +64,47 @@ test(real_default, V =:= 1.25) :-
     new(S, slider(scale, 0.5, 3.0, 1.25)),
     get(S, selection, V).
 
+%   A slider without a label and value is as high as its bar and its
+%   bar is next to the middle of the text of the items in its row.
+%   The fonts are large such that the label and values are higher than
+%   the bar.
+
+big_fonts(S) :-
+    new(F, font(sans, normal, 36)),
+    send(S, label_font, F),
+    send(S, value_font, F).
+
+test(bare_height, [Bare-Labelled == smaller-labelled]) :-
+    new(S1, slider(position, 0, 100, 50)),
+    big_fonts(S1),
+    send(S1, show_label, @off),
+    send(S1, show_value, @off),
+    new(S2, slider(position, 0, 100, 50)),
+    big_fonts(S2),
+    get(S1, height, H1),
+    get(S2, height, H2),
+    (H1 < H2 -> Bare = smaller ; Bare = H1),
+    Labelled = labelled.
+test(label_height, [H1 == H2]) :-
+    new(S1, slider(position, 0, 100, 50)),
+    big_fonts(S1),
+    send(S1, show_value, @off),
+    new(S2, slider(position, 0, 100, 50)),
+    big_fonts(S2),
+    get(S1, height, H1),
+    get(S2, height, H2).
+test(bare_aligned, [Aligned == true]) :-
+    new(D, dialog),
+    send(D, append, new(B, button(play))),
+    send(D, append, new(S, slider(position, 0, 100, 50)), right),
+    send(S, show_label, @off),
+    send(S, show_value, @off),
+    send(D, layout),
+    get(B?area, center, point(_, BY)),
+    get(S?area, center, point(_, SY)),
+    (abs(BY-SY) =< 2 -> Aligned = true ; Aligned = BY-SY),
+    free(D).
+
 :- end_tests(slider).
 
 %   slider_dialog(-Dialog, -Slider, -Log, +Low, +High, +Value)
