@@ -62,7 +62,8 @@ sdl_timer_event(SDL_Event *event)
   { Timer tm = event->user.data1;
 
     if ( !onFlag(tm, F_FREEING|F_FREED) &&
-	 instanceOfObject(tm, ClassTimer) )
+	 instanceOfObject(tm, ClassTimer) &&
+	 tm->status != NAME_idle )	/* stopped after the event was queued */
     { pceMTLock();
       bool completed = (tm->status == NAME_once);
 
