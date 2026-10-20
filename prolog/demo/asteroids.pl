@@ -596,7 +596,7 @@ ship_figure(Flame, Fig) :-
 
 tick(S) :->
     "Steer, move, fire and check for a collision"::
-    get(S, window, P),
+    get(S, device, P),
     get(P, dt, Dt),
     get(P, input, In),
     get(S, rotate_speed, RS),
@@ -658,7 +658,7 @@ fire(S, Fire, Dt) :-
     Reload is Reload0 - Dt,
     (   Fire == true,
         Reload =< 0,
-        get(S, window, P),
+        get(S, device, P),
         get(P?layers, find_all,
             message(@arg1, instance_of, asteroids_bullet), Bullets),
         get(Bullets, size, NB),
@@ -686,7 +686,7 @@ collide(S) :-
     get(S, hit_radius, R),
     hit_asteroid(S, X, Y, R, _),
     !,
-    get(S, window, P),
+    get(S, device, P),
     get(S, burst_particles, NP),
     burst(P, X, Y, NP),
     send(P, play, explosion),
@@ -840,7 +840,7 @@ hit(A, X:num, Y:num, R:num) :->
 
 explode(A) :->
     "Hit by a bullet: score, burst and split into two smaller rocks"::
-    get(A, window, P),
+    get(A, device, P),
     get(A, size, Size),
     get(A, px, X), get(A, py, Y),
     size_property(A, Size, score, Score),
@@ -990,7 +990,7 @@ tick(S) :->
     "Maybe twinkle"::
     get(S, twinkle, T0),
     (   T0 > 0
-    ->  get(S?window, dt, Dt),
+    ->  get(S?device, dt, Dt),
         T is T0 - Dt,
         (   T > 0
         ->  send(S, slot, twinkle, T)
@@ -1214,7 +1214,7 @@ pce_preferences:preferences(asteroids_window,
 %   Objects leaving the field on one side come back on the other.
 
 wrap(Gr, X0, Y0, X, Y) :-
-    get(Gr, window, P),
+    get(Gr, device, P),
     get(P, width, W),
     get(P, height, H),
     X is X0 - W*floor(X0/W),
@@ -1226,7 +1226,7 @@ wrap(Gr, X0, Y0, X, Y) :-
 %   tick.  Sprite has the slots `px`, `py`, `vx` and `vy`.
 
 move(Gr, X, Y, Dt) :-
-    get(Gr?window, dt, Dt),
+    get(Gr?device, dt, Dt),
     get(Gr, px, X0), get(Gr, py, Y0),
     get(Gr, vx, VX), get(Gr, vy, VY),
     wrap(Gr, X0 + VX*Dt, Y0 + VY*Dt, X, Y),
@@ -1252,7 +1252,7 @@ key(Key, V) :-
 %   touches Asteroid.
 
 hit_asteroid(Gr, X, Y, R, A) :-
-    get(Gr?window?layers, find,
+    get(Gr?device?layers, find,
         and(message(@arg1, instance_of, asteroid),
             message(@arg1, hit, X, Y, R)),
         A).

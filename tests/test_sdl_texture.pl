@@ -271,16 +271,16 @@ test(defaults, [Scale-Flip-Win == fit-none-(@nil), Alpha =:= 1]) :-
     get(L, scale, Scale),
     get(L, alpha, Alpha),
     get(L, flip, Flip),
-    get(L, window, Win).
+    get(L, device, Win).
 test(append_delete, [Before-W1-After-W2 == [L]-W-[]-(@nil)]) :-
     sdl_window(20, W),
     new(L, sdl_layer),
     send(W, append, L),
-    get(L, window, W1),
+    get(L, device, W1),
     chain_list(W?layers, Before),
     send(W, delete, L),
     chain_list(W?layers, After),
-    get(L, window, W2),
+    get(L, device, W2),
     free(W).
 test(move_to_other_window, [L1-L2 == []-[L]]) :-
     sdl_window(20, W1),
@@ -317,7 +317,7 @@ test(free_window, [Win == @nil]) :-
     sdl_window(20, W),
     send(W, append, new(L, sdl_layer)),
     free(W),
-    get(L, window, Win).
+    get(L, device, Win).
 test(background, [Names == [blue]]) :-
     sdl_window(40, W),
     pixels(W, [20-20], Names).

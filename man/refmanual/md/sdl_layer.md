@@ -135,8 +135,9 @@ changing it.
 - sdl_layer<->displayed: bool
     If @off, the layer is not shown.
 
-- sdl_layer<-window: sdl_window*
-    The window showing the layer.  See sdl_window->append.
+- sdl_layer<-device: sdl_window*
+    The window showing the layer, as graphical<-device is the device
+    showing a graphical.  See sdl_window->append.
 
 
 ## Send methods {#class-sdl_layer-send}

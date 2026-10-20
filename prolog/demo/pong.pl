@@ -481,7 +481,7 @@ px(Pd, X:num) :<-
     get(Pd, margin, M),
     (   get(Pd, side, left)
     ->  X = M
-    ;   get(Pd?window, width, W),
+    ;   get(Pd?device, width, W),
         X is W - M
     ).
 
@@ -496,7 +496,7 @@ face(Pd, X:num) :<-
 
 tick(Pd) :->
     "Move the paddle"::
-    get(Pd, window, P),
+    get(Pd, device, P),
     get(P, dt, Dt),
     get(Pd, side, Side),
     get(Pd, py, Y0),
@@ -521,7 +521,7 @@ tick(Pd) :->
 
 target(Pd, Y:num) :<-
     "Where the computer wants the paddle"::
-    get(Pd, window, P),
+    get(Pd, device, P),
     get(P, ball, B),
     (   get(P, serve, Serve),
         Serve =:= 0,
@@ -624,7 +624,7 @@ speed_up(B) :->
 
 tick(B) :->
     "Wait for the serve or move"::
-    get(B, window, P),
+    get(B, device, P),
     get(P, serve, Serve0),
     (   get(P, mode, game_over)
     ->  true
@@ -646,7 +646,7 @@ tick(B) :->
 
 launch(B) :->
     "Serve the ball"::
-    get(B?window, serve_to, Side),
+    get(B?device, serve_to, Side),
     (   Side == left
     ->  Dir = -1
     ;   Dir = 1
@@ -658,15 +658,15 @@ launch(B) :->
     VX is Dir*Speed*cos(Angle),
     VY is Speed*sin(Angle),
     set_velocity(B, VX, VY),
-    send(B?window?left, new_aim),
-    send(B?window?right, new_aim).
+    send(B?device?left, new_aim),
+    send(B?device?right, new_aim).
 
 %   Move the ball, bounce off the walls and the paddles and see whether
 %   a player missed the ball.
 
 fly(B) :->
     "Move the ball for one tick"::
-    get(B, window, P),
+    get(B, device, P),
     get(P, dt, Dt),
     get(B, px, X0), get(B, py, Y0),
     get(B, vx, VX), get(B, vy, VY),
@@ -711,13 +711,13 @@ wall(B, Y1, R, H, Y) :-
     get(B, vy, VY0),
     VY is -VY0,
     set_velocity(B, VX, VY),
-    send(B?window, play, wall).
+    send(B?device, play, wall).
 wall(_, Y, _, _, Y).
 
 trail(B, X, Y) :-
     (   get(B, trail, @on)
     ->  get(B, radius, R),
-        send(B?window, append, new(T, pong_spark(trail(R), X, Y, 0, 0))),
+        send(B?device, append, new(T, pong_spark(trail(R), X, Y, 0, 0))),
         send(T, hide, B)
     ;   true
     ).
@@ -764,7 +764,7 @@ initialise(S, Look:prolog, X:num, Y:num, VX:num, VY:num) :->
 
 tick(S) :->
     "Fly and fade"::
-    get(S?window, dt, Dt),
+    get(S?device, dt, Dt),
     get(S, life, Life0),
     Life is Life0 - Dt,
     (   Life < 0

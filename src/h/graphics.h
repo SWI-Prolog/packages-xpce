@@ -1101,7 +1101,7 @@ NewClass(sdl_layer)
   Area		slices;			/* Centre part for 9-grid or @nil */
   SdlMesh	mesh;			/* Triangles to draw or @nil */
   BoolObj	displayed;		/* Visible? */
-  SdlWindow	window;			/* Window showing it or @nil */
+  SdlWindow	device;			/* Window showing it or @nil */
 End;
 
 NewClass(audio_recorder)

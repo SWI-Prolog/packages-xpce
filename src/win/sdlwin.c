@@ -58,7 +58,7 @@ unlinkSdlWindow(SdlWindow sw)
   for_cell(cell, sw->layers)
   { SdlLayer l = cell->value;
 
-    assign(l, window, NIL);
+    assign(l, device, NIL);
   }
   clearChain(sw->layers);
 
@@ -68,13 +68,13 @@ unlinkSdlWindow(SdlWindow sw)
 
 static status
 appendSdlWindow(SdlWindow sw, SdlLayer l)
-{ if ( l->window == sw )
+{ if ( l->device == sw )
     succeed;
-  if ( notNil(l->window) )
-    send(l->window, NAME_delete, l, EAV);
+  if ( notNil(l->device) )
+    send(l->device, NAME_delete, l, EAV);
 
   appendChain(sw->layers, l);
-  assign(l, window, sw);
+  assign(l, device, sw);
   ws_present_window((PceWindow) sw);
 
   succeed;
@@ -83,12 +83,12 @@ appendSdlWindow(SdlWindow sw, SdlLayer l)
 
 static status
 deleteSdlWindow(SdlWindow sw, SdlLayer l)
-{ if ( l->window != sw )
+{ if ( l->device != sw )
     fail;
 
   addCodeReference(l);
   deleteChain(sw->layers, l);
-  assign(l, window, NIL);
+  assign(l, device, NIL);
   delCodeReference(l);
   ws_present_window((PceWindow) sw);
 

@@ -166,8 +166,8 @@ makeClassSdlTexture(Class class)
 
 static status
 presentSdlLayer(SdlLayer l)
-{ if ( notNil(l->window) )
-    ws_present_window((PceWindow)l->window);
+{ if ( notNil(l->device) )
+    ws_present_window((PceWindow)l->device);
 
   succeed;
 }
@@ -190,7 +190,7 @@ initialiseSdlLayer(SdlLayer l, SdlTexture texture, Area area, Name scale)
   assign(l, slices,    NIL);
   assign(l, mesh,      NIL);
   assign(l, displayed, ON);
-  assign(l, window,    NIL);
+  assign(l, device,    NIL);
 
   succeed;
 }
@@ -198,8 +198,8 @@ initialiseSdlLayer(SdlLayer l, SdlTexture texture, Area area, Name scale)
 
 static status
 unlinkSdlLayer(SdlLayer l)
-{ if ( notNil(l->window) )
-    send(l->window, NAME_delete, l, EAV);
+{ if ( notNil(l->device) )
+    send(l->device, NAME_delete, l, EAV);
   if ( notNil(l->mesh) )
     deleteChain(l->mesh->layers, l);
 
@@ -228,9 +228,9 @@ meshSdlLayer(SdlLayer l, SdlMesh mesh)
 
 static status
 restackSdlLayer(SdlLayer l, SdlLayer l2, bool top)
-{ SdlWindow sw = l->window;
+{ SdlWindow sw = l->device;
 
-  if ( isNil(sw) || l == l2 || (notDefault(l2) && l2->window != sw) )
+  if ( isNil(sw) || l == l2 || (notDefault(l2) && l2->device != sw) )
     fail;
 
   if ( isDefault(l2) )
@@ -321,7 +321,7 @@ static vardecl var_sdl_layer[] =
      NAME_appearance, "Draw these triangles instead of placing <-texture"),
   SV(NAME_displayed, "bool", IV_GET|IV_STORE, displayedSdlLayer,
      NAME_visibility, "Whether the layer is shown"),
-  IV(NAME_window, "sdl_window*", IV_GET,
+  IV(NAME_device, "sdl_window*", IV_GET,
      NAME_organisation, "Window showing the layer")
 };
 
@@ -335,7 +335,7 @@ static senddecl send_sdl_layer[] =
 { SM(NAME_initialise, 3, T_initialiseSdlLayer, initialiseSdlLayer,
      DEFAULT, "Create from texture, area and scale"),
   SM(NAME_unlink, 0, NULL, unlinkSdlLayer,
-     DEFAULT, "Delete from <-window"),
+     DEFAULT, "Delete from <-device"),
   SM(NAME_expose, 1, "above=[sdl_layer]", exposeSdlLayer,
      NAME_stacking, "Put on top of all layers or just above argument"),
   SM(NAME_hide, 1, "below=[sdl_layer]", hideSdlLayer,
