@@ -222,11 +222,6 @@ sdl_frame_texture(FrameObj fr, SdlTexture t)
 		  pp(t), SDL_GetPixelFormatName(ft->texture->format),
 		  SDL_GetPixelFormatName(surf->format),
 		  SDL_GetRendererName(wfr->ws_renderer)));
-    if ( SDL_ISPIXELFORMAT_ALPHA(ft->texture->format) )
-      SDL_SetTextureBlendMode(ft->texture,
-			      is_premultiplied(surf)
-				? SDL_BLENDMODE_BLEND_PREMULTIPLIED
-				: SDL_BLENDMODE_BLEND);
     ft->made_for = surf->format;
     ft->premultiplied = is_premultiplied(surf);
     ft->stale = true;
@@ -810,7 +805,19 @@ sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
     { pts[i]->x = dstrect->x + pts[i]->x*scale;
       pts[i]->y = dstrect->y + pts[i]->y*scale;
     }
-    SDL_SetTextureAlphaModFloat(tex, (float)(valNum(l->alpha)*opacity));
+    /* The texture is shared by all layers that show it, so we set its
+     * modes for each draw.  SDL scales the alpha, but not the RGB, of
+     * premultiplied textures by the alpha mod.  Textures without alpha
+     * (camera, video) must blend as well, or <-alpha is ignored.
+     */
+    bool pm = is_premultiplied(l->texture->surface);
+    float alpha = (float)(valNum(l->alpha)*opacity);
+    float rgb = pm ? alpha : 1.0f;
+
+    SDL_SetTextureBlendMode(tex, pm ? SDL_BLENDMODE_BLEND_PREMULTIPLIED
+				    : SDL_BLENDMODE_BLEND);
+    SDL_SetTextureAlphaModFloat(tex, alpha);
+    SDL_SetTextureColorModFloat(tex, rgb, rgb, rgb);
     render_quad(r, tex, &q);
   }
   SDL_SetRenderClipRect(r, NULL);

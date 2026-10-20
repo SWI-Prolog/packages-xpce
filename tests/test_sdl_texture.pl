@@ -363,6 +363,26 @@ test(order, [Names == [green]]) :-
     send(W, append, sdl_layer(sdl_texture(I1), @default, stretch)),
     send(W, append, sdl_layer(sdl_texture(I2), @default, stretch)),
     pixels(W, [20-20], Names).
+test(alpha, [RGB == rgb(128,128,0)]) :-
+    colour_image([red], I1),            % premultiplied green at 0.5
+    colour_image([green], I2),          % over red
+    sdl_window(40, W),
+    send(W, append, sdl_layer(sdl_texture(I1), @default, stretch)),
+    send(W, append, new(L, sdl_layer(sdl_texture(I2), @default, stretch))),
+    send(L, alpha, 0.5),
+    pixels(W, [20-20], [RGB0]),
+    round8(RGB0, RGB).
+test(alpha_no_alpha_channel, [RGB == rgb(128,0,128)]) :-
+    colour_image([red], I1),            % YUV camera frame at 0.5
+    new(C, camera),
+    send(C, texture, new(T, sdl_texture)),
+    send(C, sdl_test_frame, 8, 8, colour(blue)),
+    sdl_window(40, W),
+    send(W, append, sdl_layer(sdl_texture(I1), @default, stretch)),
+    send(W, append, new(L, sdl_layer(T, @default, stretch))),
+    send(L, alpha, 0.5),
+    pixels(W, [20-20], [RGB0]),
+    round8(RGB0, RGB).
 test(changed, [Before-After == red-green]) :-
     colour_image([red], I1),
     new(T, sdl_texture(I1)),
@@ -379,6 +399,9 @@ test(changed, [Before-After == red-green]) :-
     get(F, sdl_test_image, GPU2),
     name_of(GPU2, X, Y, After),
     send(F, destroy).
+
+round8(rgb(R0,G0,B0), rgb(R,G,B)) :-
+    R is round(R0/8)*8, G is round(G0/8)*8, B is round(B0/8)*8.
 
 :- end_tests(sdl_layer).
 
