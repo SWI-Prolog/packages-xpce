@@ -120,6 +120,7 @@ add_frame_texture(WsFrame wfr, SdlTexture t)
   ft->texture  = NULL;
   ft->made_for = SDL_PIXELFORMAT_UNKNOWN;
   ft->premultiplied = false;
+  ft->straight = false;
   ft->stale    = true;
 
   return ft;
@@ -168,6 +169,43 @@ renderer_supports(SDL_Renderer *r, SDL_PixelFormat format)
 }
 
 
+/* The software renderer draws triangles (SDL_RenderGeometry(),
+ * SDL_RenderTextureAffine()) ignoring the premultiplied blend modes:
+ * the texture replaces what is below.  We therefore give it textures
+ * with straight alpha.
+ */
+
+static bool
+is_software_renderer(SDL_Renderer *r)
+{ const char *name = SDL_GetRendererName(r);
+
+  return name && strcmp(name, SDL_SOFTWARE_RENDERER) == 0;
+}
+
+
+/* Divide the colours of the ARGB8888 surface `s` by alpha */
+
+static void
+unpremultiply_surface(SDL_Surface *s)
+{ for(int y=0; y<s->h; y++)
+  { Uint32 *p = (Uint32*)((Uint8*)s->pixels + (size_t)y*s->pitch);
+
+    for(int x=0; x<s->w; x++)
+    { Uint32 v = p[x];
+      Uint32 a = v>>24;
+
+      if ( a > 0 && a < 255 )
+      { Uint32 r = SDL_min(255, (((v>>16)&0xff)*255 + a/2)/a);
+	Uint32 g = SDL_min(255, (((v>> 8)&0xff)*255 + a/2)/a);
+	Uint32 b = SDL_min(255, (( v     &0xff)*255 + a/2)/a);
+
+	p[x] = (a<<24) | (r<<16) | (g<<8) | b;
+      }
+    }
+  }
+}
+
+
 /* The texture of `t` in the renderer of `fr`, made or uploaded if
  * needed.  The texture has the format of the surface if the renderer
  * supports it.  A YUV format the renderer does not support, such as
@@ -176,7 +214,7 @@ renderer_supports(SDL_Renderer *r, SDL_PixelFormat format)
  * and as a last resort convert to ARGB8888 ourselves.
  */
 
-static SDL_Texture *
+static frame_texture *
 sdl_frame_texture(FrameObj fr, SdlTexture t)
 { WsFrame wfr = fr->ws_ref;
   SDL_Surface *surf = t->surface;
@@ -224,11 +262,22 @@ sdl_frame_texture(FrameObj fr, SdlTexture t)
 		  SDL_GetRendererName(wfr->ws_renderer)));
     ft->made_for = surf->format;
     ft->premultiplied = is_premultiplied(surf);
+    ft->straight = ( ft->premultiplied &&
+		     ft->texture->format == SDL_PIXELFORMAT_ARGB8888 &&
+		     is_software_renderer(wfr->ws_renderer) );
     ft->stale = true;
   }
 
   if ( ft->stale )
-  { if ( ft->texture->format == surf->format )
+  { if ( ft->straight )
+    { SDL_Surface *copy = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_ARGB8888);
+
+      if ( copy )
+      { unpremultiply_surface(copy);
+	SDL_UpdateTexture(ft->texture, NULL, copy->pixels, copy->pitch);
+	SDL_DestroySurface(copy);
+      }
+    } else if ( ft->texture->format == surf->format )
     { SDL_UpdateTexture(ft->texture, NULL, surf->pixels, surf->pitch);
     } else
     { SDL_Colorspace cs = SDL_ISPIXELFORMAT_FOURCC(ft->texture->format)
@@ -245,7 +294,7 @@ sdl_frame_texture(FrameObj fr, SdlTexture t)
     ft->stale = false;
   }
 
-  return ft->texture;
+  return ft;
 }
 
 
@@ -1066,20 +1115,21 @@ sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
   Cell cell;
   for_cell(cell, sw->layers)
   { SdlLayer l = cell->value;
-    SDL_Texture *tex;
+    frame_texture *ft;
     layer_layout ly;
 
     if ( isNil(l->texture) || !l->texture->surface ||
 	 !layer_geometry(sw, l, l->texture->surface,
 			 dstrect->x, dstrect->y, scale, &ly) ||
-	 !(tex = sdl_frame_texture(fr, l->texture)) )
+	 !(ft = sdl_frame_texture(fr, l->texture)) )
       continue;
 
     /* The texture is shared by all layers that show it, so we set its
      * modes for each draw.  SDL scales the alpha, but not the RGB, of
      * premultiplied textures by the alpha mod.  `none` ignores alpha.
      */
-    bool pm = is_premultiplied(l->texture->surface);
+    SDL_Texture *tex = ft->texture;
+    bool pm = ft->premultiplied && !ft->straight;
     float alpha = (float)(valNum(l->alpha)*opacity);
     float rgb = pm && l->blend != NAME_none ? alpha : 1.0f;
     float tr = rgb, tg = rgb, tb = rgb;
@@ -1250,3 +1300,4 @@ sdl_cairo_layers(cairo_t *cr, SdlWindow sw, float wx, float wy,
   }
   cairo_restore(cr);
 }
+

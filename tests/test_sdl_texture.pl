@@ -126,6 +126,21 @@ pixel(Image, OX, OY, X-Y, Name) :-
     IX is OX+X, IY is OY+Y,
     name_of(Image, IX, IY, Name).
 
+filled_box(Size, Colour, Box) :-
+    new(Box, box(Size, Size)),
+    send(Box, pen, 0),
+    send(Box, fill, Colour).
+
+%!  round8(+RGB0, -RGB) is det.
+%
+%   Round the components of an interpolated colour to multiples of 8.
+
+round8(rgb(R0,G0,B0), rgb(R,G,B)) :-
+    round_to_8(R0, R), round_to_8(G0, G), round_to_8(B0, B).
+
+round_to_8(V0, V) :-
+    V is min(255, round(V0/8)*8).
+
 :- begin_tests(sdl_texture).
 
 test(empty, [W-H-Format == 0-0-(@nil)]) :-
@@ -159,11 +174,6 @@ test(replace_image, [W-H-Name == 10-10-blue]) :-
 :- end_tests(sdl_texture).
 
 :- begin_tests(sdl_texture_image).
-
-filled_box(Size, Colour, Box) :-
-    new(Box, box(Size, Size)),
-    send(Box, pen, 0),
-    send(Box, fill, Colour).
 
 rgba(Image, X, Y, rgba(R,G,B,A)) :-
     get(Image, pixel, X, Y, C),
@@ -582,12 +592,6 @@ test(slices_rotate, [Names == [red, green, green, red, white]]) :-
     send(L, angle, 90),                 % X,Y shows 50+(Y-30),30-(X-50)
     pixels(W, [75-75, 75-65, 65-75, 25-75, 50-30], Names).
 
-round8(rgb(R0,G0,B0), rgb(R,G,B)) :-
-    round_to_8(R0, R), round_to_8(G0, G), round_to_8(B0, B).
-
-round_to_8(V0, V) :-
-    V is min(255, round(V0/8)*8).
-
 :- end_tests(sdl_layer).
 
 %   Sprites: textures placed by their hot spot and mapped through a
@@ -650,6 +654,17 @@ test(shear, [Names == [red, green, red, red, blue]]) :-
     send(Tr, set, 1, 0.5, 0, 1, 10, 10),
     send(L, transform, Tr),
     pixels(W, [15-10, 25-10, 21-14, 9-6, 5-10], Names).
+test(translucent_shear, [RGB == rgb(128,0,128)]) :-
+    new(T, sdl_texture(size(10, 10))), % drawn with triangles
+    filled_box(10, colour(@default, 255, 0, 0, 128), Box),
+    send(T, draw_in, Box, point(0, 0)),
+    sdl_window(40, W),
+    send(W, append, new(L, sdl_layer(T, @nil, none))),
+    new(Tr, transform),
+    send(Tr, set, 2, 0.5, 0, 2, 10, 10),
+    send(L, transform, Tr),
+    pixels(W, [20-20], [RGB0]),
+    round8(RGB0, RGB).
 test(singular_transform, [Names == [green]]) :-
     red_green(T),                       % shows nothing, but the next
     colour_image([green], I),           % layer is drawn
@@ -686,3 +701,4 @@ test(graphical_no_origin, [HS == @nil]) :-
     get(T, hot_spot, HS).
 
 :- end_tests(sdl_sprite).
+

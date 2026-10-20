@@ -44,6 +44,7 @@ typedef struct frame_texture
   SDL_Texture  *texture;		/* NULL: not yet created */
   SDL_PixelFormat made_for;		/* format of the surface it shows */
   bool		premultiplied;		/* and whether it is premultiplied */
+  bool		straight;		/* texture holds straight alpha */
   bool		stale;			/* owner changed since the upload */
 } frame_texture;
 
