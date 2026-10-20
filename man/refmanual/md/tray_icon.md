@@ -1,4 +1,4 @@
-# class tray_icon {#class-tray-icon}
+# class tray_icon {#class-tray_icon}
 
 A tray_icon shows an icon in the system tray, also known as the
 notification area, e.g., for an application that runs in the
@@ -26,7 +26,7 @@ On Linux, the system tray requires the AppIndicator library
 @see class popup
 
 
-## Instance variables {#class-tray-icon-instvars}
+## Instance variables {#class-tray_icon-instvars}
 
 - tray_icon<->image: image
     The icon.
@@ -38,7 +38,7 @@ On Linux, the system tray requires the AppIndicator library
     The menu.
 
 
-## Send methods {#class-tray-icon-send}
+## Send methods {#class-tray_icon-send}
 
 - tray_icon->initialise: image=image, tooltip=[char_array]*, popup=[popup]*
     Show `image` in the tray.  Fails with an error if the system has

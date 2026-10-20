@@ -1,4 +1,4 @@
-# class sdl_window {#class-sdl-window}
+# class sdl_window {#class-sdl_window}
 
 An sdl_window shows sdl_layer objects below its graphicals.  The
 layers are drawn by the SDL renderer of the frame rather than by
@@ -25,13 +25,13 @@ sdl_window on a picture.
 @see frame<-sdl_test_image
 
 
-## Instance variables {#class-sdl-window-instvars}
+## Instance variables {#class-sdl_window-instvars}
 
 - sdl_window<-layers: chain
     The sdl_layer objects shown, bottom first.
 
 
-## Send methods {#class-sdl-window-send}
+## Send methods {#class-sdl_window-send}
 
 - sdl_window->initialise: label=[name], size=[size], display=[display]
     Create as a window.

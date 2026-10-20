@@ -1,4 +1,4 @@
-# class pen_state {#class-pen-state}
+# class pen_state {#class-pen_state}
 
 A pen_state is the `event<-detail` of the events of a pen on a graphics
 tablet or touch screen.  The tip of the pen generates the ms_left_*
@@ -26,7 +26,7 @@ for <-hover_distance and <-barrel_rotation, as an event already has a
 @see class event_detail
 
 
-## Instance variables {#class-pen-state-instvars}
+## Instance variables {#class-pen_state-instvars}
 
 - pen_state<-pressure: num
     Pressure of the tip, from 0 to 1.
@@ -60,7 +60,7 @@ for <-hover_distance and <-barrel_rotation, as an event already has a
     button, 2 the second, etc.
 
 
-## Send methods {#class-pen-state-send}
+## Send methods {#class-pen_state-send}
 
 - pen_state->initialise: pressure=[num], xtilt=[num], ytilt=[num], hover_distance=[num], barrel_rotation=[num], slider=[num], tangential_pressure=[num], eraser=[bool], barrel_buttons=[int]
     Create from the given values.  Omitted values are 0 or @off.

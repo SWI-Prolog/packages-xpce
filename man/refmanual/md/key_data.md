@@ -1,4 +1,4 @@
-# class key_data {#class-key-data}
+# class key_data {#class-key_data}
 
 A key_data is the `event<-detail` of the events of the keyboard.  It
 holds whether a key-down is auto-repeated and the key that a key_up
@@ -33,7 +33,7 @@ receiver if the keyboard focus moved while the key was held.
 @see class event_detail
 
 
-## Instance variables {#class-key-data-instvars}
+## Instance variables {#class-key_data-instvars}
 
 - key_data<-key: name
     `event<-key` of the key-down: the character typed, e.g., `a` or
@@ -44,7 +44,7 @@ receiver if the keyboard focus moved while the key was held.
     @off for a key_up.
 
 
-## Send methods {#class-key-data-send}
+## Send methods {#class-key_data-send}
 
 - key_data->initialise: key=name, repeat=[bool]
     Create from the given key.  `repeat` defaults to @off.

@@ -1,4 +1,4 @@
-# class sdl_layer {#class-sdl-layer}
+# class sdl_layer {#class-sdl_layer}
 
 An sdl_layer shows an sdl_texture in an sdl_window.  The renderer
 scales, rotates and flips the texture while it draws it.  Layers are
@@ -33,7 +33,7 @@ changing it.
 @see class sdl_window
 
 
-## Instance variables {#class-sdl-layer-instvars}
+## Instance variables {#class-sdl_layer-instvars}
 
 - sdl_layer<->texture: sdl_texture*
     What is shown.  Nothing is shown if this is @nil.
@@ -80,7 +80,7 @@ changing it.
     The window showing the layer.  See sdl_window->append.
 
 
-## Send methods {#class-sdl-layer-send}
+## Send methods {#class-sdl_layer-send}
 
 - sdl_layer->initialise: texture=[sdl_texture*], area=[area*], scale=[{stretch,fit,fill,none}]
     Create to show texture in area of the window, scaled as described

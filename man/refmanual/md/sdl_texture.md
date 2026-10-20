@@ -1,4 +1,4 @@
-# class sdl_texture {#class-sdl-texture}
+# class sdl_texture {#class-sdl_texture}
 
 An sdl_texture holds pixels that the SDL renderer draws itself,
 without Cairo.  An sdl_layer places it in an sdl_window.  The pixels
@@ -23,7 +23,7 @@ drawn again; the Cairo drawings of the windows are not redrawn.
 @see camera<->texture
 
 
-## Instance variables {#class-sdl-texture-instvars}
+## Instance variables {#class-sdl_texture-instvars}
 
 - sdl_texture<->hot_spot: point*
     Point of the texture, in its pixels, that is placed at the position
@@ -33,7 +33,7 @@ drawn again; the Cairo drawings of the windows are not redrawn.
     graphical the texture is made from.
 
 
-## Send methods {#class-sdl-texture-send}
+## Send methods {#class-sdl_texture-send}
 
 - sdl_texture->initialise: from=[image|size|graphical]
     Create with a copy of the pixels of an image or, given a size, with
@@ -61,7 +61,7 @@ drawn again; the Cairo drawings of the windows are not redrawn.
     done by the methods that change the pixels.
 
 
-## Get methods {#class-sdl-texture-get}
+## Get methods {#class-sdl_texture-get}
 
 - sdl_texture<-image: -> image
     New image holding a copy of the pixels, converted to RGB.  Use this

@@ -1,4 +1,4 @@
-# class drop_data {#class-drop-data}
+# class drop_data {#class-drop_data}
 
 A drop_data is the `event<-detail` of the drop_* events that the window
 system generates when files or text are dragged onto a window from
@@ -14,7 +14,7 @@ below are normally called on the event:
 @see event<-detail
 
 
-## Instance variables {#class-drop-data-instvars}
+## Instance variables {#class-drop_data-instvars}
 
 - drop_data-path: name*
     Dropped file of a drop_file event.
@@ -26,13 +26,13 @@ below are normally called on the event:
     Name of the application that sent the drop, if known.
 
 
-## Send methods {#class-drop-data-send}
+## Send methods {#class-drop_data-send}
 
 - drop_data->initialise: path=[name], text=[string], source=[name]
     Create from the given values.  Omitted values are @nil.
 
 
-## Get methods {#class-drop-data-get}
+## Get methods {#class-drop_data-get}
 
 - drop_data<-path: -> name
     Dropped file.  Fails if the drop is not a file.

@@ -1,4 +1,4 @@
-# class move_point {#class-move-point}
+# class move_point {#class-move_point}
 
 A move_point is a point of a path that is reached without drawing,
 starting a new sub-path.  Sub-paths allow for shapes with holes:
@@ -13,7 +13,7 @@ starting a new sub-path.  Sub-paths allow for shapes with holes:
 
 See also class path and `path<-fill_rule`.
 
-## Instance variables {#class-move-point-instvars}
+## Instance variables {#class-move_point-instvars}
 
 - move_point<-closed: bool*
     Whether the sub-path that starts here is closed.  If @nil, it is
@@ -21,7 +21,7 @@ See also class path and `path<-fill_rule`.
 
     **Defaults**: @nil
 
-## Send methods {#class-move-point-send}
+## Send methods {#class-move_point-send}
 
 - move_point->initialise: x=[int], y=[int], closed=[bool]*
     Create a point that starts a sub-path.

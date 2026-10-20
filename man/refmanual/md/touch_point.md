@@ -1,4 +1,4 @@
-# class touch_point {#class-touch-point}
+# class touch_point {#class-touch_point}
 
 A touch_point is the `event<-detail` of the events of a finger on a
 touch screen.  The first finger that touches the screen acts as the
@@ -22,7 +22,7 @@ to its detail, the values below are normally requested from the event:
 @see class event_detail
 
 
-## Instance variables {#class-touch-point-instvars}
+## Instance variables {#class-touch_point-instvars}
 
 - touch_point<-finger: int
     Identifies the finger while it touches the screen.
@@ -39,7 +39,7 @@ to its detail, the values below are normally requested from the event:
     pixels.
 
 
-## Send methods {#class-touch-point-send}
+## Send methods {#class-touch_point-send}
 
 - touch_point->initialise: finger=int, pressure=[num], dx=[num], dy=[num]
     Create from the given values.  Omitted values are 0.

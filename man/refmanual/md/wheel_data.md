@@ -1,4 +1,4 @@
-# class wheel_data {#class-wheel-data}
+# class wheel_data {#class-wheel_data}
 
 A wheel_data is the `event<-detail` of the wheel and horizontal_wheel
 events.  `event<-rotation` reports whole notches in the dominant
@@ -18,7 +18,7 @@ user) and positive `dx` scrolls right.
 @see class event_detail
 
 
-## Instance variables {#class-wheel-data-instvars}
+## Instance variables {#class-wheel_data-instvars}
 
 - wheel_data<-dx: num
     Horizontal scroll distance in notches.  Positive is to the right.
@@ -32,7 +32,7 @@ user) and positive `dx` scrolls right.
     negate them to obtain the physical direction of the movement.
 
 
-## Send methods {#class-wheel-data-send}
+## Send methods {#class-wheel_data-send}
 
 - wheel_data->initialise: dx=num, dy=num, flipped=[bool]
     Create from the given distances.  `flipped` defaults to @off.

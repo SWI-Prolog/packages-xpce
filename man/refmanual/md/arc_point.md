@@ -1,4 +1,4 @@
-# class arc_point {#class-arc-point}
+# class arc_point {#class-arc_point}
 
 An arc_point is a point of a path that is reached by an elliptical arc
 from the previous point.  The arc is specified as in the SVG `A`
@@ -11,7 +11,7 @@ too small to connect the points, they are scaled up just enough.
 
 See also class path and class curve_point.
 
-## Instance variables {#class-arc-point-instvars}
+## Instance variables {#class-arc_point-instvars}
 
 - arc_point<-rx: num
     Horizontal radius of the ellipse.
@@ -37,7 +37,7 @@ See also class path and class curve_point.
 
     **Defaults**: @on
 
-## Send methods {#class-arc-point-send}
+## Send methods {#class-arc_point-send}
 
 - arc_point->initialise: x=int, y=int, rx=num, ry=[num], rotation=[num], large=[bool], sweep=[bool]
     Create the end point of an arc.  Only the end point and radius are

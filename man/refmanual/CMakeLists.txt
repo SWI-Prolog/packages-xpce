@@ -72,9 +72,12 @@ add_custom_command(
     VERBATIM
     COMMENT "-- doc2tex: predicates.plx -> predicates.tex")
 
-# Stage 2: .tex -> .html via ltx2htm
+# Stage 2: .tex -> .html via ltx2htm.  Start from an empty output
+# directory: pages named after section labels that no longer exist
+# would otherwise linger and end up in manindex.db.
 add_custom_command(
     OUTPUT  ${REFMAN_TEX_DIR}/XPCERefMan/index.html
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${REFMAN_TEX_DIR}/XPCERefMan
     COMMAND ${PROG_SWIPL} --home=${SWIPL_BUILD_HOME} -f none
             -s ${SWIPL_BUILD_LIBRARY}/ext/ltx2htm/latex2html.pl
             -t halt

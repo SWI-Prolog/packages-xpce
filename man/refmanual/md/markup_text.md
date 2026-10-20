@@ -1,4 +1,4 @@
-# class markup_text {#class-markup-text}
+# class markup_text {#class-markup_text}
 
 A markup_text displays text formatted using
 [Pango markup](https://docs.gtk.org/Pango/pango_markup.html).  The
@@ -31,7 +31,7 @@ Likewise, `font_family` and `face` accept xpce's font families such as
 fixed-width text, rather than Pango's `Monospace`, on the faint theme
 colour `ui_code_background`.
 
-## Instance variables {#class-markup-text-instvars}
+## Instance variables {#class-markup_text-instvars}
 
 - markup_text<-markup: char_array
     The text with Pango markup.  Setting it to invalid markup raises a
@@ -74,7 +74,7 @@ colour `ui_code_background`.
 
     **Defaults**: 0
 
-## Send methods {#class-markup-text-send}
+## Send methods {#class-markup_text-send}
 
 - markup_text->initialise: markup=char_array, width=[int]*, font=[font]
     Create from markup and optionally a wrap width and font.  Fails with
@@ -84,7 +84,7 @@ colour `ui_code_background`.
     Move the text.  If a width is given, set <-width.  The height is
     determined by the content.
 
-## Get methods {#class-markup-text-get}
+## Get methods {#class-markup_text-get}
 
 - markup_text<-text: -> string
     The text without the markup.

@@ -1,4 +1,4 @@
-# class audio_stream {#class-audio-stream}
+# class audio_stream {#class-audio_stream}
 
 An audio_stream plays audio while it is written.  Its data is either
 raw samples in <-format, <-frequency and <-channels, or, if <-format is
@@ -40,7 +40,7 @@ again.
 @see class audio_recorder
 
 
-## Instance variables {#class-audio-stream-instvars}
+## Instance variables {#class-audio_stream-instvars}
 
 - audio_stream<-format: {u8,s8,s16,s32,f32,encoded}
     Format of the samples written, or `encoded` for a sound file.
@@ -74,7 +74,7 @@ again.
     `@on` from ->play until the data ended and is played or ->stop.
 
 
-## Send methods {#class-audio-stream-send}
+## Send methods {#class-audio_stream-send}
 
 - audio_stream->initialise: format=[{u8,s8,s16,s32,f32,encoded}], frequency=[1..], channels=[1..8]
     Create a stream.  The default format is `encoded`.  The defaults
@@ -111,7 +111,7 @@ again.
     Process events until all queued data is played.
 
 
-## Get methods {#class-audio-stream-get}
+## Get methods {#class-audio_stream-get}
 
 - audio_stream<-queued: -> num
     Seconds of decoded audio that is queued for playing.

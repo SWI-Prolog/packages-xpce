@@ -1,4 +1,4 @@
-# class stroke_style {#class-stroke-style}
+# class stroke_style {#class-stroke_style}
 
 A stroke_style describes how the lines of a graphical are drawn,
 beyond their thickness (`graphical<-pen`) and colour.  It is used as
@@ -21,7 +21,7 @@ Round and square caps and miter joins make a line cover more than the
 area spanned by its points.  Class line and class path take this into
 account when computing their area.
 
-## Instance variables {#class-stroke-style-instvars}
+## Instance variables {#class-stroke_style-instvars}
 
 - stroke_style<-cap: {butt,round,square}
     Shape of the ends of a line.  `butt` ends at the end point, `round`
@@ -60,7 +60,7 @@ account when computing their area.
 
     **Defaults**: @nil
 
-## Send methods {#class-stroke-style-send}
+## Send methods {#class-stroke_style-send}
 
 - stroke_style->initialise: cap=[{butt,round,square}], join=[{miter,round,bevel}], dash=[texture_name|vector*], paint=[colour|gradient*]
     Create a stroke style.

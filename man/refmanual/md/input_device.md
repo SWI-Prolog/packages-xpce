@@ -1,4 +1,4 @@
-# class input_device {#class-input-device}
+# class input_device {#class-input_device}
 
 An input_device describes the device that generated an event (see
 `event<-device`).  Events from the mouse refer to @mouse_device and
@@ -24,7 +24,7 @@ is a keyboard and gamepads are of class gamepad.
 @see class event_detail
 
 
-## Instance variables {#class-input-device-instvars}
+## Instance variables {#class-input_device-instvars}
 
 - input_device<-kind: {mouse,pen,touch,gamepad,keyboard}
     The kind of device.
@@ -38,7 +38,7 @@ is a keyboard and gamepads are of class gamepad.
     provide a name, this is the <-kind.
 
 
-## Send methods {#class-input-device-send}
+## Send methods {#class-input_device-send}
 
 - input_device->initialise: kind={mouse,pen,touch,gamepad,keyboard}, id=[int], name=[name]
     Create a device description.  Devices are normally created by

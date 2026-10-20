@@ -1,4 +1,4 @@
-# class video_writer {#class-video-writer}
+# class video_writer {#class-video_writer}
 
 A video_writer encodes frames and sound into a video file.  The format
 follows from the extension of the file: `.mp4` and `.mov` give H.264
@@ -59,7 +59,7 @@ The codecs that are available are in display<-video_encoders.
 @see display<-video_encoders
 
 
-## Instance variables {#class-video-writer-instvars}
+## Instance variables {#class-video_writer-instvars}
 
 - video_writer<-target: file|name|code
     File or URL the video is written to, or code that is executed with
@@ -121,7 +121,7 @@ The codecs that are available are in display<-video_encoders.
     Frame or window recorded by ->record.
 
 
-## Send methods {#class-video-writer-send}
+## Send methods {#class-video_writer-send}
 
 - video_writer->initialise: target=file|name|code, size=size, frame_rate=[num], codec=[name], quality=[0..100]
     Create to write a video file, to stream to a URL or to give the data

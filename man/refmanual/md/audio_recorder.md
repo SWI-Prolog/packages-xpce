@@ -1,4 +1,4 @@
-# class audio_recorder {#class-audio-recorder}
+# class audio_recorder {#class-audio_recorder}
 
 An audio_recorder records from the default audio input, normally the
 microphone, into its <-sound, a mono 16-bit sound of 44100 samples per
@@ -27,7 +27,7 @@ The system may ask the user for permission to use the microphone.
 @see class audio_stream
 
 
-## Instance variables {#class-audio-recorder-instvars}
+## Instance variables {#class-audio_recorder-instvars}
 
 - audio_recorder<-sound: sound
     The recorded sound.
@@ -44,7 +44,7 @@ The system may ask the user for permission to use the microphone.
     <-sound.
 
 
-## Send methods {#class-audio-recorder-send}
+## Send methods {#class-audio_recorder-send}
 
 - audio_recorder->initialise: level_message=[code]*
     Create a recorder.
@@ -61,7 +61,7 @@ The system may ask the user for permission to use the microphone.
     Stop recording.
 
 
-## Get methods {#class-audio-recorder-get}
+## Get methods {#class-audio_recorder-get}
 
 - audio_recorder<-format: -> name
     Format of the recorded samples: `s16`, signed 16-bit in native

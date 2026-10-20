@@ -1,4 +1,4 @@
-# class pinch_data {#class-pinch-data}
+# class pinch_data {#class-pinch_data}
 
 A pinch_data is the `event<-detail` of the pinch_begin, pinch_update
 and pinch_end events, which are generated for the zoom gesture of a
@@ -15,7 +15,7 @@ The recogniser of library(pan_zoom) zooms a figure on a pinch.
 @see class event_detail
 
 
-## Instance variables {#class-pinch-data-instvars}
+## Instance variables {#class-pinch_data-instvars}
 
 - pinch_data<-scale: num
     Change of the scale since the previous pinch_update.  A scale
@@ -23,7 +23,7 @@ The recogniser of library(pan_zoom) zooms a figure on a pinch.
     and pinch_end is 1.
 
 
-## Send methods {#class-pinch-data-send}
+## Send methods {#class-pinch_data-send}
 
 - pinch_data->initialise: scale=[num]
     Create with the given scale, which defaults to 1.
