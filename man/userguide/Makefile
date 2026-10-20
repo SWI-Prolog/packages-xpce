@@ -11,7 +11,7 @@ LOG=$(DOC).log
 PDF=$(DOC).pdf
 RERUN="Rerun to get cross-references right"
 CLHIER=figs/pceclasshierarchy.pdf
-PCECMAKE=../../CMakeLists.txt
+PCEVERSION=../../VERSION
 
 COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
 	interface.tex graphics.tex drawing.tex devices.tex pceprolog.tex \
@@ -56,12 +56,12 @@ html:	$(XPCETEX) $(CLHIER)
 
 tex:	$(XPCETEX)
 
-# version.tex defines \productversion from PCE_VERSION in CMakeLists.txt
+# version.tex defines \productversion from the xpce VERSION file
 # and \productdate and \productyear from the current date.  The file is
 # only rewritten if its content changes.
 
 version.tex: FORCE
-	@v=`sed -n 's/^set(PCE_VERSION *\([^ )]*\).*/\1/p' $(PCECMAKE)`; \
+	@v=`tr -d ' \t\r\n' < $(PCEVERSION)`; \
 	m=`LANG=POSIX date '+%B'`; \
 	y=`date '+%Y'`; \
 	printf '\\newcommand{\\productversion}{%s}\n\\newcommand{\\productdate}{%s}\n\\newcommand{\\productyear}{%s}\n' \
