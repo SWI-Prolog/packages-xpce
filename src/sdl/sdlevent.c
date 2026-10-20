@@ -1183,7 +1183,12 @@ CtoEvent(SDL_Event *event)
       fx   = sp->pen_x;
       fy   = sp->pen_y;
       time = event->pproximity.timestamp/1000000;
+#if SDL_VERSION_ATLEAST(3, 4, 16)
       sp->pen_state = event->pproximity.pen_state;
+#else					/* no pen_state in proximity events */
+      if ( event->type == SDL_EVENT_PEN_PROXIMITY_OUT )
+	sp->pen_state = 0;
+#endif
       mouse_flags = pen_mouse_flags(sp->pen_state);
       name = ( event->type == SDL_EVENT_PEN_PROXIMITY_IN
 	       ? NAME_penProximityIn : NAME_penProximityOut );
