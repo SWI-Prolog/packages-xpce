@@ -622,15 +622,37 @@ ws_sdl_texture_format(SdlTexture t)
 		 *	      LAYERS		*
 		 *******************************/
 
-/* Where layer `l` of `sw` shows which part of its texture: the part
- * `src` of the texture is mapped onto the parallelogram with corners
- * `origin` (top-left of `src`), `right` (top-right) and `down`
- * (bottom-left), in window coordinates.
+/* Where layer `l` of `sw` shows which part of its texture.  The layout
+ * places the part `src` of the texture on the rectangle `dst` in the
+ * coordinates of the window, according to <-scale.  Using `none`, its
+ * hot spot is at the top-left of <-area.  Using `tile`, `src` is
+ * repeated at its own size to fill `dst`, the first tile at `tile`.
+ * If `sliced`, `centre` is the part of `src` that stretches or tiles
+ * in both directions; see sdl_layer<-slices.
  *
- * The texture is first placed in <-area according to <-scale.  Using
- * `none`, its hot spot is at the top-left of the area.  It is then
- * flipped, rotated by <-angle around its hot spot or else its centre
- * and finally mapped through <-transform.
+ * `map` maps the layout onto the device pixels of the renderer: it
+ * flips around the centre of `dst`, rotates by <-angle around the hot
+ * spot or else the centre, applies <-transform and scrolling and
+ * finally the position and pixel density of the window.
+ */
+
+typedef struct
+{ double xx, xy, yx, yy, tx, ty;	/* x' = xx*x + xy*y + tx, ... */
+} layer_map;
+
+typedef struct
+{ SDL_FRect	src;			/* part of the texture */
+  SDL_FRect	dst;			/* where in the window */
+  bool		tiled;			/* scale is `tile` */
+  SDL_FPoint	tile;			/* top-left of the first tile */
+  bool		sliced;			/* nine parts */
+  SDL_FRect	centre;			/* centre part of `src` */
+  layer_map	map;			/* window -> device pixels */
+} layer_layout;
+
+/* Part `src` of a texture on the parallelogram with corners `origin`
+ * (top-left of `src`), `right` (top-right) and `down` (bottom-left),
+ * in device pixels.
  */
 
 typedef struct
@@ -640,9 +662,51 @@ typedef struct
   SDL_FPoint	down;
 } layer_quad;
 
+
+/* m := n o m, where n is given by its coefficients */
+
+static void
+map_then(layer_map *m, double xx, double xy, double yx, double yy,
+	 double tx, double ty)
+{ layer_map o = *m;
+
+  m->xx = xx*o.xx + xy*o.yx;
+  m->xy = xx*o.xy + xy*o.yy;
+  m->yx = yx*o.xx + yy*o.yx;
+  m->yy = yx*o.xy + yy*o.yy;
+  m->tx = xx*o.tx + xy*o.ty + tx;
+  m->ty = yx*o.tx + yy*o.ty + ty;
+}
+
+
+static SDL_FPoint
+map_point(const layer_map *m, double x, double y)
+{ return (SDL_FPoint){ (float)(m->xx*x + m->xy*y + m->tx),
+		       (float)(m->yx*x + m->yy*y + m->ty) };
+}
+
+
+/* First tile position at or before `from` for tiles of size `size`,
+ * shifted by `offset`.
+ */
+
+static float
+tile_start(float from, float size, float offset)
+{ float t = from + fmodf(offset, size);
+
+  return t > from ? t - size : t;
+}
+
+
+/* Compute the layout of `l` in `sw`, whose top-left is at `ox`,`oy` in
+ * device pixels with `scale` device pixels per window pixel.  False if
+ * nothing is shown.
+ */
+
 static bool
-layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf, layer_quad *q)
-{ SDL_FRect base, dst, *src = &q->src;
+layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf,
+	       float ox, float oy, float scale, layer_layout *ly)
+{ SDL_FRect base, *src = &ly->src, *dst = &ly->dst;
   int tw = surf->w, th = surf->h;
   SdlTexture t = l->texture;
 
@@ -670,18 +734,19 @@ layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf, layer_quad *q)
        (l->scale != NAME_none && (base.w <= 0 || base.h <= 0)) )
     return false;
 
-  bool hot = notNil(t->hot_spot);
+  ly->tiled = (l->scale == NAME_tile);
+  bool hot = !ly->tiled && notNil(t->hot_spot);
   float hx = hot ? valNum(t->hot_spot->x) - src->x : src->w/2;
   float hy = hot ? valNum(t->hot_spot->y) - src->y : src->h/2;
 
   if ( l->scale == NAME_none )
-  { dst = (SDL_FRect){base.x - (hot ? hx : 0), base.y - (hot ? hy : 0),
-		      src->w, src->h};
+  { *dst = (SDL_FRect){base.x - (hot ? hx : 0), base.y - (hot ? hy : 0),
+		       src->w, src->h};
   } else if ( l->scale == NAME_fit )
   { float s = fminf(base.w/src->w, base.h/src->h);
     float w = src->w*s, h = src->h*s;
 
-    dst = (SDL_FRect){base.x+(base.w-w)/2, base.y+(base.h-h)/2, w, h};
+    *dst = (SDL_FRect){base.x+(base.w-w)/2, base.y+(base.h-h)/2, w, h};
   } else if ( l->scale == NAME_fill )
   { float s = fmaxf(base.w/src->w, base.h/src->h);
     float w = base.w/s, h = base.h/s;
@@ -692,43 +757,157 @@ layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf, layer_quad *q)
     src->y += (src->h-h)/2;
     src->w  = w;
     src->h  = h;
-    dst = base;
+    *dst = base;
+  } else if ( ly->tiled )
+  { bool off = notNil(l->offset);
+
+    ly->tile.x = tile_start(base.x, src->w, off ? valNum(l->offset->x) : 0);
+    ly->tile.y = tile_start(base.y, src->h, off ? valNum(l->offset->y) : 0);
+    hx = base.w/2;			/* rotate around the centre */
+    hy = base.h/2;
+    *dst = base;
   } else				/* stretch */
-  { dst = base;
+  { *dst = base;
   }
 
-  bool fh = (l->flip == NAME_horizontal || l->flip == NAME_both);
-  bool fv = (l->flip == NAME_vertical   || l->flip == NAME_both);
-  SDL_FPoint *pts[3] = { &q->origin, &q->right, &q->down };
-  float us[3] = { fh ? 1 : 0, fh ? 0 : 1, fh ? 1 : 0 };
-  float vs[3] = { fv ? 1 : 0, fv ? 1 : 0, fv ? 0 : 1 };
+  ly->sliced = ( notNil(l->slices) &&
+		 (l->scale == NAME_stretch || ly->tiled) );
+  if ( ly->sliced )
+  { float x0 = valNum(l->slices->x), y0 = valNum(l->slices->y);
+    float x1 = x0 + valNum(l->slices->w), y1 = y0 + valNum(l->slices->h);
+
+    x0 = SDL_clamp(x0, src->x, src->x+src->w);
+    y0 = SDL_clamp(y0, src->y, src->y+src->h);
+    x1 = SDL_clamp(x1, x0, src->x+src->w);
+    y1 = SDL_clamp(y1, y0, src->y+src->h);
+    ly->centre = (SDL_FRect){x0, y0, x1-x0, y1-y0};
+  }
+
+  layer_map *m = &ly->map;
+  *m = (layer_map){1, 0, 0, 1, 0, 0};
+
+  if ( l->flip == NAME_horizontal || l->flip == NAME_both )
+    map_then(m, -1, 0, 0, 1, 2*dst->x+dst->w, 0);
+  if ( l->flip == NAME_vertical || l->flip == NAME_both )
+    map_then(m, 1, 0, 0, -1, 0, 2*dst->y+dst->h);
+
   double rad = valNum(l->angle)*M_PI/180.0;
   double c = cos(rad), sn = sin(rad);
-  float px = dst.x + hx*dst.w/src->w;	/* rotate around this point */
-  float py = dst.y + hy*dst.h/src->h;
+  double px = dst->x + (ly->tiled ? hx : hx*dst->w/src->w);
+  double py = dst->y + (ly->tiled ? hy : hy*dst->h/src->h);
+  map_then(m, c, -sn, sn, c, px - c*px + sn*py, py - sn*px - c*py);
+
   Transform tr = l->transform;
-  bool scroll = notNil(l->area) || notNil(tr);
-
-  for(int i=0; i<3; i++)
-  { double x = dst.x + us[i]*dst.w - px;
-    double y = dst.y + vs[i]*dst.h - py;
-    double rx = px + c*x - sn*y;
-    double ry = py + sn*x + c*y;
-
-    if ( notNil(tr) )
-    { double tx = valNum(tr->xx)*rx + valNum(tr->xy)*ry + valNum(tr->tx);
-      double ty = valNum(tr->yx)*rx + valNum(tr->yy)*ry + valNum(tr->ty);
-      rx = tx; ry = ty;
-    }
-    if ( scroll )
-    { rx += valNum(sw->scroll_offset->x);
-      ry += valNum(sw->scroll_offset->y);
-    }
-    pts[i]->x = (float)rx;
-    pts[i]->y = (float)ry;
-  }
+  if ( notNil(tr) )
+    map_then(m, valNum(tr->xx), valNum(tr->xy), valNum(tr->yx),
+	     valNum(tr->yy), valNum(tr->tx), valNum(tr->ty));
+  if ( notNil(l->area) || notNil(tr) )
+    map_then(m, 1, 0, 0, 1,
+	     valNum(sw->scroll_offset->x), valNum(sw->scroll_offset->y));
+  map_then(m, scale, 0, 0, scale, ox, oy);
 
   return true;
+}
+
+
+/* Call `func` for the quads that make up the layout: one, one for
+ * each (part of a) tile, or those for the nine parts of a sliced
+ * texture.
+ */
+
+typedef void (*quad_func)(const layer_quad *q, void *closure);
+
+static void
+layer_quad_part(const layer_layout *ly, const SDL_FRect *src,
+		const SDL_FRect *dst, quad_func func, void *closure)
+{ layer_quad q = { .src = *src };
+
+  q.origin = map_point(&ly->map, dst->x,        dst->y);
+  q.right  = map_point(&ly->map, dst->x+dst->w, dst->y);
+  q.down   = map_point(&ly->map, dst->x,        dst->y+dst->h);
+  (*func)(&q, closure);
+}
+
+
+/* Show `src` on `dst`, repeating it at its own size from `start` in the
+ * directions `tx` and `ty` and stretching it in the others.
+ */
+
+static void
+layer_part(const layer_layout *ly, const SDL_FRect *src, const SDL_FRect *dst,
+	   bool tx, bool ty, SDL_FPoint start, quad_func func, void *closure)
+{ float tw = tx ? src->w : dst->w;
+  float th = ty ? src->h : dst->h;
+  int nx = 1, ny = 1;
+
+  if ( src->w <= 0 || src->h <= 0 || dst->w <= 0 || dst->h <= 0 )
+    return;
+  if ( tx )
+    nx = (int)ceilf((dst->x+dst->w-start.x)/tw);
+  else
+    start.x = dst->x;
+  if ( ty )
+    ny = (int)ceilf((dst->y+dst->h-start.y)/th);
+  else
+    start.y = dst->y;
+
+  for(int j=0; j<ny; j++)
+  { for(int i=0; i<nx; i++)
+    { SDL_FRect tile = { start.x+i*tw, start.y+j*th, tw, th };
+      SDL_FRect part;
+
+      if ( SDL_GetRectIntersectionFloat(&tile, dst, &part) )
+      { float sx = src->w/tw, sy = src->h/th;
+	SDL_FRect s = { src->x + (part.x-tile.x)*sx,
+			src->y + (part.y-tile.y)*sy,
+			part.w*sx, part.h*sy };
+
+	layer_quad_part(ly, &s, &part, func, closure);
+      }
+    }
+  }
+}
+
+
+/* Split `from`..`from+size` of the source in three at the centre part
+ * `c0`..`c1`, and `to`..`to+room` of the window such that the outer
+ * parts keep their size, shrinking them if there is not enough room.
+ */
+
+static void
+slice_axis(float from, float size, float c0, float c1, float to, float room,
+	   float s[4], float d[4])
+{ float lo = c0-from, hi = from+size-c1;
+  float f = lo+hi > room ? room/(lo+hi) : 1.0f;
+
+  s[0] = from; s[1] = c0;      s[2] = c1;           s[3] = from+size;
+  d[0] = to;   d[1] = to+lo*f; d[2] = to+room-hi*f; d[3] = to+room;
+}
+
+
+static void
+for_layer_quads(const layer_layout *ly, quad_func func, void *closure)
+{ const SDL_FRect *src = &ly->src, *dst = &ly->dst;
+
+  if ( !ly->sliced )
+  { layer_part(ly, src, dst, ly->tiled, ly->tiled, ly->tile, func, closure);
+    return;
+  }
+
+  const SDL_FRect *c = &ly->centre;
+  float sx[4], dx[4], sy[4], dy[4];
+
+  slice_axis(src->x, src->w, c->x, c->x+c->w, dst->x, dst->w, sx, dx);
+  slice_axis(src->y, src->h, c->y, c->y+c->h, dst->y, dst->h, sy, dy);
+  for(int j=0; j<3; j++)
+  { for(int i=0; i<3; i++)
+    { SDL_FRect s = { sx[i], sy[j], sx[i+1]-sx[i], sy[j+1]-sy[j] };
+      SDL_FRect d = { dx[i], dy[j], dx[i+1]-dx[i], dy[j+1]-dy[j] };
+
+      layer_part(ly, &s, &d, ly->tiled && i == 1, ly->tiled && j == 1,
+		 (SDL_FPoint){d.x, d.y}, func, closure);
+    }
+  }
 }
 
 
@@ -739,9 +918,17 @@ layer_geometry(SdlWindow sw, SdlLayer l, SDL_Surface *surf, layer_quad *q)
  * premultiplied alpha.
  */
 
+typedef struct
+{ SDL_Renderer *renderer;
+  SDL_Texture  *texture;
+} render_target;
+
 static void
-render_quad(SDL_Renderer *r, SDL_Texture *tex, const layer_quad *q)
-{ float ux = q->right.x - q->origin.x, uy = q->right.y - q->origin.y;
+render_quad(const layer_quad *q, void *closure)
+{ render_target *rt = closure;
+  SDL_Renderer *r = rt->renderer;
+  SDL_Texture *tex = rt->texture;
+  float ux = q->right.x - q->origin.x, uy = q->right.y - q->origin.y;
   float vx = q->down.x  - q->origin.x, vy = q->down.y  - q->origin.y;
   float w = hypotf(ux, uy), h = hypotf(vx, vy);
 
@@ -764,6 +951,93 @@ render_quad(SDL_Renderer *r, SDL_Texture *tex, const layer_quad *q)
   { SDL_RenderTextureAffine(r, tex, &q->src,
 			    &q->origin, &q->right, &q->down);
   }
+}
+
+
+/* Tiles that are not rotated, flipped or sheared and scaled the same
+ * in both directions are drawn by SDL_RenderTextureTiled(), which
+ * uses a single draw with a repeating texture if the renderer can and
+ * the tile is the whole texture.  `clip` is the clip rectangle of the
+ * window.  False if the tiles are not upright.
+ */
+
+static bool
+render_upright_tiles(SDL_Renderer *r, SDL_Texture *tex,
+		     const layer_layout *ly, const SDL_Rect *clip)
+{ const layer_map *m = &ly->map;
+  const SDL_FRect *dst = &ly->dst;
+
+  if ( m->xy != 0 || m->yx != 0 || m->xx <= 0 ||
+       fabs(m->xx - m->yy) > 1e-6*m->xx )
+    return false;
+
+  SDL_FPoint a = map_point(m, dst->x, dst->y);
+  SDL_FPoint b = map_point(m, dst->x+dst->w, dst->y+dst->h);
+  SDL_FPoint t = map_point(m, ly->tile.x, ly->tile.y);
+  int x0 = (int)SDL_lroundf(a.x), y0 = (int)SDL_lroundf(a.y);
+  SDL_Rect area = { x0, y0,
+		    (int)SDL_lroundf(b.x)-x0, (int)SDL_lroundf(b.y)-y0 };
+  SDL_Rect visible;
+
+  if ( SDL_GetRectIntersection(&area, clip, &visible) )
+  { SDL_FRect tiles = { t.x, t.y, b.x-t.x, b.y-t.y };
+
+    SDL_SetRenderClipRect(r, &visible);
+    SDL_RenderTextureTiled(r, tex, &ly->src, (float)m->xx, &tiles);
+    SDL_SetRenderClipRect(r, clip);
+  }
+
+  return true;
+}
+
+
+/* The SDL blend mode for <-blend of `l`.  Textures without alpha
+ * (camera, video) must blend as well, or <-alpha is ignored.
+ */
+
+static SDL_BlendMode
+layer_blend_mode(SdlLayer l, bool pm)
+{ if ( l->blend == NAME_add )
+    return pm ? SDL_BLENDMODE_ADD_PREMULTIPLIED : SDL_BLENDMODE_ADD;
+  if ( l->blend == NAME_mod )
+    return SDL_BLENDMODE_MOD;
+  if ( l->blend == NAME_mul )
+    return SDL_BLENDMODE_MUL;
+  if ( l->blend == NAME_none )
+    return SDL_BLENDMODE_NONE;
+
+  return pm ? SDL_BLENDMODE_BLEND_PREMULTIPLIED : SDL_BLENDMODE_BLEND;
+}
+
+
+/* As layer_blend_mode() for drawing with Cairo */
+
+static cairo_operator_t
+layer_cairo_operator(SdlLayer l)
+{ if ( l->blend == NAME_add )
+    return CAIRO_OPERATOR_ADD;
+  if ( l->blend == NAME_mod || l->blend == NAME_mul )
+    return CAIRO_OPERATOR_MULTIPLY;
+  if ( l->blend == NAME_none )
+    return CAIRO_OPERATOR_SOURCE;
+
+  return CAIRO_OPERATOR_OVER;
+}
+
+
+static SDL_ScaleMode
+layer_scale_mode(SdlLayer l)
+{ if ( l->scale_mode == NAME_nearest )
+    return SDL_SCALEMODE_NEAREST;
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+  if ( l->scale_mode == NAME_pixelart )
+    return SDL_SCALEMODE_PIXELART;
+#else
+  if ( l->scale_mode == NAME_pixelart )
+    return SDL_SCALEMODE_NEAREST;
+#endif
+
+  return SDL_SCALEMODE_LINEAR;
 }
 
 
@@ -793,34 +1067,104 @@ sdl_draw_layers(FrameObj fr, SdlWindow sw, const SDL_FRect *dstrect,
   for_cell(cell, sw->layers)
   { SdlLayer l = cell->value;
     SDL_Texture *tex;
-    layer_quad q;
+    layer_layout ly;
 
     if ( isNil(l->texture) || !l->texture->surface ||
-	 !layer_geometry(sw, l, l->texture->surface, &q) ||
+	 !layer_geometry(sw, l, l->texture->surface,
+			 dstrect->x, dstrect->y, scale, &ly) ||
 	 !(tex = sdl_frame_texture(fr, l->texture)) )
       continue;
 
-    SDL_FPoint *pts[3] = { &q.origin, &q.right, &q.down };
-    for(int i=0; i<3; i++)
-    { pts[i]->x = dstrect->x + pts[i]->x*scale;
-      pts[i]->y = dstrect->y + pts[i]->y*scale;
-    }
     /* The texture is shared by all layers that show it, so we set its
      * modes for each draw.  SDL scales the alpha, but not the RGB, of
-     * premultiplied textures by the alpha mod.  Textures without alpha
-     * (camera, video) must blend as well, or <-alpha is ignored.
+     * premultiplied textures by the alpha mod.  `none` ignores alpha.
      */
     bool pm = is_premultiplied(l->texture->surface);
     float alpha = (float)(valNum(l->alpha)*opacity);
-    float rgb = pm ? alpha : 1.0f;
+    float rgb = pm && l->blend != NAME_none ? alpha : 1.0f;
+    float tr = rgb, tg = rgb, tb = rgb;
 
-    SDL_SetTextureBlendMode(tex, pm ? SDL_BLENDMODE_BLEND_PREMULTIPLIED
-				    : SDL_BLENDMODE_BLEND);
+    if ( notNil(l->tint) )
+    { SDL_Color c = pceColour2SDL_Color(l->tint);
+
+      tr *= c.r/255.0f; tg *= c.g/255.0f; tb *= c.b/255.0f;
+    }
+    SDL_SetTextureBlendMode(tex, layer_blend_mode(l, pm));
+    SDL_SetTextureScaleMode(tex, layer_scale_mode(l));
     SDL_SetTextureAlphaModFloat(tex, alpha);
-    SDL_SetTextureColorModFloat(tex, rgb, rgb, rgb);
-    render_quad(r, tex, &q);
+    SDL_SetTextureColorModFloat(tex, tr, tg, tb);
+    if ( !ly.tiled || ly.sliced || !render_upright_tiles(r, tex, &ly, &clip) )
+      for_layer_quads(&ly, render_quad, &(render_target){r, tex});
   }
   SDL_SetRenderClipRect(r, NULL);
+}
+
+
+/* Multiply the colours of the ARGB8888 surface `s` by `c`, as
+ * SDL_SetTextureColorModFloat() does.
+ */
+
+static void
+tint_surface(SDL_Surface *s, Colour tint)
+{ SDL_Color c = pceColour2SDL_Color(tint);
+
+  for(int y=0; y<s->h; y++)
+  { Uint32 *p = (Uint32*)((Uint8*)s->pixels + (size_t)y*s->pitch);
+
+    for(int x=0; x<s->w; x++)
+    { Uint32 v = p[x];
+      Uint32 r = ((v>>16)&0xff)*c.r/255;
+      Uint32 g = ((v>> 8)&0xff)*c.g/255;
+      Uint32 b = ( v     &0xff)*c.b/255;
+
+      p[x] = (v&0xff000000) | (r<<16) | (g<<8) | b;
+    }
+  }
+}
+
+
+/* Paint the current source for layer `l` */
+
+static void
+cairo_paint_layer(cairo_t *cr, SdlLayer l, double opacity)
+{ cairo_pattern_set_filter(cairo_get_source(cr),
+			   l->scale_mode == NAME_linear
+			     ? CAIRO_FILTER_BILINEAR
+			     : CAIRO_FILTER_NEAREST);
+  cairo_set_operator(cr, layer_cairo_operator(l));
+  if ( l->blend == NAME_none )
+    cairo_paint(cr);
+  else
+    cairo_paint_with_alpha(cr, valNum(l->alpha)*opacity);
+}
+
+
+typedef struct
+{ cairo_t	   *cr;
+  cairo_surface_t *surface;		/* the texture */
+  SdlLayer	    layer;
+  double	    opacity;
+} cairo_quad_context;
+
+static void
+cairo_quad(const layer_quad *q, void *closure)
+{ cairo_quad_context *ctx = closure;
+  cairo_t *cr = ctx->cr;
+  cairo_matrix_t m;			/* src pixels -> device pixels */
+
+  cairo_matrix_init(&m,
+		    (q->right.x-q->origin.x)/q->src.w,
+		    (q->right.y-q->origin.y)/q->src.w,
+		    (q->down.x -q->origin.x)/q->src.h,
+		    (q->down.y -q->origin.y)/q->src.h,
+		    q->origin.x, q->origin.y);
+  cairo_save(cr);
+  cairo_transform(cr, &m);
+  cairo_rectangle(cr, 0, 0, q->src.w, q->src.h);
+  cairo_clip(cr);
+  cairo_set_source_surface(cr, ctx->surface, -q->src.x, -q->src.y);
+  cairo_paint_layer(cr, ctx->layer, ctx->opacity);
+  cairo_restore(cr);
 }
 
 
@@ -846,42 +1190,61 @@ sdl_cairo_layers(cairo_t *cr, SdlWindow sw, float wx, float wy,
   for_cell(cell, sw->layers)
   { SdlLayer l = cell->value;
     SDL_Surface *argb;
-    layer_quad q;
+    layer_layout ly;
 
     if ( isNil(l->texture) || !l->texture->surface ||
-	 !layer_geometry(sw, l, l->texture->surface, &q) ||
+	 !layer_geometry(sw, l, l->texture->surface, wx, wy, scale, &ly) ||
 	 !(argb = SDL_ConvertSurface(l->texture->surface,
 				     SDL_PIXELFORMAT_ARGB8888)) )
       continue;
 
     if ( !is_premultiplied(l->texture->surface) )
       SDL_PremultiplySurfaceAlpha(argb, false);
+    if ( notNil(l->tint) )
+      tint_surface(argb, l->tint);
     cairo_surface_t *cs =
       cairo_image_surface_create_for_data(argb->pixels, CAIRO_FORMAT_ARGB32,
 					  argb->w, argb->h, argb->pitch);
-    cairo_matrix_t m;			/* src pixels -> device pixels */
+    cairo_surface_t *tile = NULL;
+    const SDL_FRect *src = &ly.src, *dst = &ly.dst;
+    cairo_matrix_t m;			/* window -> device pixels */
 
-    cairo_matrix_init(&m,
-		      (q.right.x-q.origin.x)*scale/q.src.w,
-		      (q.right.y-q.origin.y)*scale/q.src.w,
-		      (q.down.x -q.origin.x)*scale/q.src.h,
-		      (q.down.y -q.origin.y)*scale/q.src.h,
-		      wx + q.origin.x*scale,
-		      wy + q.origin.y*scale);
+    cairo_matrix_init(&m, ly.map.xx, ly.map.yx, ly.map.xy, ly.map.yy,
+		      ly.map.tx, ly.map.ty);
     cairo_matrix_t inv = m;
     if ( cairo_matrix_invert(&inv) != CAIRO_STATUS_SUCCESS )
     { cairo_surface_destroy(cs);	/* zero size: nothing to show */
       SDL_DestroySurface(argb);
       continue;
     }
+    if ( ly.sliced )
+    { cairo_quad_context ctx = { cr, cs, l, opacity };
+
+      for_layer_quads(&ly, cairo_quad, &ctx);
+      cairo_surface_destroy(cs);
+      SDL_DestroySurface(argb);
+      continue;
+    }
     cairo_save(cr);
     cairo_transform(cr, &m);
-    cairo_rectangle(cr, 0, 0, q.src.w, q.src.h);
+    cairo_rectangle(cr, dst->x, dst->y, dst->w, dst->h);
     cairo_clip(cr);
-    cairo_set_source_surface(cr, cs, -q.src.x, -q.src.y);
-    cairo_paint_with_alpha(cr, valNum(l->alpha)*opacity);
+    if ( ly.tiled )
+    { tile = cairo_surface_create_for_rectangle(cs, src->x, src->y,
+						src->w, src->h);
+      cairo_translate(cr, ly.tile.x, ly.tile.y);
+      cairo_set_source_surface(cr, tile, 0, 0);
+      cairo_pattern_set_extend(cairo_get_source(cr), CAIRO_EXTEND_REPEAT);
+    } else
+    { cairo_translate(cr, dst->x, dst->y);
+      cairo_scale(cr, dst->w/src->w, dst->h/src->h);
+      cairo_set_source_surface(cr, cs, -src->x, -src->y);
+    }
+    cairo_paint_layer(cr, l, opacity);
     cairo_restore(cr);
 
+    if ( tile )
+      cairo_surface_destroy(tile);
     cairo_surface_destroy(cs);
     SDL_DestroySurface(argb);
   }

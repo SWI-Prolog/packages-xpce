@@ -183,6 +183,11 @@ initialiseSdlLayer(SdlLayer l, SdlTexture texture, Area area, Name scale)
   assign(l, angle,     toNum(0.0));
   assign(l, flip,      NAME_none);
   assign(l, transform, NIL);
+  assign(l, blend,     NAME_blend);
+  assign(l, tint,      NIL);
+  assign(l, scale_mode, NAME_linear);
+  assign(l, offset,    NIL);
+  assign(l, slices,    NIL);
   assign(l, displayed, ON);
   assign(l, window,    NIL);
 
@@ -256,6 +261,11 @@ LAYER_SLOT(alpha,     alphaSdlLayer)
 LAYER_SLOT(angle,     angleSdlLayer)
 LAYER_SLOT(flip,      flipSdlLayer)
 LAYER_SLOT(transform, transformSdlLayer)
+LAYER_SLOT(blend,     blendSdlLayer)
+LAYER_SLOT(tint,      tintSdlLayer)
+LAYER_SLOT(scale_mode, scaleModeSdlLayer)
+LAYER_SLOT(offset,    offsetSdlLayer)
+LAYER_SLOT(slices,    slicesSdlLayer)
 LAYER_SLOT(displayed, displayedSdlLayer)
 
 
@@ -268,7 +278,7 @@ static vardecl var_sdl_layer[] =
      NAME_area, "Part of the texture shown; @nil: all of it"),
   SV(NAME_area, "area*", IV_GET|IV_STORE, areaSdlLayer,
      NAME_area, "Where in the window; @nil: the whole window"),
-  SV(NAME_scale, "{stretch,fit,fill,none}", IV_GET|IV_STORE, scaleSdlLayer,
+  SV(NAME_scale, "{stretch,fit,fill,none,tile}", IV_GET|IV_STORE, scaleSdlLayer,
      NAME_area, "How the texture is fitted into <-area"),
   SV(NAME_alpha, "0.0..1.0", IV_GET|IV_STORE, alphaSdlLayer,
      NAME_appearance, "Opacity"),
@@ -279,6 +289,17 @@ static vardecl var_sdl_layer[] =
      NAME_appearance, "Mirror the texture"),
   SV(NAME_transform, "transform*", IV_GET|IV_STORE, transformSdlLayer,
      NAME_area, "Finally map the texture through this transform"),
+  SV(NAME_blend, "{blend,add,mod,mul,none}", IV_GET|IV_STORE, blendSdlLayer,
+     NAME_appearance, "How the texture is combined with what is below"),
+  SV(NAME_tint, "colour*", IV_GET|IV_STORE, tintSdlLayer,
+     NAME_appearance, "Multiply the colours of the texture by this"),
+  SV(NAME_scaleMode, "{linear,nearest,pixelart}", IV_GET|IV_STORE,
+     scaleModeSdlLayer,
+     NAME_appearance, "How pixels are sampled when scaling"),
+  SV(NAME_offset, "point*", IV_GET|IV_STORE, offsetSdlLayer,
+     NAME_area, "Shift of the tiles for scale `tile`"),
+  SV(NAME_slices, "area*", IV_GET|IV_STORE, slicesSdlLayer,
+     NAME_area, "Centre part of the texture for 9-slice scaling"),
   SV(NAME_displayed, "bool", IV_GET|IV_STORE, displayedSdlLayer,
      NAME_visibility, "Whether the layer is shown"),
   IV(NAME_window, "sdl_window*", IV_GET,
@@ -289,7 +310,7 @@ static vardecl var_sdl_layer[] =
 
 static char *T_initialiseSdlLayer[] =
         { "texture=[sdl_texture*]", "area=[area*]",
-	  "scale=[{stretch,fit,fill,none}]" };
+	  "scale=[{stretch,fit,fill,none,tile}]" };
 
 static senddecl send_sdl_layer[] =
 { SM(NAME_initialise, 3, T_initialiseSdlLayer, initialiseSdlLayer,

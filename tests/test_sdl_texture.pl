@@ -92,7 +92,7 @@ rgb_name(R, G, B, Name) :-
 nearest(R-G-B, Name) :-
     member(Name-(R0-G0-B0),
            [ red-(255-0-0), green-(0-255-0), blue-(0-0-255),
-             white-(255-255-255), black-(0-0-0) ]),
+             yellow-(255-255-0), white-(255-255-255), black-(0-0-0) ]),
     abs(R-R0) < 16, abs(G-G0) < 16, abs(B-B0) < 16,
     !.
 
@@ -400,8 +400,193 @@ test(changed, [Before-After == red-green]) :-
     name_of(GPU2, X, Y, After),
     send(F, destroy).
 
+%!  two_layers(+Below, +Above, +Blend, -Window) is det.
+%
+%   A 40x20 window showing the colour blocks Above over Below, both
+%   stretched over the whole window.  Above is combined using Blend.
+
+two_layers(Below, Above, Blend, W) :-
+    colour_image(Below, I1),
+    colour_image(Above, I2),
+    new(W, sdl_window),
+    send(W, size, size(40, 20)),
+    send(W, append, sdl_layer(sdl_texture(I1), @default, stretch)),
+    send(W, append, new(L, sdl_layer(sdl_texture(I2), @default, stretch))),
+    send(L, blend, Blend).
+
+test(blend_default, [Blend == blend]) :-
+    new(L, sdl_layer),
+    get(L, blend, Blend).
+test(blend_add, [Names == [yellow, green]]) :-
+    two_layers([red, green], [green, black], add, W),
+    pixels(W, [10-10, 30-10], Names).
+test(blend_mod, [Names == [red, black]]) :-
+    two_layers([red, green], [white, black], mod, W),
+    pixels(W, [10-10, 30-10], Names).
+test(blend_mul, [Names == [red, black]]) :-
+    two_layers([red, green], [white, black], mul, W),
+    pixels(W, [10-10, 30-10], Names).
+test(blend_none_ignores_alpha, [Names == [green]]) :-
+    two_layers([red], [green], none, W),
+    get(W?layers, tail, L),
+    send(L, alpha, 0.5),
+    pixels(W, [20-10], Names).
+test(blend_add_alpha, [RGB == rgb(255,128,0)]) :-
+    two_layers([red], [green], add, W),
+    get(W?layers, tail, L),
+    send(L, alpha, 0.5),
+    pixels(W, [20-10], [RGB0]),
+    round8(RGB0, RGB).
+
+test(tint, [Names == [red, black]]) :-
+    two_layers([blue], [white, green], blend, W),
+    get(W?layers, tail, L),
+    send(L, tint, colour(red)),
+    pixels(W, [10-10, 30-10], Names).
+test(tint_alpha, [RGB == rgb(128,0,128)]) :-
+    two_layers([blue], [white], blend, W),
+    get(W?layers, tail, L),
+    send(L, tint, colour(red)),
+    send(L, alpha, 0.5),
+    pixels(W, [20-10], [RGB0]),
+    round8(RGB0, RGB).
+test(tint_camera, [RGB == rgb(0,0,128)]) :-
+    new(C, camera),                     % no alpha, not premultiplied
+    send(C, texture, new(T, sdl_texture)),
+    send(C, sdl_test_frame, 8, 8, colour(blue)),
+    sdl_window(40, W),
+    send(W, background, colour(black)),
+    send(W, append, new(L, sdl_layer(T, @default, stretch))),
+    send(L, tint, colour(@default, 128, 128, 128)),
+    pixels(W, [20-20], [RGB0]),
+    round8(RGB0, RGB).
+
+%!  scaled_up(+ScaleMode, -Window) is det.
+%
+%   A red|blue texture of 20x10 stretched to 200x20: the edge between
+%   the colours is at x=100.
+
+scaled_up(Mode, W) :-
+    colour_image([red, blue], I),
+    new(W, sdl_window),
+    send(W, size, size(200, 20)),
+    send(W, append, new(L, sdl_layer(sdl_texture(I), @default, stretch))),
+    send(L, scale_mode, Mode).
+
+test(scale_mode_default, [Mode == linear]) :-
+    new(L, sdl_layer),
+    get(L, scale_mode, Mode).
+test(scale_mode_nearest, [Names == [red, blue]]) :-
+    scaled_up(nearest, W),
+    pixels(W, [98-10, 101-10], Names).
+test(scale_mode_pixelart, [Names == [red, blue]]) :-
+    scaled_up(pixelart, W),
+    pixels(W, [97-10, 102-10], Names).
+test(scale_mode_linear, true(Name \== red)) :-
+    scaled_up(linear, W),               % compare only the renderer:
+    send(W, open),                      % Cairo filters slightly different
+    get(W, frame, F),
+    get(W?area, x, X0), get(W?area, y, Y0),
+    X is X0+98, Y is Y0+10,
+    get(F, sdl_test_image, GPU),
+    name_of(GPU, X, Y, Name),
+    send(F, destroy).
+
+%!  tiled(+Area, -Layer, -Window) is det.
+%
+%   A 60x60 window showing a red|green texture of 20x10 tiled over
+%   Area.
+
+tiled(Area, L, W) :-
+    colour_image([red, green], I),
+    sdl_window(60, W),
+    send(W, append, new(L, sdl_layer(sdl_texture(I), Area, tile))).
+
+test(tile, [Names == [red, green, red, green, red, blue]]) :-
+    tiled(area(0,0,60,20), _, W),
+    pixels(W, [5-5, 15-5, 25-5, 35-15, 45-15, 30-30], Names).
+test(tile_offset, [Names == [green, red, green]]) :-
+    tiled(area(0,0,60,20), L, W),       % first tile at -15
+    send(L, offset, point(5, 0)),
+    pixels(W, [2-5, 8-5, 18-5], Names).
+test(tile_negative_offset, [Names == [red, green]]) :-
+    tiled(area(0,0,60,20), L, W),       % first tile at -5: red until 5
+    send(L, offset, point(-5, 0)),
+    pixels(W, [2-5, 8-5], Names).
+test(tile_source, [Names == [green, green, green]]) :-
+    tiled(area(0,0,60,20), L, W),
+    send(L, source, area(10, 0, 10, 10)),
+    pixels(W, [5-5, 15-5, 55-15], Names).
+test(tile_zoom, [Names == [red, green, red, blue]]) :-
+    tiled(area(0,0,30,10), L, W),       % tiles of 40x20
+    new(Tr, transform),
+    send(Tr, set, 2, 0, 0, 2, 0, 0),
+    send(L, transform, Tr),
+    pixels(W, [10-10, 30-10, 50-10, 30-30], Names).
+test(tile_flip, [Names == [red, green, red]]) :-
+    tiled(area(0,0,25,10), L, W),       % unflipped: red, red, green
+    send(L, flip, horizontal),
+    pixels(W, [3-5, 8-5, 18-5], Names).
+test(tile_rotate, [Names == [red, green, red, green, blue]]) :-
+    tiled(area(0,0,60,20), L, W),       % around 30,10: x becomes y
+    send(L, angle, 90),
+    pixels(W, [30-5, 30-15, 30-25, 30-35, 5-10], Names).
+
+%!  grid_image(+Rows, -Image) is det.
+%
+%   An image of 10x10 pixel blocks, Rows is a list of rows of colours.
+
+grid_image(Rows, Image) :-
+    Rows = [Row|_],
+    length(Rows, NR), length(Row, NC),
+    W is NC*10, H is NR*10,
+    new(Image, image(@nil, W, H, pixmap)),
+    forall(( nth0(J, Rows, Cols), nth0(I, Cols, C) ),
+           ( X is I*10, Y is J*10,
+             send(Image, fill, colour(C), area(X, Y, 10, 10)) )).
+
+%!  sliced(+Rows, +Slices, +Area, +Scale, -Layer, -Window) is det.
+
+sliced(Rows, Slices, Area, Scale, L, W) :-
+    grid_image(Rows, I),
+    sdl_window(100, W),
+    send(W, append, new(L, sdl_layer(sdl_texture(I), Area, Scale))),
+    send(L, scale_mode, nearest),
+    send(L, slices, Slices).
+
+frame_rows([[red, green, red], [green, white, green], [red, green, red]]).
+
+test(slices, [Names == [red, green, green, red, green, white, red, blue]]) :-
+    frame_rows(Rows),                   % corners stay 10x10
+    sliced(Rows, area(10,10,10,10), area(0,0,100,60), stretch, _, W),
+    pixels(W, [5-5, 15-5, 50-5, 95-5, 5-30, 50-30, 95-55, 50-70], Names).
+test(slices_shrink, [Names == [red, red, red, blue]]) :-
+    frame_rows(Rows),                   % no room: corners of 5x5
+    sliced(Rows, area(10,10,10,10), area(0,0,10,10), stretch, _, W),
+    pixels(W, [2-2, 4-4, 6-6, 15-15], Names).
+test(slices_ignored_by_fit, [Names == [red, red]]) :-
+    frame_rows(Rows),                   % fit: 60x60 at 20,0
+    sliced(Rows, area(10,10,10,10), area(0,0,100,60), fit, _, W),
+    pixels(W, [25-5, 35-15], Names).
+test(slices_stretch, [Names == [red, green, green, green, blue, red]]) :-
+    sliced([[red, green, blue, red]], area(10,0,20,10),
+           area(0,0,100,20), stretch, _, W),
+    pixels(W, [5-5, 15-5, 25-5, 35-15, 85-5, 95-15], Names).
+test(slices_tile, [Names == [red, green, blue, green, blue, red]]) :-
+    sliced([[red, green, blue, red]], area(10,0,20,10),
+           area(0,0,100,20), tile, _, W),
+    pixels(W, [5-5, 15-5, 25-5, 35-15, 85-5, 95-15], Names).
+test(slices_rotate, [Names == [red, green, green, red, white]]) :-
+    frame_rows(Rows),                   % 100x60 turned around 50,30:
+    sliced(Rows, area(10,10,10,10), area(0,0,100,60), stretch, L, W),
+    send(L, angle, 90),                 % X,Y shows 50+(Y-30),30-(X-50)
+    pixels(W, [75-75, 75-65, 65-75, 25-75, 50-30], Names).
+
 round8(rgb(R0,G0,B0), rgb(R,G,B)) :-
-    R is round(R0/8)*8, G is round(G0/8)*8, B is round(B0/8)*8.
+    round_to_8(R0, R), round_to_8(G0, G), round_to_8(B0, B).
+
+round_to_8(V0, V) :-
+    V is min(255, round(V0/8)*8).
 
 :- end_tests(sdl_layer).
 

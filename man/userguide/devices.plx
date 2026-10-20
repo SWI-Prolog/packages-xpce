@@ -421,6 +421,16 @@ Layers are drawn in the order of `sdl_window <-layers'; `sdl_layer
 as for graphicals.  The demo \textsf{Asteroids} draws its ship, rocks,
 bullets and stars as sprites.
 
+A layer can also combine its texture with what is below it in other
+ways than alpha blending: `sdl_layer <->blend' \const{add} makes
+sparks and light glow, \const{mod} and \const{mul} darken.
+`sdl_layer <->tint' shows one texture in many colours and `sdl_layer
+<->scale_mode' \const{nearest} or \const{pixelart} keeps pixel art
+sharp.  Scale \const{tile} repeats the texture over the area, e.g., for
+a background that scrolls by changing `sdl_layer <->offset', and
+`sdl_layer <->slices' scales a texture as nine parts that keep the
+size of its corners, as is common for the frames of buttons and panels.
+
 \subsection{Playing and recording video}		\label{sec:video}
 
 \index{video}\index{MP4}%

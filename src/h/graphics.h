@@ -1084,11 +1084,16 @@ NewClass(sdl_layer)
   SdlTexture	texture;		/* What is shown, or @nil */
   Area		source;			/* Part of the texture or @nil */
   Area		area;			/* Where in the window or @nil */
-  Name		scale;			/* stretch, fit, fill, none */
+  Name		scale;			/* stretch, fit, fill, none, tile */
   Any		alpha;			/* Opacity (0.0..1.0) */
   Any		angle;			/* Clockwise rotation in degrees */
   Name		flip;			/* none, horizontal, vertical, both */
   Transform	transform;		/* Final mapping or @nil */
+  Name		blend;			/* blend, add, mod, mul, none */
+  Colour	tint;			/* Multiply colours by this or @nil */
+  Name		scale_mode;		/* linear, nearest, pixelart */
+  Point		offset;			/* Shift of the tiles or @nil */
+  Area		slices;			/* Centre part for 9-grid or @nil */
   BoolObj	displayed;		/* Visible? */
   SdlWindow	window;			/* Window showing it or @nil */
 End;

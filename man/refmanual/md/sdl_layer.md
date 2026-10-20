@@ -47,14 +47,21 @@ changing it.
     uses the whole window.  If <-scale is `none`, only the position is
     used.
 
-- sdl_layer<->scale: {stretch,fit,fill,none}
+- sdl_layer<->scale: {stretch,fit,fill,none,tile}
     How the texture is fitted into <-area.  `stretch` makes it exactly
     as large as the area; `fit` (default) makes it as large as possible
     while keeping its aspect ratio and centres it; `fill` covers the
-    area while keeping the aspect ratio, cutting off what falls outside
-    and `none` shows it at its own size with its hot spot at the
+    area while keeping the aspect ratio, cutting off what falls outside;
+    `none` shows it at its own size with its hot spot at the
     top-left corner of the area.  The hot spot is
     sdl_texture<-hot_spot or else the top-left of the texture.
+    `tile` repeats the texture at its own size to fill the area,
+    starting at its top-left corner shifted by <-offset; flipping,
+    rotating and <-transform apply to the whole tiled area.  Tiles
+    that are not rotated or flipped are drawn in a single call by
+    renderers that can repeat a texture, provided <-source is @nil.
+    Otherwise each tile is drawn separately, so tiling a large area
+    with a small rotated texture is slow.
 
 - sdl_layer<->alpha: 0.0..1.0
     Opacity: 0.0 is invisible, 1.0 (default) is opaque.
@@ -73,6 +80,51 @@ changing it.
     Changing the transform object itself is not noticed: send a
     (new) transform after changing it.
 
+- sdl_layer<->blend: {blend,add,mod,mul,none}
+    How the texture is combined with what is below it, using the
+    blend modes of SDL.  `blend` (default) is normal alpha blending.
+    `add` adds the colours, which makes glows, light, fire and
+    particles.  `mod` multiplies the colours below with those of the
+    texture, ignoring its transparency.  `mul` does the same, but keeps
+    what is below where the texture is transparent, e.g., for shadows.
+    `none` replaces what is below by the texture, ignoring <-alpha
+    and transparency; it is only useful for opaque textures.
+
+- sdl_layer<->tint: colour*
+    If not @nil, the red, green and blue of the texture are
+    multiplied by those of this colour (SDL's *color mod*).  A white
+    texture thus shows in the tint colour, which allows for one
+    texture in many colours or to flash a sprite.  The alpha of the
+    colour is ignored; use <-alpha.
+
+- sdl_layer<->scale_mode: {linear,nearest,pixelart}
+    How the pixels of a scaled or rotated texture are sampled.
+    `linear` (default) interpolates, which is smooth for photos and
+    video.  `nearest` uses the nearest pixel, keeping sharp pixel
+    edges.  `pixelart` (SDL 3.4 or later, otherwise `nearest`) also
+    keeps the pixels sharp, but avoids the uneven pixel sizes of
+    `nearest` at scales that are not whole numbers.
+
+- sdl_layer<->offset: point*
+    Shift of the tiles if <-scale is `tile`, in pixels of the window.
+    @nil is the same as point(0,0).  Changing the offset scrolls the
+    pattern, e.g., for a scrolling background; layers that share a
+    texture can scroll at different speeds for a parallax effect.
+    As with <-area, send a new point rather than changing it.
+
+- sdl_layer<->slices: area*
+    If not @nil and <-scale is `stretch` or `tile`, the texture is
+    scaled as nine parts (*9-slice scaling*), as is common for the
+    frames of buttons and panels.  The area is the centre part, in
+    pixels of the texture; it is limited to <-source.  The four
+    corners keep their size, the top and bottom edges only stretch
+    horizontally, the left and right edges only vertically and the
+    centre in both directions.  Using `tile`, the edges and centre are
+    repeated instead of stretched.  If <-area is too small for the
+    corners, they are shrunk.  Other scales ignore the slices.  With
+    <-scale_mode `linear`, a stretched part blends with the pixels of
+    its neighbours at its border; use `nearest` if this is a problem.
+
 - sdl_layer<->displayed: bool
     If @off, the layer is not shown.
 
@@ -82,7 +134,7 @@ changing it.
 
 ## Send methods {#class-sdl_layer-send}
 
-- sdl_layer->initialise: texture=[sdl_texture*], area=[area*], scale=[{stretch,fit,fill,none}]
+- sdl_layer->initialise: texture=[sdl_texture*], area=[area*], scale=[{stretch,fit,fill,none,tile}]
     Create to show texture in area of the window, scaled as described
     with <-scale (default `fit`).  If area is omitted, the layer uses
     the whole window.
