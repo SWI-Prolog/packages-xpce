@@ -22,7 +22,7 @@ See also class real.
 
 ## Instance variables {#class-number-instvars}
 
-- number-value: alien:long
+- number-value: alien:intptr_t
     Represented value.  This is an `int` and thus limited to the range
 
     	`@pce <-min_integer` .. `@pce <-min_integer`

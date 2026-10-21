@@ -265,6 +265,17 @@ test(float_args, L == [5.5, 5, 2.5, 3.5, 3]) :-
             ['+'(3,2.5), '*'(2.5,2), '-'(3,0.5), '/'(7,2), '+'(1.5,1.5)],
             L).
 
+%   Integer arithmetic is 64-bit, also where C long is 32 bits (Windows).
+
+test(large_product, V == -4_900_000_000) :-
+    get('*'(-70000, 70000), value, V).
+test(overflow_product, V =:= 2.0**80) :-
+    get('*'(1099511627776, 1099511627776), value, V).
+test(large_number, V == 9_000_000_000) :-
+    get('*'(number(3_000_000_000), 3), value, V).
+test(divide_by_zero, V =:= inf) :-
+    get('/'(1, 0), value, V).
+
 :- end_tests(expression).
 
 :- begin_tests(new_number).

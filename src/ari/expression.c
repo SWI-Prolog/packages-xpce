@@ -104,7 +104,7 @@ overflow:
 int
 ar_divide(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) )
-  { if ( n1->value.i % n2->value.i == 0)
+  { if ( n2->value.i != 0 && n1->value.i % n2->value.i == 0 )
     { r->value.i = n1->value.i / n2->value.i;
       r->type = V_INTEGER;
       succeed;
@@ -123,13 +123,15 @@ ar_divide(NumericValue n1, NumericValue n2, NumericValue r)
 int
 ar_times(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) )
-  { if ( labs(n1->value.i) >= (1 << 15) || labs(n2->value.i) >= (1 << 15) )
-    { r->value.f = (double)n1->value.i * (double)n2->value.i;
+  { double f = (double)n1->value.i * (double)n2->value.i;
+
+    if ( f > (double)PCE_MIN_INT && f < (double)PCE_MAX_INT )
+    { r->value.i = n1->value.i * n2->value.i;	/* cannot overflow */
+      r->type = V_INTEGER;
+    } else
+    { r->value.f = f;
       r->type = V_DOUBLE;
-      succeed;
     }
-    r->value.i = n1->value.i * n2->value.i;
-    r->type = V_INTEGER;
     succeed;
   }
 
@@ -221,21 +223,12 @@ Any
 ar_result(NumericValue n)
 { switch(n->type)
   { case V_INTEGER:
-    case_int:
       if ( n->value.i > PCE_MIN_INT && n->value.i < PCE_MAX_INT )
 	return toInt(n->value.i);
       else
 	return CtoNumber(n->value.i);
     case V_DOUBLE:
-    { long l = (long)n->value.f;
-
-      if ( (double)l == n->value.f )
-      { n->value.i = l;
-        goto case_int;
-      }
-
-      return CtoReal(n->value.f);
-    }
+      return toNum(n->value.f);
     default:
       fail;
   }

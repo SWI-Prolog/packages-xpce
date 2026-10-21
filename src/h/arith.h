@@ -43,7 +43,7 @@
 typedef struct
 { int type;				/* V_INTEGER or V_FLOAT */
   union
-  { long	i;			/* integer value */
+  { intptr_t	i;			/* integer value */
     double	f;			/* float value */
   } value;
 } numeric_value, *NumericValue;

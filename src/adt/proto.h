@@ -114,7 +114,7 @@ COMMON(status)	clearHashTable(HashTable ht);
 COMMON(status)	makeClassHashTable(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/adt/number.c */
-COMMON(Number)	CtoNumber(long i);
+COMMON(Number)	CtoNumber(intptr_t i);
 COMMON(status)	makeClassNumber(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/adt/point.c */

@@ -36,7 +36,7 @@
 #include <h/unix.h>
 
 Number
-CtoNumber(long i)
+CtoNumber(intptr_t i)
 { Number n = answerObject(ClassNumber, ZERO, EAV);
 
   n->value = i;
@@ -44,7 +44,7 @@ CtoNumber(long i)
 }
 
 
-static long
+static intptr_t
 valArg(Any i)
 { if ( isInteger(i) )
     return valInt(i);
@@ -121,7 +121,7 @@ getPrintNameNumber(Number n)
 
 static Name
 getCompareNumber(Number n, Any i)
-{ long v;
+{ intptr_t v;
 
   if ( isInteger(i) )
     v = valInt(i);
@@ -222,7 +222,7 @@ divideNumber(Number n, Any i)
 
 static status
 maximumNumber(Number n, Any i)
-{ long m = valArg(i);
+{ intptr_t m = valArg(i);
 
   if ( n->value < m )
     n->value = m;
@@ -233,7 +233,7 @@ maximumNumber(Number n, Any i)
 
 static status
 minimumNumber(Number n, Any i)
-{ long m = valArg(i);
+{ intptr_t m = valArg(i);
 
   if ( n->value > m )
     n->value = m;
@@ -294,7 +294,7 @@ static char T_rarg[] = "int|number|real";
 /* Instance Variables */
 
 static vardecl var_number[] =
-{ IV(NAME_value, "alien:long", IV_NONE,
+{ IV(NAME_value, "alien:intptr_t", IV_NONE,
      NAME_storage, "Value of number object")
 };
 
