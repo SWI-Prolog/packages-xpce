@@ -441,6 +441,7 @@ static void	rlc_restamp_folds(RlcData b);
 static void	rlc_keep_end_in_view(RlcData b, bool at_end);
 static int	rlc_last_window_start(RlcData b);
 static int	rlc_clamp_window_start(RlcData b, int here);
+static void	rlc_set_height(RlcData b, int h);
 static bool	rlc_scroll_past_end(RlcData b);
 static bool	rlc_fold_lines(RlcData b, TerminalBlock tb,
 			       int *headp, int *fromp, int *top);
@@ -3103,7 +3104,15 @@ cursorPageDownTerminalImage(TerminalImage ti)
 
 static status
 saveLinesTerminalImage(TerminalImage ti, Int lines)
-{ assign(ti, save_lines, lines);
+{ RlcData b = ti->data;
+
+  if ( b )				/* not while initialising */
+  { rlc_set_height(b, valInt(lines));
+    lines = toInt(b->height);
+    rlc_request_redraw(b);
+  }
+  assign(ti, save_lines, lines);
+
   succeed;
 }
 
@@ -8772,6 +8781,125 @@ rlc_clamp_window_start(RlcData b, int here)
     return last;
 
   return here;
+}
+
+
+/* Change the number of lines the ring holds: ->save_lines.  The text
+ * keeps its width, so nothing is rewrapped: the newest lines move to
+ * the start of a new ring in the order they had, and those that no
+ * longer fit scroll off, as the oldest lines do when output pushes
+ * them out (see rlc_open_line()).  Everything that names a line of the
+ * ring is moved with it.  The ring holds at least the window and one
+ * line more, so the window, and with it an alternate screen that is up,
+ * survives.
+ */
+
+#define LINE_DROPPED (-1)		/* == ANCHOR_NONE */
+
+static int
+rlc_remap_line(RlcData b, int line, int drop)
+{ if ( line < 0 || line >= b->height ||
+       !rlc_between(b, b->first, b->last, line) )
+    return LINE_DROPPED;
+
+  int n = rlc_count_lines(b, b->first, line) - drop;
+  return n >= 0 ? n : LINE_DROPPED;
+}
+
+static int
+rlc_remap_kept(RlcData b, int line, int drop)
+{ int n = rlc_remap_line(b, line, drop);
+
+  return n == LINE_DROPPED ? 0 : n;	/* the oldest line we keep */
+}
+
+static void
+rlc_set_height(RlcData b, int h)
+{ TerminalImage ti = b->object;
+  int count = rlc_count_lines(b, b->first, b->last) + 1;
+
+  if ( h < b->window_size+1 )
+    h = b->window_size+1;
+  if ( h == b->height )
+    return;
+
+  int keep = count < h ? count : h;
+  int drop = count - keep;
+  RlcTextLine lines = rlc_malloc(sizeof(rlc_text_line) * h);
+
+  if ( !lines )
+    return;
+  memset(lines, 0, sizeof(rlc_text_line) * h);
+  for(int i=0; i<h; i++)
+  { lines[i].adjusted = true;
+    lines[i].line_no  = i;
+  }
+
+  bool at_end = b->window_start == rlc_last_window_start(b);
+  for(int i=0, l=b->first; i<drop; i++, l=NextLine(b, l))
+    rlc_expire_blocks(b, l);		/* oldest first, as it wants */
+
+  if ( rlc_remap_line(b, b->sel_start_line, drop) == LINE_DROPPED ||
+       rlc_remap_line(b, b->sel_end_line,   drop) == LINE_DROPPED )
+  { b->sel_org_line = b->sel_start_line = b->sel_end_line = b->first;
+    b->sel_org_char = b->sel_start_char = b->sel_end_char = 0;
+  }
+  b->sel_org_line   = rlc_remap_kept(b, b->sel_org_line,   drop);
+  b->sel_start_line = rlc_remap_kept(b, b->sel_start_line, drop);
+  b->sel_end_line   = rlc_remap_kept(b, b->sel_end_line,   drop);
+  b->caret_y        = rlc_remap_kept(b, b->caret_y,        drop);
+  b->window_start   = rlc_remap_kept(b, b->window_start,   drop);
+  b->input_line     = rlc_remap_line(b, b->input_line,     drop);
+  b->isearch.origin_line     = rlc_remap_kept(b, b->isearch.origin_line,
+						drop);
+  b->isearch.base_line       = rlc_remap_kept(b, b->isearch.base_line,
+						drop);
+  b->isearch.window_start    = rlc_remap_kept(b, b->isearch.window_start,
+						drop);
+  b->isearch.held_start_line = rlc_remap_kept(b, b->isearch.held_start_line,
+						drop);
+  b->isearch.held_end_line   = rlc_remap_kept(b, b->isearch.held_end_line,
+						drop);
+  b->caret_asked.valid = false;		/* only during a mouse gesture */
+
+  if ( ti && notNil(ti->blocks) )
+  { Cell cl;
+
+    for_cell(cl, ti->blocks)
+    { RlcAnchors a = ((TerminalBlock)cl->value)->anchors;
+
+      if ( a )
+      { a->prompt_line = rlc_remap_line(b, a->prompt_line, drop);
+	a->input_line  = rlc_remap_line(b, a->input_line,  drop);
+	a->output_line = rlc_remap_line(b, a->output_line, drop);
+	a->end_line    = rlc_remap_line(b, a->end_line,    drop);
+      }
+    }
+  }
+
+  int l = b->first;			/* move the lines */
+  for(int i=0; i<count; i++, l=NextLine(b, l))
+  { if ( i < drop )
+    { rlc_free_line(b, l);
+    } else
+    { lines[i-drop] = b->lines[l];
+      lines[i-drop].line_no = i-drop;
+      memset(&b->lines[l], 0, sizeof(b->lines[l]));
+    }
+  }
+  for(int i=0; i<b->height; i++)	/* the slots outside the ring */
+    rlc_free_line(b, i);
+  rlc_free(b->lines);
+
+  b->lines  = lines;
+  b->height = h;
+  b->first  = 0;
+  b->last   = keep-1;
+  b->window_start = ( at_end ? rlc_last_window_start(b)
+			     : rlc_clamp_window_start(b, b->window_start) );
+  b->changed |= CHG_CARET|CHG_CHANGED|CHG_CLEAR;
+
+  rlc_check_assertions(b);
 }
 
 

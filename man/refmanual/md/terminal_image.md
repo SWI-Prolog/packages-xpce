@@ -103,7 +103,12 @@ keystrokes and hovered hyperlinks.
     Associated scroll_bar (driven by `->bubble_scroll_bar`).
 
 - terminal_image<->save_lines: int
-    Number of past lines retained in the scroll-back buffer.
+    Number of lines retained in the buffer, the window included.
+    Changing it resizes the buffer: growing it keeps all text, shrinking
+    it drops the oldest lines as output pushing them out would.  The
+    caret, the selection, the view and the `terminal_block` objects
+    follow their text.  The buffer holds at least the window plus one
+    line; a smaller value is raised to that.
 
 - terminal_image<->scroll_past_end: bool
     If @on, the window can be scrolled down until the last line is at

@@ -939,6 +939,39 @@ test(a_block_dies_with_its_lines,
     blocks(TI, Left),
     assertion(\+ memberchk(B1, Left)).
 
+test(blocks_follow_save_lines,
+     [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+       [Grown, Shrunk] == [Output, Output]
+     ]) :-
+    %  Changing ->save_lines moves the lines of the ring.  A block that
+    %  keeps its lines still finds its text.  Fill the ring first, so
+    %  that its lines are not where they will be in the new one.
+    get(TI, save_lines, Save),
+    Fill is Save+50,
+    forall(between(1, Fill, _), send(TI, insert, 'x\r\n')),
+    session(TI, 2),
+    blocks(TI, Blocks),
+    append(_, [B1,_Prompt], Blocks),        % the last command
+    get(B1, content, output, S0), text(S0, Output),
+    Grow is Save*2,
+    send(TI, save_lines, Grow),
+    get(B1, content, output, S1), text(S1, Grown),
+    send(TI, save_lines, Save),
+    get(B1, content, output, S2), text(S2, Shrunk).
+
+test(blocks_die_with_save_lines,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    %  Shrinking the ring past the lines of a block ends it, as output
+    %  pushing them out does.
+    session(TI, 1),
+    blocks(TI, [B1|_]),
+    forall(between(1, 200, _), send(TI, insert, 'x\r\n')),
+    assertion(get(B1, terminal, TI)),
+    send(TI, save_lines, 100),
+    assertion(get(B1, terminal, @nil)),
+    blocks(TI, Left),
+    assertion(\+ memberchk(B1, Left)).
+
 %!  input(+Terminal, -Text, -Tail) is semidet.
 %
 %   <-input as Prolog data.

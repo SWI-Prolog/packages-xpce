@@ -55,7 +55,8 @@ longer held its text -- a segmentation fault on narrowing a full console
 */
 
 test_terminal_rewrap :-
-    run_tests([ terminal_rewrap
+    run_tests([ terminal_rewrap,
+                terminal_save_lines
               ]).
 
                  /*******************************
@@ -64,9 +65,8 @@ test_terminal_rewrap :-
 
 %!  terminal(+SaveLines, -TI) is det.
 %
-%   A terminal image with a scrollback of SaveLines lines.  The size of
-%   the ring is fixed when the terminal is created, so it is the class
-%   variable rather than ->save_lines that decides it.
+%   A terminal image with a scrollback of SaveLines lines, created with
+%   a ring of that size rather than resized to it using ->save_lines.
 
 terminal(SaveLines, TI) :-
     get(@pce, convert, terminal_image, class, Class),
@@ -80,7 +80,10 @@ terminal(SaveLines, TI) :-
 %   number, so that a line can be told apart from its neighbours.
 
 fill(TI, Count, Len) :-
-    forall(between(1, Count, I),
+    fill(TI, 1, Count, Len).
+
+fill(TI, From, To, Len) :-
+    forall(between(From, To, I),
            ( line_text(I, Len, Text),
              atom_concat(Text, '\r\n', Line),
              send(TI, insert, Line)
@@ -174,3 +177,104 @@ test(round_trip, [cleanup(free(TI))]) :-
            )).
 
 :- end_tests(terminal_rewrap).
+
+/** <module> Test changing ->save_lines of a live terminal
+
+Changing ->save_lines resizes the ring.  Growing it keeps everything,
+shrinking it drops the oldest lines, and in both cases the terminal goes
+on where it was: the caret, the selection and the window follow their
+text.
+*/
+
+:- begin_tests(terminal_save_lines).
+
+%!  numbers(+TI, -Numbers) is det.
+%
+%   The numbers of the lines the buffer holds, oldest first.
+
+numbers(TI, Numbers) :-
+    get(TI, contents, Str),
+    get(Str, value, Text),
+    split_string(Text, "\n", "", Lines),
+    convlist([L,N]>>( L \== "",
+                      split_string(L, "x", "", [NS|_]),
+                      number_string(N, NS)
+                    ),
+             Lines, Numbers).
+
+consecutive([]).
+consecutive([_]).
+consecutive([A,B|T]) :-
+    B =:= A+1,
+    consecutive([B|T]).
+
+test(grow, [ cleanup(free(TI)),
+             [Save, First, Last] == [1000, First0, 800]
+           ]) :-
+    terminal(200, TI),
+    fill(TI, 300, 60),
+    numbers(TI, [First0|_]),
+    send(TI, save_lines, 1000),
+    get(TI, save_lines, Save),
+    fill(TI, 301, 800, 60),                 % fits in what was added
+    numbers(TI, Numbers),
+    assertion(consecutive(Numbers)),
+    Numbers = [First|_],
+    last(Numbers, Last).
+
+test(shrink, [ cleanup(free(TI)),
+               [Save, Last1, Last2] == [100, 500, 600]
+             ]) :-
+    terminal(1000, TI),
+    fill(TI, 500, 60),
+    send(TI, save_lines, 100),
+    get(TI, save_lines, Save),
+    numbers(TI, Numbers1),
+    assertion(consecutive(Numbers1)),
+    length(Numbers1, Kept),
+    assertion(Kept < 100),
+    last(Numbers1, Last1),
+    assertion(ends_with_lines(TI, [499,500], 60)),
+    fill(TI, 501, 600, 60),                 % output goes on at the caret
+    numbers(TI, Numbers2),
+    assertion(consecutive(Numbers2)),
+    last(Numbers2, Last2),
+    assertion(ends_with_lines(TI, [599,600], 60)).
+
+% The ring holds at least the window, so that what is shown survives.
+
+test(minimum, [cleanup(free(TI))]) :-
+    terminal(1000, TI),
+    fill(TI, 100, 60),
+    send(TI, save_lines, 1),
+    get(TI, save_lines, Save),
+    get(TI, rows, Rows),
+    assertion(Save > Rows),
+    assertion(ends_with_lines(TI, [99,100], 60)).
+
+test(selection, [ cleanup(free(TI)),
+                  [Grown, Shrunk] == [Selected, Selected]
+                ]) :-
+    terminal(1000, TI),
+    fill(TI, 500, 60),
+    get(TI, contents, Str),
+    get(Str, size, Size),
+    From is Size-200,
+    To is Size-100,
+    send(TI, selection, From, To),
+    get(TI, selected, S0), get(S0, value, Selected),
+    send(TI, save_lines, 2000),
+    get(TI, selected, S1), get(S1, value, Grown),
+    send(TI, save_lines, 100),
+    get(TI, selected, S2), get(S2, value, Shrunk).
+
+test(selection_dropped, [cleanup(free(TI)), fail]) :-
+    terminal(1000, TI),
+    fill(TI, 500, 60),
+    send(TI, selection, 0, 100),
+    send(TI, save_lines, 100),
+    get(TI, selected, S),
+    get(S, size, Size),
+    Size > 0.
+
+:- end_tests(terminal_save_lines).
