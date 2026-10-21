@@ -210,7 +210,10 @@ different types when passed to a vararg function.
 # define Promote(type) type
 #endif
 
-#ifdef HAVE_VISIBILITY_ATTRIBUTE
+/* Not on Windows, where DLLs only export what is dllexport and clang
+ * rejects hidden on a function interface.h declares dllexport
+ */
+#if defined(HAVE_VISIBILITY_ATTRIBUTE) && !defined(WIN32)
 #define SO_LOCAL __attribute__((visibility("hidden")))
 #else
 #define SO_LOCAL
