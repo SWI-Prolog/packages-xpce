@@ -2083,11 +2083,11 @@ resize(T) :->
     get(T, size, size(TW, TH)),
     get(T, member, scroll_bar, SB),
     get(SB, width, SBW),
-    send(SB, set, TW-SBW, 0, @default, TH),
+    send(SB, set, round(TW-SBW), 0, @default, TH),
     get(T, member, terminal, TI),
-    send(TI, set, 0, 0, TW-SBW, TH),
+    send(TI, set, 0, 0, round(TW-SBW), TH),
     get(T, member, epilog_report, Bar),
-    send(Bar, place, 0, 0, TW-SBW, TH).
+    send(Bar, place, 0, 0, round(TW-SBW), TH).
 
 create(T, Parent:[window]) :->
     "Create the terminal and attach a Prolog thread to it"::
