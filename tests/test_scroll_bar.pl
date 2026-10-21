@@ -86,4 +86,12 @@ test(top_without_arrows_is_page_up, U-D == page-backwards) :-
 test(top_with_arrows_is_line_up, U-D == line-backwards) :-
     press_top(@on, U, D).
 
+%   The width is a class variable in mm, which is not a whole number of
+%   pixels.  The bar has whole pixels, so W - Width is an integer.
+
+test(width_is_whole_pixels, W =:= round(W)) :-
+    new(SB, scroll_bar(@nil, vertical, @nil)),
+    get(SB, width, W),
+    free(SB).
+
 :- end_tests(scroll_bar).

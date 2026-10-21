@@ -80,6 +80,8 @@ initialiseScrollBar(ScrollBar s, Any obj, Name orientation, Message msg)
 
   if ( !w || isDefault(w) )
     w = ws_default_scrollbar_width();
+  else					/* e.g., 4mm: whole pixels */
+    w = toInt(rfloat(valNum(w)));
 
   initialiseGraphical(s, ZERO, ZERO, w, toInt(100));
   assign(s, cursor, getClassVariableValueObject(s, NAME_cursor));
