@@ -79,7 +79,33 @@ test_libs(image_save           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_init           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(camera               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(sdl_texture          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(video                OPTIONS ${XPCE_TEST_OPTIONS})
+
+# The video tests wait for playback in real time: some 40 seconds in
+# one process.  A process per unit, read from test_video.pl, lets ctest
+# run them in parallel.
+
+file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/test_video.pl video_unit_facts
+     REGEX "^video_test_unit\\(")
+foreach(fact ${video_unit_facts})
+  string(REGEX REPLACE "^video_test_unit\\(([a-z_]+)\\)\\." "\\1"
+         unit "${fact}")
+  add_test(NAME "xpce:video.${unit}"
+           COMMAND ${PROG_SWIPL} -f none --no-packs --on-error=status
+                   ${XPCE_TEST_OPTIONS}
+                   -s ${CMAKE_CURRENT_SOURCE_DIR}/test_video.pl
+                   -g "test_video(${unit})"
+                   -t halt)
+  list(APPEND XPCE_VIDEO_TESTS "xpce:video.${unit}")
+endforeach()
+
+# test_libs() also records the test for an installed tree, which runs
+# test_video/0 as a whole.  The ctest it adds would repeat the units.
+
+if(INSTALL_TESTS)
+  test_libs(video OPTIONS ${XPCE_TEST_OPTIONS})
+  set_tests_properties(xpce:video PROPERTIES DISABLED TRUE)
+endif()
+
 test_libs(clipboard_media      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(display_info         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tray_icon            OPTIONS ${XPCE_TEST_OPTIONS})
@@ -181,7 +207,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:emacs_init
                      xpce:camera
                      xpce:sdl_texture
-                     xpce:video
+                     ${XPCE_VIDEO_TESTS}
                      xpce:clipboard_media
                      xpce:display_info
                      xpce:tray_icon

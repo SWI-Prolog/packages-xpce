@@ -32,7 +32,10 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(test_video, [test_video/0]).
+:- module(test_video,
+          [ test_video/0,
+            test_video/1                         % +Unit
+          ]).
 
 /** <module> Playing and writing video
 
@@ -62,15 +65,24 @@ setup_headless :-
     set_prolog_flag('SDL_VIDEODRIVER', dummy).
 :- initialization(setup_headless, now).
 
+%   The units.  They wait for playback in real time rather than compute,
+%   so CMakeLists.txt reads them from here and runs each in a process of
+%   its own, in parallel.
+
+video_test_unit(video_writer).
+video_test_unit(video).
+video_test_unit(video_audio).
+video_test_unit(video_record).
+video_test_unit(video_network).
+video_test_unit(video_input).
+video_test_unit(video_output).
+
 test_video :-
-    run_tests([ video_writer,
-                video,
-                video_audio,
-                video_record,
-                video_network,
-                video_input,
-                video_output
-              ]).
+    findall(Unit, video_test_unit(Unit), Units),
+    run_tests(Units).
+
+test_video(Unit) :-
+    run_tests([Unit]).
 
 video_support :-
     get(@display, video_encoders, Chain),
@@ -614,12 +626,15 @@ network_support :-
 start_server :-
     clip(_),
     ts_clip(_),
+    message_queue_create(_, [alias(video_stall)]),
     http_server(http_dispatch, [port(localhost:Port)]),
     asserta(http_port(Port)).
 
 stop_server :-
+    thread_send_message(video_stall, release),
     forall(retract(http_port(Port)),
            http_stop_server(localhost:Port, [])),
+    message_queue_destroy(video_stall),
     forall(retract(ts_clip_file(File)),
            delete_file(File)),
     cleanup_clips.
@@ -663,7 +678,7 @@ serve_stall(_Request) :-
     format('Content-type: video/mp2t~n'),
     format('Transfer-encoding: chunked~n~n'),
     flush_output,
-    sleep(5).
+    thread_get_message(video_stall, release, [timeout(5)]).
 
 ts_clip(File) :-
     ts_clip_file(File),
@@ -733,10 +748,15 @@ test(http_stall, [Status-Quick == opening-true]) :-
 
 %   A video without a source plays the data written to it.
 
-clip_codes(Ext, Codes) :-
+%!  clip_codes(+Ext, +Frames, -Codes) is det.
+%
+%   Codes is a clip of Frames frames at 30 frames/second in the format
+%   of Ext.
+
+clip_codes(Ext, Frames, Codes) :-
     tmp_file(video, Base),
     file_name_extension(Base, Ext, File),
-    write_clip(File, size(320, 240), [frames(60)]),
+    write_clip(File, size(320, 240), [frames(Frames)]),
     read_file_to_codes(File, Codes, [type(binary)]),
     delete_file(File).
 
@@ -746,7 +766,7 @@ webm_support :-
     !.
 
 played(Ext, Status-Size) :-
-    clip_codes(Ext, Codes),
+    clip_codes(Ext, 15, Codes),         % plays in real time: keep it short
     new(V, video),
     pce_open(V, write, Out),
     set_stream(Out, type(binary)),
@@ -768,7 +788,7 @@ test(mp4, [Result == finished-size(320,240)]) :-
 test(webm, [condition(webm_support), Result == finished-size(320,240)]) :-
     played(webm, Result).
 test(arrives_while_playing, [Before-After-Played == playing-finished-true]) :-
-    clip_codes(ts, Codes),
+    clip_codes(ts, 60, Codes),
     length(Codes, Len),
     Half is Len//2,
     length(First, Half),
