@@ -110,8 +110,10 @@ sdl_window(Size, W) :-
 %!  pixels(+Window, +Points, -Names) is det.
 %
 %   Colours of Points (X-Y in window coordinates) as drawn by the
-%   renderer and as drawn by Cairo for frame <-image.  Fails if the
-%   two differ.
+%   renderer and as drawn by Cairo for frame <-image.  Raises an
+%   assertion error if the two differ.  Blended colours may differ by
+%   rounding, e.g., Metal draws blue at 0.5 alpha as 127 where Cairo
+%   draws 128.
 
 pixels(W, Points, Names) :-
     send(W, open),
@@ -122,7 +124,12 @@ pixels(W, Points, Names) :-
     maplist(pixel(GPU, OX, OY), Points, Names),
     maplist(pixel(Cairo, OX, OY), Points, CairoNames),
     send(F, destroy),
-    assertion(Names == CairoNames).
+    assertion(maplist(same_pixel, Names, CairoNames)).
+
+same_pixel(rgb(R1,G1,B1), rgb(R2,G2,B2)) =>
+    abs(R1-R2) =< 2, abs(G1-G2) =< 2, abs(B1-B2) =< 2.
+same_pixel(Name1, Name2) =>
+    Name1 == Name2.
 
 pixel(Image, OX, OY, X-Y, Name) :-
     IX is OX+X, IY is OY+Y,
