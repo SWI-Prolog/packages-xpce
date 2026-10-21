@@ -36,6 +36,7 @@
 :- use_module(library(pce)).
 :- use_module(library(xdot), []).
 :- autoload(library(pce_emacs), [emacs/1]).
+:- autoload(library(process), [process_which/2]).
 :- pce_autoload(report_dialog, library(pce_report)).
 
 /** <module> xdot renderer demo
@@ -44,7 +45,7 @@ Loads a bundled graphviz demo file (`xdot_demo.dot`) into an
 xdot_window and adds a menu bar with:
 
   * File → Open, Reload demo, Fit, Quit
-  * Engine → dot, neato, fdp, sfdp, circo, twopi
+  * Engine → dot, neato, fdp, sfdp, circo, twopi (those installed)
 
 Started via xdot_demo/0.  The condition on the pce_demo/4 entry
 requires graphviz's `dot` on PATH.
@@ -95,7 +96,7 @@ build_menu(F, D:dialog) :->
                 menu_item(quit,
                           message(F, destroy))
               ]),
-    forall(engine(E),
+    forall(available_engine(E),
            send(Engine, append,
                 menu_item(E, message(F, engine, E)))),
     send(Engine, selection, dot).
@@ -106,6 +107,15 @@ engine(fdp).
 engine(sfdp).
 engine(circo).
 engine(twopi).
+
+%   available_engine(-Engine) is nondet.
+%
+%   True when Engine is installed.  Graphviz builds may omit some
+%   engines, notably `sfdp` when built without GTS.
+
+available_engine(E) :-
+    engine(E),
+    process_which(path(E), _Path).
 
 engine(F, Name:name) :->
     "Switch graphviz layout engine and re-render current source"::
