@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,7 +38,6 @@
 #include <h/interface.h>
 
 static int	host_handles;		/* # handles */
-static long	itf_symbols;		/* # symbols */
 
 #define SizeOfSymbol offsetof(struct pceITFSymbol, handle[host_handles])
 
@@ -55,8 +55,6 @@ newSymbol(Any obj, Name name)
 
   for( n=0; n < host_handles; n++ )
     s->handle[n] = NULL;
-
-  itf_symbols++;
 
   return s;
 }
