@@ -382,7 +382,7 @@ static status	executeIsearchTerminalImage(TerminalImage ti, Int chr,
 static bool	rlc_isearching(RlcData b);
 static bool	rlc_is_word_char(RlcData b, int chr);
 static href    *rlc_add_link(RlcTextLine tl, const uchar_t *link,
-			     int start, int len);
+			     int start, int len, bool autolink);
 static void	rlc_free_link(RlcData b, href *hr);
 static void	rlc_free_links(RlcData b, href *links);
 static void	rlc_check_links(RlcTextLine tl);
@@ -482,6 +482,7 @@ typedef struct				/* A range of cells on a line; see */
 static int	rlc_overlay_width(RlcData b);
 static bool	rlc_line_in_selection(RlcData b, int line);
 static int	rlc_match_spans(RlcData b, rlc_span *spans, int max);
+static void	rlc_autolink_reset(RlcData b);
 static void	rlc_line_overlay(RlcData b, int line, RlcTextLine tl,
 				 bool insel, const rlc_span *spans,
 				 int nspans, Style *overlay);
@@ -549,6 +550,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   assign(ti, working_directory, NIL);
   assign(ti, blocks, newObject(ClassChain, EAV));
   assign(ti, drag_scroll_timer, NIL);
+  assign(ti, auto_links, NIL);
   obtainClassVariablesObject(ti);
   /* The class variables name the variant fonts by alias; they need the
      same pitch check as the ones ->font derives. */
@@ -3258,6 +3260,61 @@ linkArmedStyleTerminalImage(TerminalImage ti, Style s)
   return refreshTerminalImage(ti);
 }
 
+/* An element of <-auto_links is a regex, whose match becomes the
+ * target of the link, or tuple(Regex, Template), where \0 .. \9 in
+ * the template are replaced by what the registers matched.
+ */
+
+static status
+validAutoLink(Any pattern)
+{ if ( instanceOfObject(pattern, ClassTuple) )
+  { Tuple t = pattern;
+
+    if ( !instanceOfObject(t->second, ClassCharArray) )
+      return errorPce(t->second, NAME_unexpectedType,
+		      nameToType(NAME_charArray));
+    pattern = t->first;
+  }
+  if ( !instanceOfObject(pattern, ClassRegex) )
+    return errorPce(pattern, NAME_unexpectedType, nameToType(NAME_regex));
+
+  return compile_search_regex(pattern);
+}
+
+static status
+autoLinksTerminalImage(TerminalImage ti, Chain patterns)
+{ RlcData b = ti->data;
+
+  if ( notNil(patterns) )
+  { Cell cell;
+
+    for_cell(cell, patterns)
+      TRY(validAutoLink(cell->value));
+  }
+
+  assign(ti, auto_links, patterns);
+  if ( b )
+  { rlc_autolink_reset(b);
+    rlc_request_redraw(b);
+  }
+
+  succeed;
+}
+
+static status
+autoLinkTerminalImage(TerminalImage ti, Regex re, CharArray template)
+{ Any pattern = re;
+
+  if ( notDefault(template) )
+    pattern = newObject(ClassTuple, re, template, EAV);
+  TRY(validAutoLink(pattern));
+  if ( isNil(ti->auto_links) )
+    assign(ti, auto_links, newObject(ClassChain, EAV));
+  appendChain(ti->auto_links, pattern);
+
+  return autoLinksTerminalImage(ti, ti->auto_links);
+}
+
 static status
 ansiColoursTerminalImage(TerminalImage ti, Vector colours)
 { assign(ti, ansi_colours, colours);
@@ -4136,6 +4193,8 @@ static char *T_geometry[] =
 static char *T_scrollVertical[] =
 { "direction={forwards,backwards,goto}",
   "unit={file,page,line}", "amount=int" };
+static char *T_autoLink[] =
+{ "pattern=regex", "target=[char_array]" };
 static char *T_font[] =
 { "font=mono_font", "bold=[mono_font]", "italic=[mono_font]",
   "bold_italic=[mono_font]" };
@@ -4197,6 +4256,8 @@ static vardecl var_terminal_image[] =
      NAME_event, "Hovering the marker of a fold"),
   IV(NAME_linkMessage, "code*", IV_BOTH,
      NAME_event, "Hovering a link"),
+  SV(NAME_autoLinks, "chain*", IV_GET|IV_STORE, autoLinksTerminalImage,
+     NAME_event, "Patterns that turn the text they match into links"),
   IV(NAME_scrollBar, "scroll_bar*", IV_BOTH,
      NAME_event, "Associated scroll_bar"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
@@ -4292,6 +4353,8 @@ static senddecl send_terminal_image[] =
      NAME_selection, "Make [from, to) the selection"),
   SM(NAME_scrollTo, 1, "index=int", scrollToTerminalImage,
      NAME_scroll, "Scroll the line holding index into view"),
+  SM(NAME_autoLink, 2, T_autoLink, autoLinkTerminalImage,
+     NAME_event, "Turn text that matches pattern into a link"),
   SM(NAME_isearchForward, 0, NULL, isearchForwardTerminalImage,
      NAME_search, "Start an incremental search towards the end"),
   SM(NAME_isearchBackward, 0, NULL, isearchBackwardTerminalImage,
@@ -5908,6 +5971,331 @@ rlc_match_spans(RlcData b, rlc_span *spans, int max)
   return n;
 }
 
+		 /*******************************
+		 *          AUTO LINKS          *
+		 *******************************/
+
+/* Links found by matching <-auto_links against the text rather than
+ * marked by the client using OSC 8.  They are hrefs like any other, so
+ * hovering, the link styles, clicking and rewrapping need not know
+ * about them.  What is special is when they are found.
+ *
+ * Only what is shown needs them, so rlc_request_redraw() looks at the
+ * logical lines on the page before it works out the damage.  A logical
+ * line is the run of lines joined by soft returns: a URL that wraps is
+ * matched as a whole and gets an href on each line it covers, as an
+ * OSC 8 link that wraps does (see rlc_href_continued()).
+ *
+ * Matching every pattern against the page for each chunk of output
+ * would be wasted on lines that did not change.  So the lines of a
+ * logical line remember a hash of the text their links were found in,
+ * and while all of them hold the hash of what they hold now, those
+ * links are still the right ones.  Nothing that changes a line needs to
+ * know about this: a line that is written to hashes differently and
+ * one that is freed or reused holds 0, which is never a hash.
+ *
+ * The logical line the caret is on is left alone: that is the line
+ * being written or edited, and a URL that arrives in pieces would be
+ * linked as each of its prefixes.  The alternate screen is left alone
+ * as well: what a full screen application draws is not running text.
+ */
+
+#define AUTOLINK_MAX_LINES 256		/* longer logical lines get none */
+
+static uint32_t
+rlc_autolink_hash(RlcData b, int head, int tail)
+{ uint32_t h = 2166136261u;		/* FNV-1a */
+
+  for(int line=head; ; line = NextLine(b, line))
+  { RlcTextLine tl = &b->lines[line];
+
+    for(int i=0; i<tl->size; i++)
+    { h ^= tl->text[i].code;
+      h *= 16777619u;
+    }
+    h ^= 0x80000000u|tl->size;		/* where the line breaks */
+    h *= 16777619u;
+    if ( line == tail )
+      break;
+  }
+
+  return h ? h : 1;
+}
+
+static bool
+rlc_osc8_cell(RlcTextLine tl, int cell)
+{ for(href *hr = tl->links; hr; hr = hr->next)
+  { if ( !hr->autolink && cell >= hr->start && cell < hr->start+hr->length )
+      return true;
+  }
+
+  return false;
+}
+
+/* Remove the auto links of `tl` and forget what they were found in.
+ * The cells keep the link flag if an OSC 8 link covers them.
+ */
+
+static void
+rlc_autolink_strip_line(RlcData b, RlcTextLine tl)
+{ bool changed = false;
+
+  for(href **hp = &tl->links; *hp; )
+  { href *hr = *hp;
+
+    if ( hr->autolink )
+    { *hp = hr->next;
+      for(int i=hr->start; i < hr->start+hr->length && i < tl->size; i++)
+	tl->text[i].flags.link = rlc_osc8_cell(tl, i);
+      rlc_free_link(b, hr);
+      changed = true;
+    } else
+      hp = &hr->next;
+  }
+
+  if ( changed )
+    tl->changed |= CHG_CHANGED;
+  tl->autolink_hash = 0;
+}
+
+static void
+rlc_autolink_strip(RlcData b, int head, int tail)
+{ for(int line=head; ; line = NextLine(b, line))
+  { rlc_autolink_strip_line(b, &b->lines[line]);
+    if ( line == tail )
+      break;
+  }
+}
+
+/* A match is not linked if any of its characters already is, or the
+ * character on either side of it.  The first keeps OSC 8 links and the
+ * patterns earlier in <-auto_links ahead of later ones.  The second
+ * keeps links apart: two hrefs that touch would read as one run of
+ * link cells.
+ */
+
+static bool
+rlc_autolink_taken(RlcData b, const rlc_pos *pos, size_t len,
+		   size_t from, size_t to)
+{ if ( from > 0 )
+    from--;
+  if ( to < len )
+    to++;
+
+  for(size_t i=from; i<to; i++)
+  { RlcTextLine tl = &b->lines[pos[i].line];
+
+    if ( pos[i].cell < tl->size && tl->text[pos[i].cell].flags.link )
+      return true;
+  }
+
+  return false;
+}
+
+/* The target of a match: `template` with \0 .. \9 replaced by what the
+ * registers matched and \\ by a backslash, or the match itself if there
+ * is no template.  NULL if it is too long to be a link.
+ */
+
+static uchar_t *
+rlc_autolink_target(Regex re, const uchar_t *text, Any template)
+{ uchar_t buf[ANSI_MAX_LINK];
+  size_t o = 0;
+  size_t so, eo;
+
+#define ADD(c) do { if ( o+1 >= ANSI_MAX_LINK ) return NULL; \
+		    buf[o++] = (c); } while(0)
+
+  if ( isDefault(template) )
+  { regex_register(re, 0, &so, &eo);
+    for(size_t i=so; i<eo; i++)
+      ADD(text[i]);
+  } else
+  { PceString s = &((CharArray)template)->data;
+
+    for(size_t i=0; i<s->s_size; i++)
+    { int c = str_fetch(s, i);
+
+      if ( c == '\\' && i+1 < s->s_size )
+      { int c2 = str_fetch(s, i+1);
+
+	if ( c2 >= '0' && c2 <= '9' )
+	{ if ( regex_register(re, c2-'0', &so, &eo) )
+	  { for(size_t j=so; j<eo; j++)
+	      ADD(text[j]);
+	  }
+	  i++;
+	  continue;
+	} else if ( c2 == '\\' )
+	{ i++;
+	}
+      }
+      ADD(c);
+    }
+  }
+#undef ADD
+
+  buf[o] = 0;
+  uchar_t *url = rlc_malloc((o+1)*sizeof(*url));
+  memcpy(url, buf, (o+1)*sizeof(*url));
+  return url;
+}
+
+/* Link characters `from` .. `to` of the text, an href per line they
+ * cover.
+ */
+
+static void
+rlc_autolink_add(RlcData b, const rlc_pos *pos, size_t from, size_t to,
+		 const uchar_t *url)
+{ for(size_t i=from; i<to; )
+  { int line  = pos[i].line;
+    int first = pos[i].cell;
+    int last  = first;
+
+    while( i < to && pos[i].line == line )
+    { last = pos[i].cell + 1;
+      i++;
+    }
+    RlcTextLine tl = &b->lines[line];
+    last = rlc_snap_end(tl, last);	/* combining marks, wide chars */
+
+    for(int c=first; c<last; c++)
+      tl->text[c].flags.link = 1;
+    rlc_add_link(tl, url, first, last-first, true);
+    tl->changed |= CHG_CHANGED;
+  }
+}
+
+static void
+rlc_autolink_scan(RlcData b, int head, int tail)
+{ TerminalImage ti = b->object;
+  size_t len;
+  rlc_pos *pos;
+  uchar_t *text = rlc_text_between(b, head, tail, &len, &pos);
+  Cell cell;
+
+  if ( !text )
+    return;
+
+  for_cell(cell, ti->auto_links)
+  { Any template = DEFAULT;
+    Regex re = cell->value;
+
+    if ( instanceOfObject(re, ClassTuple) )
+    { template = ((Tuple)re)->second;
+      re = ((Tuple)re)->first;
+    }
+
+    size_t here = 0;
+    while( here < len && search_ucs_regex(re, text, len, here) )
+    { size_t so, eo;
+
+      regex_register(re, 0, &so, &eo);
+      if ( eo == so )			/* empty match: try the next char */
+      { here = so+1;
+	continue;
+      }
+      here = eo;
+
+      if ( !rlc_autolink_taken(b, pos, len, so, eo) )
+      { uchar_t *url = rlc_autolink_target(re, text, template);
+
+	if ( url )
+	{ rlc_autolink_add(b, pos, so, eo, url);
+	  rlc_free(url);
+	}
+      }
+    }
+  }
+
+  rlc_free(text);
+  rlc_free(pos);
+}
+
+/* Bring the auto links of the logical line that starts at `head` up to
+ * date.  Returns false if it is too long to look at, and leaves it to
+ * the caller to strip the lines of it that it shows.
+ */
+
+static bool
+rlc_autolink_line(RlcData b, int head, int caret_head)
+{ int tail = head;
+  int count = 1;
+
+  while( tail != b->last && b->lines[tail].softreturn )
+  { if ( ++count > AUTOLINK_MAX_LINES )
+      return false;
+    tail = NextLine(b, tail);
+  }
+
+  if ( head == caret_head || rlc_alt_screen(b) )
+  { rlc_autolink_strip(b, head, tail);
+    return true;
+  }
+
+  uint32_t h = rlc_autolink_hash(b, head, tail);
+  for(int line=head; ; line = NextLine(b, line))
+  { if ( b->lines[line].autolink_hash != h )
+      break;
+    if ( line == tail )
+      return true;			/* links are up to date */
+  }
+
+  rlc_autolink_strip(b, head, tail);
+  rlc_autolink_scan(b, head, tail);
+  for(int line=head; ; line = NextLine(b, line))
+  { b->lines[line].autolink_hash = h;
+    if ( line == tail )
+      break;
+  }
+
+  return true;
+}
+
+static void
+rlc_autolink_page(RlcData b)
+{ TerminalImage ti = b->object;
+
+  if ( !ti || isNil(ti->auto_links) || emptyChain(ti->auto_links) )
+    return;
+
+  int caret_head = rlc_logical_start(b, b->caret_y);
+  int line = b->window_start;
+  int prev = -1;
+  bool oversized = false;
+
+  for(int row=0; row < b->window_size; row++)
+  { if ( prev < 0 ||
+	 !(b->lines[prev].softreturn && NextLine(b, prev) == line) )
+      oversized = !rlc_autolink_line(b, rlc_logical_start(b, line),
+				     caret_head);
+    if ( oversized )
+      rlc_autolink_strip(b, line, line);
+
+    if ( line == b->last )
+      break;
+    prev = line;
+    line = rlc_view_next(b, line);
+  }
+}
+
+/* Forget all auto links, as the patterns changed.  Lines off the page
+ * would be put right when they come into view, but the saved screen
+ * comes back with the links it had.
+ */
+
+static void
+rlc_autolink_reset(RlcData b)
+{ for(int line=b->first; ; line = NextLine(b, line))
+  { rlc_autolink_strip_line(b, &b->lines[line]);
+    if ( line == b->last )
+      break;
+  }
+  for(int i=0; i<b->saved.height; i++)
+    rlc_autolink_strip_line(b, &b->saved.lines[i]);
+}
+
 static ssize_t
 ucs_find(RlcData b, const uchar_t *text, size_t len, ssize_t here,
 	 PceString s, ssize_t times, char az, bool exact_case, bool word)
@@ -7090,6 +7478,7 @@ rlc_request_redraw(RlcData b)
    * the same pass.  It costs nothing while nothing is selected.
    */
   rlc_update_selection_string(b);
+  rlc_autolink_page(b);		/* marks the lines it (un)links changed */
 
   if ( b->changed & CHG_CHANGED )
   { changedEntireImageGraphical(ti);
@@ -7338,6 +7727,7 @@ rlc_shift_lines_down(RlcData b, int line)
 
   b->lines[line].text       = NULL;	/* make this one `free' */
   b->lines[line].links      = NULL;
+  b->lines[line].autolink_hash = 0;	/* the links were those of the text */
   b->lines[line].size       = 0;
   b->lines[line].adjusted   = true;
   b->lines[line].softreturn = false;
@@ -7415,7 +7805,8 @@ update_links(RlcTextLine l1, RlcTextLine l2, int moved)
     { move_href(hr, l1, l2);
       hr->start -= l1->size;
     } else if ( hr->start + hr->length > l1->size )
-    { rlc_add_link(l2, hr->link, 0, hr->start + hr->length - l1->size);
+    { rlc_add_link(l2, hr->link, 0, hr->start + hr->length - l1->size,
+		   hr->autolink);
       hr->length = l1->size - hr->start;
     }
   }
@@ -7491,6 +7882,7 @@ move_links(RlcData b, RlcTextLine from, RlcTextLine to)
     unlink_href(from, hr);
     for(href *hr2 = to->links; hr2; hr2=hr2->next)
     { if ( hr->start+hr->length == hr2->start &&
+	   hr->autolink == hr2->autolink &&
 	   ucscmp(hr->link, hr2->link) == 0 )
       {	DEBUG(NAME_term, Cprintf("Rejoin split link\n"));
 	hr2->start = hr->start;
@@ -7525,6 +7917,7 @@ move_links_soft(RlcData b, RlcTextLine from, RlcTextLine to)
       hr->start -= from->size;
       for(href *hr2 = to->links; hr2; hr2=hr2->next)
       { if ( hr->start+hr->length == hr2->start &&
+	     hr->autolink == hr2->autolink &&
 	     ucscmp(hr->link, hr2->link) == 0 )
 	{ DEBUG(NAME_term, Cprintf("Rejoin split link\n"));
 	  hr2->start = hr->start;
@@ -7542,14 +7935,15 @@ move_links_soft(RlcData b, RlcTextLine from, RlcTextLine to)
       href *hr2;
 
       for(hr2 = to->links; hr2; hr2=hr2->next)
-      { if ( hr2->start == moved && ucscmp(hr->link, hr2->link) == 0 )
+      { if ( hr2->start == moved && hr->autolink == hr2->autolink &&
+	     ucscmp(hr->link, hr2->link) == 0 )
 	  break;
       }
       if ( hr2 )			/* `to` holds the rest of the link */
       { hr2->start = 0;
 	hr2->length += moved;
       } else
-	rlc_add_link(to, hr->link, 0, moved);
+	rlc_add_link(to, hr->link, 0, moved, hr->autolink);
       hr->length = from->size - hr->start;
     }
   next_link:
@@ -7919,6 +8313,7 @@ rlc_copy_links(const href *links)
     tail = &new->next;
     new->start = links->start;
     new->length = links->length;
+    new->autolink = links->autolink;
     new->link = rlc_malloc((ucslen(links->link)+1)*sizeof(*new->link));
     ucscpy(new->link, links->link);
   }
@@ -9688,13 +10083,15 @@ rlc_check_links(RlcTextLine tl)
 }
 
 static href *
-rlc_add_link(RlcTextLine tl, const uchar_t *link, int start, int len)
+rlc_add_link(RlcTextLine tl, const uchar_t *link, int start, int len,
+	     bool autolink)
 { href *hr = rlc_malloc(sizeof(*hr));
 
   hr->link = rlc_malloc((ucslen(link)+1)*sizeof(*link));
   ucscpy(hr->link, link);
   hr->start = start;
   hr->length = len;
+  hr->autolink = autolink;
   hr->next = tl->links;
   tl->links = hr;
   return hr;
@@ -9738,11 +10135,11 @@ static void
 rlc_link_cells(RlcData b, RlcTextLine tl, int start, int len)
 { href *hr = tl->links;
 
-  if ( hr && hr->start + hr->length == start &&
+  if ( hr && !hr->autolink && hr->start + hr->length == start &&
        ucscmp(hr->link, b->link_url) == 0 )
     hr->length += len;
   else
-    rlc_add_link(tl, b->link_url, start, len);
+    rlc_add_link(tl, b->link_url, start, len, false);
 }
 
 /* A link that wraps has an href on each line it covers.  Find the href

@@ -89,6 +89,7 @@
 
 :- multifile
     tty_link_hook/2,                                % +PT, +URL
+    auto_link/2,                                    % -Pattern, -Target
     profile/2.                                      % +Profile, -Options
 
 
@@ -704,6 +705,8 @@ initialise(PT) :->
     send(PT, bindings, KB),
     send(PT, name, terminal),
     send(PT, link_message, message(@receiver, open_link, @arg1)),
+    forall(auto_link(Pattern, Target),
+           send(PT, auto_link, regex(Pattern), Target)),
     send(PT, popup, new(P, pane_popup)),
     send(P, update_message, message(PT, update_popup, @receiver, @event)),
     Terminal = @event?receiver,
@@ -888,7 +891,7 @@ update_popup(PT, P:popup, Ev:event) :->
     update_block_items(PT, P, Ev),
     get(P, member, link, Item),
     (   get(PT, link, Ev, Link),
-        link_action(Link, _Action, Label)
+        link_action(PT, Link, _Action, Label)
     ->  send(Item, active, @on),
         send(PT, slot, current_link, Link),
         send(Item, label, Label)
@@ -901,28 +904,28 @@ link_action(PT) :->
     "Consult, open or copy the link the popup was on"::
     get(PT, current_link, Link),
     Link \== @nil,
-    link_action(Link, Action, _Label),
+    link_action(PT, Link, Action, _Label),
     run_link_action(Action, PT).
 
-%!  link_action(+Link, -Action, -Label) is semidet.
+%!  link_action(+Terminal, +Link, -Action, -Label) is semidet.
 %
 %   What the popup offers for Link:  consult   a  Prolog  file, open any
 %   other file with the desktop's application for it  and copy the link
 %   of anything else, typically an http(s):// URL.
 
-link_action(Link, consult(File), Label) :-
-    link_file_location(Link, File, _Location),
+link_action(PT, Link, consult(File), Label) :-
+    link_file_location(PT, Link, File, _Location),
     file_name_extension(_, Ext, File),
     user:prolog_file_type(Ext, prolog),
     !,
     file_base_name(File, Base),
     format(string(Label), 'Consult ~w', [Base]).
-link_action(Link, open(File), Label) :-
-    link_file_location(Link, File, _Location),
+link_action(PT, Link, open(File), Label) :-
+    link_file_location(PT, Link, File, _Location),
     !,
     file_base_name(File, Base),
     format(string(Label), 'Open ~w', [Base]).
-link_action(Link, copy(Link), "Copy link").
+link_action(_PT, Link, copy(Link), "Copy link").
 
 run_link_action(consult(File), PT) :-
     send(PT, inject, consult(File), @on, signal).
@@ -1765,8 +1768,8 @@ editline:el_wcwidth(Code, Columns) :-
 tty_link(PT, Link) :-
     tty_link_hook(PT, Link),
     !.
-tty_link(_PT, Link) :-
-    link_file_location(Link, _File, Location),
+tty_link(PT, Link) :-
+    link_file_location(PT, Link, _File, Location),
     !,
     tty_open(Location).
 tty_link(_PT, URL) :-
@@ -1820,9 +1823,20 @@ binary_type(application/'x-java-archive').
 binary_type(application/'octet-stream').
 
 
-link_file_location(Link, File, Location) :-
-    uri_file_name(Link, File),
+%!  link_file_location(+Terminal, +Link, -File, -Location) is semidet.
+%
+%   True when Link is a `file:` link to  File, where Location is what to
+%   pass to edit/1.  A relative File, as   found by auto_link/2, is
+%   relative to the working directory of Terminal.
+
+link_file_location(PT, Link, File, Location) :-
+    uri_file_name(Link, File0),
     !,
+    (   is_absolute_file_name(File0)
+    ->  File = File0
+    ;   get(PT, working_directory, Dir),
+        directory_file_path(Dir, File0, File)
+    ),
     uri_components(Link, Components),
     uri_data(fragment, Components, Fragment),
     fragment_location(Fragment, File, Location).
@@ -1846,6 +1860,17 @@ fragment_location(Fragment, File, File:Line:Column) :-
 fragment_location(Fragment, File, File:Line) :-
     split_string(Fragment, "", "L", [LineS]),
     number_string(Line, LineS).
+
+%!  auto_link(-Pattern, -Target) is nondet.
+%
+%   Text in the terminal that matches the  regex Pattern becomes a link
+%   to Target, where `\N` is replaced  by   what  group  N matched (see
+%   terminal_image->auto_link).  Text marked as  a   link  by the client
+%   (OSC 8) is left alone.  Links are opened by tty_link/2.
+
+auto_link('https?://[^[:space:]<>"\']*[^[:space:]<>"\'.,;:!?)]', @default).
+auto_link('([[:alnum:]_./~+-]*[[:alnum:]_]\\.[[:alpha:]][[:alnum:]]*):([0-9]+)(:[0-9]+)?',
+          'file:\\1#\\2\\3').
 
 :- pce_group(drop).
 

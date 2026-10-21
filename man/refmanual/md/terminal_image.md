@@ -91,6 +91,14 @@ keystrokes and hovered hyperlinks.
     it: Control-click asks for the popup menu there.  See `event
     ->is_popup`.
 
+- terminal_image<->auto_links: chain*
+    Patterns that turn the text they match into hyperlinks.  Each
+    element is a `regex`, whose match is the link target, or a
+    `tuple(Regex, Target)`; see `->auto_link`.  Setting it validates
+    the patterns and matches the page again.  Changing the chain in
+    place does not; use `->auto_link` to add a pattern.  See
+    [Automatic links](#class-terminal_image-autolinks).
+
 - terminal_image<->scroll_bar: scroll_bar*
     Associated scroll_bar (driven by `->bubble_scroll_bar`).
 
@@ -156,6 +164,17 @@ keystrokes and hovered hyperlinks.
     rejected with a message and set to @nil: the cell grid is measured
     from the regular font alone, so a variant of another pitch would not
     line up with it.
+
+- terminal_image->auto_link: pattern=regex, target=[char_array]
+    Make text that matches `pattern` a hyperlink, as if the client had
+    marked it using OSC 8.  If `target` is omitted, the link points at
+    the matched text.  Otherwise it points at `target`, where `\0` ..
+    `\9` are replaced by what the corresponding group of `pattern`
+    matched (nothing if the group did not take part in the match) and
+    `\\` by a single backslash.  Patterns are tried in the order they
+    were added.  Fails, printing an error, if `pattern` is not a valid
+    regular expression.  See
+    [Automatic links](#class-terminal_image-autolinks).
 
 - terminal_image->compute
     Recompute the rendered image.
@@ -442,6 +461,53 @@ keystrokes and hovered hyperlinks.
     and emoji code points that the static Unicode tables call width 1
     while an emoji-presenting font draws them twice as wide.  Fails
     while the terminal has no cell metrics yet.
+
+
+## Automatic links {#class-terminal_image-autolinks}
+
+Besides the hyperlinks a client marks using OSC 8, `->auto_link` makes
+the terminal find links in plain text.  Found links behave exactly like
+OSC 8 links: they are drawn in `<-link_style`, highlighted in
+`<-link_armed_style` while hovered, reported by `<-link` and activated
+through `<-link_message`.
+
+ - Patterns are matched against _logical_ lines: a line that is
+   wrapped because it does not fit the window is matched as a whole,
+   so a URL that wraps is a single link that covers all rows it is on.
+   A match does not cross a hard newline.
+ - Only the lines on the screen are matched, just before they are
+   painted.  A line is matched again only if its text changed, so the
+   cost does not depend on the amount of output.
+ - The line holding the caret is not linked: it is still being written
+   or edited.  Its links appear once the caret leaves it.
+ - Nothing is linked while an application uses the alternate screen
+   (e.g., `vim` or `less`).
+ - Text the client marked using OSC 8 is never overruled.  Neither is
+   a match of an earlier pattern: a match that overlaps or touches an
+   existing link is ignored.
+ - Logical lines longer than 256 rows are not linked.
+
+The example below makes http(s) URLs links to themselves and links
+`#1234` to the corresponding issue on GitHub.  The URL pattern does not
+include punctuation that ends a sentence.  Note the double backslash:
+the target is a quoted Prolog atom.
+
+```prolog
+auto_link_demo :-
+    new(T, terminal_image(600, 300)),
+    send(T, auto_link,
+         regex('https?://[^[:space:]]*[^[:space:].,;:!?)]')),
+    send(T, auto_link, regex('#([0-9]+)'),
+         'https://github.com/SWI-Prolog/swipl-devel/issues/\\1'),
+    send(T, link_message, message(@prolog, www_open_url, @arg1)),
+    send(new(W, window('Links', size(600, 300))), display, T),
+    send(W, open),
+    send(T, insert, 'See https://www.swi-prolog.org or issue #1234.\r\n').
+```
+
+Epilog (`library(epilog)`) uses this to link URLs and `File:Line` or
+`File:Line:Column` locations such as those in compiler messages.  More
+patterns can be added through the multifile hook `epilog:auto_link/2`.
 
 
 ## Character indices {#class-terminal_image-indices}

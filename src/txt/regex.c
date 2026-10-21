@@ -310,6 +310,77 @@ search_string_regex(Regex re, PceString s)
 }
 
 
+static int
+re_fetch_ucs(const charW *at, void *closure)
+{ const uint32_t *text = closure;
+
+  return text[PTR2IDX(at)];
+}
+
+
+/* Compile `re` for searching, raising an error if it is not a valid
+ * pattern.  For a caller that matches many times and wants to know
+ * up front, as search_ucs_regex() cannot tell no match from an error.
+ */
+
+status
+compile_search_regex(Regex re)
+{ return ensure_compiled_regex(re, RE_SEARCH);
+}
+
+
+/* Search `text[from..len)`, an array of code points that is not an
+ * object, for `re`.  The terminal matches the text of its lines this
+ * way without turning them into a string first.  On success the
+ * registers are relative to the start of `text`; see regex_register().
+ */
+
+status
+search_ucs_regex(Regex re, const uint32_t *text, size_t len, size_t from)
+{ int eflags = 0;
+  int rc;
+
+  if ( from > len )
+    fail;
+  if ( !ensure_compiled_regex(re, RE_SEARCH) )
+    fail;
+  if ( from > 0 && text[from-1] != '\n' )
+    eflags |= REG_NOTBOL;
+
+  rc = re_execW(re->compiled, IDX2PTR(from), len-from,
+		re_fetch_ucs, (void*)text,
+		NULL,
+		re->compiled->re_nsub+1, re->registers, eflags);
+  if ( rc == 0 )
+  { for(size_t n=0; n <= re->compiled->re_nsub; n++)
+    { if ( re->registers[n].rm_so >= 0 )
+      { re->registers[n].rm_so += from;
+	re->registers[n].rm_eo += from;
+      }
+    }
+    succeed;
+  }
+
+  return error_regex(re, rc);
+}
+
+
+/* Where register `n` of the last match is.  Fails if there is no such
+ * register or it did not take part in the match.
+ */
+
+bool
+regex_register(Regex re, int n, size_t *start, size_t *end)
+{ if ( n < 0 || !re->compiled || n > (int)re->compiled->re_nsub ||
+       re->registers[n].rm_so < 0 )
+    return false;
+
+  *start = re->registers[n].rm_so;
+  *end   = re->registers[n].rm_eo;
+  return true;
+}
+
+
 
 static status
 search_regex(Regex re, Any obj, Int start, Int end, int *sp, int *ep, int flags)

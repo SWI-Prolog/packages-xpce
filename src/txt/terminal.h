@@ -95,6 +95,7 @@ typedef struct href
 { uchar_t	*link;			/* Hyperlink target */
   int		 start;			/* start of label */
   int		 length;		/* #chars of label */
+  bool		 autolink;		/* Found by <-auto_links, not OSC 8 */
   struct href   *next;			/* Next in chain */
 } href;
 
@@ -110,6 +111,7 @@ typedef struct
   unsigned	 fold_head : 1;		/* the line that carries its marker */
   text_flags	 eol_flags;		/* background colour erase (bce) */
   int		 line_no;		/* The number of the line */
+  uint32_t	 autolink_hash;		/* What the auto links were found in */
 } rlc_text_line, *RlcTextLine;
 
 /* Where the OSC 133 marks of one command landed.  A position is a ring

@@ -52,7 +52,8 @@ copied to the screen as text.
 
 test_terminal_osc :-
     run_tests([ terminal_osc8,
-                terminal_osc133
+                terminal_osc133,
+                terminal_autolink
               ]).
 
                 /*******************************
@@ -988,3 +989,133 @@ test(no_input_at_a_continuation,
     assertion(input(TI, '', 0)).
 
 :- end_tests(terminal_osc133).
+
+/** <module> Test links found by matching <-auto_links
+
+Text that matches one of the patterns becomes a link, as if the client
+had marked it using OSC 8.  The patterns are matched against logical
+lines, so a URL that wraps is found as a whole.
+*/
+
+:- begin_tests(terminal_autolink).
+
+url_pattern(regex('https?://[^[:space:]]+')).
+
+autolink_terminal(TI) :-
+    terminal(TI),
+    url_pattern(Re),
+    send(TI, auto_link, Re).
+
+long_url(Columns, URL) :-
+    Len is Columns+10,
+    length(Codes, Len),
+    maplist(=(0'a), Codes),
+    atom_codes(Path, Codes),
+    atom_concat('https://x.org/', Path, URL).
+
+test(plain, [setup(autolink_terminal(TI)), cleanup(destroy_terminal(TI)),
+             [ Before, First, Last, After ] ==
+             [ false, 'https://x.org/a', 'https://x.org/a', false ]]) :-
+    send(TI, insert, 'see https://x.org/a here\r\n'),
+    truth(link_at(TI, 3, 0, _), Before),
+    link_at(TI, 4, 0, First),
+    link_at(TI, 18, 0, Last),
+    truth(link_at(TI, 19, 0, _), After).
+
+test(wrap, [setup(autolink_terminal(TI)), cleanup(destroy_terminal(TI)),
+            [ Head, Tail, Rest ] == [ URL, URL, false ]]) :-
+    get(TI, columns, Columns),
+    long_url(Columns, URL),
+    atom_length(URL, Len),
+    format(atom(Text), '~w\r\n', [URL]),
+    send(TI, insert, Text),
+    Last is Columns-1,
+    link_at(TI, Last, 0, Head),
+    End is Len-Columns-1,
+    link_at(TI, End, 1, Tail),
+    After is End+1,
+    truth(link_at(TI, After, 1, _), Rest).
+
+% The window narrows, so a URL that fitted on one line now wraps.  It
+% must still be one link.
+
+test(rewrap, [setup(autolink_terminal(TI)), cleanup(destroy_terminal(TI)),
+              [ Head, Tail ] == [ URL, URL ]]) :-
+    get(TI, columns, Columns0),
+    Len is Columns0//2,
+    length(Codes, Len),
+    maplist(=(0'b), Codes),
+    atom_codes(Path, Codes),
+    atom_concat('https://x.org/', Path, URL),
+    format(atom(Text), '~w\r\n', [URL]),
+    send(TI, insert, Text),
+    send(TI, width, 300),
+    get(TI, columns, Columns),
+    assertion(Columns < Len),
+    link_at(TI, 0, 0, Head),
+    link_at(TI, 0, 1, Tail).
+
+test(template, [setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                Link == 'file:///src/foo.pl#12']) :-
+    send(TI, auto_link,
+         regex('([[:alnum:]_/.]+\\.pl):([0-9]+)'), 'file://\\1#\\2'),
+    send(TI, insert, 'Warning: /src/foo.pl:12: oops\r\n'),
+    link_at(TI, 12, 0, Link).
+
+% The line the caret is on is still being written: it is linked when
+% the caret leaves it.
+
+test(caret_line, [setup(autolink_terminal(TI)), cleanup(destroy_terminal(TI)),
+                  [ Writing, Done ] == [ false, 'https://x.org/' ]]) :-
+    send(TI, insert, 'https://x.org/'),
+    truth(link_at(TI, 0, 0, _), Writing),
+    send(TI, insert, '\r\n'),
+    link_at(TI, 0, 0, Done).
+
+% Writing over a link takes the link away.
+
+test(overwrite, [setup(autolink_terminal(TI)), cleanup(destroy_terminal(TI)),
+                 [ Before, After ] == [ 'https://x.org/', false ]]) :-
+    send(TI, insert, 'https://x.org/\r\n'),
+    link_at(TI, 0, 0, Before),
+    send(TI, insert, '\e[1A\rplain text\e[K\r\n'),
+    truth(link_at(TI, 0, 0, _), After).
+
+% Changing part of a link changes what it links to.
+
+test(overwrite_part, [ setup(autolink_terminal(TI)),
+                       cleanup(destroy_terminal(TI)),
+                       [ Before, After ] == [ 'https://x.org/', 'http://x.org/' ]
+                     ]) :-
+    send(TI, insert, 'https://x.org/\r\n'),
+    link_at(TI, 0, 0, Before),
+    send(TI, insert, '\e[1A\rhttp://x.org/ \r\n'),
+    link_at(TI, 0, 0, After).
+
+% An OSC 8 link says what it links to: a pattern does not override it.
+
+test(osc8_wins, [setup(autolink_terminal(TI)), cleanup(destroy_terminal(TI)),
+                 Link == 'file:///tmp/a']) :-
+    osc8('file:///tmp/a', Open),
+    osc8('', Close),
+    atomic_list_concat([Open, 'https://x.org/', Close, '\r\n'], Text),
+    send(TI, insert, Text),
+    link_at(TI, 3, 0, Link).
+
+test(reset, [setup(autolink_terminal(TI)), cleanup(destroy_terminal(TI)),
+             [ Before, After ] == [ 'https://x.org/', false ]]) :-
+    send(TI, insert, 'https://x.org/\r\n'),
+    link_at(TI, 0, 0, Before),
+    send(TI, auto_links, @nil),
+    truth(link_at(TI, 0, 0, _), After).
+
+test(bad_pattern, [setup(terminal(TI)), cleanup(destroy_terminal(TI)), fail]) :-
+    send(TI, auto_link, regex('(')).
+
+truth(Goal, Truth) :-
+    (   call(Goal)
+    ->  Truth = true
+    ;   Truth = false
+    ).
+
+:- end_tests(terminal_autolink).
