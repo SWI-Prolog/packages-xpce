@@ -94,6 +94,7 @@ test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(display_function     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(display_removed      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(pce_date             OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(regex                OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(refman_signatures    OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_grep           OPTIONS ${XPCE_TEST_OPTIONS})
@@ -189,6 +190,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:display_function
                      xpce:display_removed
                      xpce:number_conversion
+                     xpce:pce_date
                      xpce:regex
                      xpce:refman_signatures
                      xpce:emacs_grep

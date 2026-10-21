@@ -51,15 +51,30 @@ static time_t mktime(struct tm *);
 #endif
 
 #ifndef HAVE_TIMEGM
+#ifdef __WINDOWS__
+#define timegm(tm) _mkgmtime(tm)
+#else
 static time_t timegm(struct tm *tm);
+#endif
 #endif
 
 static status	setDate(Date d, Int s, Int m, Int h, Int D, Int M, Int Y);
 
 #define unix_date date.date
 
+/* The local time of `d`, or NULL if the C library cannot represent it.
+ * On Windows, that is any date before 1970.
+ */
+
+static struct tm *
+local_tm(Date d)
+{ time_t t = d->unix_date;
+
+  return localtime(&t);
+}
+
 Date
-CtoDate(long int time)
+CtoDate(intptr_t time)
 { Date d = newObject(ClassDate, EAV);
 
   d->unix_date = time;
@@ -208,7 +223,9 @@ setDate(Date d, Int s, Int m, Int h, Int D, Int M, Int Y)
   int v;
 
   now = d->unix_date;
-  tm = localtime(&now);
+  if ( !(tm = localtime(&now)) )
+    return errorPce(d->class, NAME_representation,
+		    CtoName("POSIX timestamp representation"));
   if ( notDefault(s) && (v=valInt(s)) >= 0    && v <= 59   ) tm->tm_sec  = v;
   if ( notDefault(m) && (v=valInt(m)) >= 0    && v <= 59   ) tm->tm_min  = v;
   if ( notDefault(h) && (v=valInt(h)) >= 0    && v <= 23   ) tm->tm_hour = v;
@@ -227,9 +244,9 @@ setDate(Date d, Int s, Int m, Int h, Int D, Int M, Int Y)
 static status
 convertDate(Date d, CharArray s)
 { if ( isstrA(&s->data) )
-  { long t = get_date((char *)s->data.s_textA, NULL);
+  { time_t t = get_date((char *)s->data.s_textA, NULL);
 
-    if ( t == -1 )
+    if ( t == (time_t)-1 )
       return errorPce(d, NAME_syntaxError, s);
     d->unix_date = t;
     succeed;
@@ -309,56 +326,70 @@ yearDate(Date d, Int Y)
 
 static Int
 getSecondDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
+
+  if ( !tm )
+    fail;
   answer(toInt(tm->tm_sec));
 }
 
 
 static Int
 getMinuteDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
+
+  if ( !tm )
+    fail;
   answer(toInt(tm->tm_min));
 }
 
 
 static Int
 getHourDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
+
+  if ( !tm )
+    fail;
   answer(toInt(tm->tm_hour));
 }
 
 
 static Int
 getDayDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
+
+  if ( !tm )
+    fail;
   answer(toInt(tm->tm_mday));
 }
 
 
 static Int
 getMonthDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
+
+  if ( !tm )
+    fail;
   answer(toInt(tm->tm_mon + 1));
 }
 
 
 static Int
 getYearDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
+
+  if ( !tm )
+    fail;
   answer(toInt(tm->tm_year + 1900));
 }
 
 
 static Int
 getWeekDayDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
+
+  if ( !tm )
+    fail;
   answer(toInt(tm->tm_wday));
 }
 
@@ -383,9 +414,10 @@ static char * shortMonthName[] =
 
 static Name
 getDayNameDate(Date d, BoolObj shrt)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
 
+  if ( !tm )
+    fail;
   answer(shrt == ON ? CtoName(shortDayName[tm->tm_wday])
 		    : CtoName(dayName[tm->tm_wday]));
 }
@@ -393,9 +425,10 @@ getDayNameDate(Date d, BoolObj shrt)
 
 static Name
 getMonthNameDate(Date d, BoolObj shrt)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
 
+  if ( !tm )
+    fail;
   answer(shrt == ON ? CtoName(shortMonthName[tm->tm_mon])
 	            : CtoName(monthName[tm->tm_mon]));
 }
@@ -403,18 +436,23 @@ getMonthNameDate(Date d, BoolObj shrt)
 
 static StringObj
 getStringDate(Date d)
-{ time_t now = d->unix_date;
-  char *s = ctime(&now);
-  s[24] = '\0';
+{ struct tm *tm = local_tm(d);
+  char date[64];
 
-  answer(CtoString(s));
+  if ( !tm )
+    fail;
+  snprintf(date, sizeof date, "%s %s %2d %02d:%02d:%02d %d",
+	   shortDayName[tm->tm_wday], shortMonthName[tm->tm_mon],
+	   tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec,
+	   tm->tm_year + 1900);
+
+  answer(CtoString(date));
 }
 
 
 static BoolObj
 getDstDate(Date d)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
 
   if ( !tm || tm->tm_isdst < 0 )
     fail;
@@ -424,26 +462,31 @@ getDstDate(Date d)
 
 static Name
 getTimeZoneDate(Date d, BoolObj abbrev)
-{ time_t now = d->unix_date;
-  struct tm *tm = localtime(&now);
+{ struct tm *tm = local_tm(d);
 
   if ( !tm )
     fail;
 
   if ( abbrev == ON )
-  {
-#ifdef HAVE_TZNAME
-    answer(CtoName(tzname[tm->tm_isdst > 0 ? 1 : 0]));
-#endif
+  { char buf[64];			/* Windows has long names */
+
+    if ( strftime(buf, sizeof buf, "%Z", tm) > 0 )
+      answer(CtoName(buf));
   } else
-  {
+  { char buf[24];
 #ifdef HAVE_TM_GMTOFF
-    char buf[24];
     long off = tm->tm_gmtoff;
-    snprintf(buf, sizeof buf, "%+03ld%02ld",
-	     off / 3600, labs(off % 3600) / 60);
-    answer(CtoName(buf));
+#else					/* local wall clock as if UTC */
+    struct tm ltm = *tm;
+    time_t lt = timegm(&ltm);
+
+    if ( lt == (time_t)-1 )
+      fail;
+    long off = (long)(lt - (time_t)d->unix_date);
 #endif
+    snprintf(buf, sizeof buf, "%c%02ld%02ld",
+	     off < 0 ? '-' : '+', labs(off) / 3600, labs(off) % 3600 / 60);
+    answer(CtoName(buf));
   }
   fail;
 }
@@ -451,24 +494,19 @@ getTimeZoneDate(Date d, BoolObj abbrev)
 
 static StringObj
 getRfcStringDate(Date d)
-{ time_t now = d->unix_date;
-  char *s = ctime(&now);
-  char date[40];
+{ struct tm *tm = local_tm(d);
+  char date[64];
 
-  date[0] = '\0';
-
-  strncat(date, s, 3);			/* dayname */
-  strcat(date, ", ");
-  strncat(date, s+8, 2);		/* day */
-  strncat(date, s+3, 5);		/* Month */
-  strncat(date, s+20, 4);		/* year */
-  strncat(date, s+10, 9);		/* time */
+  if ( !tm )
+    fail;
+  int len = snprintf(date, sizeof date, "%s, %02d %s %d %02d:%02d:%02d",
+		     shortDayName[tm->tm_wday], tm->tm_mday,
+		     shortMonthName[tm->tm_mon], tm->tm_year + 1900,
+		     tm->tm_hour, tm->tm_min, tm->tm_sec);
 
   Name tz = getTimeZoneDate(d, OFF);
   if ( tz )
-  { strcat(date, " ");
-    strcat(date, strName(tz));
-  }
+    snprintf(date+len, sizeof date - len, " %s", strName(tz));
   answer(CtoString(date));
 }
 
@@ -479,6 +517,8 @@ getXMLStringDate(Date d)
   struct tm *tm = gmtime(&now);
   char date[100];
 
+  if ( !tm )
+    fail;
   snprintf(date, sizeof(date),
 	   "%04d-%02d-%02dT%02d:%02d:%02dZ",
 	   tm->tm_year + 1900,
@@ -502,7 +542,7 @@ getCompareDate(Date d1, Date d2)
 
 static Int
 getDifferenceDate(Date d1, Date d2, Name units)
-{ long t = isDefault(d2) ? 0 : d2->unix_date;
+{ intptr_t t = isDefault(d2) ? 0 : d2->unix_date;
 
   if ( isDefault(units) )
     units = NAME_second;
@@ -530,7 +570,7 @@ getDifferenceDate(Date d1, Date d2, Name units)
 
 static status
 advanceDate(Date d, Int times, Name units)
-{ long mult, i, n;
+{ intptr_t mult, n;
 
   if ( isDefault(units) )
     units = NAME_second;
@@ -547,17 +587,18 @@ advanceDate(Date d, Int times, Name units)
     mult = 3600*24*7;
   else
   { assert(0);
-    mult = 0;
+    fail;
   }
 
-  i = valInt(times) * mult;
-
-  n = d->unix_date + i;
-  if ( (d->unix_date > 0 && i > 0 && n < 0) ||
-       (d->unix_date < 0 && i < 0 && n > 0) )
+  n = valInt(times);			/* test before overflowing */
+  if ( n > INTPTR_MAX/mult || n < -(INTPTR_MAX/mult) )
+    return errorPce(d, NAME_intRange);
+  n *= mult;
+  if ( n > 0 ? d->unix_date > INTPTR_MAX - n
+	     : d->unix_date < INTPTR_MIN - n )
     return errorPce(d, NAME_intRange);
 
-  d->unix_date = n;
+  d->unix_date += n;
 
   succeed;
 }
@@ -583,7 +624,7 @@ static char *T_advance[] =
 /* Instance Variables */
 
 static vardecl var_date[] =
-{ IV(NAME_date, "alien:long", IV_NONE,
+{ IV(NAME_date, "alien:intptr_t", IV_NONE,
      NAME_storage, "Unix's notion of date")
 };
 
@@ -732,7 +773,7 @@ struct tm *tm;
 }
 #endif
 
-#ifndef HAVE_TIMEGM
+#if !defined(HAVE_TIMEGM) && !defined(__WINDOWS__)
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 timegm() is provided by glibc and the inverse of gmtime().  The glibc

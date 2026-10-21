@@ -86,7 +86,7 @@ COMMON(status)	makeClassChainTable(Class class);
 COMMON(status)	makeClassConstant(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/adt/date.c */
-COMMON(Date)	CtoDate(long int time);
+COMMON(Date)	CtoDate(intptr_t time);
 COMMON(status)	makeClassDate(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/adt/dict.c */
