@@ -956,12 +956,16 @@ keyboard_focus(F, W:[window]*) :->
 %       graph, does not move the keyboard focus (see postEventWindow()).
 %       It still says the user works in the pane that holds the window:
 %       give it the focus if that is another pane than the current one.
-%       Within the current pane the focus stays where it is.
+%       Within the current pane the focus stays where it is.  A window
+%       outside my tabs, e.g., the menu bar, is not a pane: clicking it
+%       must leave the focus with the pane the user works in.
 
 window_clicked(F, W:window) :->
     "W was clicked but does not want the keyboard"::
-    pane_group(W, Group),
-    (   get(F, current_pane, Current),
+    (   \+ get(W, container, pane_tabbed_window, _)
+    ->  true
+    ;   pane_group(W, Group),
+        get(F, current_pane, Current),
         pane_group(Current, Group)
     ->  true
     ;   send(F, keyboard_focus, W)

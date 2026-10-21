@@ -2524,6 +2524,11 @@ test(a_click_in_the_current_pane_keeps_the_focus, Focus == V) :-
     view_and_pane(F, V, _P),
     send(F, window_clicked, V),
     get(F, keyboard_focus, Focus).
+test(a_click_on_the_menu_bar_keeps_the_focus, Focus == V) :-
+    view_and_pane(F, V, _P),
+    get(F, menu_dialog, MD),
+    send(F, window_clicked, MD),
+    get(F, keyboard_focus, Focus).
 
 :- end_tests(pane_frame_click).
 

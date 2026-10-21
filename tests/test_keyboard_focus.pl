@@ -228,4 +228,43 @@ test(click_list_browser, Name == lb) :-
     focus(D, Name),
     send(D, destroy).
 
+%   A click on a menu bar leaves the keyboard focus of the frame where
+%   it was, also if the window holding the menu bar wants the keyboard,
+%   so that the keys go back there when the menu, or a dialog opened
+%   from it, closes.  A click on the text item still takes it.  The
+%   popup is inactive, so the click opens nothing: the dummy video
+%   driver cannot open a popup window.
+
+menu_frame(F, D, V) :-
+    new(F, frame('Menu focus')),
+    send(F, append, new(D, dialog)),
+    send(D, append, new(MB, menu_bar)),
+    send(MB, append, new(P, popup(edit))),
+    send(P, append, menu_item(hello)),
+    send(P, active, @off),
+    send(D, append, text_item(name)),
+    send(new(V, view), below, D),
+    send(F, open),
+    send(F, keyboard_focus, V).
+
+click(D, Gr) :-
+    get(Gr, area, area(X0, Y0, _, H)),
+    X is X0+10, Y is Y0+H//2,
+    forall(member(Id, [ms_left_down, ms_left_up]),
+           ( new(Ev, event(Id, D, X, Y, 0, 1000)),
+             ignore(send(D, post_event, Ev)) )).
+
+test(click_menu_bar, Focus == V) :-
+    menu_frame(F, D, V),
+    get(D, member, menu_bar, MB),
+    click(D, MB),
+    get(F, keyboard_focus, Focus),
+    send(F, destroy).
+test(click_text_item_in_menu_dialog, Focus == D) :-
+    menu_frame(F, D, _V),
+    get(D, member, name, TI),
+    click(D, TI),
+    get(F, keyboard_focus, Focus),
+    send(F, destroy).
+
 :- end_tests(keyboard_focus).

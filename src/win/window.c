@@ -726,6 +726,38 @@ inspectWindow(PceWindow sw, EventObj ev)
 
 static status eventFixedWindow(PceWindow sw, EventObj ev);
 
+/* Is ev on a menu bar of sw?  Descends into the devices of the window
+ * along the topmost graphical under the pointer.
+ */
+
+static bool
+eventOnMenuBarWindow(PceWindow sw, EventObj ev)
+{ Device dev = (Device)sw;
+
+  for(;;)
+  { Graphical hit = NULL;
+    Int x, y;
+    Cell cell;
+
+    get_xy_event(ev, dev, OFF, &x, &y);
+    for_cell(cell, dev->graphicals)	/* last is on top */
+    { Graphical gr = cell->value;
+
+      if ( gr->displayed == ON && inEventAreaGraphical(gr, x, y) )
+	hit = gr;
+    }
+
+    if ( !hit )
+      return false;
+    if ( instanceOfObject(hit, ClassMenuBar) )
+      return true;
+    if ( !instanceOfObject(hit, ClassDevice) ||
+	 instanceOfObject(hit, ClassWindow) )
+      return false;
+    dev = (Device)hit;
+  }
+}
+
 status
 postEventWindow(PceWindow sw, EventObj ev)
 { int rval = FAIL;
@@ -760,10 +792,17 @@ postEventWindow(PceWindow sw, EventObj ev)
  * frame may still want to know about the click, e.g., to make the pane
  * that holds the window the one the user works in: if it defines
  * ->window_clicked, it is told.
+ *
+ * A click on a menu bar leaves the focus where it is: the menu works
+ * on the window the user was working in.  While open, the menu bar
+ * grabs the keyboard (see frame_keyboard_event()), and when it closes,
+ * including after closing a dialog opened from it, the keys go back to
+ * that window.
  */
 
   if ( isDownEvent(ev) && fr && notNil(fr) &&
-       (sw->input_focus == OFF || !focusFollowsMouseFrame(fr)) )
+       (sw->input_focus == OFF || !focusFollowsMouseFrame(fr)) &&
+       !eventOnMenuBarWindow(sw, ev) )
   { if ( send(sw, NAME_WantsKeyboardFocus, EAV) ||
 	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) )
       send(fr, NAME_keyboardFocus, sw, EAV);
