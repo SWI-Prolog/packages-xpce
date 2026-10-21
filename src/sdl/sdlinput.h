@@ -88,9 +88,10 @@ typedef struct
    */
   char		*inbuf;		/* data read by the watcher thread */
   size_t	 inbuf_size;	/* allocated size of inbuf */
-  size_t	 inbuf_len;	/* bytes currently held */
+  size_t	 inbuf_start;	/* first byte not yet collected */
+  size_t	 inbuf_len;	/* bytes currently held from there */
   bool		 inbuf_eof;	/* read() answered 0 */
-  SDL_Mutex	*inbuf_lock;	/* guards the four fields above */
+  SDL_Mutex	*inbuf_lock;	/* guards the five fields above */
 #endif
   fd_ready_codes code;		/* SDL3 event.user.code */
   Any		userdata;	/* SDL3 event.user.data2 */

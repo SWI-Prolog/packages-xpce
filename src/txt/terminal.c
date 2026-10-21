@@ -515,12 +515,20 @@ rlc_check_assertions(RlcData b)
 /*assert(rlc_between(b, b->window_start, window_last, b->caret_y));*/
   (void)window_last;
 
+  /* This runs for every character the client writes, and our release
+   * builds keep assert(): a walk over the whole ring here made it the
+   * most expensive thing about printing.
+   */
+#if defined(_DEBUG) || defined(O_DEBUG)
   for(y=0; y<b->height; y++)
   { RlcTextLine tl = &b->lines[y];
 
     assert(tl->size >= 0 && tl->size <= LINE_CELL_CAPACITY(b));
     (void)tl;
   }
+#else
+  (void)y;
+#endif
 }
 
 		 /*******************************
@@ -12133,22 +12141,37 @@ rlc_suspend_char(RlcData b)
 }
 
 #define PTY_READ_CHUNK 4096
+#define PTY_DRAIN_MS	 20		/* see receiveTerminalImage() */
+
+/* Process what the client wrote.  Each event used to take one chunk, so
+ * a client that writes a lot had us redraw after every 4K: the event
+ * loop paints whenever it finds nothing queued.  Instead, take all the
+ * watcher has buffered, for at most PTY_DRAIN_MS so that the screen
+ * still moves and keys get through while output pours in.  What is
+ * left raises another event; see processed_fd_watch().
+ */
 
 status
 receiveTerminalImage(TerminalImage ti)
 { char buf[PTY_READ_CHUNK+MAX_INCOMPLETE];
   RlcData b = ti->data;
-  ssize_t count;
+  int64_t start = mclock();
 
-  /* The watcher thread has already read this; see watch_fill().  Doing
-     the read here would make the main thread the only drainer of the
-     pty, so a main-thread write that fills it could never complete. */
-  count = read_watch(b->pty.watch, buf+MAX_INCOMPLETE, PTY_READ_CHUNK);
-  if ( count < 0 )
-    succeed;				/* nothing buffered right now */
-  if ( count == 0 && rlc_reclaim_pty(b) )
-    succeed;				/* revoked rather than closed */
-  return processClientOutputTerminalImage(ti, buf+MAX_INCOMPLETE, count);
+  for(;;)
+  { ssize_t count;
+
+    /* The watcher thread has already read this; see watch_fill().  Doing
+       the read here would make the main thread the only drainer of the
+       pty, so a main-thread write that fills it could never complete. */
+    count = read_watch(b->pty.watch, buf+MAX_INCOMPLETE, PTY_READ_CHUNK);
+    if ( count < 0 )
+      succeed;				/* nothing buffered right now */
+    if ( count == 0 && rlc_reclaim_pty(b) )
+      succeed;				/* revoked rather than closed */
+    TRY(processClientOutputTerminalImage(ti, buf+MAX_INCOMPLETE, count));
+    if ( mclock() - start >= PTY_DRAIN_MS )
+      succeed;
+  }
 }
 
 static void

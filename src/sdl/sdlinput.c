@@ -176,7 +176,7 @@ releaseWatch(FDWatch *watch)
   }
   free(watch->inbuf);
   watch->inbuf = NULL;
-  watch->inbuf_size = watch->inbuf_len = 0;
+  watch->inbuf_size = watch->inbuf_start = watch->inbuf_len = 0;
   watch->inbuf_eof = false;
 #endif
   watch->state = WATCH_FREE;
@@ -217,7 +217,14 @@ watch_has_room(FDWatch *watch)
 }
 
 
-/* Read what is available into the watch.  Runs on the watcher thread. */
+/* Read what is available into the watch.  Runs on the watcher thread.
+ *
+ * read_watch() takes from the front of the buffer by moving
+ * `inbuf_start`.  The data still held is moved back to the front only
+ * when at least as much as that has been collected since, so each byte
+ * is moved at most once on average.  Moving it on every read_watch()
+ * made draining a full buffer quadratic.
+ */
 
 static void
 watch_fill(FDWatch *watch)
@@ -233,21 +240,30 @@ watch_fill(FDWatch *watch)
     return;
 
   SDL_LockMutex(watch->inbuf_lock);
+  if ( count > 0 &&
+       watch->inbuf_start + watch->inbuf_len + count > watch->inbuf_size &&
+       watch->inbuf_start > 0 && watch->inbuf_start >= watch->inbuf_len )
+  { memmove(watch->inbuf, watch->inbuf+watch->inbuf_start, watch->inbuf_len);
+    watch->inbuf_start = 0;
+  }
   if ( count <= 0 )
   { watch->inbuf_eof = true;		/* 0: closed, <0: error */
-  } else if ( watch->inbuf_len + count > watch->inbuf_size )
-  { size_t size = watch->inbuf_size ? watch->inbuf_size : WATCH_INBUF_CHUNK;
+  } else if ( watch->inbuf_start + watch->inbuf_len + count >
+	      watch->inbuf_size )
+  { size_t need = watch->inbuf_start + watch->inbuf_len + count;
+    size_t size = watch->inbuf_size ? watch->inbuf_size : WATCH_INBUF_CHUNK;
     char *new;
 
-    while( size < watch->inbuf_len + count )
+    while( size < need )
       size *= 2;
     if ( (new=realloc(watch->inbuf, size)) )
     { watch->inbuf = new;
       watch->inbuf_size = size;
     }
   }
-  if ( count > 0 && watch->inbuf_len + count <= watch->inbuf_size )
-  { memcpy(watch->inbuf+watch->inbuf_len, buf, count);
+  if ( count > 0 &&
+       watch->inbuf_start + watch->inbuf_len + count <= watch->inbuf_size )
+  { memcpy(watch->inbuf+watch->inbuf_start+watch->inbuf_len, buf, count);
     watch->inbuf_len += count;
   }
   SDL_UnlockMutex(watch->inbuf_lock);
@@ -264,9 +280,9 @@ read_watch(FDWatch *watch, char *buffer, size_t size)
   SDL_LockMutex(watch->inbuf_lock);
   if ( watch->inbuf_len > 0 )
   { rc = watch->inbuf_len < size ? watch->inbuf_len : size;
-    memcpy(buffer, watch->inbuf, rc);
-    memmove(watch->inbuf, watch->inbuf+rc, watch->inbuf_len-rc);
+    memcpy(buffer, watch->inbuf+watch->inbuf_start, rc);
     watch->inbuf_len -= rc;
+    watch->inbuf_start = watch->inbuf_len ? watch->inbuf_start+rc : 0;
   } else
   { rc = watch->inbuf_eof ? 0 : -1;
     if ( rc == -1 )
