@@ -273,6 +273,15 @@ test(overflow_product, V =:= 2.0**80) :-
     get('*'(1099511627776, 1099511627776), value, V).
 test(large_number, V == 9_000_000_000) :-
     get('*'(number(3_000_000_000), 3), value, V).
+test(add_overflow, V =:= 1.8e19) :-
+    get('+'(number(9_000_000_000_000_000_000),
+            number(9_000_000_000_000_000_000)), value, V).
+test(minus_overflow, V =:= -1.8e19) :-
+    get('-'(number(-9_000_000_000_000_000_000),
+            number(9_000_000_000_000_000_000)), value, V).
+test(add_no_overflow, V == 0) :-
+    get('+'(number(9_000_000_000_000_000_000),
+            number(-9_000_000_000_000_000_000)), value, V).
 test(divide_by_zero, V =:= inf) :-
     get('/'(1, 0), value, V).
 

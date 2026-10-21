@@ -54,21 +54,29 @@ promoteToRealNumericValue(NumericValue n)
 }
 
 
+/* Test for overflow before computing, as signed overflow is undefined */
+
+static bool
+add_overflows(intptr_t a, intptr_t b)
+{ return ( b > 0 ? a > INTPTR_MAX - b
+		 : a < INTPTR_MIN - b );
+}
+
+static bool
+sub_overflows(intptr_t a, intptr_t b)
+{ return ( b < 0 ? a > INTPTR_MAX + b
+		 : a < INTPTR_MIN + b );
+}
+
 status
 ar_add(NumericValue n1, NumericValue n2, NumericValue r)
-{ if ( intNumericValue(n1) && intNumericValue(n2) )
+{ if ( intNumericValue(n1) && intNumericValue(n2) &&
+       !add_overflows(n1->value.i, n2->value.i) )
   { r->value.i = n1->value.i + n2->value.i;
-
-    if ( n1->value.i > 0 && n2->value.i > 0 && r->value.i <= 0 )
-      goto overflow;
-    if ( n1->value.i < 0 && n2->value.i < 0 && r->value.i >= 0 )
-      goto overflow;
-
     r->type = V_INTEGER;
     succeed;
   }
 
-overflow:
   promoteToRealNumericValue(n1);
   promoteToRealNumericValue(n2);
   r->value.f = n1->value.f + n2->value.f;
@@ -80,19 +88,13 @@ overflow:
 
 int
 ar_minus(NumericValue n1, NumericValue n2, NumericValue r)
-{ if ( intNumericValue(n1) && intNumericValue(n2) )
+{ if ( intNumericValue(n1) && intNumericValue(n2) &&
+       !sub_overflows(n1->value.i, n2->value.i) )
   { r->value.i = n1->value.i - n2->value.i;
-
-    if ( n1->value.i > 0 && n2->value.i < 0 && r->value.i <= 0 )
-      goto overflow;
-    if ( n1->value.i < 0 && n2->value.i > 0 && r->value.i >= 0 )
-      goto overflow;
-
     r->type = V_INTEGER;
     succeed;
   }
 
-overflow:
   promoteToRealNumericValue(n1);
   promoteToRealNumericValue(n2);
   r->value.f = n1->value.f - n2->value.f;
