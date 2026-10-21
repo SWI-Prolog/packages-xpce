@@ -114,18 +114,45 @@ uncreate_windows_frame(FrameObj fr)
   }
 }
 
+/**
+ * Which frame gets the keyboard when `fr`, which had it, goes away?
+ *
+ * A transient hands it back to the frame it is transient for.  Window
+ * managers are supposed to do that themselves, but not all do: GNOME
+ * with focus-follows-mouse leaves the owner visible but without the
+ * keyboard after a dialog closes, even if the pointer is above it.
+ *
+ * Otherwise, closing a window is the window system's business: it
+ * knows its own focus policy, which on X11 may well be "whatever the
+ * pointer is now over", and an application that raises a window of its
+ * own on top of that is fighting the user.  AppKit has no such policy
+ * to respect -- it activates the next window of the application itself
+ * -- but it does not do so for the windows SDL creates, and closing the
+ * window opened with Command-N leaves the one it was opened from
+ * visible but inactive, with no caret and no keys.  So on MacOS we pick
+ * `frame <-next_focus`.
+ */
+
+static FrameObj
+focus_successor(FrameObj fr)
+{ if ( fr->kind == NAME_transient &&
+       instanceOfObject(fr->transient_for, ClassFrame) )
+  { FrameObj owner = fr->transient_for;
+
+    if ( !onFlag(owner, F_FREED|F_FREEING) &&
+	 ws_created_frame(owner) )
+      return owner;
+  }
+
 #ifdef __APPLE__
+  return getNextFocusFrame(fr);
+#else
+  return NULL;
+#endif
+}
+
 /**
  * Hand the keyboard to another frame of the same application.
- *
- * Closing a window is the window system's business: it knows its own
- * focus policy, which on X11 may well be "whatever the pointer is now
- * over", and an application that raises a window of its own on top of
- * that is fighting the user.  AppKit has no such policy to respect --
- * it activates the next window of the application itself -- but it does
- * not do so for the windows SDL creates, and closing the window opened
- * with Command-N leaves the one it was opened from visible but inactive,
- * with no caret and no keys.  Do it ourselves on MacOS only.
  *
  * Cocoa reports a new key window while SDL_DestroyWindow() is still
  * running, so SDL already knows whether anything took over; leave it
@@ -143,7 +170,7 @@ ws_pass_on_input_focus(FrameObj fr)
   if ( SDL_GetKeyboardFocus() )		/* the platform found one after all */
     return;
 
-  if ( (next=getNextFocusFrame(fr)) )
+  if ( (next=focus_successor(fr)) )
   { WsFrame wfr = next->ws_ref;
 
     if ( wfr && wfr->ws_window )
@@ -154,7 +181,6 @@ ws_pass_on_input_focus(FrameObj fr)
     }
   }
 }
-#endif /*__APPLE__*/
 
 /**
  * Uncreate or destroy the specified frame.
@@ -167,9 +193,7 @@ ws_uncreate_frame(FrameObj fr)
 
   if ( f && f->ws_window )
   { ASSERT_SDL_MAIN();
-#ifdef __APPLE__
     bool had_focus = SDL_GetKeyboardFocus() == f->ws_window;
-#endif
     deleteChain(ChangedFrames, fr);
     sdl_frame_free_textures(fr);
     SDL_DestroyRenderer(f->ws_renderer);
@@ -177,10 +201,8 @@ ws_uncreate_frame(FrameObj fr)
     unalloc(sizeof(*f), f);
     fr->ws_ref = NULL;
     uncreate_windows_frame(fr);
-#ifdef __APPLE__
     if ( had_focus )
       ws_pass_on_input_focus(fr);
-#endif
   }
 
   ws_event_destroyed_target(fr);

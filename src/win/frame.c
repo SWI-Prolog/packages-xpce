@@ -1505,9 +1505,9 @@ that belongs to no application falls back on the frames of its display,
 where the order says nothing, but where there is normally only one
 candidate anyway.
 
-Only a toplevel qualifies.  A transient is handed the keyboard by the
-window system along with the owner it declared, and a popup must never
-hold it at all.
+Only a toplevel qualifies.  A transient hands the keyboard back to the
+owner it declared (see focus_successor() in sdlframe.c), and a popup
+must never hold it at all.
 
 This answers a question; it does not move the focus.  Normally nothing
 has to: the window system decides who gets the keyboard when a window
