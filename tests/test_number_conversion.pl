@@ -282,10 +282,30 @@ test(minus_overflow, V =:= -1.8e19) :-
 test(add_no_overflow, V == 0) :-
     get('+'(number(9_000_000_000_000_000_000),
             number(-9_000_000_000_000_000_000)), value, V).
+test(int_divide, L == [3, -3, 3, 4]) :-
+    maplist([E,V]>>get(E, value, V),
+            ['//'(7,2), '//'(-7,2), '//'(7.5,2), '//'(9,2.25)],
+            L).
+test(int_divide_by_zero, error(pce(division_by_zero, _), _)) :-
+    get('//'(7, 0), value, _).
+test(round, L == [4, -4, 3, 15]) :-
+    maplist(width_of, [round(7/2), round(-7/2), round(3.4), round(4*3.78)], L).
+test(floor, L == [3, -4, 3]) :-
+    maplist(width_of, [floor(7/2), floor(-7/2), floor(3)], L).
+test(round_in_expression, V == 4) :-
+    get(x+round(3.4), value, x=1, V).
 test(divide_by_zero, V =:= inf) :-
     get('/'(1, 0), value, V).
 
 :- end_tests(expression).
+
+%   Width of a box sized by the expression E, i.e., E as an int.
+
+width_of(E, W) :-
+    new(B, box),
+    send(B, width, E),
+    get(B, width, W),
+    free(B).
 
 :- begin_tests(new_number).
 

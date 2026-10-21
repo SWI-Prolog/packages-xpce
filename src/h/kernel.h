@@ -1101,6 +1101,11 @@ NewClass(binary_expression)
   ABSTRACT_BINARY_EXPRESSION
 End;
 
+NewClass(unary_expression)
+  ABSTRACT_FUNCTION
+  Expression	argument;		/* The operand */
+End;
+
 NewClass(binary_condition)
   ABSTRACT_BINARY_CONDITION
 End;

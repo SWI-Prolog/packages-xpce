@@ -44,6 +44,7 @@ mapped_class_name(*,                       times).
 mapped_class_name(+,                       plus).
 mapped_class_name(-,                       minus).
 mapped_class_name(/,                       divide).
+mapped_class_name(//,                      int_divide).
 mapped_class_name(:=,                      binding).
 mapped_class_name(<,                       less).
 mapped_class_name(=,                       eq).

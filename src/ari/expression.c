@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/arith.h>
+#include <math.h>
 
 static int	get_var_in_binary_expression(Any e, Var var, int n);
 
@@ -122,6 +123,28 @@ ar_divide(NumericValue n1, NumericValue n2, NumericValue r)
 }
 
 
+/* Integer division, truncating towards zero as Prolog's //.  The
+ * caller deals with a zero divisor.
+ */
+
+static int
+ar_int_divide(NumericValue n1, NumericValue n2, NumericValue r)
+{ if ( intNumericValue(n1) && intNumericValue(n2) &&
+       !(n1->value.i == INTPTR_MIN && n2->value.i == -1) )
+  { r->value.i = n1->value.i / n2->value.i;
+    r->type = V_INTEGER;
+    succeed;
+  }
+
+  promoteToRealNumericValue(n1);
+  promoteToRealNumericValue(n2);
+
+  r->value.f = trunc(n1->value.f / n2->value.f);
+  r->type = V_DOUBLE;
+  succeed;
+}
+
+
 int
 ar_times(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) )
@@ -169,6 +192,14 @@ evaluateExpression(Any e, NumericValue v)
 	return ar_times(&vl, &vr, v);
       if ( class == ClassDivide )	/* / */
 	return ar_divide(&vl, &vr, v);
+      if ( class == ClassIntDivide )	/* // */
+      { if ( intNumericValue(&vr) ? vr.value.i == 0 : vr.value.f == 0.0 )
+	{ errorPce(e, NAME_divisionByZero);
+	  v->type = V_ERROR;
+	  fail;
+	}
+	return ar_int_divide(&vl, &vr, v);
+      }
 
       errorPce(e, NAME_unknownFunction);
       v->type = V_ERROR;
@@ -398,6 +429,13 @@ makeClassDivide(Class class)
 
 
 status
+makeClassIntDivide(Class class)
+{ sourceClass(class, makeClassIntDivide, __FILE__);
+  succeed;
+}
+
+
+status
 makeClassTimes(Class class)
 { sourceClass(class, makeClassTimes, __FILE__);
   succeed;
@@ -516,4 +554,95 @@ getValueExpression(Expression e, ...)
 
     fail;
   }
+}
+
+
+		 /*******************************
+		 *	  UNARY EXPRESSIONS	*
+		 *******************************/
+
+/* Class unary_expression is the abstract super class of round and
+ * floor, which make an integer from an expression.
+ */
+
+static status
+initialiseUnaryExpression(UnaryExpression e, Expression argument)
+{ assign(e, argument, argument);
+
+  return initialiseFunction((Function) e);
+}
+
+
+static Any
+getExecuteUnaryExpression(UnaryExpression e)
+{ numeric_value v;
+
+  if ( !evaluateExpression(e->argument, &v) )
+    fail;
+
+  if ( v.type == V_DOUBLE )
+  { if ( instanceOfObject(e, ClassFloor) )
+      v.value.f = floor(v.value.f);
+    else				/* half away from zero, as Prolog */
+      v.value.f = round(v.value.f);
+  }
+
+  return ar_result(&v);
+}
+
+
+/* Type declarations */
+
+/* Instance Variables */
+
+static vardecl var_unaryExpression[] =
+{ IV(NAME_argument, "expression", IV_BOTH,
+     NAME_operant, "Operand of the expression")
+};
+
+/* Send Methods */
+
+static senddecl send_unaryExpression[] =
+{ SM(NAME_initialise, 1, "argument=expression", initialiseUnaryExpression,
+     DEFAULT, "Create unary expression")
+};
+
+/* Get Methods */
+
+static getdecl get_unaryExpression[] =
+{ GM(NAME_Execute, 0, "value=int|number|real", NULL,
+     getExecuteUnaryExpression,
+     DEFAULT, "Evaluate")
+};
+
+/* Resources */
+
+#define rc_unaryExpression NULL
+
+/* Class Declaration */
+
+static Name unaryExpression_termnames[] = { NAME_argument };
+
+ClassDecl(unaryExpression_decls,
+          var_unaryExpression, send_unaryExpression,
+	  get_unaryExpression, rc_unaryExpression,
+          1, unaryExpression_termnames);
+
+status
+makeClassUnaryExpression(Class class)
+{ return declareClass(class, &unaryExpression_decls);
+}
+
+
+status
+makeClassRound(Class class)
+{ sourceClass(class, makeClassRound, __FILE__);
+  succeed;
+}
+
+
+status
+makeClassFloor(Class class)
+{ sourceClass(class, makeClassFloor, __FILE__);
+  succeed;
 }

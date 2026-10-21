@@ -3,10 +3,11 @@
 Binary arithmetic expression with <-left and <-right operants.  Class
 binary_expression has the subclasses
 
-	| + | Addition                 |
-	| - | Subtraction and negation |
-- Multiplication
-	/		Division
+	| +  | Addition                 |
+	| -  | Subtraction and negation |
+	| *  | Multiplication           |
+	| /  | Division                 |
+	| // | Integer division         |
 
 PCE expression objects are first of all designed for supporting
 graphics calculations.  The intermediate results are calculated
@@ -39,6 +40,7 @@ evaluates then and then destroys them again.
 Evaluation of expressions is written in C, bypassing the message passing
 of PCE.  This implies the user cannot define new expression classes.
 
+@see class unary_expression
 @see class real
 @see class number
 

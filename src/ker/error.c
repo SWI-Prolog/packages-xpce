@@ -517,6 +517,8 @@ static const error_def errors[] =
     "%O: Unknown arithmetic function" },
   { NAME_outOfIntRange,		ET_WARNING,
     "%N: computed value is out of integer range" },
+  { NAME_divisionByZero,	ET_WARNING,
+    "%N: Division by zero" },
   { NAME_initVariableFailed,	ET_WARNING,
     "%N: Init failed for %O" },
   { NAME_redeclaredVar,		0,

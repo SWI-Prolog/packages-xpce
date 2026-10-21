@@ -613,6 +613,9 @@ static struct class_definition classdefs[] =
   { NAME_type, NAME_programObject, makeClassType,
     &ClassType, "Argument-type specifier" },
 
+  { NAME_unaryExpression, NAME_function, makeClassUnaryExpression,
+    &ClassUnaryExpression, "Unary arithmetic function" },
+
   { NAME_var, NAME_function, makeClassVar,
     &ClassVar, "Variable (as a function)" },
 
@@ -687,6 +690,12 @@ initClassDefs()
 	   ClassPlus, "Addition expression");
   defClass(CtoName("/"), NAME_binaryExpression, makeClassDivide,
 	   ClassDivide, "Division expression");
+  defClass(CtoName("//"), NAME_binaryExpression, makeClassIntDivide,
+	   ClassIntDivide, "Integer division expression");
+  defClass(NAME_round, NAME_unaryExpression, makeClassRound,
+	   ClassRound, "Round to the nearest integer");
+  defClass(NAME_floor, NAME_unaryExpression, makeClassFloor,
+	   ClassFloor, "Round down to an integer");
   defClass(CtoName(":="), NAME_object, makeClassBinding,
 	   ClassBinding, "Name-value pair for argument-list");
   defClass(CtoName("<"), NAME_binaryCondition, makeClassLess,
