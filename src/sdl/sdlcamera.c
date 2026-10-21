@@ -36,6 +36,11 @@
 #include <h/graphics.h>
 #include <SDL3_image/SDL_image.h>
 
+#if !SDL_VERSION_ATLEAST(3, 4, 0)	/* SDL 3.2 returns a plain int */
+#define SDL_CAMERA_PERMISSION_STATE_DENIED   (-1)
+#define SDL_CAMERA_PERMISSION_STATE_APPROVED 1
+#endif
+
 /* Cameras.  SDL has no event for a new frame, so the open cameras are
  * polled from the media tick (see sdlaudio.c).  The camera subsystem
  * is started on first use, as this may ask the user for permission.

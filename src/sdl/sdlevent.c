@@ -2088,8 +2088,10 @@ ws_test_event(FrameObj fr, Name type, Sheet fields)
       ev.wheel.which     = (SDL_MouseID)ID(which);
       ev.wheel.x	 = F(dx);
       ev.wheel.y	 = F(dy);
+#if SDL_VERSION_ATLEAST(3, 2, 12)
       ev.wheel.integer_x = (Sint32)F(integer_x);
       ev.wheel.integer_y = (Sint32)F(integer_y);
+#endif
       ev.wheel.mouse_x	 = F(x);
       ev.wheel.mouse_y	 = F(y);
       ev.wheel.direction = F(flipped) ? SDL_MOUSEWHEEL_FLIPPED

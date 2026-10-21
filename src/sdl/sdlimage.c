@@ -314,6 +314,7 @@ add_animation_frame(Animation a, SDL_Surface *surf, Uint64 ms)
   succeed;
 }
 
+#if SDL_IMAGE_VERSION_ATLEAST(3, 4, 0)
 /* The metadata of animations that we copy from and to SDL properties */
 
 static const struct metadata_prop
@@ -372,28 +373,16 @@ animation_type(SDL_IOStream *io)
   return NULL;
 }
 
-/**
- * Load all frames of the animated image file `a->file`.  A file that
+/* Add the frames of the animated image in `io` to `a`.  An image that
  * is not animated becomes a single frame.
  */
-status
-ws_load_animation(Animation a)
+
+static status
+load_animation_frames(Animation a, SDL_IOStream *io)
 { IMG_AnimationDecoder *dec = NULL;
   SDL_Surface *single = NULL;
-  IOSTREAM *fd = NULL;
-  SDL_IOStream *io = NULL;
   status rc = FAIL;
 
-  if ( instanceOfObject(a->file, ClassFile) )
-  { const char *fname =
-      charArrayToFN((CharArray)getOsNameFile((FileObj)a->file));
-
-    io = SDL_IOFromFile(fname, "rb");
-  } else if ( (fd = Sopen_object(a->file, "rbr")) )
-  { io = IOSTREAM_to_SDL_IOStream(fd);
-  }
-
-  if ( io )
   { const char *type = animation_type(io);
 
     if ( !(type && (dec = IMG_CreateAnimationDecoder_IO(io, false, type))) &&
@@ -418,8 +407,51 @@ ws_load_animation(Animation a)
   { rc = add_animation_frame(a, single, 0);
   }
 
+  return rc;
+}
+#else /* SDL_image < 3.4: no metadata and no encoder */
+
+static status
+load_animation_frames(Animation a, SDL_IOStream *io)
+{ IMG_Animation *anim = IMG_LoadAnimation_IO(io, false);
+  status rc = FAIL;
+
+  if ( anim )
+  { rc = SUCCEED;
+    for(int i=0; rc && i < anim->count; i++)
+    { rc = add_animation_frame(a, anim->frames[i], anim->delays[i]);
+      anim->frames[i] = NULL;		/* add_animation_frame() owns it */
+    }
+    IMG_FreeAnimation(anim);
+  }
+
+  return rc;
+}
+#endif
+
+/**
+ * Load all frames of the animated image file `a->file`.  A file that
+ * is not animated becomes a single frame.
+ */
+status
+ws_load_animation(Animation a)
+{ IOSTREAM *fd = NULL;
+  SDL_IOStream *io = NULL;
+  status rc = FAIL;
+
+  if ( instanceOfObject(a->file, ClassFile) )
+  { const char *fname =
+      charArrayToFN((CharArray)getOsNameFile((FileObj)a->file));
+
+    io = SDL_IOFromFile(fname, "rb");
+  } else if ( (fd = Sopen_object(a->file, "rbr")) )
+  { io = IOSTREAM_to_SDL_IOStream(fd);
+  }
+
   if ( io )
+  { rc = load_animation_frames(a, io);
     SDL_CloseIO(io);
+  }
   if ( fd )
     Sclose(fd);
 
@@ -438,6 +470,7 @@ ws_load_animation(Animation a)
  * default, the extension of the file selects it.  `quality` is -1 for
  * the default of SDL_image.
  */
+#if SDL_IMAGE_VERSION_ATLEAST(3, 4, 0)
 status
 ws_save_animation(Animation a, FileObj file, Name format, int quality)
 { const char *fname = nameToFN(file->name);
@@ -478,6 +511,13 @@ ws_save_animation(Animation a, FileObj file, Name format, int quality)
 
   succeed;
 }
+#else
+status
+ws_save_animation(Animation a, FileObj file, Name format, int quality)
+{ return errorPce(a, NAME_cannotSave, file,
+		  CtoName("saving animations requires SDL_image 3.4"));
+}
+#endif
 
 /* The standard Huffman tables of JPEG (ITU T.81, Annex K.3) as a DHT
  * segment.  The MJPG of many cameras leaves them out and expects the
@@ -937,6 +977,29 @@ save_format_from_file(const char *file)
   return "png";
 }
 
+/* IMG_SaveTyped_IO() for SDL_image before 3.4, which only writes
+ * PNG, JPEG and AVIF.  SDL itself writes BMP.
+ */
+
+#if !SDL_IMAGE_VERSION_ATLEAST(3, 4, 0)
+static bool
+IMG_SaveTyped_IO(SDL_Surface *surf, SDL_IOStream *io, bool closeio,
+		 const char *format)
+{ if ( strcmp(format, "png") == 0 )
+    return IMG_SavePNG_IO(surf, io, closeio);
+  if ( strcmp(format, "jpeg") == 0 )
+    return IMG_SaveJPG_IO(surf, io, closeio, 90);
+  if ( strcmp(format, "avif") == 0 )
+    return IMG_SaveAVIF_IO(surf, io, closeio, 90);
+  if ( strcmp(format, "bmp") == 0 )
+    return SDL_SaveBMP_IO(surf, io, closeio);
+
+  if ( closeio )
+    SDL_CloseIO(io);
+  return SDL_SetError("Saving %s images requires SDL_image 3.4", format);
+}
+#endif
+
 /* Save `surf` to the file `fname` in `format`.  JPEG, WebP and AVIF
  * use `quality` (0..100); IMG_SaveTyped_IO() would use 90.
  */
@@ -946,8 +1009,10 @@ save_surface(SDL_Surface *surf, const char *fname, const char *format,
 	     int quality)
 { if ( strcmp(format, "jpeg") == 0 )
     return IMG_SaveJPG(surf, fname, quality);
+#if SDL_IMAGE_VERSION_ATLEAST(3, 4, 0)
   if ( strcmp(format, "webp") == 0 )
     return IMG_SaveWEBP(surf, fname, (float)quality);
+#endif
   if ( strcmp(format, "avif") == 0 )
     return IMG_SaveAVIF(surf, fname, quality);
 

@@ -299,6 +299,7 @@ ws_cursor_font_index(Name name)
  * milliseconds or less for 100 milliseconds; for SDL 0 means forever.
  */
 
+#if SDL_VERSION_ATLEAST(3, 4, 0)
 static SDL_Cursor *
 animated_cursor(CursorObj c, Animation a)
 { int n = valInt(a->frames->size);
@@ -327,6 +328,28 @@ animated_cursor(CursorObj c, Animation a)
 
   return cursor;
 }
+#else
+/* SDL before 3.4 has no animated cursors; use the first frame */
+
+static SDL_Cursor *
+animated_cursor(CursorObj c, Animation a)
+{ SDL_Cursor *cursor = NULL;
+
+  if ( valInt(a->frames->size) > 0 )
+  { Image img = getElementVector(a->frames, ONE);
+    SDL_Surface *surf = pceImage2SDL_Surface(img);
+
+    if ( surf )
+    { cursor = SDL_CreateColorCursor(surf,
+				     valInt(c->hot_spot->x),
+				     valInt(c->hot_spot->y));
+      SDL_DestroySurface(surf);
+    }
+  }
+
+  return cursor;
+}
+#endif
 
 status
 ws_create_cursor(CursorObj c, DisplayObj d)
