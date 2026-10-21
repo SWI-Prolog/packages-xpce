@@ -81,7 +81,7 @@ test(emoji_default_finds_via_fallback, [condition(emoji_by_fallback)]) :-
     emoji(C),
     send(F, member, C).
 
-test(emoji_main_only_fails, [fail]) :-
+test(emoji_not_in_main_font, [fail]) :-
     new(F, font(sans, normal, 12)),
     emoji(C),
     send(F, member, C, @off).

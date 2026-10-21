@@ -323,11 +323,11 @@ test(round_trip_is_identity) :-
     near(TX, 0), near(TY, 0),
     free(T), free(Inv).
 
-test(singular_inverse_fails, [fail]) :-
+test(singular_has_no_inverse, [fail]) :-
     mk_transform(1, 1, 1, 1, 0, 0, T),
     get(T, inverse, _).
 
-test(singular_invert_send_fails, [fail]) :-
+test(singular_cannot_invert, [fail]) :-
     mk_transform(1, 1, 1, 1, 0, 0, T),
     send(T, invert).
 

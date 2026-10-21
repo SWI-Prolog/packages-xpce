@@ -122,7 +122,7 @@ test(partial, R == failing('Failing ISearch: barz', bar, z)) :-
     isearch('foo(X) :- bar(X).', `barz`, R).
 test(no_match, R == failing('Failing ISearch: q', '', q)) :-
     isearch('foo(X) :- bar(X).', `q`, R).
-test(stays_failing, R == failing('Failing ISearch: barzy', bar, zy)) :-
+test(extend_past_mismatch, R == failing('Failing ISearch: barzy', bar, zy)) :-
     isearch('foo(X) :- bar(X).', `barzy`, R).
 test(escaped, R == failing('Failing ISearch: a<c', 'a&lt;', c)) :-
     isearch('a<b', `a<c`, R).

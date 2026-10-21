@@ -4720,7 +4720,7 @@ test(find_returns_the_start_on_request, [setup(test_begin(T))]) :-
     term_find(T, 0, world, @default, start, @default, @default, Index),
     assertion(Index == 6).
 
-test(find_fails_without_a_match, [setup(test_begin(T))]) :-
+test(find_without_a_match, [setup(test_begin(T))]) :-
     three_lines(T),
     \+ term_find(T, 0, 'nowhere at all', _).
 
@@ -4835,7 +4835,7 @@ test(scroll_to_leaves_a_visible_line_alone, [setup(test_begin(T))]) :-
     term_bubble(T, _, After, _),
     assertion(After == Before).
 
-test(scroll_to_fails_on_the_alternate_screen,
+test(no_scroll_to_on_the_alternate_screen,
      [ setup(test_begin(T)),
        cleanup(normal_screen(T))
      ]) :-

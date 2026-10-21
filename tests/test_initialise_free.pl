@@ -32,7 +32,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(test_failed_initialise, [test_failed_initialise/0]).
+:- module(test_initialise_free, [test_initialise_free/0]).
 
 /** <module> Free objects whose ->initialise failed
 
@@ -42,15 +42,15 @@ then, which used to crash some ->unlink methods.
 
 Run with:
 
-    swipl -g test_failed_initialise -t halt packages/xpce/tests/test_failed_initialise.pl
+    swipl -g test_initialise_free -t halt packages/xpce/tests/test_initialise_free.pl
 */
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
 :- use_module(library(pane_frame)).
 
-test_failed_initialise :-
-    run_tests([failed_initialise]).
+test_initialise_free :-
+    run_tests([initialise_free]).
 
 %   fails_to_create(+Term)
 %
@@ -59,7 +59,7 @@ test_failed_initialise :-
 fails_to_create(Term) :-
     \+ pce_catch_error(_, new(_, Term)).
 
-:- begin_tests(failed_initialise).
+:- begin_tests(initialise_free).
 
 test(frame) :-
     fails_to_create(frame(x, y, z, w)).
@@ -76,4 +76,4 @@ test(class, Super == object) :-
     new(C, class(test_failed_class)),
     get(C?super_class, name, Super).
 
-:- end_tests(failed_initialise).
+:- end_tests(initialise_free).

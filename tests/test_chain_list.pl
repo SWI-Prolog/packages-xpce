@@ -146,7 +146,7 @@ test(code_references_after_exception, After == Before) :-
     get(P, code_references, Before),
     catch(( member_chain(X, C), X == a, throw(stop) ), stop, true),
     get(P, code_references, After).
-test(code_references_after_failure, After == Before) :-
+test(code_references_after_no_match, After == Before) :-
     new(P, point),
     new(C, chain(P, a, b)),
     get(P, code_references, Before),

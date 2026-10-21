@@ -123,7 +123,7 @@ test(and_the_end_of_the_one_after_it, true(EOC == 42)) :-
     mode(Text, M),
     get(M, forward_clause, 33, EOC).
 
-test(it_fails_past_the_last_clause, fail) :-
+test(nothing_past_the_last_clause, fail) :-
     clauses(Text),
     mode(Text, M),
     get(M, forward_clause, 42, _).
