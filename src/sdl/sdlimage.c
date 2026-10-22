@@ -653,6 +653,35 @@ ws_decode_mjpg(const Uint8 *d, size_t len)
   return surf;
 }
 
+/* Convert `surf` to ARGB8888.  Before 3.4, SDL only converts YUV to
+ * RGB with the same primaries, so BT.601 video cannot be converted to
+ * sRGB.  We keep the primaries; the difference is hardly visible.
+ */
+
+static SDL_Surface *
+convert_to_argb(SDL_Surface *surf)
+{
+#if !SDL_VERSION_ATLEAST(3, 4, 0)
+  if ( SDL_ISPIXELFORMAT_FOURCC(surf->format) )
+  { SDL_Colorspace cs = SDL_GetSurfaceColorspace(surf);
+    SDL_Colorspace rgb = SDL_DEFINE_COLORSPACE(SDL_COLOR_TYPE_RGB,
+					       SDL_COLOR_RANGE_FULL,
+					       SDL_COLORSPACEPRIMARIES(cs),
+					       SDL_TRANSFER_CHARACTERISTICS_SRGB,
+					       SDL_MATRIX_COEFFICIENTS_IDENTITY,
+					       SDL_CHROMA_LOCATION_NONE);
+    SDL_Surface *argb = SDL_ConvertSurfaceAndColorspace(
+			  surf, SDL_PIXELFORMAT_ARGB8888, NULL, rgb, 0);
+
+    if ( argb )
+      SDL_SetSurfaceColorspace(argb, SDL_COLORSPACE_SRGB);
+    return argb;
+  }
+#endif
+
+  return SDL_ConvertSurface(surf, SDL_PIXELFORMAT_ARGB8888);
+}
+
 /**
  * Replace the pixels of `image` by those of `surf`, which may have any
  * format, e.g., the YUV format of a camera.  The cairo surface of the
@@ -674,7 +703,7 @@ ws_set_image_pixels(Image image, SDL_Surface *surf)
     surf = decoded;
   }
 
-  SDL_Surface *argb = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_ARGB8888);
+  SDL_Surface *argb = convert_to_argb(surf);
 
   if ( decoded )
     SDL_DestroySurface(decoded);
