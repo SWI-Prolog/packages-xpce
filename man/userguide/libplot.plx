@@ -344,3 +344,114 @@ attached to.
 \end{description}
 
 \postscriptfig{boot}{Stacked bars with associated buttons}
+
+\subsection{Hierarchical distributions using ``plot/hierarchy_chart''}
+\label{sec:hierarchychart}
+\index{treemap}\index{sunburst}\index{rings chart}\index{disk usage}%
+
+The library \pllib{plot/hierarchy_chart} shows how a quantity, such as
+disk space, time or memory, is distributed over a hierarchy, in the
+style of GNOME's disk usage analyser \program{baobab}.  The hierarchy
+is a tree of \class{hierarchy_node} objects.  There are two views on
+the same tree: a \class{rings_chart} shows the \emph{focus} node as a
+disc surrounded by a ring per level below it, where the angle of a
+segment is its share of the focus; a \class{treemap_chart} divides a
+rectangle into a rectangle per child, nested for the levels below it.
+Both views colour a node by its position in the focus, so the colours
+of the two views agree.  Moving the pointer over a node highlights it
+and shows a balloon with its name and value.  Clicking a node zooms
+into it: it becomes the new focus.  Clicking the focus zooms out.
+
+\begin{pcecode}
+:- use_module(library(plot/hierarchy_chart)).
+
+show_usage :-
+	hierarchy_from_term(node(home, 0,
+				 [ node(src, 0, [ swipl-900, other-300 ]),
+				   photos-1500,
+				   notes-10
+				 ]), Root),
+	new(F, frame('Usage')),
+	send(F, append, new(W, hierarchy_window(Root))),
+	send(W, unit, bytes),
+	send(new(D, dialog), below, W),
+	send(D, append, label(reporter)),
+	send(F, open).
+\end{pcecode}
+
+\begin{description}
+    \predicate{hierarchy_from_term}{2}{+Term, -Node}
+Create a tree of \class{hierarchy_node} objects from a term
+\term{node}{Label, Value, Children}, \term{node}{Label, Value, Children,
+Options} or \exam{Label-Value} for a leaf.  Options is a list holding
+\term{data}{Data} and \term{colour}{Colour}.
+\end{description}
+
+\subsubsection{Class \class{hierarchy_node}}
+
+\begin{description}
+    \sendmethod{hierarchy_node}{initialise}{label=char_array,
+					    value=[num], data=[any]*}
+Create a node.  \arg{value} is the value of the node itself, excluding
+the nodes below it, and \arg{data} is application data, available as
+<-data.
+    \sendmethod{hierarchy_node}{append}{hierarchy_node}
+Add a node below this one.
+    \getmethod{hierarchy_node}{total}{}{num}
+The value of the node and all nodes below it.  The total is cached and
+recomputed if a value below it changes through ->value, ->append or
+->delete.
+    \getmethod{hierarchy_node}{path_label}{separator=[char_array]}{string}
+The labels from the root down to this node.
+    \sendmethod{hierarchy_node}{colour}{colour*}
+Use this colour rather than one computed from the node's position.
+\end{description}
+
+\subsubsection{Classes \class{rings_chart} and \class{treemap_chart}}
+
+Both are subclasses of the abstract class \class{hierarchy_chart}, a
+\class{device}.  The segments of the charts are instances of
+\class{hierarchy_segment}, a \class{path} that accepts events exactly
+where it is painted (see `path<->event_area').
+
+\begin{description}
+    \sendmethod{hierarchy_chart}{initialise}{root=[hierarchy_node]*,
+					     extent=[size]}
+Create a chart of the given size (default 400x400).
+    \sendmethod{hierarchy_chart}{root}{hierarchy_node*}
+Show a new hierarchy, with the root as focus.
+    \sendmethod{hierarchy_chart}{focus}{hierarchy_node*}
+Zoom to a node.  See also ->zoom_out and ->zoom_to_root.
+    \sendmethod{hierarchy_chart}{extent}{size}
+Resize the chart.
+    \sendmethod{hierarchy_chart}{max_depth}{1..}
+The number of levels shown below the focus.  The default is the class
+variable \classvar{hierarchy_chart}{max_depth}: 5 for rings and 4 for a treemap.
+    \sendmethod{hierarchy_chart}{unit}{\{bytes,seconds,count,plain\}}
+How values are shown.  Redefine <-format_value in a subclass for other
+units.
+    \sendmethod{hierarchy_chart}{select_message}{code*}
+Called with a node without children that is clicked.
+    \sendmethod{hierarchy_chart}{focus_message}{code*}
+Called with the new focus.
+    \sendmethod{hierarchy_chart}{hover_message}{code*}
+Called with the node below the pointer, or \const{@nil} if the pointer
+leaves the chart.
+\end{description}
+
+\subsubsection{Class \class{hierarchy_window}}
+
+A \class{picture} that shows a chart filling the window.  It reports
+the path and value of the node below the pointer, and its popup zooms
+out and switches between the views.
+
+\begin{description}
+    \sendmethod{hierarchy_window}{initialise}{root=[hierarchy_node]*,
+					      view=[\{rings,treemap\}]}
+Create the window.  The default view is the class variable
+\classvar{hierarchy_window}{view}.
+    \sendmethod{hierarchy_window}{view}{\{rings,treemap\}}
+Switch the view, keeping the focus.
+    \getmethod{hierarchy_window}{chart}{}{hierarchy_chart}
+The chart shown.  ->root, ->focus and ->unit are passed to it.
+\end{description}

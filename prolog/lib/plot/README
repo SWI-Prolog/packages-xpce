@@ -1,6 +1,7 @@
 Plotting graphs and charts.  For a  short  demo, please consult demo.pl;
 library('demo/charts') is a gallery covering both this library and
-library('plot/barchart').  Documentation for this library is in the
+library('plot/barchart').  library('plot/hierarchy_chart') shows how
+a quantity is distributed over a hierarchy as rings or as a treemap.  Documentation for this library is in the
 XPCE/Prolog Userguide.
 
 In XPCE 5.1.3 a number of extensions have been implemented to improve

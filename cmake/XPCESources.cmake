@@ -240,7 +240,8 @@ set(XPCE_DATA_prolog_lib_man behaviour_item.pl classification.pl classmap.pl
 
 set(XPCE_DATA_prolog_lib_math expandmath.pl)
 
-set(XPCE_DATA_prolog_lib_plot axis.pl barchart.pl demo.pl plotter.pl README)
+set(XPCE_DATA_prolog_lib_plot axis.pl barchart.pl demo.pl hierarchy_chart.pl
+    plotter.pl README)
 
 set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl)
 if(MULTI_THREADED)
