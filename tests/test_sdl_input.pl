@@ -500,7 +500,11 @@ test(cancel_primary, Ids == [ms_left_down, ms_left_up]) :-
 
 :- end_tests(sdl_touch).
 
-:- begin_tests(sdl_pinch, [cleanup(close_windows)]).
+%   SDL added pinch events in 3.4
+
+:- begin_tests(sdl_pinch, [ condition(sdl_version(30400)),
+                            cleanup(close_windows)
+                          ]).
 
 test(pinch, [Ids-Scales-Kinds == [pinch_begin, pinch_update, pinch_end]-
                                  [1, 1.25, 1]-[mouse, mouse, mouse]]) :-
@@ -515,6 +519,10 @@ test(pinch, [Ids-Scales-Kinds == [pinch_begin, pinch_update, pinch_end]-
     kinds(Es, Kinds).
 
 :- end_tests(sdl_pinch).
+
+sdl_version(Min) :-
+    get(@pce, window_system_version, V),
+    V >= Min.
 
 %!  zoom_figure(-Window, -Figure) is det.
 %
