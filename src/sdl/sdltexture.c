@@ -1243,6 +1243,9 @@ white_texture(void)
  * rectangle, ignoring the blend mode if the texture coordinates are
  * clamped (SDL 3.4).  We avoid this by repeating the texture there,
  * and by always using a texture: a white pixel if the layer has none.
+ * Its texture coordinates are the positions, as SDL 3.2 fills a
+ * rectangle whose texture coordinates have no size, ignoring the
+ * blend mode.  Clamped or repeated, the pixel stays white.
  */
 
 static void
@@ -1291,7 +1294,7 @@ render_mesh(FrameObj fr, const layer_canvas *cv, SdlLayer l, SDL_Renderer *r,
 			       s->color.b*tb*k, a };
     v[i].tex_coord = textured ? (SDL_FPoint){ s->tex_coord.x/tw,
 					      s->tex_coord.y/th }
-			      : (SDL_FPoint){0.5f, 0.5f};
+			      : s->position;
   }
 
   SDL_SetTextureBlendMode(ft->texture, layer_blend_mode(l, pm));
