@@ -70,6 +70,43 @@ run_demo(File, Goal) :-
     New \== [],
     forall(member(F, New), send(F, destroy)).
 
+scan_tree(Dir) :-
+    tmp_file(du, Dir),
+    make_directory(Dir),
+    directory_file_path(Dir, sub, Sub),
+    make_directory(Sub),
+    sized_file(Dir, 'a.txt', 100),
+    sized_file(Sub, 'b.txt', 50),
+    sized_file(Sub, 'c.txt', 3000),
+    directory_file_path(Sub, loop, Loop),   % a symbolic link to itself
+    catch(link_file(loop, Loop, symbolic), error(_, _), true).
+
+sized_file(Dir, Name, Size) :-
+    directory_file_path(Dir, Name, File),
+    length(Codes, Size),
+    maplist(=(0'x), Codes),
+    setup_call_cleanup(open(File, write, Out),
+                       format(Out, '~s', [Codes]),
+                       close(Out)).
+
+%   wait_for(:Get, :Test, +Timeout)
+%
+%   Dispatch events until Test is true after Get.
+
+wait_for(Get, Test, Timeout) :-
+    get_time(T0),
+    repeat,
+      ignore(send(@display, dispatch)),
+      call(Get),
+      (   call(Test)
+      ->  !
+      ;   get_time(Now),
+          Now-T0 > Timeout
+      ->  !, fail
+      ;   sleep(0.05),
+          fail
+      ).
+
 :- begin_tests(graphics_demos).
 
 test(paths)   :- run_demo(paths, paths_demo:paths_demo).
@@ -77,6 +114,37 @@ test(paint)   :- run_demo(paint, paint_demo:paint_demo).
 test(compose) :- run_demo(compose, compose_demo:compose_demo).
 test(canvas)  :- run_demo(canvas_demo, canvas_demo:canvas_demo).
 test(ripples) :- run_demo(ripples, ripples_demo:ripples_demo).
+test(disk_usage) :-                     % destroyed while scanning
+    module_property(test_graphics_demos, file(File)),
+    file_directory_name(File, Dir),
+    run_demo(disk_usage, disk_usage_demo:disk_usage_demo(Dir)).
+
+%   Scan a folder with files of 100, 50 and 3000 bytes and a symbolic
+%   link that loops.  The scan runs
+%   in a thread that passes the result to the xpce thread, so we
+%   dispatch events until it arrives.
+
+test(disk_usage_scan, [ Total-Labels-SubLabels ==
+                        3150-[sub, 'a.txt']-['b.txt', 'c.txt'],
+                        setup(scan_tree(Dir)),
+                        cleanup(delete_directory_and_contents(Dir))
+                      ]) :-
+    use_module(demo(disk_usage)),
+    new(F, disk_usage_demo:disk_usage_frame),
+    send(F, scan, Dir),
+    get(F, chart_window, W),
+    wait_for(get(W, root, Root), Root \== @nil, 10),
+    get(Root, total, Total),
+    child_labels(Root, Labels),
+    get(Root?children, head, Sub),
+    child_labels(Sub, SubLabels0),
+    msort(SubLabels0, SubLabels),
+    send(F, destroy).
+
+child_labels(Node, Labels) :-
+    get(Node?children, map, @arg1?label?value, Ch),
+    chain_list(Ch, Labels).
+
 test(blend_menu) :-
     use_module(demo(compose)),
     compose_demo:compose_demo,

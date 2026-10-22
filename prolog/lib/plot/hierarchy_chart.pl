@@ -955,7 +955,8 @@ show_label(C, Text, Fill, X, Y) :-
 
 class_variable(view, {rings,treemap}, rings, "Initial view").
 
-variable(view, {rings,treemap}, get, "Current view").
+variable(view,         {rings,treemap}, get,  "Current view").
+variable(view_message, code*,           both, "Called with a new view").
 
 initialise(W, Root:root=[hierarchy_node]*, View:view=[{rings,treemap}]) :->
     "Create, showing Root as View"::
@@ -967,6 +968,7 @@ initialise(W, Root:root=[hierarchy_node]*, View:view=[{rings,treemap}]) :->
     ),
     view_class(TheView, Class),
     send(W, slot, view, TheView),
+    send(W, slot, view_message, @nil),
     send(W, display, new(C, Class), point(0,0)),
     send(W, chart_messages, C),
     default(Root, @nil, TheRoot),
@@ -1037,7 +1039,12 @@ view(W, View:{rings,treemap}) :->
         send(W, slot, view, View),
         send(W, display, New, point(0,0)),
         send(W, resize),
-        send(New, focus, Focus)
+        send(New, focus, Focus),
+        (   get(W, view_message, Msg),
+            Msg \== @nil
+        ->  send(Msg, forward, View)
+        ;   true
+        )
     ).
 
 copy_slot(From, To, Slot) :-

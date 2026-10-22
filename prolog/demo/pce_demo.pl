@@ -320,6 +320,11 @@ demo('Chart gallery',
      demo(charts),
      charts_demo).
 
+demo('Disk usage',
+     'Rings and treemap of the disk space of a folder',
+     demo(disk_usage),
+     disk_usage_demo).
+
 demo('London Tube',
      'Interactive London tube map: zoom, pan, search and toggle lines',
      demo(tube_gui),

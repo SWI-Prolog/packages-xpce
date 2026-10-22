@@ -451,7 +451,11 @@ out and switches between the views.
 Create the window.  The default view is the class variable
 \classvar{hierarchy_window}{view}.
     \sendmethod{hierarchy_window}{view}{\{rings,treemap\}}
-Switch the view, keeping the focus.
+Switch the view, keeping the focus.  This calls <-view_message with
+the new view.
+    \sendmethod{hierarchy_window}{view_message}{code*}
+Called with the new view if the view changes, for example from the
+popup.
     \getmethod{hierarchy_window}{chart}{}{hierarchy_chart}
 The chart shown.  ->root, ->focus and ->unit are passed to it.
 \end{description}
