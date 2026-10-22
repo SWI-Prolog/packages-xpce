@@ -76,6 +76,7 @@
 :- autoload(library(pce_drop_target),
             [drop_target_event/4, drop_target_show_rejected/3]).
 :- autoload(library(desktop), [desktop_open/1]).
+:- autoload(library(open_document), [open_document/1]).
 :- autoload(library(process), [process_create/3, process_wait/2]).
 :- autoload(library(shell), [shell_command/1]).
 :- autoload(library(pce_theme), [adaptive_colour/3]).
@@ -1778,49 +1779,13 @@ tty_link(_PT, URL) :-
 %!  tty_open(+Location) is det.
 %
 %   Open a file link.  A location that   carries a line number is opened
-%   using edit/1.  A plain file is  opened   using  the editor unless we
-%   know it is not a text file,  e.g., an image or PDF document.
+%   using edit/1, a plain file using open_document/1.
 
 tty_open(file(File)) :-
     !,
-    (   (   exists_directory(File)
-        ;   binary_file(File)
-        )
-    ->  desktop_open(File)
-    ;   call(edit(file(File)))
-    ).
+    open_document(File).
 tty_open(Location) :-
     call(edit(Location)).
-
-%!  binary_file(+File) is semidet.
-%
-%   True when we know File cannot be edited as text.  Note that
-%   file_mime_type/2 returns `application/unknown` if it does not know
-%   the extension, so we must ask for known binary types rather than
-%   for known text types.
-
-:- if(exists_source(library(http/mimetype))).
-:- autoload(library(http/mimetype), [file_mime_type/2]).
-
-binary_file(File) :-
-    file_mime_type(File, Type),
-    binary_type(Type).
-:- else.
-binary_file(_) :-               % library(http) is not installed and we
-    fail.                       % cannot tell.  Assume text.
-:- endif.
-
-binary_type(image/_).
-binary_type(audio/_).
-binary_type(video/_).
-binary_type(application/pdf).
-binary_type(application/msword).
-binary_type(application/zip).
-binary_type(application/wasm).
-binary_type(application/'x-gzip').
-binary_type(application/'x-gtar').
-binary_type(application/'x-java-archive').
-binary_type(application/'octet-stream').
 
 
 %!  link_file_location(+Terminal, +Link, -File, -Location) is semidet.

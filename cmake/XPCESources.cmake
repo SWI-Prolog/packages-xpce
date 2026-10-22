@@ -153,7 +153,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     draw_extend.pl edit_dialog.pl emacs_extend.pl emacs_tags.pl file_item.pl
     find_file_dialog.pl find_file.pl getpass.pl gui_tracer.pl
     help_message.pl http_client.pl hyper.pl imageops.pl isocomp.pl
-    keybinding.pl make_dialog.pl MKINDEX.pl Overview pan_zoom.pl
+    keybinding.pl make_dialog.pl MKINDEX.pl open_document.pl Overview pan_zoom.pl
     password_item.pl pce_arm.pl pce_arrow_item.pl pce_class_index.pl
     pce_class_variable_editor.pl pce_colour_editor.pl pce_cursor_item.pl
     pce_style_item.pl pce_preferences.pl pce_theme_editor.pl
