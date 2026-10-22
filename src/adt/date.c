@@ -232,6 +232,7 @@ setDate(Date d, Int s, Int m, Int h, Int D, Int M, Int Y)
   if ( notDefault(D) && (v=valInt(D)) >= 1    && v <= 31   ) tm->tm_mday = v;
   if ( notDefault(M) && (v=valInt(M)-1) >= 0  && v <= 11   ) tm->tm_mon  = v;
   if ( notDefault(Y) && (v=valInt(Y)-1900) >= 70 && v <= 1050 ) tm->tm_year = v;
+  tm->tm_isdst = -1;		/* DST of the new date, not of the old one */
   if ( (t = mktime(tm)) == (time_t)-1 )
     return errorPce(d->class, NAME_representation,
 		    CtoName("POSIX timestamp representation"));

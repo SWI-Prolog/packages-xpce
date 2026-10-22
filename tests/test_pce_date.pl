@@ -91,6 +91,11 @@ test(string, A == 'Thu Jul  2 03:04:05 2026') :-
     new(D, date(5,4,3,2,7,2026)),
     get(D, string, S),
     get(S, value, A).
+test(dst, [Jan,Jul] == ['03:04:05','03:04:05']) :-
+    \+ current_prolog_flag(windows, true),
+    with_tz('CET-1CEST,M3.5.0,M10.5.0/3',
+            ( hms(date(5,4,3,2,1,2026), Jan),
+              hms(date(5,4,3,2,7,2026), Jul) )).
 test(before_1970, [Y,M,Day] == [1969,12,31]) :-
     new(D, date(0,0,12,1,1,1970)),
     send(D, advance, -1, day),
@@ -111,6 +116,14 @@ test(before_1970_strings, true) :-
     ignore(get(D, time_zone, _)).
 
 :- end_tests(pce_date).
+
+hms(Term, HMS) :-
+    new(D, Term),
+    get(D, string, S),
+    get(S, value, A),
+    split_string(A, " ", " ", Parts),
+    nth1(4, Parts, Str),
+    atom_string(HMS, Str).
 
 code_type_digit(C) :-
     code_type(C, digit).
