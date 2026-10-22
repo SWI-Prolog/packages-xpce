@@ -105,6 +105,11 @@ owner(W, Owner:any) :<-
 
 %   The owner may be gone, e.g., closed from the keyboard while the
 %   balloon was shown.  Then the balloon is hidden.
+%
+%   A move inside the owner updates the balloon and is then processed
+%   as usual, so the owner can track the pointer, e.g., to highlight
+%   what is below it.  A loc_still is not passed on, as that would open
+%   the balloon again.
 
 try_hide(W, Ev:event) :->
     (   get(W, owner, Owner),
@@ -128,7 +133,8 @@ try_hide(W, Ev:event) :->
             ->  true
             ;   send(W, feedback, @nil, Ev)
             )
-        )
+        ),
+        \+ send(Ev, is_a, loc_move)        % normal processing of a move
     ;   send(W, owner, @nil),
         send(W, hide),
         fail                        % normal event-processing

@@ -220,6 +220,26 @@ test(key_hides, [ condition(combo_boxes),
     get(TI, selection, Typed),
     send(D?frame, destroy).
 
+%   A move inside the owner of the balloon updates the balloon and is
+%   then processed as usual, so the owner can track the pointer.  The
+%   balloon need not be open for this: try_hide/1 only compares the
+%   message for the event with that of the balloon.
+
+test(move_is_passed_on, [ Moved-Owner == false-B ]) :-
+    new(D, dialog),
+    send(D, append, new(B, button(one))),
+    send(B, help_message, tag, 'A tip'),
+    send(D, open),
+    get(B?area, center, point(X, Y)),
+    send(@help_message_window, owner, B),
+    send(@help_message_window, slot, message, string('A tip')),
+    truth(send(@help_message_window, try_hide, event(loc_move, D, X, Y)),
+          Moved),
+    get(@help_message_window, owner, Owner),
+    send(@help_message_window, owner, @nil),
+    send(@help_message_window, slot, message, @nil),
+    send(D?frame, destroy).
+
 :- end_tests(help_message_owner).
 
 %   count_tip_handlers(-N)
