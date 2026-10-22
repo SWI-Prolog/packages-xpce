@@ -359,8 +359,12 @@ segment is its share of the focus; a \class{treemap_chart} divides a
 rectangle into a rectangle per child, nested for the levels below it.
 Both views colour a node by its position in the focus, so the colours
 of the two views agree.  Moving the pointer over a node highlights it
-and shows a balloon with its name and value.  Clicking a node zooms
-into it: it becomes the new focus.  Clicking the focus zooms out.
+and shows a balloon with its name and value.  If the pointer rests on a
+node of a rings chart, the names of its children are shown around the
+rings, each connected to its segment by a line (see the class variables
+\classvar{hierarchy_chart}{label_delay} and
+\classvar{rings_chart}{max_labels}).  Clicking a node zooms into it: it
+becomes the new focus.  Clicking the focus zooms out.
 
 \begin{pcecode}
 :- use_module(library(plot/hierarchy_chart)).
@@ -420,8 +424,11 @@ where it is painted (see `path<->event_area').
 					     extent=[size]}
 Create a chart of the given size (default 400x400).
     \sendmethod{hierarchy_chart}{root}{hierarchy_node*}
-Show a new hierarchy, with the root as focus.
-    \sendmethod{hierarchy_chart}{focus}{hierarchy_node*}
+Show a new hierarchy, with the root as focus.  The chart owns the
+hierarchy: the nodes refer to each other and are thus not reclaimed
+automatically, so the chart frees the old hierarchy when it gets a new
+one and when it is freed itself.
+    \sendmethod{hierarchy_chart}{focus_node}{hierarchy_node*}
 Zoom to a node.  See also ->zoom_out and ->zoom_to_root.
     \sendmethod{hierarchy_chart}{extent}{size}
 Resize the chart.
@@ -464,5 +471,5 @@ popup.
 The node below the pointer when the popup opened, for items that act on
 it.  Add such items to `window<-popup'.
     \getmethod{hierarchy_window}{chart}{}{hierarchy_chart}
-The chart shown.  ->root, ->focus and ->unit are passed to it.
+The chart shown.  ->root, ->focus_node and ->unit are passed to it.
 \end{description}

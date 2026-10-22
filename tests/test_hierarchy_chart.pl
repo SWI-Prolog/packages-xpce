@@ -217,11 +217,11 @@ test(zoom, [Labels == [b, all, all]]) :-
     new(C, treemap_chart(R)),
     child(R, b, B),
     send(C, clicked, B),
-    label(C?focus, L1),
+    label(C?focus_node, L1),
     send(C, clicked, B),                % the focus: zoom out
-    label(C?focus, L2),
+    label(C?focus_node, L2),
     send(C, clicked, R),                % the root: nothing
-    label(C?focus, L3),
+    label(C?focus_node, L3),
     Labels = [L1, L2, L3].
 test(select_leaf, [Selected-Focus == [a]-all]) :-
     tree(R),
@@ -231,16 +231,16 @@ test(select_leaf, [Selected-Focus == [a]-all]) :-
     child(R, a, A),
     send(C, clicked, A),
     chain_list(Ch, Selected),
-    label(C?focus, Focus).
+    label(C?focus_node, Focus).
 test(switch_view, [Focus-Class == b-treemap_chart]) :-
     tree(R),
     new(W, hierarchy_window(R, rings)),
     child(R, b, B),
-    send(W, focus, B),
+    send(W, focus_node, B),
     send(W, view, treemap),
     get(W, chart, C),
     get(C, class_name, Class),
-    label(C?focus, Focus),
+    label(C?focus_node, Focus),
     send(W, destroy).
 test(describe, S == "y\n9 bytes (64.3% of b)") :-
     tree(R),
@@ -248,7 +248,7 @@ test(describe, S == "y\n9 bytes (64.3% of b)") :-
     send(C, unit, bytes),
     child(R, b, B),
     child(B, y, Y),
-    send(C, focus, B),
+    send(C, focus_node, B),
     get(C, describe, Y, Str),
     get(Str, value, A),
     atom_string(A, S).
@@ -257,7 +257,7 @@ test(describe_title, S == "a long name\n1") :-
                                    ]), R),
     new(C, rings_chart(R)),
     child(R, b, B),
-    send(C, focus, B),
+    send(C, focus_node, B),
     get(C, describe, B, Str),
     get(Str, value, A),
     atom_string(A, S).
@@ -268,5 +268,92 @@ test(format_value, Texts == ['1.5 kB', '2.50 s', '12.0 ms', '1,234,567']) :-
 
 format_value(Unit-Value, Text) :-
     hierarchy_chart:format_value(Unit, Value, Text).
+
+%   window->focus and graphical->focus are used by gestures, e.g., the
+%   popup of the window.  They are not the node zoomed into.
+
+test(window_focus, [Context == graphical]) :-
+    tree(R),
+    new(W, hierarchy_window(R)),
+    get(W, chart, C),
+    send(W, focus, C),
+    send(W, focus, @nil),
+    get(W?focus_node?label, value, all),
+    get(class(rings_chart), send_method, focus, M),
+    get(M?context, name, Context),
+    send(W, destroy).
+
+%   Resting on b names its children x and y around the rings.
+
+test(child_labels, [Names == [x, y]]) :-
+    tree(R),
+    new(C, rings_chart(R, size(400, 400))),
+    get(C?graphicals, find,
+        and(message(@arg1, instance_of, hierarchy_segment),
+            @arg1?node?label == b), S),
+    send(C, hover_segment, S),
+    send(C, show_child_labels),
+    get(C, member, child_labels, D),
+    get(D?graphicals, find_all, message(@arg1, instance_of, text), Texts),
+    get(Texts, map, @arg1?string?value, Chain),
+    chain_list(Chain, Names0),
+    msort(Names0, Names),
+    send(C, hover_segment, @nil),
+    \+ get(C, member, child_labels, _),
+    free(C).
+
+%   The chart owns its hierarchy and its segments.
+
+test(root_replaced_frees, [Alive == false]) :-
+    tree(R),
+    child(R, a, A),
+    new(C, rings_chart(R)),
+    tree(R2),
+    send(C, root, R2),
+    alive(A, Alive),
+    free(C).
+test(chart_freed_frees, [Alive == false]) :-
+    tree(R),
+    child(R, a, A),
+    new(C, rings_chart(R)),
+    free(C),
+    alive(A, Alive).
+test(switch_view_keeps, [Alive == true]) :-
+    tree(R),
+    child(R, a, A),
+    new(W, hierarchy_window(R, rings)),
+    send(W, view, treemap),
+    alive(A, Alive),
+    send(W, destroy).
+%   The node the popup opened on is freed with its hierarchy, so the
+%   window forgets it when it gets another one.
+
+test(new_root_forgets_popup_node, [Node == @nil]) :-
+    tree(R),
+    child(R, a, A),
+    new(W, hierarchy_window(R, rings)),
+    send(W, slot, popup_node, A),
+    tree(R2),
+    send(W, root, R2),
+    get(W, popup_node, Node),
+    send(W, destroy).
+test(layout_frees_segments, [Live1 == Live0]) :-
+    tree(R),
+    new(C, rings_chart(R)),
+    live_segments(Live0),
+    send(C, layout),
+    live_segments(Live1),
+    free(C).
+
+alive(Obj, Alive) :-
+    (   object(Obj)
+    ->  Alive = true
+    ;   Alive = false
+    ).
+
+live_segments(N) :-
+    get(class(hierarchy_segment), no_created, Created),
+    get(class(hierarchy_segment), no_freed, Freed),
+    N is Created-Freed.
 
 :- end_tests(hierarchy_chart).

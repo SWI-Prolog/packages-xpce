@@ -79,6 +79,7 @@ the IDE components to the autoloading of one single predicate.
 :- pce_autoload(prolog_query_frame,     library('trace/query')).
 :- pce_autoload(prolog_trace_exception, library('trace/exceptions')).
 :- pce_autoload(prolog_thread_monitor,  library('swi/thread_monitor')).
+:- pce_autoload(prolog_memory_viewer,   library('swi/pce_memory')).
 :- pce_autoload(prolog_debug_monitor,   library('swi/pce_debug_monitor')).
 :- pce_autoload(xref_tool,              library('pce_xref')).
 
@@ -179,6 +180,10 @@ thread_monitor(IDE) :->
              'This version of SWI-Prolog is not built \n\c
                   with thread-support')
     ).
+
+memory_viewer(IDE) :->
+    "Open a window showing how Prolog uses its memory"::
+    send(IDE, show_tool, prolog_memory_viewer).
 
 debug_monitor(IDE) :->
     "Open monitor for debug messages"::
@@ -792,6 +797,8 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                           message(IDE, open_navigator)),
                 menu_item(view_threads,
                           message(IDE, thread_monitor)),
+                menu_item(view_memory,
+                          message(IDE, memory_viewer)),
                 menu_item(debug_messages,
                           message(IDE, debug_monitor)),
                 menu_item(cross_referencer,

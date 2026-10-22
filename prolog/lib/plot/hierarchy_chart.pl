@@ -37,10 +37,14 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
-:- autoload(library(apply), [foldl/4, foldl/5, maplist/3]).
+:- autoload(library(apply),
+            [foldl/4, foldl/5, maplist/2, maplist/3, partition/4]).
 :- autoload(library(lists),
             [sum_list/2, max_list/2, min_list/2, append/3, reverse/2]).
-:- autoload(library(pairs), [pairs_keys/2]).
+:- autoload(library(pairs),
+            [ pairs_keys/2, pairs_values/2, pairs_keys_values/3,
+              map_list_to_pairs/3
+            ]).
 :- autoload(library(pce_util), [default/3]).
 
 /** <module> Charts of a hierarchical distribution
@@ -301,6 +305,7 @@ sorted_children(_, []).
 
 variable(node,        hierarchy_node, get, "Node represented").
 variable(base_colour, colour,         get, "Fill when not highlighted").
+variable(geometry,    prolog,         both, "How the chart placed me").
 
 initialise(S, Node:hierarchy_node, Fill:colour, Border:colour) :->
     send_super(S, initialise),
@@ -334,9 +339,11 @@ class_variable(border_colour, colour, ui_window_background,
 class_variable(font,          font,   small, "Font of the labels").
 class_variable(max_depth,     int,    5,     "Number of levels shown").
 class_variable(centre_colour, colour, grey85, "Fill of the focus").
+class_variable(label_delay,   num,    0.6,
+               "Seconds the pointer rests before the children are named").
 
 variable(root,           hierarchy_node*, get,  "Topmost node").
-variable(focus,          hierarchy_node*, get,  "Node shown as a whole").
+variable(focus_node,     hierarchy_node*, get,  "Node shown as a whole (zoomed into)").
 variable(hover,          hierarchy_segment*, get, "Segment below the pointer").
 variable(extent,         size,    get,  "Size of the chart").
 variable(max_depth,      int,     get,  "Number of levels shown").
@@ -350,6 +357,7 @@ variable(focus_message,  code*,   both,
          "Called with the new focus").
 variable(hover_message,  code*,   both,
          "Called with the node below the pointer, or @nil").
+variable(label_timer,    timer*,  none, "Timer for ->show_child_labels").
 
 initialise(C, Root:root=[hierarchy_node]*, Extent:extent=[size]) :->
     "Create from the root and the size"::
@@ -361,14 +369,21 @@ initialise(C, Root:root=[hierarchy_node]*, Extent:extent=[size]) :->
     default(Root, @nil, TheRoot),
     send(C, root, TheRoot).
 
-root(C, Root:hierarchy_node*) :->
-    "Show a new hierarchy"::
-    send(C, slot, root, Root),
-    send(C, focus, Root).
+%   The chart owns its hierarchy.  The nodes refer to each other, so
+%   they are not reclaimed when they are no longer referenced; the
+%   chart frees them when the root is replaced and when it is freed
+%   itself.
 
-focus(C, Focus:hierarchy_node*) :->
+root(C, Root:hierarchy_node*) :->
+    "Show a new hierarchy, freeing the old one"::
+    get(C, root, Old),
+    send(C, slot, root, Root),
+    send(C, focus_node, Root),
+    free_root(Old, Root).
+
+focus_node(C, Focus:hierarchy_node*) :->
     "Zoom to a node"::
-    send(C, slot, focus, Focus),
+    send(C, slot, focus_node, Focus),
     send(C, layout),
     (   get(C, focus_message, Msg),
         Msg \== @nil,
@@ -379,16 +394,16 @@ focus(C, Focus:hierarchy_node*) :->
 
 zoom_out(C) :->
     "Zoom out one level"::
-    get(C, focus, Focus),
+    get(C, focus_node, Focus),
     Focus \== @nil,
     get(Focus, parent, Parent),
     Parent \== @nil,
-    send(C, focus, Parent).
+    send(C, focus_node, Parent).
 
 zoom_to_root(C) :->
     "Show the whole hierarchy"::
     get(C, root, Root),
-    send(C, focus, Root).
+    send(C, focus_node, Root).
 
 extent(C, Extent:size) :->
     "Resize the chart"::
@@ -406,8 +421,8 @@ unit(C, Unit:{bytes,seconds,count,plain}) :->
 layout(C) :->
     "Draw the chart again"::
     send(C, hover_segment, @nil),
-    send(C, clear),
-    (   get(C, focus, Focus),
+    send(C, clear, free),
+    (   get(C, focus_node, Focus),
         Focus \== @nil,
         get(Focus, total, Total),
         Total > 0
@@ -418,6 +433,20 @@ layout(C) :->
 draw(_C, _Focus:hierarchy_node) :->
     "Draw the focus and the levels below it (subclass)"::
     fail.
+
+unlink(C) :->
+    send(C, stop_label_timer),
+    get(C, root, Root),
+    send_super(C, unlink),
+    free_root(Root, @nil).
+
+free_root(Old, New) :-
+    (   Old == @nil
+    ->  true
+    ;   Old == New
+    ->  true
+    ;   free(Old)
+    ).
 
                  /*******************************
                  *            EVENTS            *
@@ -455,10 +484,13 @@ hover_segment(C, S:hierarchy_segment*) :->
         ;   true
         ),
         send(C, slot, hover, S),
+        send(C, hide_child_labels),
         (   S == @nil
-        ->  Node = @nil
+        ->  Node = @nil,
+            send(C, stop_label_timer)
         ;   send(S, highlight, @on),
-            get(S, node, Node)
+            get(S, node, Node),
+            send(C, start_label_timer)
         ),
         (   get(C, hover_message, Msg),
             Msg \== @nil
@@ -467,15 +499,49 @@ hover_segment(C, S:hierarchy_segment*) :->
         )
     ).
 
+%   When the pointer rests on a segment for <-label_delay seconds, the
+%   chart may name the children of its node (see ->show_child_labels).
+%   A timer rather than loc_still, as the help balloon takes those.
+
+start_label_timer(C) :->
+    "(Re)start waiting to name the children of the hovered node"::
+    (   get(C, slot, label_timer, T),
+        T \== @nil
+    ->  send(T, stop)
+    ;   get(C, class_variable_value, label_delay, Delay),
+        new(T, timer(Delay, message(C, show_child_labels))),
+        send(T, service, @on),
+        send(C, slot, label_timer, T)
+    ),
+    send(T, start, once).
+
+stop_label_timer(C) :->
+    (   get(C, slot, label_timer, T),
+        T \== @nil
+    ->  send(T, stop)
+    ;   true
+    ).
+
+show_child_labels(_C) :->
+    "Name the children of the hovered node (subclass)"::
+    true.
+
+hide_child_labels(C) :->
+    "Remove what ->show_child_labels displayed"::
+    (   get(C, member, child_labels, L)
+    ->  free(L)
+    ;   true
+    ).
+
 clicked(C, Node:hierarchy_node) :->
     "Call <-click_message, zoom in or out, or call <-select_message"::
     (   get(C, click_message, Msg),
         Msg \== @nil
     ->  send(Msg, forward, Node)
-    ;   get(C, focus, Node)
+    ;   get(C, focus_node, Node)
     ->  ignore(send(C, zoom_out))
     ;   send(Node, has_children)
-    ->  send(C, focus, Node)
+    ->  send(C, focus_node, Node)
     ;   get(C, select_message, Msg),
         Msg \== @nil
     ->  send(Msg, forward, Node)
@@ -507,7 +573,7 @@ describe(C, Node:hierarchy_node, Text:string) :<-
     ),
     get(Node, total, Total),
     get(C, format_value, Total, Value),
-    (   get(C, focus, Focus),
+    (   get(C, focus_node, Focus),
         Focus \== Node,
         get(Focus, total, FT),
         FT > 0
@@ -607,6 +673,12 @@ display_label(C, Text, Fill, Center) :-
 
 class_variable(min_angle,     num,    0.5,
                "Segments smaller than this (degrees) are not shown").
+class_variable(max_labels,    '0..',  24,
+               "Most children named when the pointer rests on a node").
+class_variable(label_line_colour, colour, grey50,
+               "Lines from the names of the children to their segment").
+
+variable(rings, prolog, get, "rings(CX, CY, Radius) of the last drawing").
 
 draw(C, Focus:hierarchy_node) :->
     "Draw the focus as a disc and the rings around it"::
@@ -622,6 +694,9 @@ draw(C, Focus:hierarchy_node) :->
     disc_data(CX, CY, RW, Data),
     send(C, display, new(Disc, hierarchy_segment(Focus, Centre, Border))),
     send(Disc, svg_data, Data),
+    send(Disc, geometry, ring(0, RW, 0, 2*pi)),
+    Outer is (Depth+1)*RW,
+    send(C, slot, rings, rings(CX, CY, Outer)),
     centre_label(C, Focus, CX, CY, RW, Centre),
     get(C, min_angle, MinDeg),
     MinAngle is MinDeg*pi/180,
@@ -670,6 +745,7 @@ draw_child(C, Ring, Scale, Level, Total-Child, A0, A1) :-
         ring_data(CX, CY, Inner, Outer, A0, A1, Data),
         send(C, display, new(S, hierarchy_segment(Child, Fill, Border))),
         send(S, svg_data, Data),
+        send(S, geometry, ring(Inner, Outer, A0, A1)),
         send(S, fill_rule, even_odd),
         segment_label(C, Child, CX, CY, Inner, Outer, A0, A1, Fill),
         Level1 is Level+1,
@@ -766,6 +842,130 @@ centre_label(C, Focus, CX, CY, R, Fill) :-
     ->  display_label(C, Value, Fill, point(round(CX), round(CY)))
     ;   true
     ).
+
+                 /*******************************
+                 *         CHILD LABELS         *
+                 *******************************/
+
+%   As baobab, name the children of the node the pointer rests on just
+%   outside the rings, at the side of their segment, each with a line
+%   to the middle of its segment.  The names on either side are stacked
+%   without overlap, the largest children first.
+
+show_child_labels(C) :->
+    "Name the children of the hovered node around the rings"::
+    get(C, hover, S),
+    S \== @nil,
+    get(S, node, Node),
+    get(C, rings, rings(CX, CY, R)),
+    get(C?graphicals, find_all,
+        and(message(@arg1, instance_of, hierarchy_segment),
+            @arg1?node?parent == Node), Chain),
+    chain_list(Chain, Segments),
+    Segments \== [],
+    findall(T-Seg, ( member(Seg, Segments),
+                     get(Seg?node, total, T)
+                   ), Pairs0),
+    keysort(Pairs0, Ascending),
+    reverse(Ascending, Pairs),
+    get(C, max_labels, Max),
+    length(Pairs, Len),
+    N is min(Max, Len),
+    length(Largest, N),
+    append(Largest, _, Pairs),
+    pairs_values(Largest, Shown),
+    get(C, font, Font),
+    get(Font, height, FH),
+    BH is FH+2,
+    LR is R+10,
+    maplist(label_spec(CX, CY, LR, Font), Shown, Specs),
+    partition(right_label, Specs, Right, Left),
+    get(C, extent, size(W, H)),
+    stack_labels(Right, BH, H, RightPlaced),
+    stack_labels(Left, BH, H, LeftPlaced),
+    send(C, hide_child_labels),
+    send(C, display, new(D, device)),
+    send(D, name, child_labels),
+    get(C, label_line_colour, LineColour),
+    append(RightPlaced, LeftPlaced, Placed),
+    forall(member(P, Placed),
+           draw_child_label(D, P, W, BH, Font, LineColour)).
+
+%   label_spec(+CX, +CY, +Radius, +Font, +Segment, -Spec)
+%
+%   Spec is label(Side, Y, X, Anchor, Text, Fill), where (X,Y) is where
+%   the line to the name ends, on the circle of Radius at the middle
+%   angle of Segment, and Anchor the middle of the segment.
+
+label_spec(CX, CY, LR, Font, Seg,
+           label(Side, Y, X, point(AX, AY), Label, TW, Fill)) :-
+    get(Seg, geometry, ring(Inner, Outer, A0, A1)),
+    A is (A0+A1)/2,
+    Mid is (Inner+Outer)/2,
+    polar(CX, CY, Mid, A, AX0, AY0),
+    AX is round(AX0), AY is round(AY0),
+    polar(CX, CY, LR, A, X0, Y0),
+    X is round(X0), Y is round(Y0),
+    (   sin(A) >= 0
+    ->  Side = right
+    ;   Side = left
+    ),
+    get(Seg?node?label, value, Label),
+    get(Font, width, Label, TW),
+    get(Seg, base_colour, Fill).
+
+right_label(label(right, _, _, _, _, _, _)).
+
+%   stack_labels(+Specs, +Height, +Max, -Placed)
+%
+%   Placed holds Top-Spec, where the labels are Height high, do not
+%   overlap, are as close as possible to their Y and lie within 0..Max.
+
+stack_labels(Specs, BH, Max, Placed) :-
+    msort_by_y(Specs, Sorted),
+    foldl(label_top(BH), Sorted, Tops0, 0, End),
+    (   Tops0 = [First|_]
+    ->  Shift is max(0, min(End-Max, First)),
+        maplist(plus(Shift), Tops, Tops0)
+    ;   Tops = []
+    ),
+    pairs_keys_values(Placed, Tops, Sorted).
+
+msort_by_y(Specs, Sorted) :-
+    map_list_to_pairs(spec_y, Specs, Keyed),
+    keysort(Keyed, SortedKeyed),
+    pairs_values(SortedKeyed, Sorted).
+
+spec_y(label(_, Y, _, _, _, _, _), Y).
+
+label_top(BH, label(_, Y, _, _, _, _, _), Top, Min, Next) :-
+    Top is max(Min, Y - BH//2),
+    Next is Top+BH+2.
+
+draw_child_label(D, Top-label(Side, _, X, Anchor, Text, TW, Fill),
+                 W, BH, Font, LineColour) :-
+    BW is TW+8,
+    (   Side == right
+    ->  BX is max(0, min(X, W-BW)),
+        EX = BX
+    ;   BX is max(0, min(X-BW, W-BW)),
+        EX is BX+BW
+    ),
+    EY is Top + BH//2,
+    Anchor = point(AX, AY),
+    send(D, display, new(L, line(AX, AY, EX, EY))),
+    send(L, colour, LineColour),
+    send(D, display, new(Dot, circle(4))),
+    send(Dot, fill, LineColour),
+    send(Dot, pen, 0),
+    send(Dot, center, Anchor),
+    send(D, display, new(B, box(BW, BH)), point(BX, Top)),
+    send(B, fill, Fill),
+    send(B, colour, LineColour),
+    send(B, radius, 3),
+    send(D, display, new(T, text(Text, left, Font)), point(BX+4, Top+1)),
+    text_colour(Fill, TC),
+    send(T, colour, TC).
 
 :- pce_end_class(rings_chart).
 
@@ -1033,22 +1233,23 @@ chart_messages(W, C:hierarchy_chart) :->
     send(C, hover_message, message(W, hover, @arg1)).
 
 root(W, Root:hierarchy_node*) :->
-    "Show a new hierarchy"::
+    "Show a new hierarchy; the old one is freed"::
+    send(W, slot, popup_node, @nil),
     send(W?chart, root, Root).
 root(W, Root:hierarchy_node*) :<-
     get(W?chart, root, Root).
 
-focus(W, Focus:hierarchy_node*) :->
-    send(W?chart, focus, Focus).
-focus(W, Focus:hierarchy_node*) :<-
-    get(W?chart, focus, Focus).
+focus_node(W, Focus:hierarchy_node*) :->
+    send(W?chart, focus_node, Focus).
+focus_node(W, Focus:hierarchy_node*) :<-
+    get(W?chart, focus_node, Focus).
 
 unit(W, Unit:{bytes,seconds,count,plain}) :->
     "How values are shown"::
     send(W?chart, unit, Unit).
 
 can_zoom_out(W) :->
-    get(W?chart, focus, Focus),
+    get(W?chart, focus_node, Focus),
     Focus \== @nil,
     get(Focus, parent, Parent),
     Parent \== @nil.
@@ -1064,13 +1265,14 @@ view(W, View:{rings,treemap}) :->
                 [unit, select_message, click_message, focus_message]),
         send(W, chart_messages, New),
         get(Old, root, Root),
-        get(Old, focus, Focus),
+        get(Old, focus_node, Focus),
         send(New, slot, root, Root),
+        send(Old, slot, root, @nil),    % the hierarchy moves to New
         free(Old),
         send(W, slot, view, View),
         send(W, display, New, point(0,0)),
         send(W, resize),
-        send(New, focus, Focus),
+        send(New, focus_node, Focus),
         (   get(W, view_message, Msg),
             Msg \== @nil
         ->  send(Msg, forward, View)
