@@ -141,10 +141,10 @@ test(png, W-H-Red == 16-8-true)  :- saved('a.png',  default, W, H, Red).
 test(jpeg, W-H-Red == 16-8-true) :- saved('a.jpg',  default, W, H, Red).
 test(webp, [condition(can_save(webp)), W-H-Red == 16-8-true]) :-
     saved('a.webp', default, W, H, Red).
-test(gif, W-H-Red == 16-8-true)  :- saved('a.gif',  default, W, H, Red).
+test(gif, [condition(can_save(gif)), W-H-Red == 16-8-true]) :- saved('a.gif',  default, W, H, Red).
 test(bmp, W-H-Red == 16-8-true)  :- saved('a.bmp',  default, W, H, Red).
-test(tga, W-H-Red == 16-8-true)  :- saved('a.tga',  default, W, H, Red).
-test(ico, W-H-Red == 16-8-true)  :- saved('a.ico',  default, W, H, Red).
+test(tga, [condition(can_save(tga)), W-H-Red == 16-8-true]) :- saved('a.tga',  default, W, H, Red).
+test(ico, [condition(can_save(ico)), W-H-Red == 16-8-true]) :- saved('a.ico',  default, W, H, Red).
 test(avif, [condition(can_save(avif)), W-H-Red == 16-8-true]) :-
     saved('a.avif', default, W, H, Red).
 
@@ -154,7 +154,10 @@ test(avif, [condition(can_save(avif)), W-H-Red == 16-8-true]) :-
 test(extension_selects_format, Sig == [0xFF, 0xD8, 0xFF, 0xE0]) :-
     saved('b.jpeg', default, _, _, _),
     signature('b.jpeg', Sig).
-test(format_overrules_extension, Sig == [0x47, 0x49, 0x46, 0x38]) :-
+test(format_overrules_extension,
+     [ condition(can_save(gif)),
+       Sig == [0x47, 0x49, 0x46, 0x38]
+     ]) :-
     saved('c.png', gif, _, _, _),
     signature('c.png', Sig).
 test(unknown_extension_is_png, Sig == [0x89, 0x50, 0x4E, 0x47]) :-
@@ -170,7 +173,9 @@ test(jpeg_quality, true(Small < Large)) :-
     file_size('low.jpg', Small),
     file_size('high.jpg', Large).
 
-test(save_formats, true(subset([png, jpeg, gif, bmp], Formats))) :-
+%   SDL_image before 3.4 only writes PNG, JPEG and AVIF; SDL writes BMP.
+
+test(save_formats, true(subset([png, jpeg, bmp], Formats))) :-
     get(@display, image_save_formats, Chain),
     chain_list(Chain, Formats).
 
