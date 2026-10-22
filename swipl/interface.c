@@ -163,6 +163,7 @@ typedef struct
 		 *	    PROTOTYPES		*
 		 *******************************/
 
+
 static PceObject	termToObject(term_t t, PceType type,
 				     atom_t assoc, int new);
 static prolog_call_data *get_pcd(PceObject method);
@@ -255,7 +256,6 @@ static atom_t ATOM_open;		/* "open" */
 static atom_t ATOM_pce;			/* "pce" */
 static atom_t ATOM_permission_error;	/* "permission_error" */
 static atom_t ATOM_procedure;		/* "procedure" */
-static atom_t ATOM_proper_list;		/* "proper_list" */
 static atom_t ATOM_read;		/* "read" */
 static atom_t ATOM_ref;			/* "@" */
 static atom_t ATOM_send;		/* "send" */
@@ -309,7 +309,6 @@ initPrologConstants(void)
   ATOM_pce			= AtomFromString("pce");
   ATOM_permission_error		= AtomFromString("permission_error");
   ATOM_procedure		= AtomFromString("procedure");
-  ATOM_proper_list		= AtomFromString("proper_list");
   ATOM_read			= AtomFromString("read");
   ATOM_ref			= AtomFromString("@");
   ATOM_send			= AtomFromString("send");
@@ -1691,6 +1690,39 @@ type2vectorClassName(PceType type)
 
 
 
+/* Collect the objects of a Prolog list for termToObject().  The array
+ * starts in a local buffer and moves to malloc()ed memory if the list
+ * is long.
+ */
+
+#define LIST_OBJECTS_LOCAL 16
+
+typedef struct
+{ PceObject *argv;
+  size_t     size;
+} list_objects;
+
+static int
+list_object(term_t head, size_t index, void *closure)
+{ list_objects *lo = closure;
+
+  if ( index >= lo->size )
+  { size_t size = lo->size*2;
+    PceObject *new;
+
+    if ( size > INT_MAX ||
+	 !(new = malloc(size*sizeof(PceObject))) )
+      return PL_resource_error("memory");
+    memcpy(new, lo->argv, lo->size*sizeof(PceObject));
+    if ( lo->size > LIST_OBJECTS_LOCAL )
+      free(lo->argv);
+    lo->argv = new;
+    lo->size = size;
+  }
+  return get_object_arg(head, &lo->argv[index]);
+}
+
+
 static PceObject
 termToObject(term_t t, PceType type, atom_t assoc, int new)
 { atom_t functor;
@@ -1797,34 +1829,20 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
     }
 					/* A list */
     if ( functor == ATOM_dot && arity == 2 )
-    { term_t tail = CopyTerm(t);
-      term_t head = PL_new_term_ref();
-      int argsallocated = 16;
-      int argc = 0;
-      PceObject *argv = alloca(argsallocated*sizeof(PceObject));
-      PceName classname = type2vectorClassName(type);
+    { PceObject local[LIST_OBJECTS_LOCAL];
+      list_objects lo = { .argv = local, .size = LIST_OBJECTS_LOCAL };
+      size_t argc;
+      PceObject rval;
 
-      while ( PL_get_list(tail, head, tail) )
-      { PceObject a;
+      if ( PL_get_list_slice(t, 0, (size_t)-1, list_object, &lo,
+			     &argc, CVT_EXCEPTION) )
+	rval = pceNew(NIL, type2vectorClassName(type), (int)argc, lo.argv);
+      else
+	rval = PCE_FAIL;
+      if ( lo.argv != local )
+	free(lo.argv);
 
-	if ( get_object_arg(head, &a) )
-	{ if ( argc >= argsallocated )
-	  { PceObject tmp = alloca(2*argsallocated*sizeof(PceObject));
-	    memcpy(tmp, argv, argsallocated*sizeof(PceObject));
-	    argv = tmp;
-	    argsallocated *= 2;
-	  }
-	  argv[argc++] = a;
-	} else
-	  return PCE_FAIL;
-      }
-
-      if ( !PL_get_nil(tail) )
-      { ThrowException(EX_TYPE, ATOM_proper_list, t);
-	return PCE_FAIL;
-      }
-
-      return pceNew(NIL, classname, argc, argv);
+      return rval;
     }
 
 					/* Class(...Args...) */

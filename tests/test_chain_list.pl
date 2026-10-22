@@ -55,8 +55,39 @@ Run with:
 test_chain_list :-
     run_tests([ chain_list,
                 member_chain,
+                list_to_object,
                 chain_snapshot_threads
               ]).
+
+:- begin_tests(list_to_object).
+
+%   A Prolog list converts to a chain or vector.  Long and cyclic lists
+%   used to crash by growing an alloca() array on the C stack.
+
+test(chain, [Class-Size == chain-3]) :-
+    get(@pce, convert, [a, b, c], chain, C),
+    get(C, class_name, Class),
+    get(C, size, Size).
+test(vector, [Class-Size-First == vector-3-1]) :-
+    get(@pce, convert, [1, 2, 3], vector, V),
+    get(V, class_name, Class),
+    get(V, size, Size),
+    get(V, element, 1, First).
+test(long, [Size == 3000000]) :-
+    numlist(1, 3000000, L),
+    get(@pce, convert, L, chain, C),
+    get(C, size, Size).
+test(cyclic, error(type_error(list, _))) :-
+    L = [a|L],
+    get(@pce, convert, L, chain, _).
+test(not_a_list, error(type_error(list, [a|b]))) :-
+    get(@pce, convert, [a|b], chain, _).
+test(partial, error(instantiation_error)) :-
+    get(@pce, convert, [a|_], chain, _).
+test(bad_element, error(existence_error(pce(object), _))) :-
+    get(@pce, convert, [a, @test_chain_list_no_such_object], chain, _).
+
+:- end_tests(list_to_object).
 
 :- begin_tests(chain_list).
 
