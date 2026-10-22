@@ -97,6 +97,9 @@ profiler(F) :-
 
 profiler(Ports, F) :-
     profile(Data0),
+    profiler(Ports, Data0, F).
+
+profiler(Ports, Data0, F) :-
     Data = Data0.put(summary/ports, Ports),
     Summary = Data.summary,
     new(F, prof_frame),
@@ -205,4 +208,151 @@ test(limit_changed, Stale == @on) :-
         send(CV, value, Old)),
     free(F).
 
+%   The call tree below p/1.  Ticks are 5 ms.  q/1 spends 10 ticks
+%   itself and 80 below it on behalf of p/1, all in p/1, which is not
+%   expanded again as it is on the path.  r/1 calls nothing.
+
+test(call_tree, [ Tree == node('p/1', 0.05,
+                               [ node('q/1', 0.05, [node('p/1', 0.45, [])]),
+                                 node('r/1', 0.025, [])
+                               ]),
+                  Total =:= 0.575
+                ]) :-
+    profiler(F),
+    get(F, window, prof_tree, T),
+    get(F, node_data, user:p/1, Data),
+    send(T, render, Data),
+    get(T, root, Root),
+    get(Root, total, Total),
+    tree_term(Root, Tree),
+    free(F).
+
+%   ev/1 and od/1 call each other; each level of the recursion is a
+%   cycle of its own in the profile.  The calls of ev/1 to od/1 are
+%   nested: the outer one includes the inner one.  Its calls to work/0
+%   at the two levels are distinct.  The tree and the graph have one
+%   node for each.
+
+recursion_profile(
+    profile{summary:summary{samples:100, ticks:100, accounting:0,
+                            time:0.5, nodes:10, sample_period:5000,
+                            ports:true},
+            nodes:[ node{predicate:user:ev/1,
+                         ticks_self:0, ticks_siblings:100,
+                         call:2, redo:0, exit:2,
+                         callers:[node(user:od/1,1,0,60,1,0,1)],
+                         callees:[node(user:work/0,0,10,0,1,0,1),
+                                  node(user:od/1,0,0,80,1,0,1),
+                                  node(user:work/0,1,10,0,1,0,1),
+                                  node(user:od/1,1,0,60,1,0,1)]},
+                    node{predicate:user:od/1,
+                         ticks_self:0, ticks_siblings:80,
+                         call:2, redo:0, exit:2,
+                         callers:[node(user:ev/1,0,0,80,1,0,1),
+                                  node(user:ev/1,1,0,60,1,0,1)],
+                         callees:[node(user:ev/1,1,0,70,1,0,1),
+                                  node(user:work/0,0,10,0,1,0,1)]},
+                    node{predicate:user:work/0,
+                         ticks_self:30, ticks_siblings:0,
+                         call:3, redo:0, exit:3,
+                         callers:[node(user:ev/1,0,10,0,1,0,1),
+                                  node(user:ev/1,1,10,0,1,0,1),
+                                  node(user:od/1,0,10,0,1,0,1)],
+                         callees:[]}
+                  ]}).
+
+test(tree_merges_cycles,
+     [ Children == [ node('work/0', 0.1, []),
+                     node('od/1', 0, [ node('ev/1', 0.35, []),
+                                       node('work/0', 0.05, [])
+                                     ])
+                   ]
+     ]) :-
+    recursion_profile(Data),
+    profiler(true, Data, F),
+    get(F, window, prof_tree, T),
+    get(F, node_data, user:ev/1, EvData),
+    send(T, render, EvData),
+    get(T, root, Root),
+    tree_term(Root, node(_, _, Children0)),
+    msort(Children0, Sorted),
+    reverse(Sorted, Children),
+    free(F).
+test(graph_merges_cycles, [ Work-Od == 20-80 ]) :-
+    recursion_profile(Data),
+    profiler(true, Data, F),
+    call_graph(F, user:ev/1, Edges),
+    memberchk(edge(user:ev/1, user:work/0, Work, _), Edges),
+    memberchk(edge(user:ev/1, user:od/1, Od, _), Edges),
+    free(F).
+test(components, [ Same-Other == true-false ]) :-
+    recursion_profile(Data),
+    profiler(true, Data, F),
+    get(F, components, Cs),
+    truth(pce_profile:same_component(user:ev/1, user:od/1, Cs), Same),
+    truth(pce_profile:same_component(user:ev/1, user:work/0, Cs), Other),
+    free(F).
+
+%   Clicking a node of the call tree, also one with children, makes its
+%   predicate the current node of the profiler, which all tabs show.
+
+test(tree_click, [Current-Graph == (user:q/1)-(user:q/1)]) :-
+    profiler(F),
+    get(F, window, prof_tree, T),
+    get(F, node_data, user:p/1, Data),
+    send(F, details, Data),
+    send(T, render, Data),
+    get(T, root, Root),
+    get(Root?children, find, @arg1?label == 'q/1', Q),
+    send(Q, has_children),
+    send(T?chart, clicked, Q),
+    get(T, node, TData),
+    Current = TData.predicate,
+    get(F, window, prof_graph, G),
+    get(G, node, GData),
+    Graph = GData.predicate,
+    free(F).
+
+%   The popup of the tree edits the predicate it was opened on.
+
+test(tree_popup_edit, [CanEdit-Recursive == true-false]) :-
+    profiler(F),
+    get(F, window, prof_tree, T),
+    get(F, node_data, user:p/1, Data),
+    send(T, render, Data),
+    get(T, root, Root),
+    send(T, slot, popup_node, Root),
+    truth(send(T, can_edit), CanEdit),
+    new(R, hierarchy_node('<recursive>', 1, '<recursive>')),
+    send(T, slot, popup_node, R),
+    truth(send(T, can_edit), Recursive),
+    free(F).
+
+%   As the boxes of the call graph, the call tree leaves out the module,
+%   which its balloon shows.
+
+test(tree_labels, [Label-Title == 'append/3'-'lists:append/3']) :-
+    pce_profile:tree_labels(lists:append/3, Label0, Title0),
+    maplist(text_atom, [Label0, Title0], [Label, Title]).
+
+text_atom(Text, Atom) :-
+    (   atom(Text)
+    ->  Atom = Text
+    ;   get(Text, value, Atom)
+    ).
+
+truth(G, true) :- call(G), !.
+truth(_, false).
+
 :- end_tests(profiler).
+
+tree_term(Node, node(Label, Value, Children)) :-
+    get(Node?label, value, Label),
+    get(Node, value, Value0),
+    Value is round(Value0*1000)/1000,
+    (   get(Node, children, Chain),
+        Chain \== @nil
+    ->  chain_list(Chain, Nodes),
+        maplist(tree_term, Nodes, Children)
+    ;   Children = []
+    ).

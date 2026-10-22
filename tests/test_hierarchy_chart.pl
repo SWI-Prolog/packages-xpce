@@ -252,6 +252,15 @@ test(describe, S == "y\n9 bytes (64.3% of b)") :-
     get(C, describe, Y, Str),
     get(Str, value, A),
     atom_string(A, S).
+test(describe_title, S == "a long name\n1") :-
+    hierarchy_from_term(node(a, 0, [ node(b, 1, [], [title('a long name')])
+                                   ]), R),
+    new(C, rings_chart(R)),
+    child(R, b, B),
+    send(C, focus, B),
+    get(C, describe, B, Str),
+    get(Str, value, A),
+    atom_string(A, S).
 test(format_value, Texts == ['1.5 kB', '2.50 s', '12.0 ms', '1,234,567']) :-
     maplist(format_value,
             [bytes-1500, seconds-2.5, seconds-0.012, count-1234567],

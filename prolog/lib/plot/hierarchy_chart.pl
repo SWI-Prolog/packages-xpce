@@ -85,18 +85,23 @@ For example:
 %       A leaf.
 %
 %   Value is the value of the node itself, excluding its children.
-%   Options is a list holding data(Data) for the node's <-data and
-%   colour(Colour) for its <-colour.
+%   Options is a list holding data(Data) for the node's <-data,
+%   colour(Colour) for its <-colour and title(Title) for its <-title, a
+%   longer name shown in the balloon.
 
 hierarchy_from_term(Term, Node) :-
     node_term(Term, Label, Value, Children, Options),
     (   memberchk(data(Data), Options)
     ->  true
-    ;   Data = @nil
+    ;   Data = @default
     ),
     new(Node, hierarchy_node(Label, Value, Data)),
     (   memberchk(colour(Colour), Options)
     ->  send(Node, colour, Colour)
+    ;   true
+    ),
+    (   memberchk(title(Title), Options)
+    ->  send(Node, title, Title)
     ;   true
     ),
     forall(member(ChildTerm, Children),
@@ -120,14 +125,15 @@ node_term(Term, _, _, _, _) :-
                    "Node of a hierarchical distribution").
 
 variable(label,    char_array,      get,  "Name of the node").
+variable(title,    char_array*,     both, "Longer name, for the balloon").
 variable(value,    num := 0,        get,  "Value of the node itself").
 variable(total,    num*,            none, "Cached <-total").
 variable(children, chain*,          get,  "Nodes below me").
 variable(parent,   hierarchy_node*, get,  "Node I am part of").
-variable(data,     any*,            both, "Application data").
+variable(data,     prolog,          both, "Application data").
 variable(colour,   colour*,         both, "Colour (@nil: from the position)").
 
-initialise(N, Label:label=char_array, Value:value=[num], Data:data=[any]*) :->
+initialise(N, Label:label=char_array, Value:value=[num], Data:data=[prolog]) :->
     "Create from label, value and application data"::
     send_super(N, initialise),
     send(N, slot, label, Label),
@@ -135,8 +141,10 @@ initialise(N, Label:label=char_array, Value:value=[num], Data:data=[any]*) :->
     ->  true
     ;   send(N, slot, value, Value)
     ),
-    default(Data, @nil, TheData),
-    send(N, slot, data, TheData).
+    (   Data == @default
+    ->  true
+    ;   send(N, slot, data, Data)
+    ).
 
 unlink(N) :->
     "Destroy the nodes below me as well"::
@@ -336,6 +344,8 @@ variable(unit,           {bytes,seconds,count,plain} := plain, get,
          "How values are shown").
 variable(select_message, code*,   both,
          "Called with a node without children that is clicked").
+variable(click_message,  code*,   both,
+         "Called with the node clicked, instead of zooming").
 variable(focus_message,  code*,   both,
          "Called with the new focus").
 variable(hover_message,  code*,   both,
@@ -458,8 +468,11 @@ hover_segment(C, S:hierarchy_segment*) :->
     ).
 
 clicked(C, Node:hierarchy_node) :->
-    "Zoom in or out, or call <-select_message"::
-    (   get(C, focus, Node)
+    "Call <-click_message, zoom in or out, or call <-select_message"::
+    (   get(C, click_message, Msg),
+        Msg \== @nil
+    ->  send(Msg, forward, Node)
+    ;   get(C, focus, Node)
     ->  ignore(send(C, zoom_out))
     ;   send(Node, has_children)
     ->  send(C, focus, Node)
@@ -486,8 +499,12 @@ help_message(C, What:{tag,summary}, Ev:[event], Msg:string) :<-
     get(C, describe, Node, Msg).
 
 describe(C, Node:hierarchy_node, Text:string) :<-
-    "Label, value and share of a node"::
-    get(Node, label, Label),
+    "Label (or title), value and share of a node"::
+    (   get(Node, title, Label),
+        Label \== @nil
+    ->  true
+    ;   get(Node, label, Label)
+    ),
     get(Node, total, Total),
     get(C, format_value, Total, Value),
     (   get(C, focus, Focus),
@@ -957,6 +974,7 @@ class_variable(view, {rings,treemap}, rings, "Initial view").
 
 variable(view,         {rings,treemap}, get,  "Current view").
 variable(view_message, code*,           both, "Called with a new view").
+variable(popup_node,   hierarchy_node*, get,  "Node below the pointer when the popup opened").
 
 initialise(W, Root:root=[hierarchy_node]*, View:view=[{rings,treemap}]) :->
     "Create, showing Root as View"::
@@ -974,6 +992,7 @@ initialise(W, Root:root=[hierarchy_node]*, View:view=[{rings,treemap}]) :->
     default(Root, @nil, TheRoot),
     send(C, root, TheRoot),
     send(W, popup, new(P, popup)),
+    send(P, update_message, message(W, update_popup_node)),
     send_list(P, append,
               [ menu_item(zoom_out,
                           message(W?chart, zoom_out),
@@ -989,6 +1008,18 @@ initialise(W, Root:root=[hierarchy_node]*, View:view=[{rings,treemap}]) :->
                           message(W, view, treemap),
                           condition := W?view \== treemap)
               ]).
+
+%   The popup may act on the node below the pointer.  It is remembered
+%   when the popup opens, as the pointer leaves the chart for the popup.
+
+update_popup_node(W) :->
+    "Remember the node below the pointer for the popup"::
+    (   get(W?chart, hover, S),
+        S \== @nil
+    ->  get(S, node, Node)
+    ;   Node = @nil
+    ),
+    send(W, slot, popup_node, Node).
 
 view_class(rings,   rings_chart).
 view_class(treemap, treemap_chart).
@@ -1030,7 +1061,7 @@ view(W, View:{rings,treemap}) :->
         view_class(View, Class),
         new(New, Class),
         maplist(copy_slot(Old, New),
-                [unit, select_message, focus_message]),
+                [unit, select_message, click_message, focus_message]),
         send(W, chart_messages, New),
         get(Old, root, Root),
         get(Old, focus, Focus),

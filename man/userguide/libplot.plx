@@ -384,14 +384,15 @@ show_usage :-
 Create a tree of \class{hierarchy_node} objects from a term
 \term{node}{Label, Value, Children}, \term{node}{Label, Value, Children,
 Options} or \exam{Label-Value} for a leaf.  Options is a list holding
-\term{data}{Data} and \term{colour}{Colour}.
+\term{data}{Data}, \term{colour}{Colour} and \term{title}{Title}, a
+longer name for the balloon.
 \end{description}
 
 \subsubsection{Class \class{hierarchy_node}}
 
 \begin{description}
     \sendmethod{hierarchy_node}{initialise}{label=char_array,
-					    value=[num], data=[any]*}
+					    value=[num], data=[prolog]}
 Create a node.  \arg{value} is the value of the node itself, excluding
 the nodes below it, and \arg{data} is application data, available as
 <-data.
@@ -432,6 +433,9 @@ How values are shown.  Redefine <-format_value in a subclass for other
 units.
     \sendmethod{hierarchy_chart}{select_message}{code*}
 Called with a node without children that is clicked.
+    \sendmethod{hierarchy_chart}{click_message}{code*}
+Called with the node that is clicked, instead of zooming into or out of
+it and calling <-select_message.
     \sendmethod{hierarchy_chart}{focus_message}{code*}
 Called with the new focus.
     \sendmethod{hierarchy_chart}{hover_message}{code*}
@@ -456,6 +460,9 @@ the new view.
     \sendmethod{hierarchy_window}{view_message}{code*}
 Called with the new view if the view changes, for example from the
 popup.
+    \getmethod{hierarchy_window}{popup_node}{}{hierarchy_node*}
+The node below the pointer when the popup opened, for items that act on
+it.  Add such items to `window<-popup'.
     \getmethod{hierarchy_window}{chart}{}{hierarchy_chart}
 The chart shown.  ->root, ->focus and ->unit are passed to it.
 \end{description}

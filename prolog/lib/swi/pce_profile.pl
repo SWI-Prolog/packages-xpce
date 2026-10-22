@@ -46,6 +46,8 @@
 :- use_module(library(aggregate), [aggregate_all/3]).
 :- use_module(library(apply)).
 :- use_module(library(pairs)).
+:- use_module(library(assoc),
+              [list_to_assoc/2, get_assoc/3, put_assoc/4, empty_assoc/1]).
 :- use_module(library(yall)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(debug)).
@@ -56,6 +58,7 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(xdot), []).
 :- use_module(library(pce_filter_item), []).
+:- use_module(library(plot/hierarchy_chart), [hierarchy_from_term/2]).
 
 :- require([ auto_call/1,
 	     reset_profiler/0,
@@ -122,6 +125,8 @@ variable(nodes,            int,  get, "Nodes created").
 variable(ports,            {true,false,classic},  get, "Port mode").
 variable(time_view,        {percentage,seconds} := percentage,
                                  get, "How time is displayed").
+variable(components,       prolog, none,
+         "Cached strongly connected components of the call graph").
 
 class_variable(auto_reset, bool, @on, "Reset profiler after collecting").
 
@@ -220,7 +225,22 @@ details(F, From:prolog) :->
     get(F, window, prof_details, W),
     send(W, node, Node),
     get(F, window, prof_graph, G),
-    send(G, node, Node).
+    send(G, node, Node),
+    get(F, window, prof_tree, T),
+    send(T, node, Node).
+
+components(F, Components:prolog) :<-
+    "Assoc mapping a predicate to its component in the call graph"::
+    (   get(F, slot, components, Components),
+        Components \== @nil,
+        Components \== none
+    ->  true
+    ;   get(F, window, prof_browser, B),
+        chain_list(B?all_items, Items),
+        maplist([DI,D]>>get(DI, data, D), Items, Nodes),
+        call_graph_components(Nodes, Components),
+        send(F, slot, components, Components)
+    ).
 
 node_data(F, Pred:prolog, Node:prolog) :<-
     "The profile data of a predicate; fails if it was not sampled"::
@@ -290,6 +310,7 @@ pce_preferences:preferences(prof_frame,
       prof_graph   - [ caller_depth, callee_depth, prune_above,
                        max_relatives, max_nodes, natural_zoom
                      ],
+      prof_tree    - [ view, min_share, max_depth ],
       prof_details - [ header_colour, header_background ]
     ]).
 
@@ -299,6 +320,8 @@ pce_preferences:edit_type(prof_graph, prune_above,   '1..20').
 pce_preferences:edit_type(prof_graph, max_relatives, '1..30').
 pce_preferences:edit_type(prof_graph, max_nodes,     '10..100').
 pce_preferences:edit_type(prof_graph, natural_zoom,  '0.5..3.0').
+pce_preferences:edit_type(prof_tree,  min_share,     '0.0..0.1').
+pce_preferences:edit_type(prof_tree,  max_depth,     '5..100').
 
 %   The call graphs are drawn again when one of their limits changes.
 
@@ -412,6 +435,7 @@ column_tile(Tile, Column, Row) :-
 load_profile(B, Nodes:prolog) :->
     "Load stored profile from the Prolog database"::
     prof_tool(B, Frame),
+    send(Frame, slot, components, none),
     get(B, sort_by, SortBy),
     get(B, all_items, All),
     forall(member(Node, Nodes),
@@ -884,7 +908,8 @@ it stale, and it is drawn when its tab comes up.
 initialise(W) :->
     send_super(W, initialise),
     send(W, append, new(prof_details), details),
-    send(W, append, new(prof_graph), call_graph).
+    send(W, append, new(prof_graph), call_graph),
+    send(W, append, new(prof_tree), call_tree).
 
 new_tab(_W, Window:window, Label:[name], Tab:tab) :<-
     "Create the tab that is to hold Window"::
@@ -900,7 +925,9 @@ status(T, Status:{on_top,hidden}) :->
     send_super(T, status, Status),
     (   Status == on_top,
         get(T, window, Window),
-        send(Window, instance_of, prof_graph)
+        (   send(Window, instance_of, prof_graph)
+        ;   send(Window, instance_of, prof_tree)
+        )
     ->  send(Window, update)
     ;   true
     ).
@@ -958,10 +985,7 @@ initialise(W) :->
     get(W, xdot, X),
     send(X, node_clicked, message(W, clicked, @arg1)),
     new(P, popup),
-    send_list(P, append,
-              [ menu_item(details, message(W, clicked, @arg1)),
-                menu_item(edit, message(W, edit, @arg1))
-              ]),
+    send(P, append, menu_item(edit, message(W, edit, @arg1))),
     send(X, node_popup, P).
 
 unlink(W) :->
@@ -1111,13 +1135,174 @@ clicked(W, Node:xdot_node) :->
 edit(W, Node:xdot_node) :->
     "Edit the predicate of a node"::
     get(W, pred, Node, Pred),
+    edit_predicate(Pred).
+
+:- pce_end_class(prof_graph).
+
+edit_predicate(Pred) :-
     (   object(Pred)
     ->  send(Pred, edit)
     ;   new(PP, prolog_predicate(Pred)),
         send(PP, edit)
     ).
 
-:- pce_end_class(prof_graph).
+
+                 /*******************************
+                 *           CALL TREE          *
+                 *******************************/
+
+/* Where the time below the current node goes, as rings or a treemap
+(see library(plot/hierarchy_chart)).  The profile is a call graph, not
+a tree, so the tree is made by expanding the callees of the current
+node.  A callee gets the time spent in it on behalf of its caller, and
+its own callees share the time spent below it on behalf of that caller
+in proportion to all the time spent below it: the profile does not tell
+the calls made on behalf of one caller apart.  A callee is not expanded
+if it is already on the path to the current node (recursion), if it
+takes less than `min_share' of the current node, or below `max_depth'.
+
+As the call graph, the tree is only built when its tab can be seen.
+*/
+
+:- pce_begin_class(prof_tree, hierarchy_window,
+                   "Call tree below the current node").
+
+variable(node,  prolog,       get, "Currently shown node").
+variable(stale, bool := @off, get, "The node changed since it was drawn").
+
+class_variable(min_share, num,   0.002,
+               "Callees taking less of the time are not expanded").
+class_variable(max_depth, '1..', 40, "Deepest level built").
+
+initialise(W) :->
+    send_super(W, initialise, @nil),
+    send(W, name, call_tree),
+    send(W, unit, seconds),
+    send(W?chart, click_message, message(W, clicked, @arg1)),
+    get(W, popup, P),
+    send(P, insert_before,
+         menu_item(edit,
+                   message(W, edit),
+                   condition := message(W, can_edit),
+                   end_group := @on),
+         zoom_out).
+
+%   The tree shows the current node of the profiler.  Clicking a node
+%   makes it the current node, which shows its own tree here and its
+%   details and call graph in the other tabs.  The popup acts on the
+%   node it was opened on.
+
+can_edit(W) :->
+    "True if the popup is on a predicate"::
+    get(W, popup_node, Node),
+    Node \== @nil,
+    get(Node, data, Pred),
+    Pred \= '<recursive>'.
+
+edit(W) :->
+    "Edit the predicate the popup is on"::
+    get(W, popup_node, Node),
+    get(Node, data, Pred),
+    edit_predicate(Pred).
+
+node(W, Data:prolog) :->
+    "Show the call tree below a node"::
+    send(W, slot, node, Data),
+    send(W, slot, stale, @on),
+    send(W, update).
+
+update(W) :->
+    "Build the tree if it changed and I can be seen"::
+    (   get(W, stale, @on),
+        get(W, node, Data),
+        Data \== @nil,
+        get(W, container, tab, Tab),
+        get(Tab, status, on_top)
+    ->  send(W, slot, stale, @off),
+        send(W, render, Data)
+    ;   true
+    ).
+
+render(W, Data:prolog) :->
+    "Build the call tree below Data"::
+    prof_tool(W, Tool),
+    get(Tool, window, prof_browser, B),
+    chain_list(B?all_items, Items),
+    findall(P-D, ( member(DI, Items),
+                   get(DI, data, D),
+                   P = D.predicate
+                 ), Pairs),
+    sort(1, @<, Pairs, Unique),
+    list_to_assoc(Unique, Nodes),
+    get(Tool, ticks, Ticks),
+    get(Tool, time, Time),
+    TickTime is Time/max(1, Ticks),
+    Total is Data.ticks_self + Data.ticks_siblings,
+    get(W, class_variable_value, min_share, MinShare),
+    get(W, class_variable_value, max_depth, MaxDepth),
+    MinTicks is Total*MinShare,
+    get(Tool, components, Components),
+    Ctx = tree(Nodes, Components, TickTime, MinTicks, MaxDepth),
+    call_tree(Ctx, Data.predicate, Data.ticks_self, Data.callees,
+              1.0, [Data.predicate], Term),
+    hierarchy_from_term(Term, Root),
+    send(W, root, Root).
+
+%   call_tree(+Ctx, +Pred, +Self, +Callees, +Scale, +Path, -Term)
+%
+%   Term is the tree for Pred, which spent Self ticks itself.  Callees
+%   are its callees, whose ticks are multiplied by Scale.
+
+call_tree(Ctx, Pred, Self, Callees, Scale, Path,
+          node(Label, Seconds, Children, [data(Pred), title(Title)])) :-
+    Ctx = tree(_, Components, TickTime, _, _),
+    tree_labels(Pred, Label, Title),
+    Seconds is Self*TickTime,
+    merged_relatives(Pred, Callees, Components, Merged),
+    findall(Child,
+            ( member(Callee-t(T, CT, _), Merged),
+              callee_tree(Ctx, Callee, T*Scale, CT*Scale, Path, Child)
+            ), Children).
+
+callee_tree(Ctx, Callee, Self, Below, Path, Term) :-
+    Ctx = tree(Nodes, _, TickTime, MinTicks, MaxDepth),
+    Edge is Self+Below,
+    Edge > 0,
+    (   Below > 0,
+        Edge >= MinTicks,
+        \+ memberchk(Callee, Path),
+        length(Path, Depth),
+        Depth < MaxDepth,
+        get_assoc(Callee, Nodes, Data),
+        Data.ticks_siblings > 0
+    ->  Scale is Below/Data.ticks_siblings,
+        call_tree(Ctx, Callee, Self, Data.callees, Scale,
+                  [Callee|Path], Term)
+    ;   tree_labels(Callee, Label, Title),
+        Seconds is Edge*TickTime,
+        Term = node(Label, Seconds, [], [data(Callee), title(Title)])
+    ).
+
+%   As the boxes of the call graph, the segments leave out the module.
+%   The balloon shows it.
+
+tree_labels(Pred, Label, Title) :-
+    short_pred_label(Pred, Label),
+    pred_label(Pred, Title).
+
+clicked(W, Node:hierarchy_node) :->
+    "Make the predicate of a node the current one"::
+    get(Node, data, Pred),
+    get(W, node, Data),
+    (   Pred == Data.predicate
+    ->  true
+    ;   prof_tool(W, Tool),
+        get(Tool, node_data, Pred, _)
+    ->  send(Tool, details, Pred)
+    ;   true
+    ).
+
+:- pce_end_class(prof_tree).
 
 %   The call graphs, so they can be drawn again if one of the class
 %   variables that limit them changes.
@@ -1172,8 +1357,8 @@ byte(V, B) :-
 call_graph(Tool, Data, Limits, Edges) :-
     Limits = limits(CallerDepth, CalleeDepth, _, _, _),
     Pred = Data.predicate,
-    pred_edges(callers, Pred, Data, Limits, Callers),
-    pred_edges(callees, Pred, Data, Limits, Callees),
+    pred_edges(callers, Tool, Pred, Data, Limits, Callers),
+    pred_edges(callees, Tool, Pred, Data, Limits, Callees),
     edge_ends(callers, Callers, Up),
     edge_ends(callees, Callees, Down),
     append([[Pred], Up, Down], Seen0),
@@ -1232,7 +1417,7 @@ candidates(Dir, _, Frontier, Tool, Limits, Candidates) :-
     findall(Dir-E,
             ( member(P, Frontier),
               get(Tool, node_data, P, Data),
-              pred_edges(Dir, P, Data, Limits, PEdges),
+              pred_edges(Dir, Tool, P, Data, Limits, PEdges),
               member(E, PEdges)
             ),
             Candidates).
@@ -1259,31 +1444,18 @@ admit([Dir-E|T], Max, Seen0, Seen, Edges, Ups, Downs) :-
 new_end(callers, edge(End, _, _, _), End).
 new_end(callees, edge(_, End, _, _), End).
 
-%!  pred_edges(+Dir, +Pred, +Data, +Limits, -Edges) is det.
+%!  pred_edges(+Dir, +Tool, +Pred, +Data, +Limits, -Edges) is det.
 %
 %   The calls to (callers) or from (callees) Pred, as far as
-%   prune_relatives/3 keeps them.  The relatives of a predicate are
-%   split by the cycles it is part of; the calls between the same two
-%   predicates are summed here.  The time of the call is that of cycle 0,
-%   the outermost: that of a deeper cycle is part of it.  Recursion is
-%   added by call_graph/4.
+%   prune_relatives/3 keeps them, merged over the cycles by
+%   merged_relatives/4.  Recursion is added by call_graph/4.
 
-pred_edges(Dir, Pred, Data, Limits, Edges) :-
-    findall(Other-t(Ticks,Calls),
-            ( member(node(Other, Cycle, Self, Children, Calls, _, _),
-                     Data.Dir),
-              Other \== '<recursive>',
-              (   Cycle == 0
-              ->  Ticks is Self+Children
-              ;   Ticks = 0
-              )
-            ),
-            Pairs0),
-    keysort(Pairs0, Pairs),
-    group_pairs_by_key(Pairs, Grouped),
+pred_edges(Dir, Tool, Pred, Data, Limits, Edges) :-
+    get(Tool, components, Components),
+    merged_relatives(Pred, Data.Dir, Components, Merged),
     findall(r(Ticks, Calls, Other),
-            ( member(Other-Ts, Grouped),
-              sum_ticks(Ts, Ticks, Calls)
+            ( member(Other-t(Self, Children, Calls), Merged),
+              Ticks is Self+Children
             ),
             Relatives),
     prune_relatives(Relatives, Limits, Kept),
@@ -1332,9 +1504,126 @@ max_prefix(List, Max, Prefix) :-
     append(Prefix, _, List).
 max_prefix(List, _, List).
 
-sum_ticks(Ts, Ticks, Calls) :-
-    foldl([t(T,C), T0-C0, T1-C1]>>(T1 is T0+T, C1 is C0+C),
-          Ts, 0-0, Ticks-Calls).
+%!  merged_relatives(+Pred, +Relatives, +Components, -Merged) is det.
+%
+%   Merge the callers or callees of Pred, which the profile splits by
+%   the cycles (recursion levels) of Pred, into a list Other-t(Self,
+%   Children, Calls) with one element per predicate.  The calls are
+%   summed.  The time depends on whether Other is part of the same
+%   recursion as Pred, i.e., in the same strongly connected component
+%   of the call graph:
+%
+%     - If so, the call at a deeper level is made from within the call
+%       at the level above it, so the time of the outermost cycle
+%       includes that of all others.
+%     - If not, the calls at the various levels are distinct, and their
+%       times are summed.
+
+merged_relatives(Pred, Relatives, Components, Merged) :-
+    findall(Other-r(Cycle, Self, Children, Calls),
+            ( member(node(Other, Cycle, Self, Children, Calls, _, _),
+                     Relatives),
+              Other \== '<recursive>'
+            ),
+            Pairs0),
+    keysort(Pairs0, Pairs),
+    group_pairs_by_key(Pairs, Grouped),
+    maplist(merge_relative(Pred, Components), Grouped, Merged).
+
+merge_relative(Pred, Components, Other-Rs, Other-t(Self, Children, Calls)) :-
+    aggregate_all(sum(C), member(r(_,_,_,C), Rs), Calls),
+    (   same_component(Pred, Other, Components)
+    ->  msort(Rs, [r(_, Self, Children, _)|_])
+    ;   aggregate_all(sum(S), member(r(_,S,_,_), Rs), Self),
+        aggregate_all(sum(Ch), member(r(_,_,Ch,_), Rs), Children)
+    ).
+
+same_component(P, P, _) :- !.
+same_component(P1, P2, Components) :-
+    get_assoc(P1, Components, C),
+    get_assoc(P2, Components, C).
+
+%!  call_graph_components(+Nodes, -Components) is det.
+%
+%   Components is an assoc that maps each predicate of the profile Nodes
+%   to the strongly connected component of the call graph it is part of,
+%   computed using Tarjan's algorithm.
+
+call_graph_components(Nodes, Components) :-
+    findall(P-Callees,
+            ( member(N, Nodes),
+              P = N.predicate,
+              findall(Q, ( member(node(Q, _, _, _, _, _, _), N.callees),
+                           Q \== '<recursive>'
+                         ), Qs0),
+              sort(Qs0, Callees)
+            ), Pairs),
+    list_to_assoc(Pairs, Graph),
+    pairs_keys(Pairs, Vertices),
+    empty_assoc(E),
+    foldl(scc_root(Graph), Vertices, scc(0, E, E, [], E, 0), State),
+    State = scc(_, _, _, _, Components, _).
+
+%   The state is scc(Index, Indices, Lows, Stack, Components, NextComp).
+%   A vertex is on the stack if it has an index but no component.
+
+scc_root(Graph, V, S0, S) :-
+    S0 = scc(_, Indices, _, _, _, _),
+    (   get_assoc(V, Indices, _)
+    ->  S = S0
+    ;   strong_connect(Graph, V, S0, S)
+    ).
+
+strong_connect(Graph, V, S0, S) :-
+    S0 = scc(I, Indices0, Lows0, Stack0, Comps, NC),
+    put_assoc(V, Indices0, I, Indices),
+    put_assoc(V, Lows0, I, Lows),
+    I1 is I+1,
+    (   get_assoc(V, Graph, Ws)
+    ->  true
+    ;   Ws = []
+    ),
+    foldl(scc_edge(Graph, V), Ws,
+          scc(I1, Indices, Lows, [V|Stack0], Comps, NC), S1),
+    S1 = scc(I2, Indices2, Lows2, Stack2, Comps2, NC2),
+    (   get_assoc(V, Lows2, Low),
+        Low =:= I
+    ->  pop_component(Stack2, V, NC2, Comps2, Stack3, Comps3),
+        NC3 is NC2+1,
+        S = scc(I2, Indices2, Lows2, Stack3, Comps3, NC3)
+    ;   S = S1
+    ).
+
+scc_edge(Graph, V, W, S0, S) :-
+    S0 = scc(_, Indices, _, _, Comps, _),
+    (   \+ get_assoc(W, Indices, _)
+    ->  strong_connect(Graph, W, S0, S1),
+        S1 = scc(I, Ix, Lows1, St, Cs, NC),
+        get_assoc(W, Lows1, LW),
+        lower(V, LW, Lows1, Lows),
+        S = scc(I, Ix, Lows, St, Cs, NC)
+    ;   \+ get_assoc(W, Comps, _)     % on the stack
+    ->  get_assoc(W, Indices, IW),
+        S0 = scc(I, Ix, Lows0, St, Cs, NC),
+        lower(V, IW, Lows0, Lows),
+        S = scc(I, Ix, Lows, St, Cs, NC)
+    ;   S = S0
+    ).
+
+lower(V, L, Lows0, Lows) :-
+    get_assoc(V, Lows0, LV),
+    (   L < LV
+    ->  put_assoc(V, Lows0, L, Lows)
+    ;   Lows = Lows0
+    ).
+
+pop_component([W|Stack0], V, NC, Comps0, Stack, Comps) :-
+    put_assoc(W, Comps0, NC, Comps1),
+    (   W == V
+    ->  Stack = Stack0,
+        Comps = Comps1
+    ;   pop_component(Stack0, V, NC, Comps1, Stack, Comps)
+    ).
 
 edge(callers, Pred, Other, Ticks, Calls, edge(Other, Pred, Ticks, Calls)).
 edge(callees, Pred, Other, Ticks, Calls, edge(Pred, Other, Ticks, Calls)).

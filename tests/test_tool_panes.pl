@@ -2180,11 +2180,12 @@ test(so_the_grip_sits_in_the_corner_of_the_window_it_is_on) :-
     get(Grip, area, area(_, GY, _, _)),
     GY < 8.
 
-%       The details and the call graph are tabs on the right.  The graph
-%       takes graphviz, and is only drawn while its tab is on top.
+%       The details, the call graph and the call tree are tabs on the
+%       right.  The graph takes graphviz, and is only drawn while its tab
+%       is on top.
 
 test(the_details_and_graph_are_tabs_of_its_right_window,
-     Names == [details, call_graph]) :-
+     Names == [details, call_graph, call_tree]) :-
     no_frames,
     profiler(F),
     get(F, window, prof_tabs, T),
