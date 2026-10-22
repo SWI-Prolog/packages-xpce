@@ -451,7 +451,9 @@ warps a texture, e.g., a camera image, and draws many particles using
 a single layer.  Small meshes are built using `sdl_mesh ->append' and
 `sdl_mesh ->triangle'.  The predicate below replaces all triangles in
 one call, which is fast enough to rebuild a mesh of a few thousand
-triangles on every frame.  The demo \textsf{Particles} uses it.
+triangles on every frame.  The demo \textsf{Particles} uses it, and
+the demo \textsf{Ripples} warps a picture through waves on a grid of
+14,000 triangles.
 
 \begin{description}
     \predicate{pce_sdl_mesh_set}{3}{+Mesh, +Vertices, +Indices}

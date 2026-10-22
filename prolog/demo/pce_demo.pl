@@ -260,6 +260,11 @@ demo('Particles',
      demo(particles),
      particles_demo).
 
+demo('Ripples',
+     'Stir the water of a ripple tank: a picture warped by an sdl_mesh',
+     demo(ripples),
+     ripples_demo).
+
 demo('Drag-and-drop File',
      'Receive files dropped from the desktop (drop_file/drop_text events)',
      demo(dragdrop_file),

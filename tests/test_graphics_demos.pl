@@ -76,6 +76,7 @@ test(paths)   :- run_demo(paths, paths_demo:paths_demo).
 test(paint)   :- run_demo(paint, paint_demo:paint_demo).
 test(compose) :- run_demo(compose, compose_demo:compose_demo).
 test(canvas)  :- run_demo(canvas_demo, canvas_demo:canvas_demo).
+test(ripples) :- run_demo(ripples, ripples_demo:ripples_demo).
 test(blend_menu) :-
     use_module(demo(compose)),
     compose_demo:compose_demo,
