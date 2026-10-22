@@ -511,11 +511,47 @@ ws_save_animation(Animation a, FileObj file, Name format, int quality)
 
   succeed;
 }
+
+/**
+ * Chain with the names of the formats animation->save can write,
+ * found by encoding a 1x1 frame in memory.
+ */
+Chain
+ws_animation_save_formats(void)
+{ static const char *formats[] = { "png", "gif", "webp", "avif", "ani", NULL };
+  Chain ch = answerObject(ClassChain, EAV);
+  SDL_Surface *surf = SDL_CreateSurface(1, 1, SDL_PIXELFORMAT_ARGB8888);
+
+  if ( surf )
+  { for(const char **f = formats; *f; f++)
+    { SDL_IOStream *io = SDL_IOFromDynamicMem();
+      const char *type = streq(*f, "png") ? "apng" : *f;
+      IMG_AnimationEncoder *enc;
+
+      if ( io && (enc = IMG_CreateAnimationEncoder_IO(io, true, type)) )
+      { bool ok = IMG_AddAnimationEncoderFrame(enc, surf, 0);
+
+	if ( IMG_CloseAnimationEncoder(enc) && ok )
+	  appendChain(ch, CtoName(*f));
+      } else if ( io )
+      { SDL_CloseIO(io);
+      }
+    }
+    SDL_DestroySurface(surf);
+  }
+
+  return ch;
+}
 #else
 status
 ws_save_animation(Animation a, FileObj file, Name format, int quality)
 { return errorPce(a, NAME_cannotSave, file,
 		  CtoName("saving animations requires SDL_image 3.4"));
+}
+
+Chain
+ws_animation_save_formats(void)
+{ return answerObject(ClassChain, EAV);
 }
 #endif
 

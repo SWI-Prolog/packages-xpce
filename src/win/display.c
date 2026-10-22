@@ -719,6 +719,11 @@ getImageSaveFormatsDisplay(DisplayObj d)
 }
 
 static Chain
+getAnimationSaveFormatsDisplay(DisplayObj d)
+{ answer(ws_animation_save_formats());
+}
+
+static Chain
 getVideoDecodersDisplay(DisplayObj d)
 { answer(ws_video_codecs(false));
 }
@@ -833,6 +838,9 @@ static getdecl get_display[] =
      NAME_sound, "Extensions of the sound files that can be loaded"),
   GM(NAME_imageSaveFormats, 0, "chain", NULL, getImageSaveFormatsDisplay,
      NAME_image, "Formats image->save can write"),
+  GM(NAME_animationSaveFormats, 0, "chain", NULL,
+     getAnimationSaveFormatsDisplay,
+     NAME_image, "Formats animation->save can write"),
   GM(NAME_videoDecoders, 0, "chain", NULL, getVideoDecodersDisplay,
      NAME_video, "Common codecs class video can play"),
   GM(NAME_videoEncoders, 0, "chain", NULL, getVideoEncodersDisplay,

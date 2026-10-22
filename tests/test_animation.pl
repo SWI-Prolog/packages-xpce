@@ -254,7 +254,7 @@ wait_until(Goal, Max) :-
 
 :- begin_tests(animation).
 
-test(frames, [N-W-H-Colours == 3-4-4-[red, lime, blue]]) :-
+test(frames, [condition(apng), N-W-H-Colours == 3-4-4-[red, lime, blue]]) :-
     apng(A),
     get(A, count, N),
     get(A?size, width, W),
@@ -263,11 +263,11 @@ test(frames, [N-W-H-Colours == 3-4-4-[red, lime, blue]]) :-
                  get(A, frame, I, Image),
                  colour_of(Image, C)
                ), Colours).
-test(delays, Delays == [50, 100, 150]) :-
+test(delays, [condition(apng), Delays == [50, 100, 150]]) :-
     apng(A),
     get(A, delays, Vector),
     vector_list(Vector, Delays).
-test(loop_count, N == 2) :-
+test(loop_count, [condition(apng), N == 2]) :-
     apng(A),
     get(A, loop_count, N).
 test(still_png, [N-C == 1-blue]) :-
@@ -281,7 +281,7 @@ test(bitmap_shows_first_frame, C == red) :-
     apng(A),
     new(BM, bitmap(A)),
     shown(BM, C).
-test(select_frame, [F-C == 3-blue]) :-
+test(select_frame, [condition(apng), F-C == 3-blue]) :-
     apng(A),
     new(BM, bitmap(A)),
     send(BM, frame, 3),
@@ -300,7 +300,7 @@ test(image_loads_first_frame, C == red) :-
 %   Plays loop_count/1 times through 3 frames of 50, 100 and 150
 %   milliseconds, i.e., 0.6 seconds, and stops at the last frame.
 
-test(play, [Loops-F-C == 2-3-blue]) :-
+test(play, [condition(apng), Loops-F-C == 2-3-blue]) :-
     apng(A),
     new(BM, bitmap(A)),
     send(BM, play),
@@ -311,7 +311,7 @@ test(play, [Loops-F-C == 2-3-blue]) :-
     get(BM, loops, Loops),
     get(BM, frame, F),
     shown(BM, C).
-test(stop, [Playing == @off]) :-
+test(stop, [condition(apng), Playing == @off]) :-
     apng(A),
     new(BM, bitmap(A)),
     send(BM, play),
@@ -352,13 +352,19 @@ test(append_scales, W-H == 4-4) :-
     get(A, frame, 2, F),
     get(F?size, width, W),
     get(F?size, height, H).
-test(save_apng, [N-Delays-Colours == 3-[50, 100, 150]-[red, lime, blue]]) :-
+test(save_apng, [ condition(can_save(png)),
+                 N-Delays-Colours == 3-[50, 100, 150]-[red, lime, blue]
+               ]) :-
     saved_copy('copy.png', default, A),
     animation_info(A, N, Delays, Colours).
-test(save_gif, [N-Delays-Colours == 3-[50, 100, 150]-[red, lime, blue]]) :-
+test(save_gif, [ condition(can_save(gif)),
+                N-Delays-Colours == 3-[50, 100, 150]-[red, lime, blue]
+              ]) :-
     saved_copy('copy.gif', default, A),
     animation_info(A, N, Delays, Colours).
-test(save_format, [N-Colours == 3-[red, lime, blue]]) :-
+test(save_format, [ condition(can_save(gif)),
+                   N-Colours == 3-[red, lime, blue]
+                 ]) :-
     saved_copy('copy.anim', gif, A),
     animation_info(A, N, _, Colours).
 test(save_nothing, fail) :-
@@ -380,15 +386,17 @@ test(record, true(N >= 3)) :-
 %   APNG and WebP keep all metadata; GIF only the loop count and the
 %   description (as a comment).
 
-test(metadata_apng, [Info == 3-"Ball"-"Jan"-"Bounces"-"PD"]) :-
+test(metadata_apng, [ condition(can_save(png)),
+                     Info == 3-"Ball"-"Jan"-"Bounces"-"PD"
+                   ]) :-
     with_metadata('meta.png', Info).
-test(metadata_gif, [L-D == 3-"Bounces"]) :-
+test(metadata_gif, [condition(can_save(gif)), L-D == 3-"Bounces"]) :-
     with_metadata('meta.gif', L-_-_-D-_).
 test(metadata_webp, [ condition(can_save(webp)),
                       Info == 3-"Ball"-"Jan"-"Bounces"-"PD"
                     ]) :-
     with_metadata('meta.webp', Info).
-test(no_metadata, [T-L == (@nil)-2]) :-
+test(no_metadata, [condition(apng), T-L == (@nil)-2]) :-
     apng(A),
     get(A, title, T),
     get(A, loop_count, L).
@@ -410,7 +418,7 @@ test(cursor_in_window, C2 == C) :-
     ignore(send(@display, dispatch)),
     get(W, cursor, C2),
     send(W, destroy).
-test(ani_hot_spot, [Kind-X-Y == animation-2-3]) :-
+test(ani_hot_spot, [condition(can_save(ani)), Kind-X-Y == animation-2-3]) :-
     new(A0, animation),
     forall(member(Colour, [red, blue]),
            ( image(Colour, I),
@@ -426,9 +434,22 @@ test(ani_hot_spot, [Kind-X-Y == animation-2-3]) :-
 
 :- end_tests(animation).
 
+%!  can_save(+Format) is semidet.
+%
+%   True if animation->save can write Format.  SDL_image before 3.4
+%   cannot write animations.
+
 can_save(Format) :-
-    get(@display, image_save_formats, Chain),
+    get(@display, animation_save_formats, Chain),
     send(Chain, member, Format).
+
+%!  apng is semidet.
+%
+%   True if we can load animated PNG.  SDL_image added that in 3.4,
+%   together with writing animations.
+
+apng :-
+    can_save(png).
 
 %!  with_metadata(+Name, -Info) is det.
 %
