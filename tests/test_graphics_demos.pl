@@ -141,6 +141,33 @@ test(disk_usage_scan, [ Total-Labels-SubLabels ==
     msort(SubLabels0, SubLabels),
     send(F, destroy).
 
+%   The popup scans the parent of the folder shown and the folder it
+%   is on.
+
+test(disk_usage_parent, [ Labels1-Labels2 == [sub, 'a.txt']-['b.txt', 'c.txt'],
+                          setup(scan_tree(Dir)),
+                          cleanup(delete_directory_and_contents(Dir))
+                        ]) :-
+    use_module(demo(disk_usage)),
+    new(F, disk_usage_demo:disk_usage_frame),
+    directory_file_path(Dir, sub, Sub),
+    get(F, chart_window, W),
+    send(F, scan, Sub),
+    wait_for(get(W, root, Root0), Root0 \== @nil, 10),
+    send(F, scan_parent),
+    wait_for(get(W, root, Root1), Root1 \== @nil, 10),
+    child_labels(Root1, Labels1),
+    get(Root1?children, find, @arg1?label == sub, SubNode),
+    send(W, slot, popup_node, SubNode),
+    send(F, can_scan_node),
+    send(F, scan_node),
+    wait_for(get(W, root, Root2), Root2 \== @nil, 10),
+    child_labels(Root2, Labels0),
+    msort(Labels0, Labels2),
+    send(W, slot, popup_node, Root2),
+    \+ send(F, can_scan_node),          % already shown
+    send(F, destroy).
+
 child_labels(Node, Labels) :-
     get(Node?children, map, @arg1?label?value, Ch),
     chain_list(Ch, Labels).

@@ -41,6 +41,7 @@
 :- use_module(library(file_item)).          % directory_item
 :- use_module(library(apply)).
 :- use_module(library(lists)).
+:- use_module(library(open_document)).
 
 /** <module> Disk usage analyser
 
@@ -48,7 +49,9 @@ Scans a folder and shows how its disk space is distributed over its
 sub folders, as rings or as a treemap, in the style of GNOME's _baobab_.
 Hover a segment to see its size, click it to zoom in and click the
 centre (or the top bar of the treemap) to zoom out.  The popup of the
-chart switches between the rings and the treemap.
+chart opens the file or folder below the pointer, scans that folder or
+the parent of the folder shown, and switches between the rings and the
+treemap.
 
 Scanning runs in a thread of its own, so the window stays responsive
 and shows the progress.  The sizes are those of the files (as
@@ -94,9 +97,20 @@ initialise(F) :->
     send(W, size, size(600, 600)),
     send(W, unit, bytes),
     send(W?chart, select_message, message(F, selected, @arg1)),
+    get(W, popup, P),
+    forall(popup_item(F, Item),
+           send(P, insert_before, Item, zoom_out)),
     send(new(R, dialog), below, W),
     send(R, append, label(reporter)),
     send(R, gap, size(5, 2)).
+
+popup_item(F, menu_item(open, message(F, open_node),
+                        condition := message(F, has_popup_node))).
+popup_item(F, menu_item(scan_folder, message(F, scan_node),
+                        condition := message(F, can_scan_node))).
+popup_item(F, menu_item(scan_parent, message(F, scan_parent),
+                        condition := message(F, has_parent),
+                        end_group := @on)).
 
 unlink(F) :->
     send(F, stop_scan),
@@ -157,6 +171,51 @@ scan_failed(F, Id:int, Message:string) :->
         send(F, report, error, 'Scan failed: %s', Message)
     ;   true
     ).
+
+%   The popup acts on the node below the pointer when it opened.  The
+%   data of a node is the path of its file or folder.
+
+popup_path(F, Path:name) :<-
+    "Path of the node the popup is on"::
+    get(F?chart_window, popup_node, Node),
+    Node \== @nil,
+    get(Node, data, Path).
+
+has_popup_node(F) :->
+    get(F, popup_path, _).
+
+open_node(F) :->
+    "Open the file or folder the popup is on"::
+    get(F, popup_path, Path),
+    open_document(Path).
+
+can_scan_node(F) :->
+    "True if the popup is on a folder below the top"::
+    get(F, popup_path, Path),
+    exists_directory(Path),
+    \+ get(F?chart_window?root, data, Path).
+
+scan_node(F) :->
+    "Scan the folder the popup is on"::
+    get(F, popup_path, Path),
+    send(F, scan, Path).
+
+parent_folder(F, Parent:name) :<-
+    "Parent of the folder shown"::
+    get(F, member, dialog, D),
+    get(D, member, folder, DI),
+    get(DI, selection, Dir),
+    Dir \== '',
+    file_directory_name(Dir, Parent),
+    Parent \== Dir.
+
+has_parent(F) :->
+    get(F, parent_folder, _).
+
+scan_parent(F) :->
+    "Scan the parent of the folder shown"::
+    get(F, parent_folder, Parent),
+    send(F, scan, Parent).
 
 selected(F, Node:hierarchy_node) :->
     "A file was clicked"::
