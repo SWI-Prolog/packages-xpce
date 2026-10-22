@@ -213,6 +213,56 @@ test(svg_data_closed_subpaths, Closed == [@on, @nil]) :-
     get(MP, closed, C2),
     Closed = [C1, C2].
 
+
+%   Two filled triangles that share the diagonal from (40,0) to (0,40).
+%   (22,22) lies in the second, within the <-event_tolerance of the
+%   first.
+
+triangle(first,  [point(0,0),  point(40,0),  point(0,40)]).
+triangle(second, [point(40,0), point(40,40), point(0,40)]).
+
+filled_triangle(Which, EventArea, P) :-
+    triangle(Which, Points),
+    new_path(Points, P),
+    filled(P),
+    send(P, pen, 0),
+    send(P, event_area, EventArea).
+
+hits(P, X, Y) :-
+    send(P, compute),                   % ->in_event_area tests the area first
+    send(P, in_event_area, X, Y).
+
+test(event_area_auto_tolerance, true) :-
+    filled_triangle(first, auto, P),
+    hits(P, 22, 22).
+test(event_area_painted_exact, [Hits == [second]]) :-
+    findall(W, ( member(W, [first, second]),
+                 filled_triangle(W, painted, P),
+                 hits(P, 22, 22)
+               ), Hits).
+test(event_area_painted_line, true) :-      % unfilled: only the line
+    triangle(first, Points),
+    new_path(Points, P),
+    send(P, closed, @on),
+    send(P, pen, 4),
+    send(P, event_area, painted),
+    hits(P, 20, 1),
+    \+ hits(P, 10, 10).
+test(event_area_area_unfilled, true) :-
+    triangle(first, Points),
+    new_path(Points, P),
+    send(P, closed, @on),
+    send(P, event_area, area),
+    hits(P, 10, 10).
+test(event_area_outline_ignores_fill, fail) :-
+    filled_triangle(first, outline, P),
+    hits(P, 12, 12).
+test(event_area_auto_open_fill, true) :-    % filled, but not closed
+    triangle(first, Points),
+    new_path(Points, P),
+    send(P, fill, colour(red)),
+    hits(P, 12, 12).
+
 :- end_tests(path_segments).
 
 svg_round_trip(In, Out) :-

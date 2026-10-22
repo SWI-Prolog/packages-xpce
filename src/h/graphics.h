@@ -396,6 +396,7 @@ NewClass(path)
   BoolObj    closed;			/* Line from end back to start */
   Chain	     interpolation;		/* interpolated points */
   Name	     fill_rule;			/* winding or even_odd */
+  Name	     event_area;		/* auto, painted, area, outline */
 End;
 
 

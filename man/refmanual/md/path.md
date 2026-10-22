@@ -53,6 +53,27 @@ Paths can be used for numerous purposes:
 
     **Defaults**: @off
 
+- path<-event_area: {auto,painted,area,outline}
+    Which part of the path accepts mouse events:
+
+      - `auto`
+        The interior if the path is closed or filled, as well as
+        anything within the class variable `graphical.event_tolerance`
+        of the line, so a thin line is easy to hit.
+      - `painted`
+        Exactly what is painted: the interior if the path is filled and
+        the line as wide as <-pen.  Use this for filled shapes that touch
+        each other, such as the segments of a chart, as `auto` lets a
+        shape accept events just outside it.
+      - `area`
+        The interior as determined by <-fill_rule, whether or not the
+        path is filled.
+      - `outline`
+        Anything within the event tolerance of the line, ignoring the
+        interior.
+
+    **Defaults**: auto
+
 - path<-fill: colour|gradient|image|{foreground,background}*
     Colour, gradient or (repeated) image used to fill the interior of
     the path.  Which parts are interior is determined by <-fill_rule.

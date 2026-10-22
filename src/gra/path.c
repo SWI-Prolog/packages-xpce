@@ -70,6 +70,7 @@ initialisePath(Path p, Name kind, Int radius_or_interval, Chain points)
   assign(p, fill,  NIL);
   assign(p, closed,	   OFF);
   assign(p, fill_rule,	   NAME_winding);
+  assign(p, event_area,	   NAME_auto);
 
   if ( notDefault(points) )
     send(p, NAME_points, points, EAV);
@@ -1345,6 +1346,8 @@ initialiseNewSlotPath(Path p, Variable var)
     assign(p, offset, newObject(ClassPoint, EAV));
   else if ( var->name == NAME_fillRule )
     assign(p, fill_rule, NAME_winding);
+  else if ( var->name == NAME_eventArea )
+    assign(p, event_area, NAME_auto);
   else
     initialiseNewSlotGraphical((Graphical) p, var);
 
@@ -1402,7 +1405,9 @@ static vardecl var_path[] =
   IV(NAME_interpolation, "chain*", IV_GET,
      NAME_interpolation, "Derived interpolated points"),
   SV(NAME_fillRule, "{winding,even_odd}", IV_GET|IV_STORE, fillRulePath,
-     NAME_appearance, "Which parts of a self-intersecting path are inside")
+     NAME_appearance, "Which parts of a self-intersecting path are inside"),
+  IV(NAME_eventArea, "{auto,painted,area,outline}", IV_BOTH,
+     NAME_event, "Which part of the path accepts events")
 };
 
 /* Send Methods */
@@ -1423,7 +1428,7 @@ static senddecl send_path[] =
   SM(NAME_reference, 1, "reference=[point]", referencePath,
      NAME_area, "Move <-offset while retaining points"),
   SM(NAME_initialiseNewSlot, 1, "variable", initialiseNewSlotPath,
-     NAME_compatibility, "Initialise <-offset and <-fill_rule"),
+     NAME_compatibility, "Initialise <-offset, <-fill_rule and <-event_area"),
   SM(NAME_append, 1, "point", appendPath,
      NAME_points, "Append a point"),
   SM(NAME_clear, 0, NULL, clearPath,
@@ -1499,9 +1504,22 @@ insidePath(Path p, Int xc, Int yc)
 }
 
 
+/* Hit-test for events.  <-event_area selects what is hit:
+ *
+ *   - auto:    the area if the path is closed or filled, as well as
+ *		anything within <-event_tolerance of the line.
+ *   - painted: exactly what is painted: the fill if the path is filled
+ *		and the line as wide as <-pen.  Use this for shapes that
+ *		touch, such as the tiles of a chart.
+ *   - area:    the area enclosed by the path, filled or not.
+ *   - outline: anything within <-event_tolerance of the line.
+ */
+
 static status
 inEventAreaPath(Path p, Int xc, Int yc)
 { static int evtol = -1;
+  bool area;
+  double tolerance;
 
   if ( evtol < 0 )
   { Int v = getClassVariableValueObject(p, NAME_eventTolerance);
@@ -1511,8 +1529,22 @@ inEventAreaPath(Path p, Int xc, Int yc)
   if ( !path_drawable(p) )
     fail;
 
+  if ( p->event_area == NAME_painted )
+  { area = notNil(p->fill);
+    tolerance = valNum(p->pen)/2.0;
+  } else if ( p->event_area == NAME_area )
+  { area = true;
+    tolerance = 0.0;
+  } else if ( p->event_area == NAME_outline )
+  { area = false;
+    tolerance = (double)evtol;
+  } else				/* auto */
+  { area = (p->closed == ON || notNil(p->fill));
+    tolerance = (double)evtol;
+  }
+
   return r_path_hit(path_chain(p), path_radius(p), p->closed == ON,
-		    p->fill_rule, p->closed == ON, (double)evtol,
+		    p->fill_rule, area, tolerance,
 		    valNum(xc) - valNum(p->offset->x),
 		    valNum(yc) - valNum(p->offset->y));
 }
