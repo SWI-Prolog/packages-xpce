@@ -2624,53 +2624,146 @@ pl_chain_list(term_t chain, term_t list)
 		 *	     SDL MESHES		*
 		 *******************************/
 
-/* Get v(X,Y), v(X,Y,U,V) or v(X,Y,U,V,rgba(R,G,B,A)) into the 8 floats
- * of a vertex for pceSdlMeshSet(): x, y, r, g, b, a, u, v.  `a` and `c`
- * are scratch term references.
+/* Get v(X,Y), v(X,Y,U,V) or v(X,Y,U,V,Colour) into the 8 floats of a
+ * vertex for pceSdlMeshSet(): x, y, r, g, b, a, u, v.  Colour is
+ * rgba(R,G,B,A) or an integer 0xRRGGBBAA.  `a` and `c` are scratch
+ * term references.  PL_get_arg_values() reads all arguments in one
+ * call; we only create term references to report errors.
  */
 
 static bool
-get_mesh_vertex(term_t t, float *f, term_t a, term_t c)
-{ static atom_t ATOM_v, ATOM_rgba;
-  static const int at[] = {0, 1, 6, 7};
-  atom_t name;
-  size_t arity;
-  double d;
-
-  if ( !ATOM_v )
-  { ATOM_v    = PL_new_atom("v");
-    ATOM_rgba = PL_new_atom("rgba");
+is_number_value(const pl_value_t *v)
+{ switch(v->type)
+  { case PL_INT64:
+    case PL_INTEGER:
+    case PL_RATIONAL:
+    case PL_FLOAT:
+      return true;
+    default:
+      return false;
   }
-  if ( !PL_get_name_arity(t, &name, &arity) || name != ATOM_v ||
-       !(arity == 2 || arity == 4 || arity == 5) )
+}
+
+static bool
+get_mesh_colour(term_t c, float *f, term_t a)
+{ static functor_t FUNCTOR_rgba4;
+  pl_value_t v[4];
+
+  if ( !FUNCTOR_rgba4 )
+    FUNCTOR_rgba4 = PL_new_functor(PL_new_atom("rgba"), 4);
+  if ( !PL_is_functor(c, FUNCTOR_rgba4) )
+    return PL_type_error("rgba", c);
+  if ( !PL_get_arg_values(c, 1, 4, v, CVT_EXCEPTION) )
+    return false;
+  for(int i=0; i<4; i++)
+  { if ( v[i].type != PL_INT64 || v[i].value.i < 0 || v[i].value.i > 255 )
+    { _PL_get_arg(i+1, c, a);
+      if ( v[i].type != PL_INT64 )		/* raises the error */
+	return PL_get_integer_ex(a, &(int){0});
+      return PL_domain_error("colour_component", a);
+    }
+    f[i] = v[i].value.i/255.0f;
+  }
+
+  return true;
+}
+
+static bool
+get_mesh_vertex(term_t t, float *f, term_t a, term_t c)
+{ static functor_t FUNCTOR_v2, FUNCTOR_v4, FUNCTOR_v5;
+  static const int at[] = {0, 1, 6, 7};
+  functor_t fd;
+  size_t arity;
+  pl_value_t v[5];
+
+  if ( !FUNCTOR_v2 )
+  { atom_t v = PL_new_atom("v");
+
+    FUNCTOR_v2 = PL_new_functor(v, 2);
+    FUNCTOR_v4 = PL_new_functor(v, 4);
+    FUNCTOR_v5 = PL_new_functor(v, 5);
+  }
+  if ( !PL_get_functor(t, &fd) ||
+       !(fd == FUNCTOR_v2 || fd == FUNCTOR_v4 || fd == FUNCTOR_v5) )
     return PL_type_error("mesh_vertex", t);
+  arity = PL_functor_arity(fd);
+  if ( !PL_get_arg_values(t, 1, arity, v, PL_AS_FLOAT|CVT_EXCEPTION) )
+    return false;
 
   f[2] = f[3] = f[4] = f[5] = 1.0f;
   f[6] = f[7] = 0.0f;
   for(size_t i=0; i<arity && i<4; i++)
-  { _PL_get_arg(i+1, t, a);
-    if ( !PL_get_float_ex(a, &d) )
-      return false;
-    f[at[i]] = (float)d;
+  { if ( !is_number_value(&v[i]) )
+    { _PL_get_arg(i+1, t, a);			/* raises the error */
+      return PL_get_float_ex(a, &(double){0});
+    }
+    f[at[i]] = (float)v[i].value.f;
   }
   if ( arity == 5 )
-  { _PL_get_arg(5, t, c);
-    if ( !PL_get_name_arity(c, &name, &arity) || name != ATOM_rgba ||
-	 arity != 4 )
-      return PL_type_error("rgba", c);
-    for(int i=0; i<4; i++)
-    { int v;
+  { if ( v[4].type == PL_INT64 || v[4].type == PL_INTEGER )
+    { if ( v[4].value.f < 0 || v[4].value.f > (double)0xffffffff )
+      { _PL_get_arg(5, t, a);
+	return PL_domain_error("rgba", a);
+      }
+      uint32_t c = (uint32_t)v[4].value.f;
 
-      _PL_get_arg(i+1, c, a);
-      if ( !PL_get_integer_ex(a, &v) )
+      f[2] = (c>>24)/255.0f;
+      f[3] = ((c>>16)&0xff)/255.0f;
+      f[4] = ((c>>8)&0xff)/255.0f;
+      f[5] = (c&0xff)/255.0f;
+    } else
+    { _PL_get_arg(5, t, c);
+      if ( !get_mesh_colour(c, &f[2], a) )
 	return false;
-      if ( v < 0 || v > 255 )
-	return PL_domain_error("colour_component", a);
-      f[2+i] = v/255.0f;
     }
   }
 
   return true;
+}
+
+
+/* Buffers for pce_sdl_mesh_set/3, filled by PL_get_list_slice() and
+ * grown as needed, so we walk each list only once.
+ */
+
+typedef struct
+{ void  *data;
+  size_t size;				/* allocated elements */
+  size_t unit;				/* size of an element */
+  term_t a, c;				/* scratch for get_mesh_vertex() */
+} mesh_buffer;
+
+static bool
+mesh_buffer_room(mesh_buffer *b, size_t index)
+{ if ( index < b->size )
+    return true;
+
+  size_t size = b->size ? b->size*2 : 1024;
+  void *new;
+
+  if ( size > INT_MAX/8 ||
+       !(new = realloc(b->data, size*b->unit)) )
+    return PL_resource_error("memory");
+  b->data = new;
+  b->size = size;
+
+  return true;
+}
+
+static int
+mesh_vertex(term_t t, size_t index, void *closure)
+{ mesh_buffer *b = closure;
+
+  return ( mesh_buffer_room(b, index) &&
+	   get_mesh_vertex(t, (float*)b->data + index*8, b->a, b->c) );
+}
+
+static int
+mesh_index(term_t t, size_t index, void *closure)
+{ mesh_buffer *b = closure;
+
+  return ( mesh_buffer_room(b, index) &&
+	   PL_get_integer_ex(t, (int*)b->data + index) );
 }
 
 
@@ -2681,36 +2774,17 @@ get_mesh_vertex(term_t t, float *f, term_t a, term_t c)
 
 static foreign_t
 pl_pce_sdl_mesh_set(term_t mesh, term_t vertices, term_t indices)
-{ size_t nv, ni;
-  term_t tail = PL_copy_term_ref(vertices);
-  term_t head = PL_new_term_ref();
-  term_t a = PL_new_term_ref();
-  term_t c = PL_new_term_ref();
-  float *v = NULL;
-  int *idx = NULL;
+{ mesh_buffer vb = { .unit = 8*sizeof(float),
+		     .a = PL_new_term_ref(), .c = PL_new_term_ref() };
+  mesh_buffer ib = { .unit = sizeof(int) };
+  size_t nv, ni;
   bool rc = false;
 
-  if ( PL_skip_list(vertices, 0, &nv) != PL_LIST )
-    return PL_type_error("list", vertices);
-  if ( PL_skip_list(indices, 0, &ni) != PL_LIST )
-    return PL_type_error("list", indices);
-  if ( nv > INT_MAX/8 || ni > INT_MAX )
-    return PL_resource_error("memory");
-  if ( !(v = malloc((nv ? nv : 1)*8*sizeof(float))) ||
-       !(idx = malloc((ni ? ni : 1)*sizeof(int))) )
-  { rc = PL_resource_error("memory");
+  if ( !PL_get_list_slice(vertices, 0, (size_t)-1, mesh_vertex, &vb,
+			  &nv, CVT_EXCEPTION) ||
+       !PL_get_list_slice(indices, 0, (size_t)-1, mesh_index, &ib,
+			  &ni, CVT_EXCEPTION) )
     goto out;
-  }
-
-  for(size_t i=0; PL_get_list(tail, head, tail); i++)
-  { if ( !get_mesh_vertex(head, &v[i*8], a, c) )
-      goto out;
-  }
-  tail = PL_copy_term_ref(indices);
-  for(size_t i=0; PL_get_list(tail, head, tail); i++)
-  { if ( !PL_get_integer_ex(head, &idx[i]) )
-      goto out;
-  }
 
   PceObject obj;
   int status;
@@ -2718,7 +2792,7 @@ pl_pce_sdl_mesh_set(term_t mesh, term_t vertices, term_t indices)
   LOCK();
   pceDrainHostReferences();
   if ( (obj = termToObject(mesh, NULL, NULLATOM, FALSE)) )
-    status = pceSdlMeshSet(obj, v, (int)nv, idx, (int)ni);
+    status = pceSdlMeshSet(obj, vb.data, (int)nv, ib.data, (int)ni);
   else
     status = PCE_MESH_NOT_A_MESH;
   UNLOCK();
@@ -2741,8 +2815,8 @@ pl_pce_sdl_mesh_set(term_t mesh, term_t vertices, term_t indices)
   }
 
 out:
-  free(v);
-  free(idx);
+  free(vb.data);
+  free(ib.data);
   return rc;
 }
 

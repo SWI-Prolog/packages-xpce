@@ -412,6 +412,32 @@ close(Stream),
 See also text_buffer->format. Reading from a stream is used
 by PceEmacs to verify the syntax of an entered clause.
 
+    \predicate{pce_open_terminal_image}{4}{+TerminalImage, -In, -Out, -Error}
+Open the Prolog streams that connect to the \class{terminal_image}
+\arg{TerminalImage}.  \arg{In} reads the input typed in the terminal,
+while \arg{Out} and \arg{Error} write to the terminal.  The streams
+connect through a pseudo terminal where available.  The predicate fails
+if \arg{TerminalImage} is not a \class{terminal_image} or the streams
+cannot be created.  The streams are typically used with
+set_prolog_IO/3 to run a Prolog toplevel in the terminal, as
+\textsf{Epilog} does.
+
+    \predicate{pce_sdl_mesh_set}{3}{+Mesh, +Vertices, +Indices}
+Replace the vertices and triangles of the \class{sdl_mesh} \arg{Mesh}
+in one call.  This is much faster than using `sdl_mesh ->append' and
+`sdl_mesh ->triangle' and is intended for meshes that change on every
+frame, e.g., particles.  \arg{Vertices} is a list of terms
+\term{v}{X,Y}, \term{v}{X,Y,U,V} or \term{v}{X,Y,U,V,Colour}.  X,Y is
+the position in the window and U,V the position in the texture in its
+pixels.  Colour is either a term \term{rgba}{R,G,B,A}, where the
+components are integers 0..255, or an integer \exam{0xRRGGBBAA}.  Note
+that the integer includes the alpha channel: opaque red is
+\exam{0xFF0000FF}.  The default colour is opaque white.  \arg{Indices}
+is a list of indices in \arg{Vertices}, counting from 0, three for
+each triangle.  If \arg{Indices} is \const{[]}, each three
+consecutive vertices make a triangle.  See the class
+\class{sdl_mesh} for an example.
+
     \predicate{pce_server}{1}{+Address}
     \label{sec:xpce-pce_server}
 Create a socket-based server. This predicate is in

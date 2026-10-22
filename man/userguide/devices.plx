@@ -457,10 +457,11 @@ triangles on every frame.  The demo \textsf{Particles} uses it.
     \predicate{pce_sdl_mesh_set}{3}{+Mesh, +Vertices, +Indices}
 Replace the vertices and triangles of the \class{sdl_mesh}
 \arg{Mesh}.  \arg{Vertices} is a list of terms \term{v}{X,Y},
-\term{v}{X,Y,U,V} or \term{v}{X,Y,U,V,rgba(R,G,B,A)}.  X,Y is the
-position in the window, U,V the position in the texture in its pixels
-and R, G, B and A are integers 0..255.  The default colour is opaque
-white.  \arg{Indices} is a list of indices in \arg{Vertices},
+\term{v}{X,Y,U,V} or \term{v}{X,Y,U,V,Colour}.  X,Y is the position
+in the window and U,V the position in the texture in its pixels.
+Colour is \term{rgba}{R,G,B,A}, where R, G, B and A are integers
+0..255, or an integer \exam{0xRRGGBBAA}, e.g., \exam{0xFF0000FF} is
+opaque red.  The default colour is opaque white.  \arg{Indices} is a list of indices in \arg{Vertices},
 counting from 0, three for each triangle.  If \arg{Indices} is
 \const{[]}, each three consecutive vertices make a triangle.
 \end{description}

@@ -226,7 +226,7 @@ mesh([p(X,Y,_,_,Age,Life)|T], I, Vs, Is) :-
     R is 3 + 9*F,
     G is round(230 - 170*F),
     A is round(255*(1-F)),
-    C = rgba(255, G, 60, A),
+    C is 0xFF003C00 \/ G<<16 \/ A,           % 0xRRGGBBAA
     X0 is X-R, Y0 is Y-R, X1 is X+R, Y1 is Y+R,
     Vs = [ v(X0,Y0,0,0,C), v(X1,Y0,32,0,C),
            v(X1,Y1,32,32,C), v(X0,Y1,0,32,C) | VT ],

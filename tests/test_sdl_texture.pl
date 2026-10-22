@@ -788,6 +788,14 @@ test(no_indices, [Names == [green, blue]]) :-
     mesh_window([ v(0,0,0,0,rgba(0,255,0,255)), v(60,0,0,0,rgba(0,255,0,255)),
                   v(0,60,0,0,rgba(0,255,0,255)) ], [], @nil, _, W),
     pixels(W, [10-10, 50-50], Names).
+test(int_colour, [Names == [green, blue]]) :-
+    mesh_window([ v(0,0,0,0,0x00FF00FF), v(60,0,0,0,0x00FF00FF),
+                  v(0,60,0,0,0x00FF00FF) ], [], @nil, _, W),
+    pixels(W, [10-10, 50-50], Names).
+test(int_gradient, [true(maplist(near, GPU, [rgb(255,0,0), rgb(85,85,85)]))]) :-
+    mesh_window([ v(0,0,0,0,0xFF0000FF), v(60,0,0,0,0x00FF00FF),
+                  v(0,60,0,0,0x0000FFFF) ], [], @nil, _, W),
+    rgb_pixels(W, [0-0, 20-20], GPU, _).
 test(gradient, [true(maplist(near, GPU, [rgb(255,0,0), rgb(85,85,85)])),
                 true(maplist(near, Cairo, GPU))]) :-
     mesh_window([ v(0,0,0,0,rgba(255,0,0,255)), v(60,0,0,0,rgba(0,255,0,255)),
@@ -893,6 +901,40 @@ test(not_a_mesh, error(type_error(sdl_mesh, _))) :-
 test(bad_vertex, error(type_error(mesh_vertex, _))) :-
     new(M, sdl_mesh),
     pce_sdl_mesh_set(M, [p(0,0), v(1,0), v(0,1)], []).
+test(bad_int_colour, error(domain_error(rgba, 0x100000000))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0,0,0,0x100000000), v(1,0), v(0,1)], []).
+test(bad_int_colour, error(domain_error(rgba, -1))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0,0,0,-1), v(1,0), v(0,1)], []).
+test(bad_colour, error(type_error(rgba, red))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0,0,0,red), v(1,0), v(0,1)], []).
+test(bad_component, error(domain_error(colour_component, 256))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0,0,0,rgba(256,0,0,0)), v(1,0), v(0,1)], []).
+test(bad_component, error(type_error(integer, a))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0,0,0,rgba(a,0,0,0)), v(1,0), v(0,1)], []).
+test(bad_coordinate, error(type_error(float, a))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(a,0), v(1,0), v(0,1)], []).
+test(bad_coordinate, error(instantiation_error)) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(_,0), v(1,0), v(0,1)], []).
+test(partial_list, error(instantiation_error)) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0), v(1,0)|_], []).
+test(not_a_list, error(type_error(list, [0,1|x]))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0), v(1,0), v(0,1)], [0,1|x]).
+test(large, [N == 3000]) :-		% grows the buffers
+    findall(V, ( between(1, 1000, _),
+                 member(V, [v(0,0), v(1,0), v(0,1)])
+               ), Vs),
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, Vs, []),
+    get(M, count, N).
 test(triangle_bad_index, fail) :-
     new(M, sdl_mesh),
     send(M, append, point(0, 0)),
