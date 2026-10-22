@@ -614,6 +614,7 @@ initialise(TD, TS:thread_status, Graphs:chain, H:int, V:int) :->
          plot_axis(x, 0, H, 100, H, point(50, 200))),
     new(_, partof_hyper(TS, TD, diagram, status)),
     send(TS, recall, H),
+    send(TD, hover_values, @on),
     send(TD, update).
 
 default_size_limit(Limit) :-
@@ -656,7 +657,8 @@ update(TD) :->
     get(TD, hypered, status, TS),
     get(TS, object, History),
     send(TD?graphs, for_all,
-         message(TD, show, History, @arg1)).
+         message(TD, show, History, @arg1)),
+    send(TD, update_hover).
 
 
 clear(TD) :->
@@ -726,7 +728,8 @@ shift_graph(TD, Which:name) :->
 show_stat(TD, Stat:thread_statistics) :->
     "Add a single sample"::
     send(TD?graphs, for_all,
-         message(TD, extend_graph, Stat, @arg1)).
+         message(TD, extend_graph, Stat, @arg1)),
+    send(TD, update_hover).
 
 
 extend_graph(TD, Stat:thread_statistics, Sel:name) :->
@@ -738,6 +741,40 @@ extend_graph(TD, Stat:thread_statistics, Sel:name) :->
     get(PP, x, LX),
     X is LX + 1,
     send(G, append, point(X, Y)).
+
+%   The values shown when hovering are the samples rather than what
+%   the pixels say: sample N is at pixel N of the X axis.
+
+hover_value(TD, G:path, X:int, Value:num) :<-
+    "The sample of graph G at pixel X"::
+    get(TD, value_from_x, X, N0),
+    N is round(N0),
+    get(TD, hypered, status, TS),
+    get(TS?object, nth0, N, Stat),
+    get(G, name, Sel),
+    get(Stat, Sel, Value).
+
+hover_label(_TD, G:path, Value:num, Label:char_array) :<-
+    "Show CPU in percent, stacks in bytes"::
+    get(G, name, Sel),
+    (   percent_scale(Sel)
+    ->  format(string(Label), '~w: ~d%', [Sel, Value])
+    ;   human_bytes(Value, Bytes),
+        format(string(Label), '~w: ~w', [Sel, Bytes])
+    ).
+
+human_bytes(V, S) :-
+    (   V < 1000
+    ->  format(string(S), '~dB', [V])
+    ;   byte_unit(Unit, Size),
+        V < Size*1000
+    ->  format(string(S), '~1f~w', [V/Size, Unit])
+    ).
+
+byte_unit('K', 1000).
+byte_unit('M', 1000000).
+byte_unit('G', 1000000000).
+byte_unit('T', 1000000000000).
 
 :- pce_end_class(thread_diagram).
 

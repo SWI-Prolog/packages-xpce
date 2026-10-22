@@ -59,8 +59,9 @@ libraries that draw charts:
     `plotter` holding `bar` objects, optionally collected in a
     `bar_stack` or a `bar_group`.  Bars can be edited with the mouse.
 
-The bar charts respond to the mouse: hovering a bar shows its value in
-a balloon and clicking its label selects it.  The last two cells edit
+The charts respond to the mouse: hovering the first plot shows the
+values of its graphs, hovering a bar shows its value in a balloon and
+clicking its label selects it.  The last two cells edit
 their bars as well, by dragging them and with a pair of buttons.
 
 Run with:
@@ -223,10 +224,12 @@ samples([0-25, 2-58, 4-34, 6-79, 8-62, 10-93, 12-71]).
 %!  poly_cell(+Picture, +X0, +Y0) is det.
 %
 %   The default `poly' graph: straight segments between the values.
-%   Two graphs share the plotter and thus the axes.
+%   Two graphs share the plotter and thus the axes.  `->hover_values'
+%   shows the value of both graphs below the pointer.
 
 poly_cell(P, X0, Y0) :-
     mk_plot(P, X0, Y0, 0-12, 0-100, Plot),
+    send(Plot, hover_values, @on),
     wave(0, D1),
     wave(2.1, D2),
     graph(Plot, poly, colour(navy_blue), D1, _),

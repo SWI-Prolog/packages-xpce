@@ -153,6 +153,25 @@ Translate an X-coordinate to a value.
 
     \getmethod{plotter}{value_from_y}{int}{num}
 Translate an Y-coordinate to a value.
+
+    \sendmethod{plotter}{hover_values}{bool}
+If \const{@on} (default \const{@off}), moving the pointer over the
+plotter shows a thin vertical line at the pointer and, for each graph
+(any \class{path} on the plotter), a box in the colour of the graph
+holding its value at that $X$.  The boxes are stacked such that they do
+not overlap.  An application that changes its graphs while the pointer
+is over the plotter calls ->update_hover to show the new values.
+
+    \getmethod{plotter}{hover_value}{path, X:int}{num}
+Value of a graph at pixel $X$.  For a \class{plot_graph} this
+interpolates the values of the two points on either side of $X$; for
+other paths it translates the pixel $Y$ of the path at $X$ using
+<-value_from_y.  Fails if the graph has no value at $X$.  A subclass
+may redefine this to return the exact data.
+
+    \getmethod{plotter}{hover_label}{path, num}{char_array}
+Text for a value of a graph.  The default formats the value using
+`plot_axis<-label_for_value' of the $Y$ axis.
 \end{description}
 
 Graphs themselves are instances of class \class{plot_graph}, a subclass
