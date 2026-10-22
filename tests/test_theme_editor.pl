@@ -396,7 +396,9 @@ test(trace_link, Current == 'colour:ui_window_background') :-
     get(E, current, Current),
     get(E, member, rows, B),
     get(B?selection, key, Current).
-test(class_variable_link, Title == 'tab.indicator_colour') :-
+test(class_variable_link, [ condition(has_manual),
+                            Title == 'tab.indicator_colour'
+                          ]) :-
     %  A class variable in "Used for" links to its manual entry
     editor(E),
     send(E, select, 'colour:ui_accent'),
@@ -491,3 +493,12 @@ test(new_theme_name, Name == my_dark) :-
     pce_theme_editor:new_theme_name(dark, Name).
 
 :- end_tests(theme_editor).
+
+%   The help window needs the reference manual in Markdown.  It is not
+%   available if the documentation is not built.
+
+has_manual :-
+    absolute_file_name(swi('xpce/man/refmanual/md'), _,
+                       [ file_type(directory), access(read),
+                         file_errors(fail)
+                       ]).
