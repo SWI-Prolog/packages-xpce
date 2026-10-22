@@ -792,6 +792,10 @@ test(int_colour, [Names == [green, blue]]) :-
     mesh_window([ v(0,0,0,0,0x00FF00FF), v(60,0,0,0,0x00FF00FF),
                   v(0,60,0,0,0x00FF00FF) ], [], @nil, _, W),
     pixels(W, [10-10, 50-50], Names).
+test(colour_no_texture, [Names == [green, blue]]) :-
+    mesh_window([ v(0,0,0x00FF00FF), v(60,0,rgba(0,255,0,255)),
+                  v(0,60,0x00FF00FF) ], [], @nil, _, W),
+    pixels(W, [10-10, 50-50], Names).
 test(int_gradient, [true(maplist(near, GPU, [rgb(255,0,0), rgb(85,85,85)]))]) :-
     mesh_window([ v(0,0,0,0,0xFF0000FF), v(60,0,0,0,0x00FF00FF),
                   v(0,60,0,0,0x0000FFFF) ], [], @nil, _, W),
@@ -916,6 +920,9 @@ test(bad_component, error(domain_error(colour_component, 256))) :-
 test(bad_component, error(type_error(integer, a))) :-
     new(M, sdl_mesh),
     pce_sdl_mesh_set(M, [v(0,0,0,0,rgba(a,0,0,0)), v(1,0), v(0,1)], []).
+test(bad_colour, error(type_error(rgba, red))) :-
+    new(M, sdl_mesh),
+    pce_sdl_mesh_set(M, [v(0,0,red), v(1,0), v(0,1)], []).
 test(bad_coordinate, error(type_error(float, a))) :-
     new(M, sdl_mesh),
     pce_sdl_mesh_set(M, [v(a,0), v(1,0), v(0,1)], []).

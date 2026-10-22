@@ -427,9 +427,9 @@ Replace the vertices and triangles of the \class{sdl_mesh} \arg{Mesh}
 in one call.  This is much faster than using `sdl_mesh ->append' and
 `sdl_mesh ->triangle' and is intended for meshes that change on every
 frame, e.g., particles.  \arg{Vertices} is a list of terms
-\term{v}{X,Y}, \term{v}{X,Y,U,V} or \term{v}{X,Y,U,V,Colour}.  X,Y is
-the position in the window and U,V the position in the texture in its
-pixels.  Colour is either a term \term{rgba}{R,G,B,A}, where the
+\term{v}{X,Y}, \term{v}{X,Y,Colour}, \term{v}{X,Y,U,V} or
+\term{v}{X,Y,U,V,Colour}.  X,Y is the position in the window and U,V
+the position in the texture in its pixels, which is 0,0 if omitted.  Colour is either a term \term{rgba}{R,G,B,A}, where the
 components are integers 0..255, or an integer \exam{0xRRGGBBAA}.  Note
 that the integer includes the alpha channel: opaque red is
 \exam{0xFF0000FF}.  The default colour is opaque white.  \arg{Indices}

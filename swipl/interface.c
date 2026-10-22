@@ -2642,10 +2642,10 @@ pl_chain_list(term_t chain, term_t list)
 		 *	     SDL MESHES		*
 		 *******************************/
 
-/* Get v(X,Y), v(X,Y,U,V) or v(X,Y,U,V,Colour) into the 8 floats of a
- * vertex for pceSdlMeshSet(): x, y, r, g, b, a, u, v.  Colour is
- * rgba(R,G,B,A) or an integer 0xRRGGBBAA.  `a` and `c` are scratch
- * term references.  PL_get_arg_values() reads all arguments in one
+/* Get v(X,Y), v(X,Y,Colour), v(X,Y,U,V) or v(X,Y,U,V,Colour) into the
+ * 8 floats of a vertex for pceSdlMeshSet(): x, y, r, g, b, a, u, v.
+ * Colour is rgba(R,G,B,A) or an integer 0xRRGGBBAA.  `a` and `c` are
+ * scratch term references.  PL_get_arg_values() reads all arguments in one
  * call; we only create term references to report errors.
  */
 
@@ -2688,49 +2688,54 @@ get_mesh_colour(term_t c, float *f, term_t a)
 
 static bool
 get_mesh_vertex(term_t t, float *f, term_t a, term_t c)
-{ static functor_t FUNCTOR_v2, FUNCTOR_v4, FUNCTOR_v5;
+{ static functor_t FUNCTOR_v2, FUNCTOR_v3, FUNCTOR_v4, FUNCTOR_v5;
   static const int at[] = {0, 1, 6, 7};
   functor_t fd;
-  size_t arity;
+  size_t arity, ncoords;
   pl_value_t v[5];
 
   if ( !FUNCTOR_v2 )
   { atom_t v = PL_new_atom("v");
 
     FUNCTOR_v2 = PL_new_functor(v, 2);
+    FUNCTOR_v3 = PL_new_functor(v, 3);
     FUNCTOR_v4 = PL_new_functor(v, 4);
     FUNCTOR_v5 = PL_new_functor(v, 5);
   }
   if ( !PL_get_functor(t, &fd) ||
-       !(fd == FUNCTOR_v2 || fd == FUNCTOR_v4 || fd == FUNCTOR_v5) )
+       !(fd == FUNCTOR_v2 || fd == FUNCTOR_v3 ||
+	 fd == FUNCTOR_v4 || fd == FUNCTOR_v5) )
     return PL_type_error("mesh_vertex", t);
   arity = PL_functor_arity(fd);
+  ncoords = (arity == 3 ? 2 : arity == 5 ? 4 : arity);
   if ( !PL_get_arg_values(t, 1, arity, v, PL_AS_FLOAT|CVT_EXCEPTION) )
     return false;
 
   f[2] = f[3] = f[4] = f[5] = 1.0f;
   f[6] = f[7] = 0.0f;
-  for(size_t i=0; i<arity && i<4; i++)
+  for(size_t i=0; i<ncoords; i++)
   { if ( !is_number_value(&v[i]) )
     { _PL_get_arg(i+1, t, a);			/* raises the error */
       return PL_get_float_ex(a, &(double){0});
     }
     f[at[i]] = (float)v[i].value.f;
   }
-  if ( arity == 5 )
-  { if ( v[4].type == PL_INT64 || v[4].type == PL_INTEGER )
-    { if ( v[4].value.f < 0 || v[4].value.f > (double)0xffffffff )
-      { _PL_get_arg(5, t, a);
+  if ( ncoords < arity )			/* the colour is last */
+  { const pl_value_t *cv = &v[arity-1];
+
+    if ( cv->type == PL_INT64 || cv->type == PL_INTEGER )
+    { if ( cv->value.f < 0 || cv->value.f > (double)0xffffffff )
+      { _PL_get_arg(arity, t, a);
 	return PL_domain_error("rgba", a);
       }
-      uint32_t c = (uint32_t)v[4].value.f;
+      uint32_t c = (uint32_t)cv->value.f;
 
       f[2] = (c>>24)/255.0f;
       f[3] = ((c>>16)&0xff)/255.0f;
       f[4] = ((c>>8)&0xff)/255.0f;
       f[5] = (c&0xff)/255.0f;
     } else
-    { _PL_get_arg(5, t, c);
+    { _PL_get_arg(arity, t, c);
       if ( !get_mesh_colour(c, &f[2], a) )
 	return false;
     }

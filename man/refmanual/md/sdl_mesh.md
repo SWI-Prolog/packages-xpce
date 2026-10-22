@@ -28,8 +28,9 @@ call:
 
 	pce_sdl_mesh_set(+Mesh, +Vertices, +Indices)
 
-Vertices is a list of `v(X,Y)`, `v(X,Y,U,V)` or `v(X,Y,U,V,Colour)`,
-where U,V is the position in the texture.  Colour is `rgba(R,G,B,A)`,
+Vertices is a list of `v(X,Y)`, `v(X,Y,Colour)`, `v(X,Y,U,V)` or
+`v(X,Y,U,V,Colour)`, where U,V is the position in the texture (0,0 if
+omitted).  Colour is `rgba(R,G,B,A)`,
 where R, G, B and A are integers 0..255, or an integer `0xRRGGBBAA`,
 e.g., `0xFF0000FF` is opaque red.  The default colour is opaque white.  Indices is a list of indices of Vertices, three per triangle,
 counting from 0.  If Indices is `[]`, each three consecutive vertices
