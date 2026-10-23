@@ -163,9 +163,9 @@ locate_file(Base, File) :-
 %   that are not in a group are shown under "Other demos".
 
 demo_group('Applications and tools',
-           [ 'PceDraw', 'ImageViewer', 'FontViewer', 'XMLView',
+           [ 'PceDraw', 'Disk usage', 'FontViewer', 'XMLView',
              'GraphViewer', xdot, 'Random Terms', 'London Tube',
-             'Ispell', 'ChessTool'
+             'Ispell', 'ImageViewer', 'XMLView', 'ChessTool'
            ]).
 demo_group('Dialogs and windows',
            [ 'Dialog gallery', 'Tabs and splitting', 'Drag-and-drop File',
@@ -180,7 +180,7 @@ demo_group('Media and devices',
            [ 'Camera', 'Video player', 'Sound'
            ]).
 demo_group('Games and animation',
-           [ 'Asteroids', 'Pong', 'Animated images', 'Kangaroo', 'Juggler'
+           [ 'Asteroids', 'Pong', 'Animated images', 'Ripples', 'Particles', 'Kangaroo', 'Juggler'
            ]).
 
 demo('PceDraw',                         % Name
