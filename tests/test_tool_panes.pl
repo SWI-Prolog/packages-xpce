@@ -340,6 +340,89 @@ test(selecting_a_thread_draws_its_graph) :-
     get(TM, graph_window, GW),
     get(GW, member, thread_diagram, _).
 
+%       A new monitor shows the first console thread and, once it knows
+%       the CPU usage, the thread that is using most of it.
+
+test(it_opens_on_a_console_thread, true(Class == console)) :-
+    no_monitor,
+    monitor(TM),
+    selected_thread(TM, Key),
+    thread_property(Key, class(Class)).
+test(and_switches_to_a_busy_thread, true(Key == tp_busy)) :-
+    thread_create(tp_spin, Id, [alias(tp_busy)]),
+    no_monitor,
+    monitor(TM),
+    sleep(0.3),
+    send(TM, update),
+    selected_thread(TM, Key),
+    thread_signal(Id, abort),
+    catch(thread_join(Id), _, true),
+    send(TM, selection, main).
+
+tp_spin :-
+    repeat,
+    fail.
+
+selected_thread(TM, Key) :-
+    get(TM?browser, selection, TS),
+    get(TS, key, Key).
+
+%       The private tables of a thread are a graph of their own, shown
+%       once the thread has tables.
+
+test(no_tables_no_tables_graph, true(Shown == false)) :-
+    monitor(TM),
+    send(TM, selection, main),
+    send(TM, update),
+    get(TM, graph_window, GW),
+    get(GW, member, thread_diagram, TD),
+    shown(TD, tables, Shown).
+test(private_tables_are_a_graph, true(Shown == false-true)) :-
+    monitor(TM),
+    thread_self(Me),
+    thread_create(( thread_get_message(table),
+                    forall(tp_tabled(1000, _), true),
+                    thread_send_message(Me, tabled),
+                    thread_get_message(done)
+                  ), Id, [alias(tp_tabler)]),
+    send(TM, update),
+    send(TM, selection, tp_tabler),
+    send(TM, update),
+    get(TM, graph_window, GW),
+    get(GW, member, thread_diagram, TD),
+    shown(TD, tables, Before),
+    thread_send_message(Id, table),
+    thread_get_message(tabled),
+    send(TM, update),
+    shown(TD, tables, After),
+    Shown = Before-After,
+    thread_send_message(Id, done),
+    thread_join(Id),
+    send(TM, selection, main).
+
+shown(TD, Graph, Shown) :-
+    (   get(TD, member, Graph, _) ->  Shown = true ;  Shown = false ).
+
+:- table tp_tabled/2.
+tp_tabled(N, X) :- between(1, N, X).
+
+%       A window too low for a label per decade labels fewer decades.
+
+test(a_low_diagram_labels_fewer_decades, Steps == [10, 1000]) :-
+    monitor(TM),
+    send(TM, selection, main),
+    get(TM, graph_window, GW),
+    get(GW, member, thread_diagram, TD),
+    get(TD, axis, y, Y),
+    send(TD, axis_length, 300, 300),
+    send(TD, compute),
+    get(Y, step, High),
+    send(TD, axis_length, 300, 60),
+    send(TD, compute),
+    get(Y, step, Low),
+    Steps = [High, Low],
+    send(GW, resize).
+
 %       A tool is a pane, not only a tab: it can sit beside a terminal or
 %       an editor, and be dragged to another window like any other pane.
 

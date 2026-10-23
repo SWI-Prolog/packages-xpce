@@ -383,6 +383,7 @@ build(terminal(What), T) :-
 thread_graph_colour(thread_graph_local).
 thread_graph_colour(thread_graph_global).
 thread_graph_colour(thread_graph_trail).
+thread_graph_colour(thread_graph_tables).
 thread_graph_colour(thread_graph_cpu).
 
 %   graph_points(+Nth, -Points)

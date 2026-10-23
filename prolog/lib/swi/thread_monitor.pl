@@ -46,7 +46,7 @@
 :- use_module(library(pce_theme), [theme_colours/1]).
 :- autoload(library(aggregate), [aggregate_all/3]).
 :- autoload(library(gui_tracer), [gtrace/0]).
-:- autoload(library(pce_util), [default/3, send_list/3]).
+:- autoload(library(pce_util), [chain_list/2, default/3, send_list/3]).
 :- autoload(library(prolog_profile), [show_profile/1]).
 :- autoload(library(thread), [call_in_thread/3]).
 :- autoload(library(threadutil),
@@ -67,6 +67,7 @@ displays the status of threads.
                    thread_graph_global = orange,
                    thread_graph_trail  = dark_green,
                    thread_graph_cpu    = purple,
+                   thread_graph_tables = red,
                    thread_cpu_idle     = grey80 -
                        "Background of the CPU gauge of a running thread",
                    thread_cpu_busy     = green -
@@ -94,6 +95,7 @@ resource(thread_profiling, image, image('ide/threads/thread-profiling.svg')).
 variable(local,  int := 0, get, "Local-stack usage").
 variable(global, int := 0, get, "Global-stack usage").
 variable(trail,  int := 0, get, "Trail-stack usage").
+variable(tables, int := 0, get, "Private tables").
 variable(cpu,    int := 0, get, "%CPU (0..100)").
 
 initialise(TS, Thread:any, CPU:int) :->
@@ -103,6 +105,10 @@ initialise(TS, Thread:any, CPU:int) :->
     ->  send(TS, slot, local,  Local),
         send(TS, slot, global, Global),
         send(TS, slot, trail,  Trail)
+    ;   true
+    ),
+    (   catch(thread_statistics(Thread, table_space_used, Tables), _, fail)
+    ->  send(TS, slot, tables, Tables)
     ;   true
     ),
     send(TS, slot, cpu, CPU).
@@ -598,6 +604,8 @@ class_variable(trail_colour,  colour, thread_graph_trail,
                "Colour of the trail stack graph").
 class_variable(cpu_colour,    colour, thread_graph_cpu,
                "Colour of the CPU usage graph").
+class_variable(tables_colour, colour, thread_graph_tables,
+               "Colour of the graph of the thread's private tables").
 class_variable(graph_pen,     num, 1.0,
                "Thickness of the lines of the graphs").
 
@@ -676,6 +684,17 @@ graphs(TD, Graphs:chain) :->
 
 show(TD, History:chain, Selector:name) :->
     "Show all points of the given graph"::
+    (   hidden_while_zero(Selector),
+        \+ get(History, find, @arg1?Selector > 0, _)
+    ->  true
+    ;   send(TD, show_graph, History, Selector)
+    ).
+
+%   A thread that has no private tables shows no tables graph.
+
+hidden_while_zero(tables).
+
+show_graph(TD, History:chain, Selector:name) :->
     get(TD, axis, x, XAxis),
     get(TD, axis, y, YAxis),
     send(TD, display, new(G, path)),
@@ -733,14 +752,20 @@ show_stat(TD, Stat:thread_statistics) :->
 
 
 extend_graph(TD, Stat:thread_statistics, Sel:name) :->
-    get(TD, member, Sel, G),
-    get(TD, axis, y, YAxis),
-    get(Stat, Sel, Value),
-    get(YAxis, location, Sel, Value, Y),
-    get(G?points, tail, PP),
-    get(PP, x, LX),
-    X is LX + 1,
-    send(G, append, point(X, Y)).
+    (   get(TD, member, Sel, G)
+    ->  get(TD, axis, y, YAxis),
+        get(Stat, Sel, Value),
+        get(YAxis, location, Sel, Value, Y),
+        get(G?points, tail, PP),
+        get(PP, x, LX),
+        X is LX + 1,
+        send(G, append, point(X, Y))
+    ;   get(Stat, Sel, Value),
+        Value > 0
+    ->  get(TD, hypered, status, TS),
+        send(TD, show, TS?object, Sel)
+    ;   true
+    ).
 
 %   The values shown when hovering are the samples rather than what
 %   the pixels say: sample N is at pixel N of the X axis.
@@ -809,6 +834,22 @@ location(A, Sel:name, Val:num, Loc:int) :<-
 
 percent_scale(cpu).
 
+%   A window too low for a label per decade gets a label every so many
+%   decades: the labels are at least a line apart.
+
+compute(A) :->
+    "Label as many decades as fit"::
+    get(A, tag_font, Font),
+    get(Font, height, FH),
+    get(A, length, Len),
+    get(A, low, Low),
+    get(A, high, High),
+    Decades is round(log10(High/Low)),
+    PerLabel is min(Decades, max(1, ceiling(FH*Decades/max(Len, 1)))),
+    Step is 10^PerLabel,
+    send(A, slot, step, Step),
+    send_super(A, compute).
+
 percent_location(A, Val:num, Loc:int) :<-
     "Simple percent scale location"::
     get(A, origin, point(_, Y0)),
@@ -818,7 +859,7 @@ percent_location(A, Val:num, Loc:int) :<-
 :- pce_end_class(thread_axis).
 
 
-:- pce_begin_class(thread_window, picture,
+:- pce_begin_class(thread_window, window,
                    "Show details of a thread").
 
 monitor(Win, TM:prolog_thread_monitor) :<-
@@ -842,8 +883,8 @@ axis_length(Win, Size:size) :<-
     get(@pce, convert, normal, font, Font),
     get(Font, ex, Ex),
     get(Font, height, FH),
-    DW is W-10*Ex,
-    DH is H-2*FH-10,
+    DW is max(1, W-10*Ex),
+    DH is max(1, H-2*FH-10),
     new(Size, size(DW, DH)).
 
 resize(Win) :->
@@ -888,9 +929,11 @@ whatever window it ends up in.
 variable(timer,           timer*,  get, "Update timer").
 variable(graphs,          chain,   get, "Which graphs are shown").
 variable(update_interval, num*,    get, "Update interval").
+variable(pick_busiest,    bool := @off, none,
+         "Select the busiest thread at the next update").
 
 class_variable(update_interval, num*,  0.2).
-class_variable(graphs,          chain, chain(local,global,trail,cpu)).
+class_variable(graphs,          chain, chain(local,global,trail,tables,cpu)).
 
 initialise(TM) :->
     send_super(TM, initialise, threads),
@@ -899,7 +942,8 @@ initialise(TM) :->
     send(TM, update),
     get(TM, update_interval, Time),
     send(TM, update_interval, Time),
-    send(TM, selection, main).
+    send(TM, select_console),
+    send(TM, slot, pick_busiest, @on).
 
 unlink(TM) :->
     send(TM, update_interval, @nil),
@@ -970,7 +1014,62 @@ graphs(TM, Graphs:chain) :->
 
 update(TM) :->
     "Update status"::
-    send(TM?browser, update).
+    send(TM?browser, update),
+    (   get(TM, slot, pick_busiest, @on)
+    ->  send(TM, slot, pick_busiest, @off),
+        ignore(send(TM, select_busiest))
+    ;   true
+    ).
+
+/* Which thread is shown when the monitor opens.  The CPU usage of a
+thread is known from its second sample, so the monitor first shows the
+first console thread and at the next update switches to the thread
+using most CPU if there is one.  The thread that runs the monitor is
+not a candidate: it draws the monitor.
+*/
+
+select_console(TM) :->
+    "Select the first console thread"::
+    (   thread_property(Handle, class(console)),
+        thread_key(Handle, Key)
+    ->  true
+    ;   Key = main
+    ),
+    send(TM, selection, Key).
+
+select_busiest(TM) :->
+    "Select the running thread using most CPU, if any"::
+    thread_self(Me),
+    thread_key(Me, MeKey),
+    get(TM?browser?dict, members, Members),
+    chain_list(Members, Statuses),
+    aggregate_all(max(CPU, Key),
+                  ( member(TS, Statuses),
+                    busy_thread(TS, MeKey, CPU, Key)
+                  ),
+                  max(_, Busiest)),
+    send(TM, selection, Busiest).
+
+busy_thread(TS, MeKey, CPU, Key) :-
+    get(TS, key, Key),
+    Key \== MeKey,
+    \+ get(TS, thread_class, system),
+    get(TS, state, running),
+    get(TS, cpuprec, CPU),
+    integer(CPU),
+    CPU > 0.
+
+%   thread_key(+Handle, -Key)
+%
+%   Key is how the browser knows the thread: its alias or its id.
+
+thread_key(Handle, Key) :-
+    (   atom(Handle)
+    ->  Key = Handle
+    ;   thread_property(Handle, alias(Key))
+    ->  true
+    ;   thread_property(Handle, id(Key))
+    ).
 
 selection(TM, Thread:'name|int') :->
     "Select the given thread"::
@@ -1010,6 +1109,7 @@ initialise(D, TM:prolog_thread_monitor) :->
     add_field(Graphs, local),
     add_field(Graphs, global),
     add_field(Graphs, trail),
+    add_field(Graphs, tables),
     add_field(Graphs, cpu),
     get(TM, graphs, GraphsSetting),
     send(Graphs, selection, GraphsSetting),
@@ -1047,7 +1147,7 @@ add_field(Menu, Name) :-
 pce_preferences:preferences(prolog_thread_monitor,
     [ prolog_thread_monitor - [ update_interval, graphs ],
       thread_diagram        - [ local_colour, global_colour, trail_colour,
-                                cpu_colour, graph_pen
+                                tables_colour, cpu_colour, graph_pen
                               ]
     ]).
 
@@ -1057,7 +1157,7 @@ pce_preferences:edit_type(thread_diagram, graph_pen, '1.0..5.0').
 
 pce_preferences:edit_item(prolog_thread_monitor, graphs, Graphs, Item) :-
     new(Item, menu(graphs, toggle)),
-    forall(member(Graph, [local, global, trail, cpu]),
+    forall(member(Graph, [local, global, trail, tables, cpu]),
            add_field(Item, Graph)),
     send(Item, selection, Graphs).
 
