@@ -183,7 +183,8 @@ changed(A) :->
 
 origin(A, P:point) :->
     send(A?origin, copy, P),
-    send(A, changed).
+    send(A, changed),
+    send(A, changed_pixel_range).
 
 
 label(A, L:graphical*) :->
@@ -202,7 +203,30 @@ small_step(A, L:num*) :->
     set(A, small_step, L).
 
 length(A, Length:int) :->
-    set(A, length, Length).
+    (   get(A, length, Length)
+    ->  true
+    ;   send(A, slot, length, Length),
+        send(A, changed),
+        send(A, changed_pixel_range)
+    ).
+
+%   The support lines of an axis run across the pixel range of the
+%   other axis, so that one must be computed again.
+
+changed_pixel_range(A) :->
+    "The other axis of my device draws its lines over my range"::
+    (   get(A, device, Dev),
+        Dev \== @nil,
+        get(A, type, Type),
+        other_axis(Type, Other),
+        get(Dev, member, Other, OtherAxis),
+        OtherAxis \== A
+    ->  send(OtherAxis, request_compute)
+    ;   true
+    ).
+
+other_axis(x, y).
+other_axis(y, x).
 
 type(A, T:{x,y}) :->
     set(A, type, T).
