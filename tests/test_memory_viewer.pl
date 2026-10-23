@@ -65,6 +65,14 @@ mv_multi(from_file).
 :- thread_local mv_local/1.
 :- table mv_shared/1 as shared.
 
+:- dynamic([mv_dep/1], [incremental(true)]).
+:- table mv_inc/1 as incremental.
+
+mv_dep(1).
+mv_dep(2).
+
+mv_inc(X) :- mv_dep(X).
+
 %   A predicate of `user`, i.e., non-modular code, defined in this file.
 
 user:mv_user_pred(1).
@@ -332,6 +340,19 @@ test(compiled_table, [ true(Total >= Compiled), Title == Expected ]) :-
 %   Describing the tables of a thread is expensive, so the description
 %   is kept while the space of its tables stays the same.
 
+%   The variants of an incremental dynamic predicate in the variant
+%   table are nodes of the dependency graph, not tables.
+
+test(dependency_nodes,
+     Title == 'test_memory_viewer:mv_dep/1: incremental dynamic, 3 dependency nodes') :-
+    abolish_all_tables,
+    forall(mv_inc(_), true),
+    ignore(mv_inc(1)),
+    ignore(mv_inc(2)),
+    memory_tree(tables, T),
+    path(T, [main, 'test_memory_viewer:mv_dep/1'], node(_, _, _, Options)),
+    memberchk(title(Title), Options),
+    abolish_all_tables.
 test(thread_tables_cached, Tree == cached) :-
     thread_self(Me),
     thread_create(( fill_private,

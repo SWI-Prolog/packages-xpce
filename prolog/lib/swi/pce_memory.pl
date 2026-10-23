@@ -768,17 +768,30 @@ answer_table(Trie, TrieSize, Size, Answers, Compiled) :-
     TrieSize is S0+S1,
     Size is TrieSize+S2.
 
+%   For an incremental dynamic predicate, the variant table holds the
+%   variants that incremental tables depend on.  These are nodes of the
+%   dependency graph rather than tables: they have no answers.
+
 pred_tables(_Space-(PI-Variants),
             node(Label, 0, Nodes, [data(predicate(PI)), title(Title)])) :-
     format(atom(Label), '~q', [PI]),
     length(Variants, Tables),
-    aggregate_all(sum(N),
-                  member(_-table(_, N, _, _), Variants),
-                  Answers),
-    counted(Tables, table, TablesText),
-    counted(Answers, answer, AnswersText),
-    format(atom(Title), '~q: ~w, ~w', [PI, TablesText, AnswersText]),
-    top_nodes(Variants, variant_table, variants, Nodes).
+    (   dependency_predicate(PI)
+    ->  counted(Tables, 'dependency node', NodesText),
+        format(atom(Title), '~q: incremental dynamic, ~w', [PI, NodesText]),
+        top_nodes(Variants, dependency_node, variants, Nodes)
+    ;   aggregate_all(sum(N),
+                      member(_-table(_, N, _, _), Variants),
+                      Answers),
+        counted(Tables, table, TablesText),
+        counted(Answers, answer, AnswersText),
+        format(atom(Title), '~q: ~w, ~w', [PI, TablesText, AnswersText]),
+        top_nodes(Variants, variant_table, variants, Nodes)
+    ).
+
+dependency_predicate(M:Name/Arity) :-
+    functor(Head, Name, Arity),
+    predicate_property(M:Head, dynamic).
 
 variant_table(Size-table(M:Variant, Answers, Compiled, _),
               node(Label, Size, [], [data(table(M:Variant)), title(Title)])) :-
@@ -788,6 +801,11 @@ variant_table(Size-table(M:Variant, Answers, Compiled, _),
     ->  format(atom(Title), '~w: ~w, compiled', [Label, AnswersText])
     ;   format(atom(Title), '~w: ~w', [Label, AnswersText])
     ).
+
+dependency_node(Size-table(M:Variant, _, _, _),
+                node(Label, Size, [], [data(table(M:Variant)), title(Title)])) :-
+    variant_label(Variant, Label),
+    format(atom(Title), '~w: dependency node', [Label]).
 
 %   counted(+Count, +What, -Text)
 %
