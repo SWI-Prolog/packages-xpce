@@ -1082,39 +1082,12 @@ transform_state(T, State) :-
     ).
 
 %       The current node stands out by a star behind it, as in
-%       kcachegrind.  Its spikes reach out from an ellipse through the
-%       corners of the box.
+%       kcachegrind.
 
 star(W) :->
     "Put a star behind the current node"::
     get(W, xdot, X),
-    (   get(X, member, n0, Node)
-    ->  get(Node, area, area(NX, NY, NW, NH)),
-        CX is NX + NW/2,
-        CY is NY + NH/2,
-        IRX is NW/2*sqrt(2) + 2,
-        IRY is NH/2*sqrt(2) + 2,
-        Spike = 12,
-        Points = 14,
-        new(Star, path),
-        send(Star, closed, @on),
-        Last is 2*Points-1,
-        forall(between(0, Last, I),
-               ( A is I*pi/Points - pi/2,
-                 (   I mod 2 =:= 0
-                 ->  RX = IRX+Spike, RY = IRY+Spike
-                 ;   RX = IRX, RY = IRY
-                 ),
-                 PX is round(CX + RX*cos(A)),
-                 PY is round(CY + RY*sin(A)),
-                 send(Star, append, point(PX, PY))
-               )),
-        send(Star, pen, 0),
-        send(Star, fill, colour(@default, 128, 128, 128, 80)),
-        send(X, display, Star),
-        send(Star, hide, Node)          % in front of the graph's background
-    ;   true
-    ).
+    ignore(send(X, star, n0)).
 
 pred(W, Node:xdot_node, Pred:prolog) :<-
     "Predicate shown by a node of the graph"::

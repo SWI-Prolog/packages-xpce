@@ -159,6 +159,47 @@ load(F, Source:'file|string') :->
     ),
     send(F, slot, source, Source).
 
+%       A node may stand out by a star behind it, as the current node
+%       of a call graph in kcachegrind.  Its spikes reach out from an
+%       ellipse through the corners of the box.
+
+star(F, Name:name) :->
+    "Put a star behind the node named Name; fail if there is none"::
+    get(F, member, Name, Node),
+    send(F, unstar),
+    get(Node, area, area(NX, NY, NW, NH)),
+    CX is NX + NW/2,
+    CY is NY + NH/2,
+    IRX is NW/2*sqrt(2) + 2,
+    IRY is NH/2*sqrt(2) + 2,
+    Spike = 12,
+    Points = 14,
+    new(Star, path),
+    send(Star, closed, @on),
+    Last is 2*Points-1,
+    forall(between(0, Last, I),
+           ( A is I*pi/Points - pi/2,
+             (   I mod 2 =:= 0
+             ->  RX = IRX+Spike, RY = IRY+Spike
+             ;   RX = IRX, RY = IRY
+             ),
+             PX is round(CX + RX*cos(A)),
+             PY is round(CY + RY*sin(A)),
+             send(Star, append, point(PX, PY))
+           )),
+    send(Star, pen, 0),
+    send(Star, fill, colour(@default, 128, 128, 128, 80)),
+    send(Star, name, star),
+    send(F, display, Star),
+    send(Star, hide, Node).             % in front of the graph's background
+
+unstar(F) :->
+    "Remove the star put by ->star, if any"::
+    (   get(F, member, star, Star)
+    ->  free(Star)
+    ;   true
+    ).
+
 :- pce_end_class(xdot).
 
 %!  render_json(+Figure, +JSON) is det.

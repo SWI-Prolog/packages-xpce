@@ -168,7 +168,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pce_image.pl pce_main.pl pce_manual.pl pce_meta.pl pce_html_manual.pl
     pce_class_doc.pl pldoc_xpce.pl
     pce_objects.pl pce.pl pce_progress.pl pane_frame.pl pane_layouts.pl
-    log_store.pl
+    log_store.pl pce_labelled_group.pl
     pce_prolog_xref.pl pce_prompter.pl pce_regex_compat.pl pce_renew.pl
     pce_report.pl pce_require.pl pce_select_set_item.pl pce_theme.pl
     pce_server.pl pce_set_item.pl pce_shell.pl pce_style_item.pl
@@ -246,7 +246,7 @@ set(XPCE_DATA_prolog_lib_plot axis.pl barchart.pl demo.pl hierarchy_chart.pl
 set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl)
 if(MULTI_THREADED)
 list(APPEND XPCE_DATA_prolog_lib_swi thread_monitor.pl pce_profile.pl
-     pce_memory.pl)
+     pce_memory.pl pce_idg_viewer.pl)
 endif()
 
 set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl

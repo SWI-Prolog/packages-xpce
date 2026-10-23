@@ -61,6 +61,7 @@ test_libs(barchart             OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(hierarchy_chart      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(plot_axis            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(memory_viewer        OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(idg_viewer           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bookmark_store       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bookmarks            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(key_binding_browser  OPTIONS ${XPCE_TEST_OPTIONS})
@@ -195,6 +196,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:hierarchy_chart
                      xpce:plot_axis
                      xpce:memory_viewer
+                     xpce:idg_viewer
                      xpce:bookmark_store
                      xpce:bookmarks
                      xpce:key_binding_browser

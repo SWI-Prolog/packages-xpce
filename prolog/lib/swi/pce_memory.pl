@@ -39,6 +39,7 @@
 :- use_module(library(pce)).
 :- use_module(library(pane_frame)).
 :- use_module(library(plot/hierarchy_chart)).
+:- use_module(library(pce_labelled_group)).
 :- autoload(library(apply),
             [maplist/3, foldl/4, partition/4, exclude/3, convlist/3]).
 :- autoload(library(lists), [sum_list/2, append/3, append/2]).
@@ -1139,28 +1140,6 @@ collect_garbage(MV) :->
     send(MV, refresh).
 
 :- pce_end_class(prolog_memory_viewer).
-
-
-%   A group of dialog items with its label above them.  The items are
-%   in a narrow column, so menus do not show their own label.
-
-:- pce_begin_class(labelled_group, dialog_group,
-                   "Dialog items with a label above them").
-
-initialise(G, Name:name, Items:prolog) :->
-    send_super(G, initialise, Name, group),
-    get(Name, label_name, Label),
-    send(G, label, Label),
-    send(G, label_format, above),
-    forall(member(Item, Items),
-           ( (   send(Item, instance_of, menu)
-             ->  send(Item, show_label, @off)
-             ;   true
-             ),
-             send(G, append, Item)
-           )).
-
-:- pce_end_class(labelled_group).
 
 edit_target(module(M),    module(M)).
 edit_target(predicate(PI), PI).
