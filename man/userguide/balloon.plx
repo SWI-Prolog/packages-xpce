@@ -31,7 +31,19 @@ message (\const{summary}) for the receiving object.  The
 This message is defined to return the help-message registered using
 ->help_message.  User-defined classes may consider redefining this
 method to generate the help-message on-the-fly.
+
+    \sendmethod{visual}{tooltip}{string*}
+    \getmethod{visual}{tooltip}{}{string}
+Shorthand for ->help_message and <-help_message with \const{tag}.
+These are also defined on \class{dict_item}.
 \end{description}
+
+A message may be an instance of \class{markup}, a string holding Pango
+markup, which is rendered in the balloon:
+
+\begin{pcecode}
+	send(B, tooltip, markup('Print the <b>whole</b> document')),
+\end{pcecode}
 
 Here is a typical usage for this library.
 
@@ -42,7 +54,7 @@ resource(print, image, image('tool/print.svg')).
 	...
 	send(X, append, new(B, button(print))),
 	send(B, label, image(resource(print))),
-	send(B, help_message, tag, 'Print document'),
+	send(B, tooltip, 'Print document'),
 \end{pcecode}
 
 % tja ...

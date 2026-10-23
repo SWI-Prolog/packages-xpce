@@ -204,6 +204,13 @@ help_message(V, What:{tag,summary}, _Ev:[event], Msg:string) :<-
     attribute_name(What, AttName),
     get(V, attribute, AttName, Msg).
 
+tooltip(V, Msg:string*) :->
+    "Set the balloon text; same as ->help_message: tag"::
+    send(V, help_message, tag, Msg).
+tooltip(V, Msg:string) :<-
+    "The balloon text; same as <-help_message: tag"::
+    get(V, help_message, tag, Msg).
+
 :- pce_end_class.
 
 
@@ -271,6 +278,13 @@ help_message(DI, What:{tag,summary}, Msg:string) :<-
     "Associated help message"::
     attribute_name(What, AttName),
     get(DI, attribute, AttName, Msg).
+
+tooltip(DI, Msg:string*) :->
+    "Set the balloon text; same as ->help_message: tag"::
+    send(DI, help_message, tag, Msg).
+tooltip(DI, Msg:string) :<-
+    "The balloon text; same as <-help_message: tag"::
+    get(DI, help_message, tag, Msg).
 
 :- pce_end_class.
 

@@ -112,6 +112,48 @@ test(dict_item, Tip == 'An item') :-
     get(DI, help_message, tag, String),
     get(String, value, Tip).
 
+%   ->tooltip and <-tooltip are ->help_message and <-help_message for
+%   the tag.  A tooltip may be a markup.
+
+test(tooltip, [Tip-Tag == "A button"-"A button"]) :-
+    new(B, button(b)),
+    send(B, tooltip, 'A button'),
+    get(B, tooltip, Tip0),
+    get(Tip0, value, Tip1),
+    atom_string(Tip1, Tip),
+    get(B, help_message, tag, Tag0),
+    get(Tag0, value, Tag1),
+    atom_string(Tag1, Tag),
+    free(B).
+test(tooltip_nil, fail) :-
+    new(B, button(b)),
+    send(B, tooltip, 'A button'),
+    send(B, tooltip, @nil),
+    get(B, tooltip, _).
+test(dict_item_tooltip, Tip == 'An item') :-
+    new(DI, dict_item(x)),
+    send(DI, tooltip, 'An item'),
+    get(DI, help_message, tag, String),
+    get(String, value, Tip).
+test(markup_tooltip, Class == markup) :-
+    new(B, button(b)),
+    send(B, tooltip, markup('<b>bold</b>')),
+    get(B, tooltip, Tip),
+    get(Tip, class_name, Class),
+    free(B).
+test(markup_balloon, [ condition(combo_boxes),
+                       Class == markup ]) :-
+    new(D, dialog),
+    send(D, append, new(B, button(one))),
+    send(B, tooltip, markup('<b>bold</b>')),
+    send(D, open),
+    new(Ev, event(loc_still, D, 10, 10)),
+    send(B, show_help_message, tag, Ev),
+    get(@help_message_window, member, feedback, L),
+    get(L?selection, class_name, Class),
+    send(@help_message_window, hide),
+    send(D?frame, destroy).
+
 test(print_name, Name == 'An item') :-
     new(DI, dict_item(x, 'An item')),
     get(DI, print_name, Name0),
