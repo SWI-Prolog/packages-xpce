@@ -81,6 +81,7 @@ the IDE components to the autoloading of one single predicate.
 :- pce_autoload(prolog_thread_monitor,  library('swi/thread_monitor')).
 :- pce_autoload(prolog_memory_viewer,   library('swi/pce_memory')).
 :- pce_autoload(prolog_idg_viewer,      library('swi/pce_idg_viewer')).
+:- pce_autoload(prolog_sdg_viewer,      library('swi/pce_sdg_viewer')).
 :- pce_autoload(prolog_debug_monitor,   library('swi/pce_debug_monitor')).
 :- pce_autoload(xref_tool,              library('pce_xref')).
 
@@ -113,6 +114,8 @@ prolog_ide(Action) :-
 
 class_variable(tool_placement, {as_arranged,frame,tab,split}, as_arranged,
                "Where a tool the user asks for is put").
+class_variable(tables_on_break, bool, @on,
+               "Show the incomplete tables when a break starts in tabling").
 
 variable(exit_when_idle, bool := @off, both,
          "Prolog halts when no window keeps the application alive").
@@ -189,6 +192,25 @@ memory_viewer(IDE) :->
 idg_viewer(IDE) :->
     "Open a window showing the incremental dependency graph"::
     send(IDE, show_tool, prolog_idg_viewer).
+
+sdg_viewer(IDE, Thread:[prolog]) :->
+    "Show the incomplete tables of Thread (default main)"::
+    (   get(IDE, tool, prolog_sdg_viewer, Viewer)
+    ->  send(IDE, expose_tool, Viewer),
+        (   Thread == @default
+        ->  send(Viewer, refresh)
+        ;   send(Viewer, thread, Thread)
+        )
+    ;   new(Viewer, prolog_sdg_viewer(Thread)),
+        send(IDE, place_tool, Viewer, @default)
+    ).
+
+tables_on_break(IDE, Thread:prolog) :->
+    "A break started in Thread while it had incomplete tables"::
+    (   get(IDE, class_variable_value, tables_on_break, @on)
+    ->  send(IDE, sdg_viewer, Thread)
+    ;   true
+    ).
 
 debug_monitor(IDE) :->
     "Open monitor for debug messages"::
@@ -823,7 +845,10 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
     send_list(TablingPopup, append,
               [ menu_item(view_incremental_dependencies,
                           message(IDE, idg_viewer),
-                          'View incremental dependencies (IDG)')
+                          'View incremental dependencies (IDG)'),
+                menu_item(view_incomplete_tables,
+                          message(IDE, sdg_viewer),
+                          'View incomplete tables (SDG)')
               ]),
     send_list(GUI, append,
               [ menu_item('GUI demo programs',
@@ -876,3 +901,30 @@ settings_menu_marks(Settings) :-
     send(Settings, show_current, @on).
 
 :- pce_end_class(prolog_ide).
+
+
+                 /*******************************
+                 *        BREAK IN TABLING      *
+                 *******************************/
+
+%   A break that starts while the thread has incomplete tables, such as
+%   the break of a tripwire with action `suspend` or one asked for by
+%   interrupting a tabled computation, shows them (see
+%   `prolog_ide.tables_on_break`).  break/0 hides the tables of the
+%   thread from the query it runs, but '$tbl_sdg'/3 still finds them.
+
+:- multifile prolog:message_action/2.
+
+prolog:message_action(break(begin, _Level), _) :-
+    catch(break_in_tabling, _, true),
+    fail.
+
+break_in_tabling :-
+    '$tbl_sdg'(Components, _, _),
+    Components \== [],
+    thread_self(Me),
+    (   thread_property(Me, alias(Thread))
+    ->  true
+    ;   thread_property(Me, id(Thread))
+    ),
+    in_pce_thread(send(@prolog_ide, tables_on_break, Thread)).

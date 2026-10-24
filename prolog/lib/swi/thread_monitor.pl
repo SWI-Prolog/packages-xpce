@@ -48,6 +48,7 @@
 :- autoload(library(gui_tracer), [gtrace/0]).
 :- autoload(library(pce_util), [chain_list/2, default/3, send_list/3]).
 :- autoload(library(prolog_profile), [show_profile/1]).
+:- autoload(library(swi_ide), [prolog_ide/1]).
 :- autoload(library(thread), [call_in_thread/3]).
 :- autoload(library(threadutil),
             [thread_has_console/0, attach_console/0, tdebug/1, tnodebug/1]).
@@ -376,6 +377,11 @@ signal(TS, Signal:prolog) :->
     get(TS, key, TID),
     catch(thread_signal(TID, Signal), _, fail).
 
+view_tables(TS) :->
+    "Show the incomplete tables of the thread"::
+    get(TS, key, TID),
+    prolog_ide(sdg_viewer(TID)).
+
 gtrace(TS) :->
     "Prepare tread for graphical debugging"::
     get(TS, key, TID),
@@ -428,6 +434,10 @@ initialise(TB) :->
                 menu_item(attach_console,
                           message(@arg1, signal, attach_console),
                           condition := NoConsole),
+                gap,
+                menu_item(view_incomplete_tables,
+                          message(@arg1, view_tables),
+                          condition := IsRunning),
                 gap,
                 menu_item(profile_cpu,
                           message(@arg1, start_profile, cpu),

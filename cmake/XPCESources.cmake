@@ -246,7 +246,7 @@ set(XPCE_DATA_prolog_lib_plot axis.pl barchart.pl demo.pl hierarchy_chart.pl
 set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl)
 if(MULTI_THREADED)
 list(APPEND XPCE_DATA_prolog_lib_swi thread_monitor.pl pce_profile.pl
-     pce_memory.pl pce_idg_viewer.pl)
+     pce_memory.pl pce_idg_viewer.pl pce_sdg_viewer.pl)
 endif()
 
 set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl
