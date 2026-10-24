@@ -549,6 +549,7 @@ edge_name(_, Tail, Head, Name) :-
 
 variable(natural_zoom, num, both,
          "Preferred zoom for ->fit if the graph fits at this scale").
+variable(fitted, prolog, none, "Transform left by ->fit, or `none'").
 
 class_variable(natural_zoom, num, 1.0,
                "Default preferred zoom for ->fit").
@@ -558,6 +559,7 @@ initialise(W, Source:[file]*, Label:[name], Size:[size]) :->
     default(Label, 'xdot',          TheLabel),
     default(Size,  size(800,600),   TheSize),
     send_super(W, initialise, TheLabel, TheSize),
+    send(W, slot, fitted, none),
     new(F, xdot(Source)),
     send(F, recogniser, @pan_zoom_recogniser),
     send(W, display, F),
@@ -585,7 +587,36 @@ fit(W) :->
     ->  send(W, scale_to_fit, F)
     ;   true                            % the explanation is read as is
     ),
-    send(F, center, W?visible?center).
+    send(F, center, W?visible?center),
+    get(F, transform, T),
+    transform_state(T, State),
+    send(W, slot, fitted, State).
+
+%   A new size fits the graph again, unless the user moved or zoomed it
+%   since it was fitted: the scrollbars that come and go as they drag it
+%   past my edges change my size as well, and fitting then undoes what
+%   they just did.
+
+resize(W) :->
+    "Fit the graph to the new size if the user did not move it"::
+    send_super(W, resize),
+    (   get(W, slot, fitted, State),
+        State \== none,
+        get(W?xdot, transform, T),
+        transform_state(T, State)
+    ->  send(W, fit)
+    ;   true
+    ).
+
+transform_state(@nil, identity) :- !.
+transform_state(T, State) :-
+    get(T, xx, XX), get(T, xy, XY),
+    get(T, yx, YX), get(T, yy, YY),
+    get(T, tx, TX), get(T, ty, TY),
+    (   XX =:= 1, XY =:= 0, YX =:= 0, YY =:= 1, TX =:= 0, TY =:= 0
+    ->  State = identity                % a click makes one; see pan_zoom
+    ;   State = t(XX,XY,YX,YY,TX,TY)
+    ).
 
 scale_to_fit(W, F:xdot) :->
     "Scale F to fit the visible area or to <-natural_zoom"::

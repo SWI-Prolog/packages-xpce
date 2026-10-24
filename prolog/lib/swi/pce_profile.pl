@@ -965,7 +965,6 @@ in the middle: the profile does not tell those apart.
 variable(node,  prolog,       get, "Currently shown node").
 variable(stale, bool := @off, get, "The node changed since it was drawn").
 variable(ids,   prolog,       get, "Id-Predicate pairs of the graph nodes").
-variable(fitted, prolog,      none, "Transform left by ->fit, or `none'").
 
 class_variable(caller_depth, '1..', 2,   "Levels of callers shown").
 class_variable(callee_depth, '1..', 2,   "Levels of callees shown").
@@ -981,7 +980,6 @@ class_variable(max_nodes,    '1..', 30,
 initialise(W) :->
     send_super(W, initialise, @default, call_graph, size(300,200)),
     send(@prof_graphs, append, W),
-    send(W, slot, fitted, none),
     get(W, xdot, X),
     send(X, node_clicked, message(W, clicked, @arg1)),
     new(P, popup),
@@ -1046,40 +1044,6 @@ render(W, Data:prolog) :->
     send(X, load, Dot),                 % explains itself if dot fails
     send(W, star),
     send(W, fit).
-
-%       A new size fits the graph again, unless the user moved or
-%       zoomed it since it was fitted: the scrollbars that come and go as
-%       they drag it past my edges change my size as well, and fitting
-%       then undoes what they just did.
-
-fit(W) :->
-    "Fit the graph and remember the transform that left"::
-    send_super(W, fit),
-    get(W?xdot, transform, T),
-    transform_state(T, State),
-    send(W, slot, fitted, State).
-
-resize(W) :->
-    "Fit the graph to the new size if the user did not move it"::
-    send_super(W, resize),
-    (   get(W, stale, @off),
-        get(W, slot, fitted, State),
-        State \== none,
-        get(W?xdot, transform, T),
-        transform_state(T, State)
-    ->  send(W, fit)
-    ;   true
-    ).
-
-transform_state(@nil, identity) :- !.
-transform_state(T, State) :-
-    get(T, xx, XX), get(T, xy, XY),
-    get(T, yx, YX), get(T, yy, YY),
-    get(T, tx, TX), get(T, ty, TY),
-    (   XX =:= 1, XY =:= 0, YX =:= 0, YY =:= 1, TX =:= 0, TY =:= 0
-    ->  State = identity                % a click makes one; see pan_zoom
-    ;   State = t(XX,XY,YX,YY,TX,TY)
-    ).
 
 %       The current node stands out by a star behind it, as in
 %       kcachegrind.
