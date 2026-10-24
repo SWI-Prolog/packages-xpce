@@ -710,6 +710,30 @@ test(the_outline_of_a_drop_on_a_tool_goes_on_its_windows,
     get(Tab, drop_feedback, Boxes),
     findall(N, (member_chain(B, Boxes), get(B?device, class_name, N)), On).
 
+%       A window of a tool may hold windows itself: the views of the
+%       dependency viewer are tabs of a tabbed window.  The outline goes
+%       on them as well, or it would only show on the label row of the
+%       tabs, which looks like a drop that adds a tab there.
+
+test(the_outline_of_a_drop_on_a_tool_goes_on_nested_windows,
+     [ condition(current_prolog_flag(threads, true)),
+       true(memberchk(idg_focus, On))
+     ]) :-
+    no_frames,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_idg_viewer, split),
+    get(@prolog_ide, tool, prolog_idg_viewer, V),
+    send(F, resize),
+    as_subwindows(V),
+    get(V, window, idg_tabs, Tabs),
+    as_subwindows(Tabs),
+    get(V, container, tab_frame, Tab),
+    send(Tab, drop_feedback, V, right),
+    get(Tab, drop_feedback, Boxes),
+    findall(N, (member_chain(B, Boxes), get(B?device, class_name, N)), On),
+    send(V, destroy).
+
 test(and_is_taken_away_again_when_the_pointer_moves_on, [fail]) :-
     no_frames,
     no_monitor,

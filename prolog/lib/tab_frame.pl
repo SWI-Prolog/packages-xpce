@@ -1151,22 +1151,41 @@ feedback_box(area(_, _, W, H), Box) :-
 %   reaches instead, which is what makes a drop on a tool pane show the
 %   same outline as a drop on a terminal.  The same reason puts a tool
 %   pane's grip on one of its windows; see `tool_pane ->place_grip'.
+%
+%   A sub-window may hold sub-windows itself: a tool may have a tabbed
+%   window holding views, as the dependency viewer does.  Its outline
+%   would then only show on its label row, which looks like a drop onto
+%   that row.  So the outline goes on the windows all the way down, and
+%   also on those below Target that hold them, for what they paint
+%   themselves, such as a label row.
 
 feedback_zone(Target, Area, Window, Zone) :-
     sub_windows(Target, Windows),
     Windows \== [],
     !,
+    sub_window_zone(Target, Windows, Area, Sub, SubZone),
+    (   Window = Sub,
+        Zone = SubZone
+    ;   sub_windows(Sub, [_|_]),
+        feedback_zone(Sub, SubZone, Window, Zone)
+    ).
+feedback_zone(Target, Area, Target, Area).
+
+%   sub_window_zone(+Target, +Windows, +Area, -Sub, -Zone)
+%
+%   Sub is one of Windows, the sub-windows of Target, that overlaps Area
+%   of Target, and Zone is the overlap in the coordinates of Sub.
+
+sub_window_zone(Target, Windows, Area, Sub, area(ZX, ZY, IW, IH)) :-
     get(Target, display_position, point(TX, TY)),
-    member(Window, Windows),
-    get(Window, display_position, point(WX, WY)),
-    get(Window, size, size(SW, SH)),
-    OX is WX-TX,                        % where Window sits on Target
+    member(Sub, Windows),
+    get(Sub, display_position, point(WX, WY)),
+    get(Sub, size, size(SW, SH)),
+    OX is WX-TX,                        % where Sub sits on Target
     OY is WY-TY,
     overlap(Area, area(OX, OY, SW, SH), area(IX, IY, IW, IH)),
-    ZX is IX-OX,                        % in the coordinates of Window
-    ZY is IY-OY,
-    Zone = area(ZX, ZY, IW, IH).
-feedback_zone(Target, Area, Target, Area).
+    ZX is IX-OX,                        % in the coordinates of Sub
+    ZY is IY-OY.
 
 %!  sub_windows(+Window, -Windows) is det.
 %
