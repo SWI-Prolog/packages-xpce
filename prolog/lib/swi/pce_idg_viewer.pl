@@ -871,6 +871,7 @@ initialise(V) :->
     send(V, append_window, new(B, idg_browser)),
     send(V, append_window, new(idg_tabs), B, right),
     send(V, append_window, new(idg_filter_dialog), B, above),
+    keep_column_width(B),
     send(V, update_threads),
     send(V, refresh).
 
@@ -1012,6 +1013,24 @@ class_value(V, Name, Value) :-
 
 :- pce_end_class(prolog_idg_viewer).
 
+%   keep_column_width(+Browser)
+%
+%   Resizing the viewer resizes the graph: the column of the browser
+%   neither stretches nor shrinks.  Dragging the gap still resizes it.
+
+keep_column_width(B) :-
+    (   get(B, tile, Tile),
+        column_tile(Tile, Column, Row)
+    ->  send(Column, hor_stretch, 0),
+        send(Column, hor_shrink, 0),
+        get(Row, members, Members),
+        send(Members, for_all,
+             if(@arg1 \== Column,
+                and(message(@arg1, hor_stretch, 100),
+                    message(@arg1, hor_shrink, 100))))
+    ;   true
+    ).
+
 viewer(Gr, V) :-
     get(Gr, container, prolog_idg_viewer, V).
 
@@ -1126,6 +1145,8 @@ fit_width(B) :->
 %   widens my column, so this does not loop.  Once my column is
 %   narrower than the width I gave it, the user made it so: the names
 %   are truncated to give the graph more room and I leave it alone.
+%   When the viewer is resized, the graph takes the change and my column
+%   keeps its width; see `prolog_idg_viewer ->initialise`.
 
 apply_width(B) :->
     "Widen my column to <-wanted, at most max_width of the viewer"::
