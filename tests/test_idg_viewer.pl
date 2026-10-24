@@ -519,6 +519,13 @@ test(browser_shrinks, Wanted == @nil) :-
     send(B, apply_width),
     get(B, wanted, Wanted),
     free(V).
+%   Fitting an empty graph does not divide by its size.
+
+test(fit_empty, true) :-
+    new(W, xdot_window),
+    send(W?xdot, load, "digraph g {}"),
+    send(W, fit),
+    free(W).
 test(focus_click, [Current-Selected == (test_idg_viewer:tv_edge/2)-
                                        'test_idg_viewer:tv_edge/2']) :-
     viewer(V),

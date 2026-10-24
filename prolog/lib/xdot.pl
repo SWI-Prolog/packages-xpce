@@ -624,9 +624,12 @@ scale_to_fit(W, F:xdot) :->
     get(W, visible, area(_,_,VW,VH)),
     get(W, natural_zoom, Natural),
     Margin = 20,
-    Sx is float(VW - 2*Margin) / GW,
-    Sy is float(VH - 2*Margin) / GH,
-    S is min(Natural, min(Sx, Sy)),
+    (   GW > 0, GH > 0
+    ->  Sx is float(VW - 2*Margin) / GW,
+        Sy is float(VH - 2*Margin) / GH,
+        S is min(Natural, min(Sx, Sy))
+    ;   S = Natural                     % an empty graph
+    ),
     (   S =\= 1
     ->  new(T, transform(0.0, S)),
         send(F, transform, T)
