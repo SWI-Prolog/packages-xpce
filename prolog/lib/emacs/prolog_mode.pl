@@ -1101,10 +1101,10 @@ prolog_navigator(M) :->
     ).
 
 
-%       Editing breakpoints and exceptions, viewing the threads and the
-%       debug messages are on the Tools menu of every window of the IDE
-%       -- see `prolog_ide ->fill_menu_bar' -- which an editor is a pane
-%       of.  They are not the editor's to offer as well.
+%       Viewing the threads is on the Tools menu and editing breakpoints
+%       and exceptions and the debug messages on the Debug menu of every
+%       window of the IDE -- see `prolog_ide ->fill_menu_bar' -- which an
+%       editor is a pane of.  They are not the editor's to offer as well.
 
 		 /*******************************
 		 *           DABBREV		*

@@ -579,12 +579,12 @@ test(the_mode_leaves_the_ide_tools_to_the_window,
     get(MB, member, prolog, Popup),
     get(Popup, member, Item, _).
 
-test(and_the_window_offers_two_of_them_on_its_tools_menu) :-
+test(and_the_window_offers_two_of_them_on_its_debug_menu) :-
     epilog_frame(@default, @default, @default, @off, @default, F),
     get(F, menu_bar, MB),
-    get(MB, member, tools, Tools),
-    get(Tools, member, edit_breakpoints, _),
-    get(Tools, member, edit_exceptions, _).
+    get(MB, member, debug, Debug),
+    get(Debug, member, edit_breakpoints, _),
+    get(Debug, member, edit_exceptions, _).
 
 test(a_terminal_carries_its_own_menus_into_a_pcemacs_window) :-
     emacs,
@@ -593,8 +593,9 @@ test(a_terminal_carries_its_own_menus_into_a_pcemacs_window) :-
     send(@prolog_ide, new_terminal, F),
     terminal(F, T),
     send(F, current_pane, T),
-    menus(F, Menus),
-    memberchk(debug, Menus).            % the Debug menu is the terminal's
+    get(F, menu_bar, MB),
+    get(MB, member, debug, Debug),
+    get(Debug, member, trace_mode, _).  % the terminal's part of Debug
 
 test(both_kinds_of_pane_side_by_side_in_one_tab, true(N == 2)) :-
     emacs,
@@ -646,7 +647,7 @@ test(and_a_terminal_leaves_it_to_the_application, true(Label == Expected)) :-
 %       either bar.  Asserted outright: the whole point is the order.
 
 test(the_menus_of_an_editor_come_out_in_the_order_the_bar_names,
-     Names == [file, settings, tools, 'GUI',
+     Names == [file, settings, tools, debug, 'GUI',
                edit, browse, compile, prolog, help]) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),

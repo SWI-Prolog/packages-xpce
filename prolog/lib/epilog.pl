@@ -2361,7 +2361,8 @@ fill_menu_bar(_T, MD:tool_dialog) :->
                               end_group := @on)),
                 menu_item(show_debug_status,
                           message(Term, debugging),
-                          accelerator := 'F6')
+                          accelerator := 'F6',
+                          end_group := @on)
               ]),
     send(Debug, show_current, @on),
     send(Debug, multiple_selection, @on),

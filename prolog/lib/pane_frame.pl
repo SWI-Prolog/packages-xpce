@@ -2092,9 +2092,13 @@ class_variable(accelerator_font, font, small,
 %       name up in <-item_order and hands the super the item it must come
 %       before.  Only the ones that belong at the end need naming: every
 %       other name takes the place of `*' and keeps the order it came in.
+%       The same holds for the Debug menu: the items of the IDE come
+%       below those of the terminal.
 
 class_variable(item_order, chain,
-               chain('*', close_window, halt_prolog),
+               chain('*', close_window, halt_prolog,
+                     edit_breakpoints, edit_exceptions, debug_messages,
+                     tabling),
                "Order the items of a menu appear in").
 
 rank(P, Name:name, Rank:int) :<-
