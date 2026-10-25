@@ -1092,6 +1092,7 @@ variable(all_items, chain,   get, "All items, shown or not").
 variable(filter,    regex*,  get, "Only show items matching this").
 variable(wanted,    int*,    get, "Width wanted by ->fit_width").
 variable(applied,   int*,    get, "Width ->apply_width gave my column").
+variable(count_width, int*,  get, "Width of the widest count").
 variable(current,   prolog,  get, "Current predicate or `none`").
 
 initialise(B) :->
@@ -1106,10 +1107,24 @@ initialise(B) :->
 
 resize(B) :->
     send_super(B, resize),
-    get(B?text_image, width, W),
-    get(B?font, width, '000,000', ColW),
-    send(B, tab_stops, vector(W-ColW-15)),
+    send(B, place_counts),
     send(B, apply_width).
+
+%   The counts go in a column at the right, as wide as the widest count
+%   but at least as wide as 000,000.
+
+place_counts(B) :->
+    "Put the tab stop of the counts at the right"::
+    get(B?text_image, width, W),
+    count_width(B, ColW),
+    send(B, tab_stops, vector(W-ColW-15)).
+
+count_width(B, ColW) :-
+    (   get(B, count_width, ColW),
+        ColW \== @nil
+    ->  true
+    ;   get(B?font, width, '000,000', ColW)
+    ).
 
 fill(B, Graph:prolog) :->
     "Show the predicates of Graph"::
@@ -1133,7 +1148,18 @@ fit_width(B) :->
     send(B?all_items, for_all,
          message(Max, maximum, ?(Font, width, @arg1?name))),
     get(Max, value, NameW),
-    get(Font, width, ' 000,000', ColW),
+    new(MaxCount, number(0)),
+    send(B?all_items, for_all,
+         message(MaxCount, maximum, @arg1?count)),
+    get(MaxCount, value, Count),
+    format(atom(Widest), '~D', [Count]),
+    get(Font, width, Widest, CountW),
+    get(Font, width, '000,000', MinW),
+    CountWidth is max(CountW, MinW),
+    send(B, slot, count_width, CountWidth),
+    send(B, place_counts),
+    get(Font, width, ' ', SpaceW),
+    ColW is CountWidth + SpaceW,
     get(B?scroll_bar, width, SBW),
     Wanted is NameW + ColW + 15 + SBW + 10,
     send(B, slot, wanted, Wanted),
@@ -1227,6 +1253,7 @@ selected(B, DI:idg_dict_item) :->
 
 variable(predicate, prolog, get, "Predicate indicator").
 variable(name,      name,   get, "Name shown without the count").
+variable(count,     int,    get, "Number of nodes").
 
 initialise(DI, PI:prolog, Count:int, Invalid:int) :->
     format(atom(Key), '~q', [PI]),
@@ -1235,6 +1262,7 @@ initialise(DI, PI:prolog, Count:int, Invalid:int) :->
     send_super(DI, initialise, Key, Label),
     send(DI, slot, predicate, PI),
     send(DI, slot, name, Name),
+    send(DI, slot, count, Count),
     pi_kind(PI, Kind),
     item_style(Kind, Invalid, Style),
     send(DI, style, Style),

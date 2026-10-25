@@ -519,6 +519,18 @@ test(browser_shrinks, Wanted == @nil) :-
     send(B, apply_width),
     get(B, wanted, Wanted),
     free(V).
+%   The column of the counts is as wide as the widest count.
+
+test(browser_counts, true(Room >= CountW)) :-
+    viewer(V),
+    get(V, browser, B),
+    send(B, fill, idg([node(user:tv_big/1, 2600000, 0)], [])),
+    get(B?font, width, '2,600,000', CountW),
+    get(B?text_image, width, W),
+    get(B?text_image, tab_stops, Stops),
+    get(Stops, element, 1, Stop),
+    Room is W - 15 - Stop,
+    free(V).
 %   Fitting an empty graph does not divide by its size.
 
 test(fit_empty, true) :-
