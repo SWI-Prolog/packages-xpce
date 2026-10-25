@@ -368,6 +368,7 @@ test(thread_tables_cached, Tree == cached) :-
     memory_tree(threads, T),
     thread_send_message(Id, done),
     thread_join(Id),
+    retractall(pce_memory:thread_tables_cache(Key, _, _)),
     path(T, [mv_cached, cached], node(Tree, _, _, _)).
 test(thread_tables, Count == 11) :-
     thread_self(Me),
