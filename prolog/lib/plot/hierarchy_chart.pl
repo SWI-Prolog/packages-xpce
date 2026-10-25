@@ -876,7 +876,7 @@ show_child_labels(C) :->
     pairs_values(Largest, Shown),
     get(C, font, Font),
     get(Font, height, FH),
-    BH is FH+2,
+    BH is ceiling(FH)+2,                 % FH may be fractional
     LR is R+10,
     maplist(label_spec(CX, CY, LR, Font), Shown, Specs),
     partition(right_label, Specs, Right, Left),
