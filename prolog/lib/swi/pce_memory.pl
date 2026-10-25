@@ -42,7 +42,7 @@
 :- use_module(library(pce_labelled_group)).
 :- autoload(library(apply),
             [maplist/3, foldl/4, partition/4, exclude/3, convlist/3]).
-:- autoload(library(lists), [sum_list/2, append/3, append/2]).
+:- autoload(library(lists), [sum_list/2, append/3, append/2, reverse/2]).
 :- autoload(library(edit), [edit/1]).
 :- autoload(library(pairs),
             [ group_pairs_by_key/2, map_list_to_pairs/3, pairs_keys/2,
@@ -50,7 +50,10 @@
             ]).
 :- autoload(library(aggregate), [aggregate_all/3]).
 :- autoload(library(thread), [call_in_thread/3]).
-:- autoload(library(option), [option/2]).
+:- autoload(library(option), [option/2, option/3]).
+:- autoload(library(assoc),
+            [empty_assoc/1, put_assoc/4, get_assoc/3, assoc_to_list/2]).
+:- autoload(library(time), [call_with_time_limit/2]).
 
 /** <module> Show how Prolog uses its memory
 
@@ -600,12 +603,38 @@ thread_tables(Id, Space, Options, Tree) :-
         (   thread_tables_cache(Key, Space, Tree0)
         ->  true
         ;   thread_variant_table(Id, Options, VT)
-        ->  table_tree('private tables', VT, Space, Tree0),
+        ->  described_tables(VT, Space, Options, Tree0),
             retractall(thread_tables_cache(Key, _, _)),
             assertz(thread_tables_cache(Key, Space, Tree0))
         )
     ->  Tree = Tree0
     ;   Tree = node('private tables', Space, [], [data(private_tables)])
+    ).
+
+%   described_tables(+VT, +Space, +Options, -Tree)
+%
+%   Describe the tables of VT, giving up after the option
+%   table_time_limit(Seconds) (default 60).  If that fails, Tree only
+%   has the total, so the thread is still shown.  The result is cached
+%   either way: describing the tables again only makes sense if they
+%   changed.
+
+described_tables(VT, Space, Options, Tree) :-
+    option(table_time_limit(Limit), Options, 60),
+    catch(call_with_time_limit(Limit,
+                               table_tree('private tables', VT, Space, Tree0)),
+          E, true),
+    (   var(E)
+    ->  Tree = Tree0
+    ;   (   E == time_limit_exceeded
+        ->  format(atom(Why), 'more than ~w seconds to describe', [Limit])
+        ;   E = error(Formal, _)
+        ->  format(atom(Why), 'describing them raised ~p', [Formal])
+        ;   format(atom(Why), 'describing them raised ~p', [E])
+        ),
+        format(atom(Title), 'private tables (~w)', [Why]),
+        Tree = node('private tables', Space, [],
+                    [data(private_tables), title(Title)])
     ).
 
 %   thread_table_tree(+Id, +Options, -Tree)
@@ -710,22 +739,77 @@ table_tree(Label, VT, Pool, node(Label, Own, Preds, [data(tables)])) :-
 
 table_predicates(@none, [], 0) :-
     !.
+%   A thread may have millions of tables, so they are visited once and
+%   per predicate only the totals and the max_tables/1 largest tables
+%   are kept, as `acc(Tables, Space, Answers, Top, TopCount, TopSpace)`.
+%   Top is a list of Size-t(Variant, Trie), smallest first.  Collecting
+%   the variant of every table first used more stack than the thread
+%   computing the chart has.
+
 table_predicates(VT, Nodes, InPool) :-
-    findall(PI-(Size-table(M:Variant, Answers, Compiled, TrieSize)),
-            ( trie_gen(VT, M:Variant, Trie),
-              answer_table(Trie, TrieSize, Size, Answers, Compiled),
-              functor(Variant, Name, Arity),
-              PI = M:Name/Arity
-            ), Tables),
-    aggregate_all(sum(S), member(_-(_-table(_, _, _, S)), Tables), InPool),
-    keysort(Tables, Sorted),
-    group_pairs_by_key(Sorted, ByPred),
+    empty_assoc(Preds0),
+    State = state(Preds0, 0),
+    (   trie_gen(VT, M:Variant, Trie),
+        answer_table(Trie, TrieSize, Size, Answers, _Compiled),
+        functor(Variant, Name, Arity),
+        add_table(State, M:Name/Arity, M:Variant, Trie, TrieSize, Size,
+                  Answers),
+        fail
+    ;   true
+    ),
+    State = state(Preds, InPool),
+    assoc_to_list(Preds, ByPred),
     maplist(predicate_space, ByPred, Spaced),
     top_nodes(Spaced, pred_tables, predicates, Nodes).
 
-predicate_space(PI-Variants, Space-(PI-Variants)) :-
-    pairs_keys(Variants, Sizes),
-    sum_list(Sizes, Space).
+add_table(State, PI, Variant, Trie, TrieSize, Size, Answers) :-
+    arg(2, State, InPool0),
+    InPool is InPool0+TrieSize,
+    nb_setarg(2, State, InPool),
+    arg(1, State, Preds0),
+    (   get_assoc(PI, Preds0, _)
+    ->  true
+    ;   put_assoc(PI, Preds0, acc(0, 0, 0, [], 0, 0), Preds1),
+        nb_setarg(1, State, Preds1)
+    ),
+    arg(1, State, Preds),               % nb_setarg/3 copied the assoc
+    get_assoc(PI, Preds, Acc),
+    Acc = acc(Tables0, Space0, Answers0, Top0, TopCount0, TopSpace0),
+    Tables is Tables0+1,
+    Space is Space0+Size,
+    AllAnswers is Answers0+Answers,
+    nb_setarg(1, Acc, Tables),
+    nb_setarg(2, Acc, Space),
+    nb_setarg(3, Acc, AllAnswers),
+    max_tables(Max),
+    (   TopCount0 < Max
+    ->  insert_top(Top0, Size-t(Variant, Trie), Top),
+        TopCount is TopCount0+1,
+        TopSpace is TopSpace0+Size,
+        nb_setarg(4, Acc, Top),
+        nb_setarg(5, Acc, TopCount),
+        nb_setarg(6, Acc, TopSpace)
+    ;   Top0 = [Smallest-_|Rest],
+        Size > Smallest
+    ->  insert_top(Rest, Size-t(Variant, Trie), Top),
+        TopSpace is TopSpace0+Size-Smallest,
+        nb_setarg(4, Acc, Top),
+        nb_setarg(6, Acc, TopSpace)
+    ;   true
+    ).
+
+insert_top([], E, [E]).
+insert_top([H|T], E, L) :-
+    E = S-_,
+    H = SH-_,
+    (   S =< SH
+    ->  L = [E,H|T]
+    ;   L = [H|L1],
+        insert_top(T, E, L1)
+    ).
+
+predicate_space(PI-Acc, Space-(PI-Acc)) :-
+    arg(2, Acc, Space).
 
 %   top_nodes(+Pairs, :ToNode, +What, -Nodes)
 %
@@ -773,22 +857,30 @@ answer_table(Trie, TrieSize, Size, Answers, Compiled) :-
 %   variants that incremental tables depend on.  These are nodes of the
 %   dependency graph rather than tables: they have no answers.
 
-pred_tables(_Space-(PI-Variants),
+pred_tables(_Space-(PI-acc(Tables, Space, Answers, Top, TopCount, TopSpace)),
             node(Label, 0, Nodes, [data(predicate(PI)), title(Title)])) :-
     format(atom(Label), '~q', [PI]),
-    length(Variants, Tables),
+    reverse(Top, Largest),
+    maplist(top_table, Largest, Variants),
     (   dependency_predicate(PI)
     ->  counted(Tables, 'dependency node', NodesText),
         format(atom(Title), '~q: incremental dynamic, ~w', [PI, NodesText]),
-        top_nodes(Variants, dependency_node, variants, Nodes)
-    ;   aggregate_all(sum(N),
-                      member(_-table(_, N, _, _), Variants),
-                      Answers),
-        counted(Tables, table, TablesText),
+        maplist(dependency_node, Variants, Nodes0)
+    ;   counted(Tables, table, TablesText),
         counted(Answers, answer, AnswersText),
         format(atom(Title), '~q: ~w, ~w', [PI, TablesText, AnswersText]),
-        top_nodes(Variants, variant_table, variants, Nodes)
+        maplist(variant_table, Variants, Nodes0)
+    ),
+    RestCount is Tables-TopCount,
+    (   RestCount > 0
+    ->  RestSpace is Space-TopSpace,
+        format(atom(RestLabel), '~D other variants', [RestCount]),
+        append(Nodes0, [node(RestLabel, RestSpace, [], [data(other)])], Nodes)
+    ;   Nodes = Nodes0
     ).
+
+top_table(_-t(Variant, Trie), Size-table(Variant, Answers, Compiled, TrieSize)) :-
+    answer_table(Trie, TrieSize, Size, Answers, Compiled).
 
 dependency_predicate(M:Name/Arity) :-
     functor(Head, Name, Arity),
