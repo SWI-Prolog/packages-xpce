@@ -61,7 +61,8 @@ Run with:
 test_sdg_viewer :-
     run_tests([ sdg_graph,
                 sdg_viewer,
-                sdg_ide
+                sdg_ide,
+                sdg_monitor
               ]).
 
 %   sv_p/1 and sv_q/1 form a positive loop that calls the negative loop
@@ -419,3 +420,32 @@ test(no_tables_no_viewer, [ fail, cleanup(no_frames) ]) :-
     ide_viewer(_).
 
 :- end_tests(sdg_ide).
+
+%   The thread monitor samples the incomplete tables of a thread and
+%   the SCCs per incomplete table.
+
+:- use_module(library(swi/thread_monitor), []).
+
+:- begin_tests(sdg_monitor, [ condition(current_prolog_flag(threads, true))
+                            ]).
+
+test(sample, Incomplete-Ratio == 1-100) :-
+    waiting(Id),
+    thread_property(Id, id(TID)),               % the monitor knows ids
+    new(S, thread_statistics(TID, 0)),
+    get(S, incomplete, Incomplete),
+    get(S, scc_ratio, Ratio),
+    free(S),
+    done(Id).
+test(sample_none, Incomplete-Ratio == 0-0) :-
+    new(S, thread_statistics(main, 0)),
+    get(S, incomplete, Incomplete),
+    get(S, scc_ratio, Ratio),
+    free(S).
+test(colours, true) :-
+    pce_thread_monitor:graph_colour(incomplete, C1),
+    pce_thread_monitor:graph_colour(scc_ratio, C2),
+    send(C1, instance_of, colour),
+    send(C2, instance_of, colour).
+
+:- end_tests(sdg_monitor).

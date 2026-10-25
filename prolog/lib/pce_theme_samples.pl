@@ -385,6 +385,8 @@ thread_graph_colour(thread_graph_global).
 thread_graph_colour(thread_graph_trail).
 thread_graph_colour(thread_graph_tables).
 thread_graph_colour(thread_graph_cpu).
+thread_graph_colour(thread_graph_incomplete).
+thread_graph_colour(thread_graph_scc_ratio).
 
 %   graph_points(+Nth, -Points)
 %
@@ -394,7 +396,7 @@ thread_graph_colour(thread_graph_cpu).
 graph_points(Nth, Points) :-
     findall(X-Y, ( between(0, 23, I),
                    X is 8 + I*8,
-                   Y is round(44 - 6*Nth - 8*sin(I/3 + Nth))
+                   Y is round(44 - 5*Nth - 8*sin(I/3 + Nth))
                  ), Points).
 
 terminal_lines(text,      ['?- X = 42.', 'X = 42.']).

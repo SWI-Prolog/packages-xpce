@@ -69,6 +69,10 @@ displays the status of threads.
                    thread_graph_trail  = dark_green,
                    thread_graph_cpu    = purple,
                    thread_graph_tables = red,
+                   thread_graph_incomplete = magenta -
+                       "Graph of the incomplete tables of a thread",
+                   thread_graph_scc_ratio = dark_goldenrod -
+                       "Graph of the SCCs per incomplete table",
                    thread_cpu_idle     = grey80 -
                        "Background of the CPU gauge of a running thread",
                    thread_cpu_busy     = green -
@@ -97,6 +101,8 @@ variable(local,  int := 0, get, "Local-stack usage").
 variable(global, int := 0, get, "Global-stack usage").
 variable(trail,  int := 0, get, "Trail-stack usage").
 variable(tables, int := 0, get, "Private tables").
+variable(incomplete, int := 0, get, "Incomplete tables").
+variable(scc_ratio,  int := 0, get, "SCCs per incomplete table (0..100%)").
 variable(cpu,    int := 0, get, "%CPU (0..100)").
 
 initialise(TS, Thread:any, CPU:int) :->
@@ -110,6 +116,12 @@ initialise(TS, Thread:any, CPU:int) :->
     ),
     (   catch(thread_statistics(Thread, table_space_used, Tables), _, fail)
     ->  send(TS, slot, tables, Tables)
+    ;   true
+    ),
+    (   catch('$tbl_incomplete'(Thread, Incomplete, SCCs), _, fail),
+        Incomplete > 0
+    ->  send(TS, slot, incomplete, Incomplete),
+        send(TS, slot, scc_ratio, round(100*SCCs/Incomplete))
     ;   true
     ),
     send(TS, slot, cpu, CPU).
@@ -616,6 +628,10 @@ class_variable(cpu_colour,    colour, thread_graph_cpu,
                "Colour of the CPU usage graph").
 class_variable(tables_colour, colour, thread_graph_tables,
                "Colour of the graph of the thread's private tables").
+class_variable(incomplete_colour, colour, thread_graph_incomplete,
+               "Colour of the graph of the incomplete tables").
+class_variable(scc_ratio_colour, colour, thread_graph_scc_ratio,
+               "Colour of the graph of the SCCs per incomplete table").
 class_variable(graph_pen,     num, 1.0,
                "Thickness of the lines of the graphs").
 
@@ -700,9 +716,15 @@ show(TD, History:chain, Selector:name) :->
     ;   send(TD, show_graph, History, Selector)
     ).
 
-%   A thread that has no private tables shows no tables graph.
+%   A thread that has no private tables shows no tables graph, one that
+%   never had incomplete tables none of those.  The SCCs per incomplete
+%   table hint at the structure of a computation that does not
+%   complete: below a few percent at badly structured rules, above 30%
+%   and growing at recursion over growing terms.
 
 hidden_while_zero(tables).
+hidden_while_zero(incomplete).
+hidden_while_zero(scc_ratio).
 
 show_graph(TD, History:chain, Selector:name) :->
     get(TD, axis, x, XAxis),
@@ -792,8 +814,12 @@ hover_value(TD, G:path, X:int, Value:num) :<-
 hover_label(_TD, G:path, Value:num, Label:char_array) :<-
     "Show CPU in percent, stacks in bytes"::
     get(G, name, Sel),
-    (   percent_scale(Sel)
+    (   Sel == scc_ratio
+    ->  format(string(Label), 'SCCs per incomplete table: ~d%', [Value])
+    ;   percent_scale(Sel)
     ->  format(string(Label), '~w: ~d%', [Sel, Value])
+    ;   Sel == incomplete
+    ->  format(string(Label), 'incomplete: ~D tables', [Value])
     ;   human_bytes(Value, Bytes),
         format(string(Label), '~w: ~w', [Sel, Bytes])
     ).
@@ -843,6 +869,7 @@ location(A, Sel:name, Val:num, Loc:int) :<-
     ).
 
 percent_scale(cpu).
+percent_scale(scc_ratio).
 
 %   A window too low for a label per decade gets a label every so many
 %   decades: the labels are at least a line apart.
@@ -943,7 +970,8 @@ variable(pick_busiest,    bool := @off, none,
          "Select the busiest thread at the next update").
 
 class_variable(update_interval, num*,  0.2).
-class_variable(graphs,          chain, chain(local,global,trail,tables,cpu)).
+class_variable(graphs,          chain,
+               chain(local,global,trail,tables,incomplete,scc_ratio,cpu)).
 
 initialise(TM) :->
     send_super(TM, initialise, threads),
@@ -1120,6 +1148,8 @@ initialise(D, TM:prolog_thread_monitor) :->
     add_field(Graphs, global),
     add_field(Graphs, trail),
     add_field(Graphs, tables),
+    add_field(Graphs, incomplete),
+    add_field(Graphs, scc_ratio),
     add_field(Graphs, cpu),
     get(TM, graphs, GraphsSetting),
     send(Graphs, selection, GraphsSetting),
@@ -1157,7 +1187,8 @@ add_field(Menu, Name) :-
 pce_preferences:preferences(prolog_thread_monitor,
     [ prolog_thread_monitor - [ update_interval, graphs ],
       thread_diagram        - [ local_colour, global_colour, trail_colour,
-                                tables_colour, cpu_colour, graph_pen
+                                tables_colour, incomplete_colour,
+                                scc_ratio_colour, cpu_colour, graph_pen
                               ]
     ]).
 
@@ -1167,7 +1198,8 @@ pce_preferences:edit_type(thread_diagram, graph_pen, '1.0..5.0').
 
 pce_preferences:edit_item(prolog_thread_monitor, graphs, Graphs, Item) :-
     new(Item, menu(graphs, toggle)),
-    forall(member(Graph, [local, global, trail, tables, cpu]),
+    forall(member(Graph, [local, global, trail, tables, incomplete,
+                          scc_ratio, cpu]),
            add_field(Item, Graph)),
     send(Item, selection, Graphs).
 
