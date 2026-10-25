@@ -533,9 +533,7 @@ ws_animation_save_formats(void)
 
 	if ( IMG_CloseAnimationEncoder(enc) && ok )
 	  appendChain(ch, CtoName(*f));
-      } else if ( io )
-      { SDL_CloseIO(io);
-      }
+      }				/* closeio: a failed create closes io */
     }
     SDL_DestroySurface(surf);
   }
