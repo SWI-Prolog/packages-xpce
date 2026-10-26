@@ -353,6 +353,28 @@ test(dependency_nodes,
     path(T, [main, 'test_memory_viewer:mv_dep/1'], node(_, _, _, Options)),
     memberchk(title(Title), Options),
     abolish_all_tables.
+%   The call trie and the incremental dependency graph are part of the
+%   table space of the thread.
+
+test(call_trie_and_idg, [ CallTrie-IDG == CallTrieSize-IDGSize,
+                          Title == Expected
+                        ]) :-
+    abolish_all_tables,
+    forall(mv_inc(_), true),
+    ignore(mv_inc(1)),
+    '$tbl_local_variant_table'(VT),
+    '$trie_property'(VT, size(CallTrieSize)),
+    thread_self(Me),
+    '$idg_thread_space'(Me, IDGSize),
+    '$idg_thread_summary'(Me, Nodes, Edges),
+    format(atom(Expected),
+           'incremental dependency graph: ~D nodes, ~D edges',
+           [Nodes, Edges]),
+    memory_tree(tables, T),
+    path(T, [main, 'call trie'], node(_, CallTrie, _, _)),
+    path(T, [main, 'IDG'], node(_, IDG, _, Options)),
+    memberchk(title(Title), Options),
+    abolish_all_tables.
 test(thread_tables_cached, Tree == cached) :-
     thread_self(Me),
     thread_create(( fill_private,
@@ -479,6 +501,16 @@ test(overview, [Labels = [ program, threads, 'shared tables', xpce,
                            atoms, functors | _ ]]) :-
     memory_tree(overview, node(_, _, Children, _)),
     findall(L, member(node(L, _, _, _), Children), Labels).
+%   The option progress(Goal) tells which step computing the tree is at.
+
+test(progress, Missing == []) :-
+    memory_tree(overview, _, [progress(mv_step)]),
+    findall(S, retract(mv_step_seen(S)), Steps),
+    thread_self(Me),
+    exclude([S]>>memberchk(S, Steps),
+            [ module(test_memory_viewer), thread(Me),
+              shared_tables, classes
+            ], Missing).
 %   A class is below its super class; its size is that of the
 %   instances that exist.
 
@@ -510,6 +542,11 @@ test(edit_targets, [Targets == [true, true, true, false, true]]) :-
 test(bad_view, error(domain_error(memory_view, nonsense))) :-
     memory_tree(nonsense, _).
 
+:- dynamic mv_step_seen/1.
+
+mv_step(Step) :-
+    assertz(mv_step_seen(Step)).
+
 wait_local(Id) :-
     (   '$thread_local_clause_count'(test_memory_viewer:mv_local(_), Id, 100)
     ->  true
@@ -537,6 +574,10 @@ wait_for(Get, Test, Timeout) :-
           fail
       ).
 
+cursor_name(W, Name) :-
+    get(W, cursor, Cursor),
+    get(Cursor, name, Name).
+
 :- begin_tests(memory_viewer, [condition(current_prolog_flag(threads, true))]).
 
 %   Refresh keeps the node zoomed into.
@@ -562,6 +603,25 @@ test(refresh_in_thread, [Label == threads]) :-
     send(MV, view, threads),
     wait_for(get(MV, busy, Busy), Busy == @off, 10),
     get(MV?chart_window?root?label, value, Label),
+    free(MV).
+%   While a refresh is slow the chart shows the progress cursor, until
+%   the tree arrives.  Progress of a stale refresh is ignored.
+
+test(progress_cursor, [During-Stale-After == progress-arrow-arrow]) :-
+    new(MV, prolog_memory_viewer),
+    wait_for(get(MV, busy, Busy), Busy == @off, 10),
+    get(MV, chart_window, W),
+    send(MV, refresh),
+    get(MV, generation, Gen),
+    send(MV, progress, Gen, "module user"),
+    cursor_name(W, During),
+    wait_for(get(MV, busy, Busy2), Busy2 == @off, 10),
+    Old is Gen-1,
+    send(MV, slot, busy, @on),
+    send(MV, progress, Old, "module user"),
+    cursor_name(W, Stale),
+    send(MV, idle),
+    cursor_name(W, After),
     free(MV).
 test(stale_refresh_dropped, [Label == program]) :-
     new(MV, prolog_memory_viewer),

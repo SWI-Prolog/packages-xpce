@@ -34,7 +34,7 @@
 
 :- module(pce_memory,
           [ memory_tree/2,                      % +View, -Term
-            memory_tree/3                       % +View, -Term, +Options
+            memory_tree/3                       % +View, -Term, :Options
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pane_frame)).
@@ -50,7 +50,7 @@
             ]).
 :- autoload(library(aggregate), [aggregate_all/3]).
 :- autoload(library(thread), [call_in_thread/3]).
-:- autoload(library(option), [option/2, option/3]).
+:- autoload(library(option), [option/2, option/3, meta_options/3]).
 :- autoload(library(assoc),
             [empty_assoc/1, put_assoc/4, get_assoc/3, assoc_to_list/2]).
 :- autoload(library(time), [call_with_time_limit/2]).
@@ -98,7 +98,9 @@ library(plot/hierarchy_chart)).  There are several views:
     with `order_by(space)` and `top(10)`: the ten predicates whose
     tables use most space and below each the ten variants using most
     space.  The others are summed in one node.  The balloons tell the
-    number of tables and answers.  The space of a table that is
+    number of tables and answers.  The `call trie` maps the variants
+    to their tables and the `IDG` is the incremental dependency graph
+    of the incremental tables.  The space of a table that is
     compiled to a clause (see the flag `table_compile_threshold`) is
     that of the clause, which is not part of the table space of
     statistics/2.
@@ -121,12 +123,14 @@ By default the viewer only refreshes on request.  The menu below the
 Refresh button makes it refresh every so many seconds; the class
 variable `refresh_interval` sets the initial interval.  The tree is
 computed in a thread of its own, so the GUI keeps responding.  If
+that takes more than a quarter of a second, the chart shows the
+`progress` cursor and the status line tells what is being computed.  If
 computing takes long, the next refresh waits at least four times as
 long.
 */
 
 %!  memory_tree(+View, -Term) is det.
-%!  memory_tree(+View, -Term, +Options) is det.
+%!  memory_tree(+View, -Term, :Options) is det.
 %
 %   Term describes how memory is used according to View as a term for
 %   hierarchy_from_term/2.  View is one of `overview`, `program`,
@@ -141,21 +145,35 @@ long.
 %       own, so the variant table of another thread is fetched using
 %       call_in_thread/3.  These options avoid that, e.g., for the
 %       thread of a GUI that computes the tree in a thread of its own.
+%     - progress(:Goal)
+%       Call call(Goal, Step) as computing the tree gets to Step, one of
+%       module(M), thread(Id), tables(Id) (describing the private tables
+%       of thread Id), shared_tables or classes.
 
 memory_tree(View, Term) :-
     memory_tree(View, Term, []).
+
+:- meta_predicate
+    memory_tree(+, -, :).
+
+memory_tree(View, Term, Options0) :-
+    meta_options(is_meta, Options0, Options),
+    view_tree(View, Term, Options).
+
+is_meta(progress).
 
 %   If the allocator tells how much memory is in use (see `heapused`
 %   of statistics/2), `other` is what is not accounted for, such as the
 %   memory of foreign libraries (including that of this GUI), records
 %   and source administration.
 
-memory_tree(overview, node(Label, 0, Children, [data(process)]), Options) :-
+view_tree(overview, node(Label, 0, Children, [data(process)]), Options) :-
     !,
-    memory_tree(program, Program, Options),
-    memory_tree(threads, Threads, Options),
+    view_tree(program, Program, Options),
+    view_tree(threads, Threads, Options),
+    progress(Options, shared_tables),
     shared_tables(Shared),
-    memory_tree(xpce, XPCE, Options),
+    view_tree(xpce, XPCE, Options),
     statistics(atom_space, Atoms),
     statistics(functor_space, Functors),
     Known = [ Program, Threads, Shared, XPCE,
@@ -174,57 +192,78 @@ memory_tree(overview, node(Label, 0, Children, [data(process)]), Options) :-
     ),
     current_prolog_flag(pid, Pid),
     format(atom(Label), 'Process ~w', [Pid]).
-memory_tree(program, node(program, 0, Modules, [data(program)]), _) :-
+view_tree(program, node(program, 0, Modules, [data(program)]), Options) :-
     !,
     findall(M, current_module(M), Ms0),
     sort(Ms0, Ms),
     findall(T, ( member(M, Ms),
+                 progress(Options, module(M)),
                  module_tree(M, T)
                ), Modules).
-memory_tree(application, node(application, 0, [Static, Data],
-                             [data(application)]), _) :-
+view_tree(application, node(application, 0, [Static, Data],
+                             [data(application)]), Options) :-
     !,
     application_modules(Ms),
     findall(T, ( member(M, Ms),
                  program_module(M),
+                 progress(Options, module(M)),
                  static_module_tree(M, T)
                ), StaticMs),
     Static = node('static program', 0, StaticMs, [data(static)]),
     findall(T, ( member(M, Ms),
+                 progress(Options, module(M)),
                  data_module_tree(M, T)
                ), DataMs),
     Data = node('dynamic data', 0, DataMs, [data(dynamic)]).
-memory_tree(data, node('dynamic data', 0, DataMs, [data(dynamic)]), _) :-
+view_tree(data, node('dynamic data', 0, DataMs, [data(dynamic)]),
+            Options) :-
     !,
     findall(M, current_module(M), Ms0),
     sort(Ms0, Ms),
     findall(T, ( member(M, Ms),
+                 progress(Options, module(M)),
                  data_module_tree(M, T)
                ), DataMs).
-memory_tree(threads, node(threads, 0, Threads, [data(threads)]), Options) :-
+view_tree(threads, node(threads, 0, Threads, [data(threads)]), Options) :-
     !,
     forget_thread_tables,
     thread_local_predicates(TLPreds),
     findall(T, ( thread_property(Id, size(Size)),
+                 progress(Options, thread(Id)),
                  catch(thread_tree(Id, Size, TLPreds, Options, T),
                        error(_,_), fail)
                ), Threads).
-memory_tree(tables, node(tables, 0, [Shared|Private], [data(tables)]),
+view_tree(tables, node(tables, 0, [Shared|Private], [data(tables)]),
             Options) :-
     !,
+    progress(Options, shared_tables),
     shared_tables(Shared),
     findall(T, ( thread_property(Id, size(_)),
                  catch(thread_table_tree(Id, Options, T), error(_,_), fail)
                ), Private).
-memory_tree(xpce, node(xpce, 0, [Classes, Other], [data(xpce)]), _) :-
+view_tree(xpce, node(xpce, 0, [Classes, Other], [data(xpce)]),
+            Options) :-
     !,
+    progress(Options, classes),
     class_tree(class(object), Classes),
     term_total(Classes, Instances),
     get(@pce, core_usage, Core),
     OtherSize is max(0, Core-Instances),
     Other = node('other xpce data', OtherSize, [], [data(xpce_data)]).
-memory_tree(View, _, _) :-
+view_tree(View, _, _) :-
     domain_error(memory_view, View).
+
+%   progress(+Options, +Step)
+%
+%   If Options has progress(Goal), call(Goal, Step) to tell that
+%   computing the tree is at Step: module(M), thread(Id), tables(Id),
+%   shared_tables or classes.
+
+progress(Options, Step) :-
+    (   option(progress(Goal), Options)
+    ->  call(Goal, Step)
+    ;   true
+    ).
 
 term_total(node(_, Own, Children, _), Total) :-
     maplist(term_total, Children, Totals),
@@ -602,8 +641,9 @@ thread_tables(Id, Space, Options, Tree) :-
     (   Space > 0,
         (   thread_tables_cache(Key, Space, Tree0)
         ->  true
-        ;   thread_variant_table(Id, Options, VT)
-        ->  described_tables(VT, Space, Options, Tree0),
+        ;   progress(Options, tables(Id)),
+            thread_variant_table(Id, Options, VT)
+        ->  described_tables(Id, VT, Space, Options, Tree0),
             retractall(thread_tables_cache(Key, _, _)),
             assertz(thread_tables_cache(Key, Space, Tree0))
         )
@@ -611,18 +651,19 @@ thread_tables(Id, Space, Options, Tree) :-
     ;   Tree = node('private tables', Space, [], [data(private_tables)])
     ).
 
-%   described_tables(+VT, +Space, +Options, -Tree)
+%   described_tables(+Id, +VT, +Space, +Options, -Tree)
 %
-%   Describe the tables of VT, giving up after the option
+%   Describe the tables of VT of thread Id, giving up after the option
 %   table_time_limit(Seconds) (default 60).  If that fails, Tree only
 %   has the total, so the thread is still shown.  The result is cached
 %   either way: describing the tables again only makes sense if they
 %   changed.
 
-described_tables(VT, Space, Options, Tree) :-
+described_tables(Id, VT, Space, Options, Tree) :-
     option(table_time_limit(Limit), Options, 60),
     catch(call_with_time_limit(Limit,
-                               table_tree('private tables', VT, Space, Tree0)),
+                               table_tree('private tables', Id, VT, Space,
+                                          Tree0)),
           E, true),
     (   var(E)
     ->  Tree = Tree0
@@ -713,11 +754,11 @@ stack_tree(Id, Stack, node(Stack, 0, [Used, Free], [data(stack(Stack))])) :-
                  *            TABLES            *
                  *******************************/
 
-%   The tables in a pool: the predicates using most space and below
-%   each the variants using most space, at most max_tables/1 of each;
-%   the others are summed in one node.  The part of the pool that is not
-%   used by the answer tries is that of the variant table and the
-%   administration of the tables.
+%   The tables in a pool: the call trie, the incremental dependency
+%   graph (IDG) and the predicates using most space and below each the
+%   variants using most space, at most max_tables/1 of each; the others
+%   are summed in one node.  The part of the pool that is not used by
+%   these is the administration of the tables.
 
 shared_tables(Tree) :-
     statistics(shared_table_space_used, Pool),
@@ -725,7 +766,7 @@ shared_tables(Tree) :-
     ->  true
     ;   VT = @none
     ),
-    table_tree('shared tables', VT, Pool, Tree).
+    table_tree('shared tables', shared, VT, Pool, Tree).
 
 max_tables(10).
 
@@ -733,9 +774,53 @@ max_tables(10).
 %   its answer trie is discarded.  The clause is not part of the pool,
 %   but its space is that of the table.
 
-table_tree(Label, VT, Pool, node(Label, Own, Preds, [data(tables)])) :-
-    table_predicates(VT, Preds, InPool),
-    Own is max(0, Pool-InPool).
+%   table_tree(+Label, +Owner, +VT, +Pool, -Tree)
+%
+%   Tree describes the tables of VT, which use Pool bytes.  Owner is the
+%   thread of the tables or `shared`.  The call trie and IDG are
+%   omitted if they use no space.
+
+table_tree(Label, Owner, VT, Pool,
+           node(Label, Own, Children, [data(tables)])) :-
+    call_trie_node(VT, CallTrie),
+    idg_node(Owner, IDG),
+    table_predicates(VT, Preds, InTables),
+    maplist(term_total, [CallTrie, IDG], [CallTrieSize, IDGSize]),
+    Own is max(0, Pool-InTables-CallTrieSize-IDGSize),
+    exclude(empty_node, [CallTrie, IDG], Parts),
+    append(Parts, Preds, Children).
+
+empty_node(node(_, 0, [], _)).
+
+%   call_trie_node(+VT, -Node)
+%
+%   Node describes the call trie VT, which maps the call variants to
+%   their tables.
+
+call_trie_node(@none, Node) :-
+    !,
+    Node = node('call trie', 0, [], [data(call_trie)]).
+call_trie_node(VT, node('call trie', Size, [], [data(call_trie), title(Title)])) :-
+    '$trie_property'(VT, size(Size)),
+    '$trie_property'(VT, value_count(Variants)),
+    counted(Variants, variant, Text),
+    format(atom(Title), 'call trie: ~w', [Text]).
+
+%   idg_node(+Owner, -Node)
+%
+%   Node describes the incremental dependency graph of the tables of
+%   Owner: a thread or `shared`.
+
+idg_node(Owner, node('IDG', Size, [], [data(idg), title(Title)])) :-
+    catch(( '$idg_thread_space'(Owner, Size),
+            '$idg_thread_summary'(Owner, Nodes, Edges)
+          ), error(_,_), fail),
+    !,
+    counted(Nodes, node, NodesText),
+    counted(Edges, edge, EdgesText),
+    format(atom(Title), 'incremental dependency graph: ~w, ~w',
+           [NodesText, EdgesText]).
+idg_node(_, node('IDG', 0, [], [data(idg)])).
 
 table_predicates(@none, [], 0) :-
     !.
@@ -834,23 +919,18 @@ top_nodes(Pairs, ToNode, What, Nodes) :-
 
 %   answer_table(+Trie, -TrieSize, -Size, -Answers, -Compiled)
 %
-%   TrieSize is the space of the answer trie and its dependency graph;
-%   Size adds the clause the table is compiled to.  Compiled is `true`
-%   if there is such a clause.
+%   TrieSize is the space of the answer trie; Size adds the clause the
+%   table is compiled to.  Compiled is `true` if there is such a clause.
+%   The dependency graph of the table is part of the IDG of the pool.
 
 answer_table(Trie, TrieSize, Size, Answers, Compiled) :-
-    '$trie_property'(Trie, size(S0)),
+    '$trie_property'(Trie, size(TrieSize)),
     '$trie_property'(Trie, value_count(Answers)),
-    (   '$trie_property'(Trie, idg_size(S1))
-    ->  true
-    ;   S1 = 0
-    ),
     (   '$trie_property'(Trie, compiled_size(S2))
     ->  Compiled = true
     ;   S2 = 0,
         Compiled = false
     ),
-    TrieSize is S0+S1,
     Size is TrieSize+S2.
 
 %   For an incremental dynamic predicate, the variant table holds the
@@ -991,6 +1071,10 @@ initialise(MV) :->
     send(MV, slot, view, View),
     send(VD, gap, size(5, 3)),
     send(CD, gap, size(5, 3)),
+    forall(member(D, [VD, CD]),         % scroll if the viewer is low
+           ( send(D, scrollbars, vertical),
+             send(D, restrict_scroll, @on)
+           )),
     new(VM, menu(view, choice, message(MV, view, @arg1))),
     send_list(VM, append,
               [overview, application, program, data, threads, tables, xpce]),
@@ -1141,12 +1225,54 @@ refresh(MV, Wait:[bool]) :->
 
 refresh_tree(MV, Gen, View, Options) :-
     get_time(T0),
-    catch(memory_tree(View, Term, Options), E, true),
+    nb_setval(memory_progress, T0),
+    catch(memory_tree(View, Term,
+                      [progress(report_progress(MV, Gen))|Options]),
+          E, true),
     get_time(T1),
     Time is T1-T0,
     (   var(E)
     ->  in_pce_thread(show_tree(MV, Gen, Term, Time))
     ;   in_pce_thread(refresh_failed(MV, Gen, E))
+    ).
+
+%   report_progress(+Viewer, +Gen, +Step)
+%
+%   Tell Viewer where refresh Gen is, at most four times a second.  The
+%   first report comes after a quarter of a second, so a fast refresh
+%   shows nothing.
+
+report_progress(MV, Gen, Step) :-
+    get_time(Now),
+    nb_getval(memory_progress, Last),
+    (   Now - Last >= 0.25
+    ->  nb_setval(memory_progress, Now),
+        progress_text(Step, Text),
+        in_pce_thread(progress(MV, Gen, Text))
+    ;   true
+    ).
+
+progress_text(module(M), Text) :-
+    format(string(Text), 'module ~w', [M]).
+progress_text(thread(Id), Text) :-
+    thread_id_text(Id, Text).
+progress_text(tables(Id), Text) :-
+    thread_id_text(Id, Thread),
+    format(string(Text), 'tables of ~w', [Thread]).
+progress_text(shared_tables, "shared tables").
+progress_text(classes, "xpce classes").
+
+thread_id_text(Id, Text) :-
+    (   thread_property(Id, alias(Alias))
+    ->  format(string(Text), 'thread ~w', [Alias])
+    ;   thread_property(Id, id(TID)),
+        format(string(Text), 'thread ~d', [TID])
+    ).
+
+progress(MV, Gen, Text) :-
+    (   viewer(MV)
+    ->  send(MV, progress, Gen, Text)
+    ;   true
     ).
 
 %   The viewer may have been closed while the tree was computed.
@@ -1160,7 +1286,7 @@ show_tree(MV, Gen, Term, Time) :-
 refresh_failed(MV, Gen, E) :-
     (   viewer(MV),
         get(MV, generation, Gen)
-    ->  send(MV, slot, busy, @off),
+    ->  send(MV, idle),
         send(MV, report, error, 'Refresh failed'),
         print_message(error, E)
     ;   true
@@ -1170,10 +1296,30 @@ viewer(MV) :-
     object(MV),
     send(MV, instance_of, prolog_memory_viewer).
 
+%   While a refresh is slow, the chart shows the `progress` cursor and
+%   the status line tells what is being computed.
+
+progress(MV, Gen:int, Text:string) :->
+    "Refresh Gen is computing Text"::
+    (   get(MV, generation, Gen),
+        get(MV, busy, @on)
+    ->  send(MV?chart_window, cursor, progress),
+        get(MV, view, View),
+        send(MV, report, status, 'Computing %s: %s ...', View, Text)
+    ;   true
+    ).
+
+idle(MV) :->
+    "No refresh is being computed"::
+    send(MV, slot, busy, @off),
+    get(MV, chart_window, W),
+    get(W, class_variable_value, cursor, Cursor),
+    send(W, cursor, Cursor).
+
 show_tree(MV, Gen:int, Term:prolog, Time:num) :->
     "Show the tree computed by refresh Gen in Time seconds"::
     (   get(MV, generation, Gen)
-    ->  send(MV, slot, busy, @off),
+    ->  send(MV, idle),
         get(MV, view, View),
         get(MV, chart_window, W),
         focus_labels(W, Path),
