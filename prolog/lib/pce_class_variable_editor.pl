@@ -64,7 +64,6 @@
 :- use_module(library(apply)).
 :- use_module(library(readutil)).
 :- use_module(library(filesex)).
-:- use_module(library(yall)).
 :- use_module(library(pairs)).
 
 :- pce_autoload(select_graphical, library('man/v_select')).
@@ -1177,13 +1176,16 @@ star_scope(Name, _) :-
 
 star_tooltip(Name, Tooltip) :-
     star_classes(Name, Classes),
-    maplist([C,N]>>get(C, name, N), Classes, Names0),
+    maplist(object_name, Classes, Names0),
     sort(Names0, Names),
     (   Names == []
     ->  Tooltip = 'All classes, but each class has a specific value'
     ;   atomic_list_concat(Names, ', ', List),
         format(string(Tooltip), 'Set the value for ~w', [List])
     ).
+
+object_name(Object, Name) :-
+    get(Object, name, Name).
 
 %   value_tooltips(+Item, +Class, +Name)
 %

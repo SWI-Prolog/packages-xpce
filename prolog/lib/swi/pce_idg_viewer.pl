@@ -50,7 +50,6 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(pce_pin_button), []).
 :- autoload(library(pce_util), [center_on/2]).
-:- use_module(library(yall), [(>>)/2, (>>)/3]).
 :- autoload(library(edit), [edit/1]).
 :- autoload(library(apply),
             [maplist/3, foldl/4, foldl/5, include/3, exclude/3, partition/4]).
@@ -1430,8 +1429,7 @@ show_predicate(W, PI:prolog) :->
         idg_focus_graph(Graph, PI, Limits, FocusGraph, [show_all(ShowAll)]),
         FocusGraph = graph(Nodes, _),
         get(W, patterns, Patterns0),
-        include([P]>>memberchk(node(pred(P), _, _, _, _), Nodes),
-                Patterns0, Patterns),
+        include(graph_pred(Nodes), Patterns0, Patterns),
         send(W, slot, patterns, Patterns),
         (   Patterns \== []
         ->  get(V, thread, Thread),
@@ -1444,6 +1442,9 @@ show_predicate(W, PI:prolog) :->
             send(W, render, FocusGraph, PI)
         )
     ).
+
+graph_pred(Nodes, PI) :-
+    memberchk(node(pred(PI), _, _, _, _), Nodes).
 
 render(W, Graph:prolog, PI:prolog) :->
     "Lay out and show Graph with PI as focus"::
@@ -1785,10 +1786,9 @@ show_predicate(W, PI:prolog) :->
     ),
     get(W, expanded, Expanded0),
     get(W, auto, Auto0),
-    exclude([G]>>(memberchk(G, Auto0), \+ memberchk(G, Groups)),
-            Expanded0, Expanded1),
+    exclude(auto_closed(Auto0, Groups), Expanded0, Expanded1),
     foldl(open_group, Groups, Expanded1-[], Expanded-Opened),
-    include([G]>>memberchk(G, Groups), Auto0, Kept),
+    include(in_list(Groups), Auto0, Kept),
     append(Kept, Opened, Auto),
     send(W, slot, auto, Auto),
     (   Expanded == Expanded0
@@ -1796,6 +1796,18 @@ show_predicate(W, PI:prolog) :->
     ;   send(W, slot, expanded, Expanded),
         send(W, recompute)
     ).
+
+%   auto_closed(+Auto, +Groups, +Group)
+%
+%   Group was expanded automatically and is not one of Groups, so it is
+%   collapsed again.
+
+auto_closed(Auto, Groups, G) :-
+    memberchk(G, Auto),
+    \+ memberchk(G, Groups).
+
+in_list(List, E) :-
+    memberchk(E, List).
 
 %   open_group(+Group, +Expanded0-Opened0, -Expanded-Opened)
 %

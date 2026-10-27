@@ -48,7 +48,6 @@
 :- use_module(library(pairs)).
 :- use_module(library(assoc),
               [list_to_assoc/2, get_assoc/3, put_assoc/4, empty_assoc/1]).
-:- use_module(library(yall)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(debug)).
 :- use_module(library(pane_frame)).
@@ -237,10 +236,13 @@ components(F, Components:prolog) :<-
     ->  true
     ;   get(F, window, prof_browser, B),
         chain_list(B?all_items, Items),
-        maplist([DI,D]>>get(DI, data, D), Items, Nodes),
+        maplist(item_data, Items, Nodes),
         call_graph_components(Nodes, Components),
         send(F, slot, components, Components)
     ).
+
+item_data(DI, Data) :-
+    get(DI, data, Data).
 
 node_data(F, Pred:prolog, Node:prolog) :<-
     "The profile data of a predicate; fails if it was not sampled"::
@@ -1424,7 +1426,7 @@ prune_relatives(Relatives, limits(_, _, PruneAbove, MaxRelatives, _),
     length(Relatives, N),
     (   N =< PruneAbove
     ->  Kept = Relatives
-    ;   foldl([r(T,_,_), S0, S]>>(S is S0+T), Relatives, 0, Total),
+    ;   aggregate_all(sum(T), member(r(T,_,_), Relatives), Total),
         include(fair_share(N, Total), Relatives, Fair),
         sort(0, @>=, Fair, Heaviest),
         max_prefix(Heaviest, MaxRelatives, Kept)
