@@ -107,7 +107,8 @@ call_in_thread/3 for another thread.
 %     - node(Id, Label, Count, Invalid, Kind)
 %       A node of the graph.  Count is the number of IDG nodes it
 %       stands for and Invalid how many of them are invalid.  Kind is
-%       one of `module`, `file`, `dynamic` or `table`.
+%       one of `module`, `file`, `dynamic`, `table` or `dynamic_table`
+%       (a tabled predicate that is also dynamic, as used by ErgoAI).
 %     - cluster(Id, Label, Count, Invalid, Items)
 %       An expanded group and its parts.  Count and Invalid are the
 %       totals of the parts.
@@ -248,7 +249,10 @@ pi_label(PI, Label) :-
 pi_kind(M:Name/Arity, Kind) :-
     functor(Head, Name, Arity),
     (   predicate_property(M:Head, dynamic)
-    ->  Kind = (dynamic)
+    ->  (   predicate_property(M:Head, tabled)
+        ->  Kind = dynamic_table
+        ;   Kind = (dynamic)
+        )
     ;   Kind = (table)
     ).
 
@@ -654,7 +658,8 @@ admit([_-(Dir-P)|T], Max, Seen0, Seen, Ups, Downs) :-
 %   idg_graph/3).  Names is a list Name-Id, where Name is the graphviz
 %   name of the node or cluster for Id.  Clusters are subgraphs whose
 %   name starts with `cluster`.  Dynamic predicates are boxes, tables
-%   are ellipses, files are folders and modules are tabs.  Nodes with
+%   are ellipses, files are folders and modules are tabs.  The name of
+%   a tabled predicate that is also dynamic is in italics.  Nodes with
 %   invalid IDG nodes are filled and clusters with invalid IDG nodes
 %   have a red frame.  The width of an edge grows with the logarithm of
 %   the number of IDG edges it stands for.  Options:
@@ -713,14 +718,21 @@ dot_item(node(Id, Label, Count, Invalid, Kind), Names, Focus, Indent) :-
     memberchk(Name-Id, Names),
     kind_shape(Kind, Shape),
     counted_nodes(Count, Invalid, Counts),
-    format(string(Text), '~w\n~w', [Label, Counts]),
     node_tooltip(Id, Kind, Counts, Focus, Tooltip),
     (   Invalid > 0
     ->  Style = ', style=filled, fillcolor="#f4b6b6"'
     ;   Style = ''
     ),
-    format('~t~*|  ~w [label=~q, shape=~w, tooltip=~q~w];~n',
-           [Indent, Name, Text, Shape, Tooltip, Style]).
+    (   Kind == dynamic_table
+    ->  html_escape(Label, HLabel),
+        html_escape(Counts, HCounts),
+        format('~t~*|  ~w [label=<<I>~w</I><BR/>~w>, shape=~w, \c
+                tooltip=~q~w];~n',
+               [Indent, Name, HLabel, HCounts, Shape, Tooltip, Style])
+    ;   format(string(Text), '~w\n~w', [Label, Counts]),
+        format('~t~*|  ~w [label=~q, shape=~w, tooltip=~q~w];~n',
+               [Indent, Name, Text, Shape, Tooltip, Style])
+    ).
 dot_item(cluster(Id, Label, Count, Invalid, Children), Names, Focus,
          Indent) :-
     memberchk(Name-Id, Names),
@@ -743,6 +755,18 @@ kind_shape(module,  tab).
 kind_shape(file,    folder).
 kind_shape(dynamic, box).
 kind_shape(table,   ellipse).
+kind_shape(dynamic_table, ellipse).
+
+%   html_escape(+Text, -Escaped)
+%
+%   Escaped is Text for a graphviz HTML label.
+
+html_escape(Text, Escaped) :-
+    foldl(replace_all, ['&'-'&amp;', '<'-'&lt;', '>'-'&gt;'], Text, Escaped).
+
+replace_all(From-To, Text0, Text) :-
+    atomic_list_concat(Parts, From, Text0),
+    atomic_list_concat(Parts, To, Text).
 
 counted_nodes(Count, Invalid, Text) :-
     (   Count == 1
@@ -816,6 +840,7 @@ more_tooltip(Dir, PI, NPreds, NEdges, Tooltip) :-
 
 kind_name(dynamic, 'incremental dynamic').
 kind_name(table,   'incremental table').
+kind_name(dynamic_table, 'incremental table, dynamic').
 
 dot_edge(edge(From, To, Count), Names) :-
     memberchk(F-From, Names),
@@ -1275,13 +1300,15 @@ initialise(DI, PI:prolog, Count:int, Invalid:int) :->
 
 %   item_style(+Kind, +Invalid, -Style)
 %
-%   Incremental dynamic predicates are in italics, predicates with
-%   invalid nodes in red.
+%   Incremental dynamic predicates, also if they are tabled, are in
+%   italics, predicates with invalid nodes in red.
 
 item_style(table,     0, @default) :- !.
 item_style(table,     _, invalid).
 item_style((dynamic), 0, dynamic) :- !.
 item_style((dynamic), _, invalid_dynamic).
+item_style(dynamic_table, Invalid, Style) :-
+    item_style((dynamic), Invalid, Style).
 
 %   italic_font(+Window, -Font)
 %

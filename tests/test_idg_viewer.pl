@@ -93,6 +93,10 @@ user:tv_max(b, 2).
 
 :- table user:tv_u/1, user:tv_v/1.
 
+%   A tabled predicate that is also dynamic, as used by ErgoAI.
+
+:- table user:tv_tdyn/1 as (incremental, dynamic).
+
 user:tv_u(1).
 user:tv_u(2) :- tnot(user:tv_v(2)).
 user:tv_v(2) :- tnot(user:tv_u(2)).
@@ -268,6 +272,24 @@ test(dot, true) :-
     sub_string(Dot, 0, _, _, "digraph idg {"),
     forall(member(S, ["subgraph cluster_", "shape=", " -> "]),
            once(sub_string(Dot, _, _, _, S))).
+
+%   A tabled predicate that is also dynamic is a table, but its name is
+%   in italics, as dynamic predicates in the browser.
+
+test(dynamic_table_kind, Kinds == [table, dynamic, dynamic_table]) :-
+    maplist(pce_idg_viewer:pi_kind,
+            [user:tv_count/1, user:tv_data/1, user:tv_tdyn/1], Kinds).
+test(dynamic_table_italic, [condition(has_dot), Problem-Style == @nil-italic]) :-
+    idg_dot(graph([node(pred(t:'a<b'/0), 'a<b/0', 1, 0, dynamic_table)], []),
+            Dot, _),
+    new(X, xdot),
+    send(X, load, Dot),
+    get(X, problem, Problem),
+    get(X, find, @default,
+        and(message(@arg1, instance_of, text),
+            @arg1?string?value == 'a<b/0'), Text),
+    get(Text?font, style, Style),
+    free(X).
 
 %   In the focus graph, a click on another predicate focuses it.
 
