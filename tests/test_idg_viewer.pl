@@ -79,6 +79,18 @@ user:tv_count(N) :- aggregate_all(count, user:tv_data(_), N).
 
 user:tv_ge(N, X) :- user:tv_data(X), X >= N.
 
+%   tv_big(N, X) has N answers.
+
+:- table user:tv_big/2 as incremental.
+
+user:tv_big(N, X) :- user:tv_data(_), !, between(1, N, X).
+
+%   tv_many(I) has a variant for each I that is called.
+
+:- table user:tv_many/1 as incremental.
+
+user:tv_many(I) :- user:tv_data(_), !, I > 0.
+
 fill_ge :-
     fill_user,
     forall(between(1, 25, N), forall(user:tv_ge(N, _), true)).
@@ -745,12 +757,22 @@ variants(Spec, Fill, P) :-
 settled(P) :-
     wait_for(true, \+ send(P, pending), 10).
 
+%   counted(+Pane, -Total)
+%
+%   Wait for the variants to be counted.
+
+counted(P, Total) :-
+    wait_for(get(P, total, Total), Total \== @nil, 10).
+
 shown(P, Texts) :-
     get(P?browser?dict?members, map, @arg1?key?value, Ch),
     chain_list(Ch, Texts).
 
 next_active(P, Active) :-
-    get(P?members, find, @arg1?name == bottom, D),
+    next_active(P, bottom, Active).
+
+next_active(P, Dialog, Active) :-
+    get(P?members, find, @arg1?name == Dialog, D),
     get(D, member, next_10, B),
     get(B, active, Active).
 
@@ -768,7 +790,7 @@ test(page, [N0-N-Total-Active == 10-25-25-(@off)]) :-
     send(P, more, 100),
     settled(P),
     shown(P, Texts), length(Texts, N),
-    get(P, total, Total),
+    counted(P, Total),
     next_active(P, Active),
     free(P).
 test(with_answers, Texts == ['tv_ge(1,_)', 'tv_ge(2,_)', 'tv_ge(3,_)']) :-
@@ -856,5 +878,71 @@ test(answers_moded, Answers == ['tv_max(a,3)', 'tv_max(b,2)']) :-
 test(answers_undefined, Answers == ['tv_u(1)', 'tv_u(2) (undefined)']) :-
     answers_of(pred(user:tv_u/1), forall(call_delays(user:tv_u(_), _), true),
                'tv_u(_)', Answers).
+
+%   The variants are not collected: a predicate with many variants is
+%   shown by a worker with a small stack.
+
+test(variants_large, [ N-Total-Answers == 10-100_000-['tv_many(1)'],
+                       cleanup(abolish_all_tables)
+                     ]) :-
+    current_prolog_flag(stack_limit, Limit),
+    setup_call_cleanup(
+        set_prolog_flag(stack_limit, 8_000_000),
+        variants(pred(user:tv_many/1),
+                 forall(between(1, 100_000, I), user:tv_many(I)), P),
+        set_prolog_flag(stack_limit, Limit)),
+    shown(P, Texts), length(Texts, N),
+    counted(P, Total),
+    select(P, 'tv_many(1)'),
+    answer_labels(P, Answers),
+    free(P).
+
+%   The answers are not collected: a table with many answers is shown
+%   by a worker with a small stack.
+
+test(answers_large, [Shown-Total == 10-1_000_000, cleanup(abolish_all_tables)]) :-
+    current_prolog_flag(stack_limit, Limit),
+    setup_call_cleanup(
+        set_prolog_flag(stack_limit, 20_000_000),
+        variants(pred(user:tv_big/2), forall(user:tv_big(1_000_000, _), true),
+                 P),
+        set_prolog_flag(stack_limit, Limit)),
+    select(P, 'tv_big(1000000,_)'),
+    answer_labels(P, Answers),
+    length(Answers, Shown),
+    get(P, answers_total, Total),
+    free(P).
+test(answers_pages, [ Pages == [10-(@on), 20-(@on), 20-(@off),
+                                10-(@on), 110-(@on), 150-(@off)],
+                      cleanup(abolish_all_tables)
+                    ]) :-
+    variants(pred(user:tv_big/2), ( forall(user:tv_big(20, _), true),
+                                    forall(user:tv_big(150, _), true)
+                                  ), P),
+    select(P, 'tv_big(20,_)'),
+    answer_page(P, none, Page1),
+    answer_page(P, 10, Page2),
+    answer_page(P, 10, Page3),
+    select(P, 'tv_big(150,_)'),
+    answer_page(P, none, Page4),
+    answer_page(P, 100, Page5),
+    answer_page(P, 1000, Page6),
+    Pages = [Page1, Page2, Page3, Page4, Page5, Page6],
+    free(P).
+
+%   answer_page(+Pane, +N, -Page)
+%
+%   Ask for N more answers (`none`: the first page was asked for) and
+%   wait for them.  Page is Shown-Active, the number of answers shown
+%   and whether the buttons for more are active.
+
+answer_page(P, N, Shown-Active) :-
+    (   N == none
+    ->  true
+    ;   send(P, more_answers, N)
+    ),
+    answer_labels(P, Answers),
+    length(Answers, Shown),
+    next_active(P, answers_bottom, Active).
 
 :- end_tests(idg_variants).

@@ -53,14 +53,15 @@
 :- use_module(library(yall), [(>>)/2, (>>)/3]).
 :- autoload(library(edit), [edit/1]).
 :- autoload(library(apply),
-            [maplist/3, foldl/4, include/3, exclude/3, partition/4]).
+            [maplist/3, foldl/4, foldl/5, include/3, exclude/3, partition/4]).
 :- autoload(library(lists),
             [ member/2, append/3, append/2, sum_list/2, last/2,
-              list_to_set/2, selectchk/3, nth0/3
+              list_to_set/2, selectchk/3
             ]).
 :- autoload(library(pairs),
             [group_pairs_by_key/2, pairs_keys_values/3, pairs_values/2]).
 :- autoload(library(aggregate), [aggregate_all/3]).
+:- autoload(library(assoc), [empty_assoc/1, get_assoc/3, put_assoc/4]).
 :- autoload(library(option), [option/3]).
 :- autoload(library(thread), [call_in_thread/3]).
 
@@ -2207,9 +2208,9 @@ request(P, Request:prolog) :->
     ;   true
     ).
 
-loaded(P, Gen:int, Total:int) :->
-    "The worker collected Total variants"::
-    (   get(P, generation, Gen)
+loaded(P, Worker:prolog, Total:int) :->
+    "The variants of the worker are counted: there are Total"::
+    (   get(P, worker, Worker)
     ->  send(P, slot, total, Total),
         send(P, status)
     ;   true
@@ -2427,118 +2428,210 @@ align_answers_filter(B) :-
 
 %   variants_worker(+Pane, +Thread, +Spec, +Gen, +Filter, +N)
 %
-%   Collect the variants of Spec in the IDG of Thread, send the first N
-%   that pass Filter (see `idg_variants <-filter_term`) to Pane and
-%   serve its requests until it sends `stop`.
+%   Send the first N variants of Spec in the IDG of Thread that pass
+%   Filter (see `idg_variants <-filter_term`) to Pane and serve its
+%   requests until it sends `stop`.  A predicate may have hundreds of
+%   millions of variants, so they are not collected: an engine produces
+%   the pages (see paged/2) and a thread of its own counts them.
 
 variants_worker(P, Thread, Spec, Gen, Filter, N) :-
-    catch(spec_variants(Thread, Spec, Variants), E, true),
+    catch(idg_variant_table(Thread, VT), E, true),
     (   var(E)
-    ->  length(Variants, Total),
-        pane_send(P, loaded(Gen, Total)),
+    ->  thread_self(Me),
+        thread_create(count_variants(P, Me, VT, Spec), Counter,
+                      [detached(true)]),
         matcher(Filter, Matcher),
-        worker_page(P, Gen, N, Matcher, Variants, Rest),
-        worker_loop(P, Variants, Matcher, Rest, answers(0, [], none, []))
+        variant_engine(VT, Spec, Matcher, Engine),
+        empty_assoc(Shown),
+        worker_page(P, Gen, N, vs(VT, Spec, Matcher, Engine, Shown), State),
+        worker_loop(P, State, answers(0, none, none, none)),
+        stop_counter(Counter)
     ;   pane_send(P, failed(Gen, E))
     ).
 
-%   worker_loop(+Pane, +Variants, +Matcher, +Rest, +Answers)
+%   worker_loop(+Pane, +Variants, +Answers)
 %
-%   Rest are the variants not yet considered for a page and Answers is
-%   answers(Total, All, Regex, Rest) for the answers of the selected
-%   variant, where Regex is the answer filter or `none`.
+%   Variants is vs(VT, Spec, Matcher, Engine, Shown), where Engine
+%   produces the next page of variants that pass Matcher or is `none`
+%   if there are no more and Shown is an assoc Index -> Variant of the
+%   variants sent.  Answers is answers(Total, Variant, Engine, Regex)
+%   for the answers of the selected variant (or `none`), where Regex
+%   is the answer filter or `none` and Engine produces the next page of
+%   answers that match Regex, or is `none` if there are no more.
 
-worker_loop(P, Variants, Matcher, Rest, Answers) :-
+worker_loop(P, Variants, Answers) :-
     thread_get_message(Msg),
     (   Msg = request(Gen, page(N))
-    ->  worker_page(P, Gen, N, Matcher, Rest, Rest1),
-        worker_loop(P, Variants, Matcher, Rest1, Answers)
+    ->  worker_page(P, Gen, N, Variants, Variants1),
+        worker_loop(P, Variants1, Answers)
     ;   Msg = request(Gen, filter(Filter, N))
-    ->  free_matcher(Matcher),
-        matcher(Filter, Matcher1),
-        worker_page(P, Gen, N, Matcher1, Variants, Rest1),
-        worker_loop(P, Variants, Matcher1, Rest1, Answers)
+    ->  free_variants(Variants),
+        Variants = vs(VT, Spec, _, _, _),
+        matcher(Filter, Matcher),
+        variant_engine(VT, Spec, Matcher, Engine),
+        empty_assoc(Shown),
+        worker_page(P, Gen, N, vs(VT, Spec, Matcher, Engine, Shown),
+                    Variants1),
+        worker_loop(P, Variants1, Answers)
     ;   Msg = answers(Gen, answers(Index, Pattern, N))
     ->  free_answers(Answers),
-        nth0(Index, Variants, _-Variant),
-        catch(variant_answers(Variant, All), E, true),
-        (   var(E)
-        ->  length(All, Total),
-            answer_regex(Pattern, Regex),
-            answers_page(P, Gen, N, answers(Total, All, Regex, All),
-                         Answers1)
-        ;   pane_send(P, answers_failed(Gen, E)),
-            Answers1 = answers(0, [], none, [])
-        ),
-        worker_loop(P, Variants, Matcher, Rest, Answers1)
+        Variants = vs(_, _, _, _, Shown),
+        get_assoc(Index, Shown, Variant),
+        start_answers(P, Gen, N, Variant, Pattern, Answers1),
+        worker_loop(P, Variants, Answers1)
     ;   Msg = answers(Gen, filter(Pattern, N))
     ->  free_answers(Answers),
-        Answers = answers(Total, All, _, _),
-        answer_regex(Pattern, Regex),
-        answers_page(P, Gen, N, answers(Total, All, Regex, All), Answers1),
-        worker_loop(P, Variants, Matcher, Rest, Answers1)
+        Answers = answers(_, Variant, _, _),
+        start_answers(P, Gen, N, Variant, Pattern, Answers1),
+        worker_loop(P, Variants, Answers1)
     ;   Msg = answers(Gen, page(N))
     ->  answers_page(P, Gen, N, Answers, Answers1),
-        worker_loop(P, Variants, Matcher, Rest, Answers1)
-    ;   free_matcher(Matcher),
+        worker_loop(P, Variants, Answers1)
+    ;   free_variants(Variants),
         free_answers(Answers)
     ).
+
+free_variants(vs(_, _, Matcher, Engine, _)) :-
+    free_matcher(Matcher),
+    free_engine(Engine).
+
+%   count_variants(+Pane, +Worker, +VT, +Spec)
+%
+%   Tell Pane the number of variants of Spec, unless Worker stopped
+%   before they are counted.
+
+count_variants(P, Worker, VT, Spec) :-
+    catch(aggregate_all(count, spec_variant(VT, Spec, _), Total),
+          stop, fail),
+    !,
+    pane_send(P, loaded(Worker, Total)).
+count_variants(_, _, _, _).
+
+stop_counter(Counter) :-
+    catch(thread_signal(Counter, throw(stop)), error(_,_), true).
 
 answer_regex(none, none) :- !.
 answer_regex(Pattern, R) :-
     new(R, regex(Pattern)).
 
-free_answers(answers(_, _, none, _)) :- !.
-free_answers(answers(_, _, R, _)) :-
-    free(R).
+free_answers(answers(_, _, Engine, Regex)) :-
+    free_engine(Engine),
+    (   Regex == none
+    ->  true
+    ;   free(Regex)
+    ).
 
-answers_page(P, Gen, N, answers(Total, All, Regex, Rest0),
-             answers(Total, All, Regex, Rest)) :-
-    catch(take_answers(N, Regex, Rest0, Lines, Rest), E, true),
+free_engine(none) :- !.
+free_engine(E) :-
+    catch(engine_destroy(E), error(_,_), true).
+
+%   start_answers(+Pane, +Gen, +N, +Variant, +Pattern, -Answers)
+%
+%   Send the first page of N answers of Variant that match Pattern.
+
+start_answers(P, Gen, N, Variant, Pattern, Answers) :-
+    answer_regex(Pattern, Regex),
+    catch(answer_engine(Variant, Regex, Total, Engine), E, true),
     (   var(E)
-    ->  (   Rest == []
+    ->  answers_page(P, Gen, N, answers(Total, Variant, Engine, Regex),
+                     Answers)
+    ;   pane_send(P, answers_failed(Gen, E)),
+        Answers = answers(0, Variant, none, Regex)
+    ).
+
+%   answer_engine(+Variant, +Regex, -Total, -Engine)
+%
+%   Total is the number of answers of Variant.  Engine produces the
+%   pages of answers that match Regex; engine_post(Engine, N, Lines)
+%   gets the next N.  Calls to an incremental dynamic predicate have no
+%   answers.
+
+answer_engine(none, _, 0, none) :- !.
+answer_engine(Variant, _, 0, none) :-
+    Variant = v(_, _, _, Trie),
+    '$tbl_table_status'(Trie, Status),
+    Status == (dynamic),
+    !.
+answer_engine(Variant, Regex, Total, E) :-
+    Variant = v(_, _, _, Trie),
+    '$trie_property'(Trie, value_count(Total)),
+    engine_create(_, paged(Line, answer_line(Variant, Regex, Line)), E).
+
+%   paged(+Template, :Goal)
+%
+%   Run in an engine.  Yield the pages of instances of Template for the
+%   solutions of Goal, where the size of each page is posted by the
+%   request for it: engine_post(Engine, N, Page).  See findnsols/4
+%   using count(N).
+
+paged(Template, Goal) :-
+    engine_fetch(N),
+    Count = count(N),
+    findnsols(Count, Template, Goal, Page),
+    engine_yield(Page),
+    engine_fetch(Next),
+    nb_setarg(1, Count, Next),
+    fail.
+
+%   next_page(+Engine0, +N, -Page, -Engine)
+%
+%   Page is the next page of N from Engine0 (see paged/2).  Engine is
+%   `none` if this is the last page: a page shorter than N or no page.
+
+next_page(none, _, [], none) :- !.
+next_page(E, N, Page, Engine) :-
+    (   engine_post(E, N, Page)
+    ->  length(Page, Len),
+        (   Len < N
+        ->  free_engine(E),
+            Engine = none
+        ;   Engine = E
+        )
+    ;   Page = [],
+        Engine = none
+    ).
+
+answer_line(Variant, Regex, answer(Text, TV)) :-
+    variant_answer(Variant, Head, TV),
+    variant_text(Head, Text),
+    text_matches(m(Regex, []), Text).
+
+%   answers_page(+Pane, +Gen, +N, +Answers0, -Answers)
+%
+%   Send the next page of N answers.  A page shorter than N is the
+%   last.  After a full page we only know there are no more if the
+%   engine has no next page.
+
+answers_page(P, Gen, N, answers(Total, Variant, Engine0, Regex),
+             answers(Total, Variant, Engine, Regex)) :-
+    catch(next_page(Engine0, N, Lines, Engine), E, true),
+    (   var(E)
+    ->  (   Engine == none
         ->  AtEnd = @on
         ;   AtEnd = @off
         ),
         pane_send(P, answers_page(Gen, Total, Lines, AtEnd))
-    ;   Rest = [],
+    ;   free_engine(Engine0),
+        Engine = none,
         pane_send(P, answers_failed(Gen, E))
     ).
 
-take_answers(0, _, Answers, [], Answers) :- !.
-take_answers(_, _, [], [], []) :- !.
-take_answers(N, Regex, [Head-TV|Answers], Lines, Rest) :-
-    variant_text(Head, Text),
-    (   text_matches(m(Regex, []), Text)
-    ->  Lines = [answer(Text, TV)|Lines1],
-        N1 is N-1
-    ;   Lines = Lines1,
-        N1 = N
-    ),
-    take_answers(N1, Regex, Answers, Lines1, Rest).
-
-%   variant_answers(+Variant, -Answers)
+%   variant_answer(+Variant, -Head, -TruthValue) is nondet.
 %
-%   Answers is a list Head-TruthValue of the answers of Variant, where
-%   TruthValue is `true` or `undefined`.  An answer trie holds
-%   ret(V1, ...) for the variables of the variant; for a moded table the
-%   moded argument is in the value of the trie node.  We do not use
-%   get_returns/2 as it cannot find the variant of another thread.
+%   Enumerate the answers of Variant, where TruthValue is `true` or
+%   `undefined`.  An answer trie holds ret(V1, ...) for the variables
+%   of the variant; for a moded table the moded argument is in the
+%   value of the trie node.  We do not use get_returns/2 as it cannot
+%   find the variant of another thread.
 
-variant_answers(v(Head, Variant, Moded, Trie), Answers) :-
-    (   '$tbl_table_status'(Trie, Status),
-        Status == (dynamic)
-    ->  Answers = []
-    ;   term_variables(Variant, Vars),
-        Skeleton =.. [ret|Vars],
-        findall(Head-TV,
-                ( trie_gen(Trie, Skeleton),
-                  answer_delay(Moded, Trie, Skeleton, Delay),
-                  (   Delay == true
-                  ->  TV = true
-                  ;   TV = undefined
-                  )
-                ), Answers)
+variant_answer(v(Head, Variant, Moded, Trie), Head, TV) :-
+    term_variables(Variant, Vars),
+    Skeleton =.. [ret|Vars],
+    trie_gen(Trie, Skeleton),
+    answer_delay(Moded, Trie, Skeleton, Delay),
+    (   Delay == true
+    ->  TV = true
+    ;   TV = undefined
     ).
 
 answer_delay(none, Trie, Skeleton, Delay) :-
@@ -2558,31 +2651,51 @@ free_matcher(m(none, _)) :- !.
 free_matcher(m(R, _)) :-
     free(R).
 
-worker_page(P, Gen, N, Filter, Variants, Rest) :-
-    catch(take_lines(N, Filter, Variants, Lines, Rest), E, true),
+%   worker_page(+Pane, +Gen, +N, +Variants0, -Variants)
+%
+%   Send the next page of N variants (see worker_loop/3).
+
+worker_page(P, Gen, N, vs(VT, Spec, Matcher, Engine0, Shown0),
+            vs(VT, Spec, Matcher, Engine, Shown)) :-
+    catch(next_page(Engine0, N, Pairs, Engine), E, true),
     (   var(E)
-    ->  (   Rest == []
+    ->  pairs_keys_values(Pairs, Lines, Variants),
+        foldl(add_shown, Lines, Variants, Shown0, Shown),
+        (   Engine == none
         ->  AtEnd = @on
         ;   AtEnd = @off
         ),
         pane_send(P, page(Gen, Lines, AtEnd))
-    ;   Rest = [],
+    ;   free_engine(Engine0),
+        Engine = none,
+        Shown = Shown0,
         pane_send(P, failed(Gen, E))
     ).
 
-take_lines(0, _, Variants, [], Variants) :- !.
-take_lines(_, _, [], [], []) :- !.
-take_lines(N, Filter, [Index-v(Head, _, _, Trie)|Variants], Lines, Rest) :-
-    (   answers_match(Filter, Trie),
-        variant_text(Head, Text),
-        text_matches(Filter, Text)
-    ->  variant_line(Index, Text, Trie, Line),
-        Lines = [Line|Lines1],
-        N1 is N-1
-    ;   Lines = Lines1,
-        N1 = N
-    ),
-    take_lines(N1, Filter, Variants, Lines1, Rest).
+add_shown(variant(Index, _, _, _, _), Variant, Shown0, Shown) :-
+    put_assoc(Index, Shown0, Variant, Shown).
+
+%   variant_engine(+VT, +Spec, +Matcher, -Engine)
+%
+%   Engine produces the pages of Line-Variant for the variants of Spec
+%   in VT that pass Matcher, numbered from 0.
+
+variant_engine(VT, Spec, Matcher, E) :-
+    engine_create(_, paged(Line-V,
+                           matching_variant(VT, Spec, Matcher, index(0),
+                                            Line, V)),
+                  E).
+
+matching_variant(VT, Spec, Matcher, Counter, Line, V) :-
+    spec_variant(VT, Spec, V),
+    V = v(Head, _, _, Trie),
+    answers_match(Matcher, Trie),
+    variant_text(Head, Text),
+    text_matches(Matcher, Text),
+    arg(1, Counter, Index),
+    Index1 is Index+1,
+    nb_setarg(1, Counter, Index1),
+    variant_line(Index, Text, Trie, Line).
 
 %   answers_match(+Matcher, +Trie)
 %
@@ -2646,26 +2759,19 @@ variants_send(P, Message) :-
     ;   true
     ).
 
-%   spec_variants(+Thread, +Spec, -Variants)
+%   spec_variant(+VT, +Spec, -Variant) is nondet.
 %
-%   Variants is a list Index-v(Head, Variant, Moded, Trie) of the
-%   variants of Spec in the IDG of Thread, in the order of the variant
-%   table.  Variant is the variant of the wrapper, which shares its
-%   variables with Head, and Moded is moded(Arg) for a moded table.
+%   Variant is v(Head, Variant, Moded, Trie) for a variant of Spec in
+%   the variant table VT, in the order of the variant table.  Variant is
+%   the variant of the wrapper, which shares its variables with Head,
+%   and Moded is moded(Arg) for a moded table.
 
-spec_variants(Thread, Spec, Variants) :-
-    idg_variant_table(Thread, VT),
+spec_variant(VT, Spec, v(Head, Variant, Moded, Trie)) :-
     spec_pi(Spec, M:Name/Arity),
-    findall(v(Head, Variant, Moded, Trie),
-            ( trie_gen(VT, M:Variant, Trie),
-              variant_head(M, Variant, Head, Moded),
-              functor(Head, Name, Arity),
-              spec_matches(Spec, Head)
-            ), Variants0),
-    foldl(number_variant, Variants0, Variants, 0, _).
-
-number_variant(V, I-V, I, I1) :-
-    I1 is I+1.
+    trie_gen(VT, M:Variant, Trie),
+    variant_head(M, Variant, Head, Moded),
+    functor(Head, Name, Arity),
+    spec_matches(Spec, Head).
 
 variant_head(M, Variant, Head, Moded) :-
     (   catch(M:'$table_mode'(Head0, Variant, Moded0), error(_,_), fail)
