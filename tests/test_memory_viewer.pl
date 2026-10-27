@@ -284,7 +284,7 @@ test(shared_tables, [Variants == 1, true(Total >= Pool)]) :-
     length(VNodes, Variants),
     path(T, ['shared tables'], S),
     total(S, Total).
-test(top_variants, [ Labels == [ 'mv_private(2400,A)', 'mv_private(2500,A)' ],
+test(top_variants, [ true(memberchk('mv_private(2500,A)', Largest)),
                      Sizes == Descending,
                      Count == 11,
                      Last == '15 other variants',
@@ -296,8 +296,8 @@ test(top_variants, [ Labels == [ 'mv_private(2400,A)', 'mv_private(2500,A)' ],
     path(T, [main, 'test_memory_viewer:mv_private/2'], P),
     P = node(_, _, VNodes, _),
     length(VNodes, Count),
-    VNodes = [node(L1, _, _, _), node(L2, _, _, _)|_],
-    sort([L1, L2], Labels),             % 2400 and 2500 use the same space
+    VNodes = [node(_, Max, _, _)|_],    % several tables may use the
+    findall(L, member(node(L, Max, _, _), VNodes), Largest), % same space
     once(append(Top, [_Other], VNodes)),
     findall(Size, member(node(_, Size, _, _), Top), Sizes),
     sort(0, @>=, Sizes, Descending),
