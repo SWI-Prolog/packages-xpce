@@ -122,6 +122,8 @@ variable(accounting_ticks, int,  get, "# ticks while accounting").
 variable(time,             num,  get, "Total time").
 variable(nodes,            int,  get, "Nodes created").
 variable(ports,            {true,false,classic},  get, "Port mode").
+variable(clock,            {cpu,wall} := cpu, get, "Time profiled").
+variable(exact,            bool := @off, get, "Exact (not sampled) timing").
 variable(time_view,        {percentage,seconds} := percentage,
                                  get, "How time is displayed").
 variable(components,       prolog, none,
@@ -181,6 +183,8 @@ load_profile(F, ProfData0:[prolog]) :->
     send(F, slot, time, Summary.time),
     send(F, slot, nodes, Summary.nodes),
     send(F, slot, ports, Summary.ports),
+    send(F, slot, clock, Summary.get(clock, cpu)),
+    send(F, slot, exact, Summary.get(exact, false)),
     get(F, window, prof_browser, B),
     send(F, report, progress, 'Loading profile data ...'),
     send(B, load_profile, ProfData.nodes),
@@ -196,21 +200,39 @@ load_profile(F, ProfData0:[prolog]) :->
 
 show_statistics(F) :->
     "Show basic statistics on profile"::
+    get(F, statistics_summary, Text),
+    send(F, report, inform, '%s', Text).
+
+statistics_summary(F, Text:string) :<-
+    "Text describing the overall statistics of the profile"::
     get(F, samples, Samples),
     get(F, ticks, Ticks),
     get(F, accounting_ticks, Account),
     get(F, time, Time),
     get(F, slot, nodes, Nodes),
+    get(F, clock, Clock),
+    clock_label(Clock, Label),
     get(F, window, prof_browser, B),
     get(B?all_items, size, Predicates),
-    (   Ticks == 0
-    ->  Distortion = 0.0
-    ;   Distortion is 100.0*(Account/Ticks)
-    ),
-    send(F, report, inform,
-         '%d samples in %.2f sec; %d predicates; \c
-              %d nodes in call-graph; distortion %.0f%%',
-         Samples, Time, Predicates, Nodes, Distortion).
+    (   get(F, exact, @on)
+    ->  Net is (Ticks-Account)/1e9,
+        Overhead is Account/1e9,
+        new(Text, string('Exact %s time: %.3f sec in predicates; \c
+                          %d predicates; %d nodes in call-graph; \c
+                          profiler overhead %.3f sec (excluded)',
+                         Label, Net, Predicates, Nodes, Overhead))
+    ;   (   Ticks == 0
+        ->  Distortion = 0.0
+        ;   Distortion is 100.0*(Account/Ticks)
+        ),
+        new(Text, string('%d samples of %s time in %.2f sec; \c
+                          %d predicates; %d nodes in call-graph; \c
+                          distortion %.0f%%',
+                         Samples, Label, Time, Predicates, Nodes, Distortion))
+    ).
+
+clock_label(cpu,  'CPU').
+clock_label(wall, wall).
 
 
 details(F, From:prolog) :->

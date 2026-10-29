@@ -109,6 +109,8 @@ profiler(Ports, Data0, F) :-
     send(F, slot, time, Summary.time),
     send(F, slot, nodes, Summary.nodes),
     send(F, slot, ports, Summary.ports),
+    send(F, slot, clock, Summary.get(clock, cpu)),
+    send(F, slot, exact, Summary.get(exact, false)),
     get(F, window, prof_browser, B),
     send(B, load_profile, Data.nodes).
 
@@ -135,6 +137,27 @@ browser_labels(F, Labels) :-
     chain_list(Chain, Labels).
 
 :- begin_tests(profiler, [condition(current_prolog_flag(threads, true))]).
+
+%   The status line describes how the profile was collected.  Exact
+%   profiles do not sample and exclude the profiler's overhead.
+
+test(summary_sampled,
+     Text == '100 samples of CPU time in 0.50 sec; 3 predicates; \c
+              10 nodes in call-graph; distortion 0%') :-
+    profiler(F),
+    get(F, statistics_summary, Str),
+    get(Str, value, Text).
+test(summary_exact,
+     Text == 'Exact wall time: 0.400 sec in predicates; 3 predicates; \c
+              10 nodes in call-graph; \c
+              profiler overhead 0.100 sec (excluded)') :-
+    profile(Data0),
+    Data = Data0.put(summary, Data0.summary.put(_{clock:wall, exact:true,
+                                                  ticks:500 000 000,
+                                                  accounting:100 000 000})),
+    profiler(true, Data, F),
+    get(F, statistics_summary, Str),
+    get(Str, value, Text).
 
 %   Sorted on the time of the children, the time is shown as such
 %   rather than as a number of ticks.
