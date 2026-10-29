@@ -152,7 +152,7 @@ test(summary_exact,
               10 nodes in call-graph; \c
               profiler overhead 0.100 sec (excluded)') :-
     profile(Data0),
-    Data = Data0.put(summary, Data0.summary.put(_{clock:wall, exact:true,
+    Data = Data0.put(summary, Data0.summary.put(#{clock:wall, exact:true,
                                                   ticks:500 000 000,
                                                   accounting:100 000 000})),
     profiler(true, Data, F),
@@ -206,9 +206,30 @@ test(recursive_callee, Calls == 6) :-
 test(cycle_edge, [Ticks-Calls == 90-8, Label == "8×"]) :-
     profiler(F),
     call_graph(F, user:p/1, Edges),
-    memberchk(edge(user:q/1, user:p/1, Ticks, Calls), Edges),
-    pce_profile:edge_attrs(Ticks, Calls, 100, Attrs),
+    Edge = edge(user:q/1, user:p/1, Ticks, Calls),
+    memberchk(Edge, Edges),
+    pce_profile:edge_attrs(F, Edge, 100, Attrs),
     memberchk(label=Label, Attrs),
+    free(F).
+
+%   The tooltip of an edge tells the calls and the time, which the
+%   label leaves out.  A recursive call has no time of its own.
+
+test(edge_tooltip, Tooltip == "q/1 → p/1\nCalls: 8, time: 90.0%") :-
+    profiler(F),
+    call_graph(F, user:p/1, Edges),
+    Edge = edge(user:q/1, user:p/1, _, _),
+    memberchk(Edge, Edges),
+    pce_profile:edge_attrs(F, Edge, 100, Attrs),
+    memberchk(tooltip=Tooltip, Attrs),
+    free(F).
+test(recursive_edge_tooltip, Tooltip == "p/1 calls itself\nCalls: 7") :-
+    profiler(F),
+    call_graph(F, user:p/1, Edges),
+    Edge = edge(user:p/1, user:p/1, _, _),
+    memberchk(Edge, Edges),
+    pce_profile:edge_attrs(F, Edge, 100, Attrs),
+    memberchk(tooltip=Tooltip, Attrs),
     free(F).
 
 %   Changing a limit of the call graph in the class variable editor

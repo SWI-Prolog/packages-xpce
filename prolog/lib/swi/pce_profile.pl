@@ -1631,7 +1631,7 @@ dot_graph(Tool, Pred, Total, colours(FG), Ids, Edges) -->
     "  edge [fontname=\"Helvetica\" fontsize=9 arrowsize=0.7 ",
     "color=", dot_string(FG), " fontcolor=", dot_string(FG), "];\n",
     dot_nodes(Ids, Tool, Pred, Total),
-    dot_edges(Edges, Total, Ids),
+    dot_edges(Edges, Tool, Total, Ids),
     "}\n".
 
 dot_nodes([], _, _, _) --> [].
@@ -1713,23 +1713,37 @@ heat_colour(Ticks, Total, Colour) :-
     B is round(215 - F*165),
     format(atom(Colour), '#ff~|~`0t~16r~2+~|~`0t~16r~2+', [G, B]).
 
-dot_edges([], _, _) --> [].
-dot_edges([edge(From,To,Ticks,Calls)|T], Total, Ids) -->
-    { memberchk(FromId-From, Ids),
+dot_edges([], _, _, _) --> [].
+dot_edges([Edge|T], Tool, Total, Ids) -->
+    { Edge = edge(From, To, _, _),
+      memberchk(FromId-From, Ids),
       memberchk(ToId-To, Ids),
-      edge_attrs(Ticks, Calls, Total, Attrs)
+      edge_attrs(Tool, Edge, Total, Attrs)
     },
     "  ", atom(FromId), " -> ", atom(ToId), " [", dot_attrs(Attrs), "];\n",
-    dot_edges(T, Total, Ids).
+    dot_edges(T, Tool, Total, Ids).
 
 %   An edge is labelled with the number of calls only.  The time of a
 %   call into a cycle does not add up to anything that reads well: the
 %   time of a call at an outer level includes that of the calls further
-%   in.  It does set the width of the edge.
+%   in.  It does set the width of the edge, and the tooltip tells it.
 
-edge_attrs(Ticks, Calls, Total, [label=Label, penwidth=Width]) :-
+edge_attrs(Tool, edge(From, To, Ticks, Calls), Total,
+           [label=Label, tooltip=Tooltip, penwidth=Width]) :-
     format(string(Label), '~D×', [Calls]),
-    Width is round(10*(1 + 4*min(1.0, Ticks/float(Total))))/10.0.
+    Width is round(10*(1 + 4*min(1.0, Ticks/float(Total))))/10.0,
+    edge_tooltip(Tool, From, To, Ticks, Calls, Tooltip).
+
+edge_tooltip(_Tool, P, P, _Ticks, Calls, Tooltip) :-
+    !,
+    pred_label(P, Name),
+    format(string(Tooltip), '~w calls itself\nCalls: ~D', [Name, Calls]).
+edge_tooltip(Tool, From, To, Ticks, Calls, Tooltip) :-
+    pred_label(From, FromName),
+    pred_label(To, ToName),
+    time_text(Tool, Ticks, Time),
+    format(string(Tooltip), '~w → ~w\nCalls: ~D, time: ~w',
+           [FromName, ToName, Calls, Time]).
 
 dot_attrs([]) --> [].
 dot_attrs([Name=Value|T]) -->
