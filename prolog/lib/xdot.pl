@@ -131,6 +131,11 @@ variable(edge_clicked, code*,  both,
 variable(problem,      string*, get,
          "Why the last ->load could not draw the graph; @nil if it did").
 
+class_variable(edge_label_alpha, '0..255', 160,
+               "Opacity of the background behind edge labels, \c
+                such that lines and arrows do not hide them: \c
+                0 is none, 255 hides the edges behind a label").
+
 initialise(F, Source:[file]*) :->
     "Create an xdot figure; if Source is provided, load it"::
     send_super(F, initialise),
@@ -226,11 +231,47 @@ render_json(F, JSON) :-
              send(F, display, N)
            )),
     gvid_index(Objects, Index),
+    edge_label_background(F, JSON, LabelBG),
     forall(member(Edge, JSON.get(edges, [])),
            ( edge_endpoints(Edge, Index, Tail, Head),
              new(E, xdot_edge(Edge, Tail, Head, Ymax)),
+             send(E, label_background, LabelBG),
              send(F, display, E)
            )).
+
+%!  edge_label_background(+Figure, +JSON, -Colour) is det.
+%
+%   The background for edge labels: that of the graph if it has one,
+%   else that of the window showing the figure, made translucent by
+%   the class variable `edge_label_alpha`, or @nil if that is 0.
+%   Graphviz places a label beside the centre line of an edge,
+%   regardless of the width of the line and its arrows.
+
+edge_label_background(F, JSON, Colour) :-
+    get(F, class_variable_value, edge_label_alpha, Alpha),
+    (   Alpha =:= 0
+    ->  Colour = @nil
+    ;   label_background(F, JSON, BG),
+        get(BG, red, R),
+        get(BG, green, G),
+        get(BG, blue, B),
+        new(Colour, colour(@default, R, G, B, Alpha))
+    ).
+
+label_background(_, JSON, Colour) :-
+    get_dict(bgcolor, JSON, BG),
+    \+ atom_string(transparent, BG),
+    fill_colour(#{color:BG}, Colour0),
+    Colour0 \== none,
+    !,
+    get(@pce, convert, Colour0, colour, Colour).
+label_background(F, _, Colour) :-
+    get(F, window, W),
+    get(W, background, Colour),
+    send(Colour, instance_of, colour),
+    !.
+label_background(_, _, Colour) :-
+    get(@pce, convert, white, colour, Colour).
 
 %!  graph_draws(+JSON, -Graph) is det.
 %
@@ -504,6 +545,32 @@ initialise(E, Edge:prolog, Tail:name, Head:name, Ymax:num) :->
     set_url(E, Edge),
     send(E, recogniser, @xdot_edge_recogniser).
 
+label_background(E, Colour:colour*) :->
+    "Paint my labels on Colour, or nothing if @nil"::
+    (   Colour == @nil
+    ->  true
+    ;   send(E?graphicals, for_all,
+             if(message(@arg1, instance_of, text),
+                message(E, opaque_label, @arg1, Colour)))
+    ).
+
+%   The background is a rounded box just behind the label, a little
+%   larger than the text.
+
+opaque_label(E, T:text, Colour:colour) :->
+    "Clear a rounded area of Colour behind label T"::
+    get(T, area, area(_, _, W, H)),
+    BW is W + 6,
+    BH is H + 2,
+    R is min(6, BH//2),
+    new(B, box(BW, BH)),
+    send(B, radius, R),
+    send(B, pen, 0),
+    send(B, fill, Colour),
+    send(E, display, B),
+    send(B, center, T?center),
+    send(B, hide, T).
+
 popup(E, P:'popup*') :<-
     "Own popup slot if set, else container xdot's <-edge_popup"::
     (   get(E, slot, popup, P0), P0 \== @nil
@@ -767,9 +834,10 @@ render_object(Obj, Fig, Ymax) :-
            ),
            render_ops(Ops, Fig, Ymax)).
 
-xdot_attrs(['_draw_', '_ldraw_',
-            '_hdraw_', '_tdraw_',
-            '_hldraw_', '_tldraw_']).
+%   Labels come last, such that arrows do not hide them.
+
+xdot_attrs(['_draw_', '_hdraw_', '_tdraw_',
+            '_ldraw_', '_hldraw_', '_tldraw_']).
 
 render_ops(Ops, Fig, Ymax) :-
     initial_state(S0),
