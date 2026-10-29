@@ -757,21 +757,21 @@ confirm_reload(_, Frame, _, File) :-
                  *          OPEN WINDOW         *
                  *******************************/
 
-%       The view is the frame's <-current_pane whichever route was
-%       taken: `@emacs ->show_buffer' either makes the view it found
-%       current or appends one that exposes itself, and a frame of its
-%       own holds nothing else.
+%       The frame is the one the view ended up in: the user's
+%       arrangements can give an editor a window of its own rather than a
+%       place in the window it was asked for from.
 
 open(B, How:[{as_arranged,here,tab,split,window}], View:emacs_view) :<-
     "Create window for buffer; answer the view showing me"::
     (   How \== window,
-        get(@emacs, target_frame, Frame)
+        get(@emacs, target_frame, Target)
     ->  default(How, here, Where),
-        send(@emacs, show_buffer, Frame, B, Where),
+        get(@emacs, show_buffer, Target, B, Where, View),
+        get(View, frame, Frame),
         send(Frame, expose)
-    ;   get(@emacs, frame, B, Frame)
+    ;   get(@emacs, frame, B, Frame),
+        get(Frame, current_pane, View)
     ),
-    get(Frame, current_pane, View),
     send(B, check_modified_file, Frame).
 
 open(B, How:[{as_arranged,here,tab,split,window}]) :->

@@ -420,9 +420,18 @@ frame(_Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
 %       (see `emacs_pane'), and a window that has no editor yet is given
 %       one where the user's arrangements say an editor goes.
 
-show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
+show_buffer(Emacs, Frame:pane_frame, B:emacs_buffer,
             How:[{as_arranged,here,tab,split}]) :->
     "Show B in Frame, here, in a tab of the editor or beside what is there"::
+    get(Emacs, show_buffer, Frame, B, How, _).
+
+%       The view is answered rather than left to be found: where the
+%       user's arrangements put a new editor need not be Frame, nor the
+%       pane Frame makes current.
+
+show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
+            How:[{as_arranged,here,tab,split}], View:emacs_view) :<-
+    "Show B in Frame as ->show_buffer; answer the view showing it"::
     (   reuses_a_view(How),
         view_on_buffer(Frame, B, View)
     ->  send(Frame, current_pane, View)         % it is already open
@@ -431,16 +440,16 @@ show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
     ->  send(View?editor, text_buffer, B),      % this very editor
         send(Frame, current_pane, View)
     ;   How == split,
-        editor_view(Frame, View)
-    ->  get(View, pane_tab, Tab),               % beside it, in its own tab
-        send(Tab, split, new(New, emacs_view(B)), View, horizontally),
-        send(Frame, current_pane, New),
-        setup_view(B, New)
+        editor_view(Frame, Here)
+    ->  get(Here, pane_tab, Tab),               % beside it, in its own tab
+        send(Tab, split, new(View, emacs_view(B)), Here, horizontally),
+        send(Frame, current_pane, View),
+        setup_view(B, View)
     ;   editor_pane(Frame, Editor)              % `tab' and `as_arranged'
-    ->  send(Editor, append_view, new(New, emacs_view(B)), B?name),
-        setup_view(B, New)
-    ;   new_editor(Frame, B, How, New)          % no editor in this window
-    ->  setup_view(B, New)
+    ->  send(Editor, append_view, new(View, emacs_view(B)), B?name),
+        setup_view(B, View)
+    ;   new_editor(Frame, B, How, View)         % no editor in this window
+    ->  setup_view(B, View)
     ).
 
 %!  new_editor(+Frame, +Buffer, +How, -View) is semidet.

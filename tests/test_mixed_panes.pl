@@ -66,6 +66,8 @@ Run with:
 :- use_module(library(epilog)).
 :- use_module(library(swi_ide)).
 :- use_module(library(pane_frame), [open_pane_frame/3]).
+:- use_module(library(pane_layouts),
+              [remember_arrangement/1, forget_arrangements/0]).
 :- use_module(library(emacs/emacs)).
 :- use_module(library(emacs/bookmarks), []).
 :- use_module(library(emacs/buffer_menu), []).
@@ -288,6 +290,31 @@ test(and_beside_the_terminal_when_that_is_the_setting,
     get(F?tabs?tabs, size, Tabs),
     classes(F, Cs),
     length(Cs, Panes).
+
+%       A source asked for from a window holding only a tool -- edit/1
+%       typed while the navigator is all there is -- goes where the
+%       arrangements say an editor goes, here a window of its own.  The
+%       window it was asked from keeps the navigator as its current pane,
+%       and that used to be taken for the view to go to the line in:
+%       "No implementation for: <-editor".
+
+test(a_source_arranged_elsewhere_is_found_where_it_went,
+     true(Kinds-TB == [prolog_navigator]-B)) :-
+    no_frames,
+    emacs,
+    new(F, pane_frame(@prolog_ide, 'Navigator', new(_, prolog_navigator))),
+    send(F, open),
+    source_of_our_own(File),
+    setup_call_cleanup(
+        remember_arrangement(pane_frame([], [tab([], editor)])),
+        with_placement(as_arranged,
+                       send(@emacs, goto_source_location,
+                            source_location(File, 1))),
+        forget_arrangements),
+    findall(K, ( member_chain(P, F?panes), pane_kind(P, K) ), Kinds),
+    new(B, emacs_buffer(File)),
+    get(B?editors, head, E),
+    get(E, text_buffer, TB).
 
 %       The layout PceEmacs works out from the file is a remark: it goes
 %       on the status bar of the window when there is one to say it on,
