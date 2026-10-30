@@ -228,6 +228,31 @@ test(only_pane_from_a_split_editor, [Classes, Views] == [[emacs_pane], 1]) :-
     editor_pane(F, EP),
     get(EP?members, size, Views).
 
+%       In swipl-win, closing the terminal would end Prolog, as the editor
+%       left does not keep it alive.  Control-X 1 moves it to a tab of its
+%       own instead.
+
+test(only_pane_keeps_the_last_terminal,
+     [Alive, Tabs] == [true, [[emacs_pane], [epilog_window]]]) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F, @on),
+    terminal(F, T),
+    editor(F, V),
+    setup_call_cleanup(
+        send(@prolog_ide, exit_when_idle, @on),
+        send(V, only_pane),
+        send(@prolog_ide, exit_when_idle, @off)),
+    (   object(T) -> Alive = true ; Alive = false ),
+    get(F?tabs, tabs, Chain),
+    findall(Classes,
+            ( member_chain(Tab, Chain),
+              get(Tab, windows, Ws),
+              findall(C, (member_chain(W, Ws), get(W, class_name, C)),
+                      Classes)
+            ), Tabs).
+
 %       Both panes are dragged by a grip of their own.  A grip shows
 %       itself only on a window its frame calls a pane (see `split_handle
 %       ->update_displayed'), so it is the editor that shows one and the

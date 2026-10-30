@@ -2369,11 +2369,22 @@ close_tab(Tab) :->
 %   Tab ends it.
 
 closing_ends_application(Frame, Tab) :-
+    get(Tab, windows, Panes),
+    chain_list(Panes, List),
+    panes_end_application(Frame, List).
+
+%   panes_end_application(+Frame, +Panes) is semidet.
+%
+%   True when the application of Frame says that closing Panes, a list
+%   of panes of Frame, ends it.
+
+panes_end_application(Frame, Panes) :-
+    Panes \== [],
     get(Frame, application, App),
     App \== @nil,
     send(App, has_send_method, closing_ends_application),
-    get(Tab, windows, Panes),
-    send(App, closing_ends_application, Frame, Panes).
+    Chain =.. [chain|Panes],
+    send(App, closing_ends_application, Frame, Chain).
 
 close(Tab) :->
     "Close my panes"::
@@ -2946,17 +2957,26 @@ request_close(P) :->
 %       panes that do not agree to be closed without asking, e.g., a
 %       terminal running a query or the console showing the messages of
 %       Prolog, are moved together into a new tab rather than closed, so
-%       nothing is lost and nobody is asked.
+%       nothing is lost and nobody is asked.  Nor may closing the others
+%       end the application, as closing the idle Prolog console of
+%       swipl-win does when what remains does not keep it alive: then
+%       the panes that keep it alive are moved as well.
 
 only_pane(P) :->
     "Close the panes beside me; move those that refuse to a new tab"::
     beside(P, Others),
     (   Others == []
     ->  send(P, report, status, 'Single pane')
-    ;   partition(closes_silently, Others, Close, Keep),
+    ;   partition(closes_silently, Others, Close0, Keep0),
+        get(P, pane_frame, F),
+        (   panes_end_application(F, Close0)
+        ->  partition(keeps_alive, Close0, Keep1, Close),
+            append(Keep0, Keep1, Keep)
+        ;   Close = Close0,
+            Keep = Keep0
+        ),
         forall(member(W, Close), close_pane(W)),
         move_to_one_tab(Keep),
-        get(P, pane_frame, F),
         send(F, current_pane, P),
         send(F, keyboard_focus, P),
         pane_arranged(P)
@@ -2964,6 +2984,9 @@ only_pane(P) :->
 
 closes_silently(P) :-
     pane_can_close(P, @off).
+
+keeps_alive(P) :-
+    send(@keep_alive_pane, forward, P).
 
 %   beside(+Pane, -Others) is det.
 %
