@@ -1816,7 +1816,6 @@ label(T, Label:char_array) :<-
 
 make_prof_node_text_recogniser(G) :-
     Text = @arg1,
-    Pred = @arg1?context,
     new(P, popup),
     send_list(P, append,
               [ menu_item(details,
