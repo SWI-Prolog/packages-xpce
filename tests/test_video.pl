@@ -84,9 +84,15 @@ test_video :-
 test_video(Unit) :-
     run_tests([Unit]).
 
+%   Wine announces a Media Foundation H.264 encoder, but opening it
+%   raises "Not implemented".  All units need clips we write.
+
 video_support :-
     get(@display, video_encoders, Chain),
-    \+ send(Chain, empty).
+    \+ send(Chain, empty),
+    \+ ( current_prolog_flag(wine_version, _),
+         get(@display, video_backend, media_foundation)
+       ).
 
 %!  clip(-File) is det.
 %
