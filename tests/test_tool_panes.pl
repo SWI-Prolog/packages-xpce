@@ -406,9 +406,12 @@ shown(TD, Graph, Shown) :-
 :- table tp_tabled/2.
 tp_tabled(N, X) :- between(1, N, X).
 
-%       A window too low for a label per decade labels fewer decades.
+%       A window too low for a label per decade labels fewer decades:
+%       as few as keep the labels a line apart.  How many depends on
+%       the font.
 
-test(a_low_diagram_labels_fewer_decades, Steps == [10, 1000]) :-
+test(a_low_diagram_labels_fewer_decades,
+     [ High == 10, true(Low > High), true(Gap >= FH), true(Closer < FH) ]) :-
     monitor(TM),
     send(TM, selection, main),
     get(TM, graph_window, GW),
@@ -420,7 +423,15 @@ test(a_low_diagram_labels_fewer_decades, Steps == [10, 1000]) :-
     send(TD, axis_length, 300, 60),
     send(TD, compute),
     get(Y, step, Low),
-    Steps = [High, Low],
+    get(Y, tag_font, Font),
+    get(Font, height, FH),
+    get(Y, length, Len),
+    get(Y, low, L),
+    get(Y, high, H),
+    Decades is round(log10(H/L)),
+    PerLabel is round(log10(Low)),
+    Gap is Len*PerLabel/Decades,
+    Closer is Len*(PerLabel-1)/Decades,
     send(GW, resize).
 
 %       A tool is a pane, not only a tab: it can sit beside a terminal or
