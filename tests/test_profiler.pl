@@ -390,7 +390,65 @@ text_atom(Text, Atom) :-
 truth(G, true) :- call(G), !.
 truth(_, false).
 
+%   XPCE methods are profiled as nodes of their own.  profile_data/1
+%   used to return the predicates only, so the profiler could show a
+%   method as a callee, but not what it calls itself.  profiler/2 of
+%   this file hides the built-in one.
+
+test(methods_have_nodes, Calls == 5) :-
+    get(@pce?class, send_method, has_send_method, M),
+    reset_profiler,
+    setup_call_cleanup(
+        system:profiler(_, cputime),
+        forall(between(1, 5, _), send(@pce, has_send_method, free)),
+        system:profiler(_, false)),
+    profile_data(Data),
+    member(Node, Data.nodes),
+    Node.predicate == M,
+    !,
+    Calls = Node.call.
+
+test(methods_sort_by_name, Keys == [Hvf, Ka, 'p/1']) :-
+    method_profiler(F, M, K),
+    get(M, print_name, Hvf0), get(Hvf0, value, Hvf),
+    get(K, print_name, Ka0), get(Ka0, value, Ka),
+    send(F, sort_by, name, normal),
+    get(F, window, prof_browser, B),
+    get(B?members, map, @arg1?key, Chain),
+    chain_list(Chain, Keys),
+    free(F).
+
 :- end_tests(profiler).
+
+%!  method_profiler(-Profiler, -Method, -Callee) is det.
+%
+%   A profiler holding a profile in which a predicate calls Method,
+%   which calls Callee, both XPCE methods.
+
+method_profiler(F, M, K) :-
+    get(@display_manager?class, send_method, has_visible_frames, M),
+    get(@pce, convert, frame, class, Frame),
+    get(Frame, get_method, keep_alive, K),
+    Data = profile{summary:summary{samples:100, ticks:100, accounting:0,
+                                   time:0.5, nodes:3, sample_period:5000,
+                                   ports:true},
+                   nodes:[ node{predicate:user:p/1,
+                                ticks_self:10, ticks_siblings:90,
+                                call:1, redo:0, exit:1,
+                                callers:[],
+                                callees:[node(M,0,10,80,5,0,5)]},
+                           node{predicate:M,
+                                ticks_self:10, ticks_siblings:80,
+                                call:5, redo:0, exit:5,
+                                callers:[node(user:p/1,0,10,80,5,0,5)],
+                                callees:[node(K,0,80,0,5,0,5)]},
+                           node{predicate:K,
+                                ticks_self:80, ticks_siblings:0,
+                                call:5, redo:0, exit:5,
+                                callers:[node(M,0,80,0,5,0,5)],
+                                callees:[]}
+                         ]},
+    profiler(true, Data, F).
 
 tree_term(Node, node(Label, Value, Children)) :-
     get(Node?label, value, Label),

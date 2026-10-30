@@ -1877,6 +1877,10 @@ details(T) :->
                  *******************************/
 
 value(name, Data, Name) :-
+    object(Data.predicate),
+    !,
+    get(Data.predicate, name, Name).
+value(name, Data, Name) :-
     !,
     predicate_sort_key(Data.predicate, Name).
 value(label, Data, Label) :-

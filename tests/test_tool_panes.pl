@@ -2110,10 +2110,10 @@ profiler(F, Data) :-
 %!  stored_profile(-Data) is det.
 %
 %   A small profile in the format of profile_data/1.  Relatives are
-%   node(Pred, Cycle, Ticks, ChildTicks, Calls, Redos, Exits).  Methods
-%   of classes defined in Prolog are callees of a predicate, but have no
-%   node of their own.  They are written as method(Class, Selector) here
-%   and resolved to the method object.
+%   node(Pred, Cycle, Ticks, ChildTicks, Calls, Redos, Exits).  Here, a
+%   method of a class defined in Prolog is only the callee of a
+%   predicate.  It is written as method(Class, Selector) and resolved to
+%   the method object.
 
 stored_profile(Data) :-
     stored_profile_data(Data0),
