@@ -44,7 +44,9 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(swi/pce_idg_viewer)).
+:- endif.
 
 test_idg_viewer :-
     run_tests([ idg_graph,

@@ -55,8 +55,10 @@ Run with:
 :- use_module(library(pce_util), [member_chain/2]).
 :- use_module(library(plunit)).
 :- use_module(library(lists)).
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(thread)).
 :- use_module(library(swi/pce_sdg_viewer)).
+:- endif.
 
 test_sdg_viewer :-
     run_tests([ sdg_graph,
@@ -132,7 +134,7 @@ clusters(Items, Tree) :-
 has_dot :-
     absolute_file_name(path(dot), _, [access(execute), file_errors(fail)]).
 
-:- begin_tests(sdg_graph).
+:- begin_tests(sdg_graph, [condition(current_prolog_flag(threads, true))]).
 
 test(variants, Ids == [ test_sdg_viewer:sv_r,
                         test_sdg_viewer:sv_s,
@@ -424,7 +426,9 @@ test(no_tables_no_viewer, [ fail, cleanup(no_frames) ]) :-
 %   The thread monitor samples the incomplete tables of a thread and
 %   the SCCs per incomplete table.
 
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(swi/thread_monitor), []).
+:- endif.
 
 :- begin_tests(sdg_monitor, [ condition(current_prolog_flag(threads, true))
                             ]).

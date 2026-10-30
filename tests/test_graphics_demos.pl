@@ -114,7 +114,8 @@ test(paint)   :- run_demo(paint, paint_demo:paint_demo).
 test(compose) :- run_demo(compose, compose_demo:compose_demo).
 test(canvas)  :- run_demo(canvas_demo, canvas_demo:canvas_demo).
 test(ripples) :- run_demo(ripples, ripples_demo:ripples_demo).
-test(disk_usage) :-                     % destroyed while scanning
+test(disk_usage,                        % destroyed while scanning
+     condition(current_prolog_flag(threads, true))) :-
     module_property(test_graphics_demos, file(File)),
     file_directory_name(File, Dir),
     run_demo(disk_usage, disk_usage_demo:disk_usage_demo(Dir)).
@@ -124,7 +125,8 @@ test(disk_usage) :-                     % destroyed while scanning
 %   in a thread that passes the result to the xpce thread, so we
 %   dispatch events until it arrives.
 
-test(disk_usage_scan, [ Total-Labels-SubLabels ==
+test(disk_usage_scan, [ condition(current_prolog_flag(threads, true)),
+                        Total-Labels-SubLabels ==
                         3150-[sub, 'a.txt']-['b.txt', 'c.txt'],
                         setup(scan_tree(Dir)),
                         cleanup(delete_directory_and_contents(Dir))
@@ -144,7 +146,8 @@ test(disk_usage_scan, [ Total-Labels-SubLabels ==
 %   The popup scans the parent of the folder shown and the folder it
 %   is on.
 
-test(disk_usage_parent, [ Labels1-Labels2 == [sub, 'a.txt']-['b.txt', 'c.txt'],
+test(disk_usage_parent, [ condition(current_prolog_flag(threads, true)),
+                          Labels1-Labels2 == [sub, 'a.txt']-['b.txt', 'c.txt'],
                           setup(scan_tree(Dir)),
                           cleanup(delete_directory_and_contents(Dir))
                         ]) :-

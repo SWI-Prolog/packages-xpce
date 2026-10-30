@@ -610,13 +610,16 @@ test(recorder_track, [Rate-Channels == Rate0-Channels0]) :-
 %   a live stream that arrives in real time and as a stream that never
 %   sends data.  Only ffmpeg is known to handle all of these.
 
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_files), [http_reply_file/3]).
+:- endif.
 
 :- dynamic http_port/1, ts_clip_file/1.
 
 network_support :-
+    current_prolog_flag(threads, true),
     video_support,
     get(@display, video_backend, ffmpeg).
 
@@ -643,9 +646,11 @@ url(Path, URL) :-
     http_port(Port),
     format(atom(URL), 'http://localhost:~w~w', [Port, Path]).
 
+:- if(current_prolog_flag(threads, true)).
 :- http_handler('/clip.mp4', serve_clip, []).
 :- http_handler('/live.ts',  serve_live, []).
 :- http_handler('/stall.ts', serve_stall, []).
+:- endif.
 
 serve_clip(Request) :-
     clip(File),

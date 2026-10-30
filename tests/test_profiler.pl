@@ -49,7 +49,9 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(swi/pce_profile)).
+:- endif.
 :- use_module(library(pce_class_variable_editor), []).
 
 test_profiler :-

@@ -529,7 +529,9 @@ test(write_after_stop, [Stopped-Again == error-true]) :-
 %   raise an error.  We wait using sleep/1, as `display->dispatch` holds
 %   the xpce lock while it waits for events, which blocks the producer.
 
-test(stop_ends_producer, [true(Status = exception(_))]) :-
+test(stop_ends_producer, [ condition(current_prolog_flag(threads, true)),
+                            true(Status = exception(_))
+                          ]) :-
     pcm_stream(AS),
     send(AS, play),
     thread_create(with_output_to(string(_), write_stream(AS, 6)), Id, []),

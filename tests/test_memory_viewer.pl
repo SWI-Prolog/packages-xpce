@@ -46,7 +46,9 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- if(current_prolog_flag(threads, true)).
 :- use_module(library(swi/pce_memory)).
+:- endif.
 
 test_memory_viewer :-
     run_tests([ memory_tree,
