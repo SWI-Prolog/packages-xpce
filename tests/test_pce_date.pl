@@ -77,8 +77,9 @@ test(time_zone_offset, true) :-
     atom_codes(Z, [S,H1,H2,M1,M2]),
     memberchk(S, `+-`),
     maplist(code_type_digit, [H1,H2,M1,M2]).
-test(time_zone_negative_minutes, Z == '-0030') :-
-    \+ current_prolog_flag(windows, true),
+test(time_zone_negative_minutes, [ condition(\+ current_prolog_flag(windows, true)),
+                                   Z == '-0030'
+                                 ]) :-
     with_tz('<-0030>0:30',
             ( new(D, date),
               get(D, time_zone, Z) )).
@@ -91,12 +92,15 @@ test(string, A == 'Thu Jul  2 03:04:05 2026') :-
     new(D, date(5,4,3,2,7,2026)),
     get(D, string, S),
     get(S, value, A).
-test(dst, [Jan,Jul] == ['03:04:05','03:04:05']) :-
-    \+ current_prolog_flag(windows, true),
+test(dst, [ condition(\+ current_prolog_flag(windows, true)),
+            [Jan,Jul] == ['03:04:05','03:04:05']
+          ]) :-
     with_tz('CET-1CEST,M3.5.0,M10.5.0/3',
             ( hms(date(5,4,3,2,1,2026), Jan),
               hms(date(5,4,3,2,7,2026), Jul) )).
-test(before_1970, [Y,M,Day] == [1969,12,31]) :-
+test(before_1970, [ condition(\+ current_prolog_flag(windows, true)),
+                    [Y,M,Day] == [1969,12,31]
+                  ]) :-
     new(D, date(0,0,12,1,1,1970)),
     send(D, advance, -1, day),
     get(D, year, Y),
