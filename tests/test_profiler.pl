@@ -397,16 +397,25 @@ truth(_, false).
 
 test(methods_have_nodes, Calls == 5) :-
     get(@pce?class, send_method, has_send_method, M),
-    reset_profiler,
-    setup_call_cleanup(
-        system:profiler(_, cputime),
-        forall(between(1, 5, _), send(@pce, has_send_method, free)),
-        system:profiler(_, false)),
+    profile_sends,
     profile_data(Data),
     member(Node, Data.nodes),
     Node.predicate == M,
     !,
     Calls = Node.call.
+
+test(the_text_report_names_methods,
+     true(sub_string(Report, _, _, _, "object ->has_send_method"))) :-
+    profile_sends,
+    with_output_to(string(Report),
+                   prolog_profile:show_text_profile([top(1000)])).
+
+profile_sends :-
+    reset_profiler,
+    setup_call_cleanup(
+        system:profiler(_, cputime),
+        forall(between(1, 5, _), send(@pce, has_send_method, free)),
+        system:profiler(_, false)).
 
 test(methods_sort_by_name, Keys == [Hvf, Ka, 'p/1']) :-
     method_profiler(F, M, K),

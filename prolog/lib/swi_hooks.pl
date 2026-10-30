@@ -53,7 +53,8 @@ file from being loaded.
 
 :- multifile
     prolog:debug_control_hook/1,
-    prolog:show_profile_hook/1.
+    prolog:show_profile_hook/1,
+    prolog:profile_node_label/2.
 
 
                  /*******************************
@@ -72,6 +73,14 @@ prolog:debug_control_hook(nospy(Method)) :-
 
 prolog:show_profile_hook(_Options) :-
     autoload_call(pce_show_profile).
+
+%   The textual report of profile/2 names a method as the profiler
+%   does, e.g., `frame <-keep_alive`.
+
+prolog:profile_node_label(Method, Label) :-
+    object(Method),
+    get(Method, print_name, Name),
+    get(Name, value, Label).
 
 
                  /*******************************
