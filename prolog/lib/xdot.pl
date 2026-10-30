@@ -39,6 +39,7 @@
 :- use_module(library(pce)).
 :- use_module(library(pan_zoom)).
 :- use_module(library(process)).
+:- use_module(library(readutil)).
 :- use_module(library(json)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
@@ -720,6 +721,28 @@ scale_to_fit(W, F:xdot) :->
 %   is what it wrote to its standard error.
 
 dot_to_json(Source, Engine, JSON) :-
+    run_dot(Source, Engine, JSON0, E, Status, Message0),
+    split_string(Message0, "", " \t\n", [Message]),
+    (   Status == exit(0),
+        var(E)
+    ->  (   Message == ""
+        ->  true
+        ;   print_message(warning, format('~w: ~s', [Engine, Message]))
+        ),
+        JSON = JSON0
+    ;   throw(error(graphviz(Engine, Status, Message), _))
+    ).
+
+%   run_dot(+Source, +Engine, -JSON, -Error, -Status, -Message)
+%
+%   Run Engine on Source.  Error is unbound if we could read its JSON
+%   output and Message is what it wrote to its standard error.  Without
+%   threads we cannot feed dot and read its output and errors at the
+%   same time, so the input and the errors go through temporary files.
+
+run_dot(Source, Engine, JSON, E, Status, Message) :-
+    current_prolog_flag(threads, true),
+    !,
     dot_input(Source, Args, StdIn, Feed),
     process_create(path(Engine), ['-Tjson'|Args],
                    [ stdin(StdIn),
@@ -733,25 +756,39 @@ dot_to_json(Source, Engine, JSON) :-
     ),
     message_queue_create(Queue),
     thread_create(read_stderr(Err, Queue), Reader, []),
-    call_cleanup(catch(json_read_dict(Out, JSON0), E, true),
+    call_cleanup(catch(json_read_dict(Out, JSON), E, true),
                  close(Out)),
     thread_join(Reader, _),
-    (   thread_get_message(Queue, stderr(Message0), [timeout(0)])
+    (   thread_get_message(Queue, stderr(Message), [timeout(0)])
     ->  true
-    ;   Message0 = ""
+    ;   Message = ""
     ),
     message_queue_destroy(Queue),
-    process_wait(PID, Status),
-    split_string(Message0, "", " \t\n", [Message]),
-    (   Status == exit(0),
-        var(E)
-    ->  (   Message == ""
-        ->  true
-        ;   print_message(warning, format('~w: ~s', [Engine, Message]))
+    process_wait(PID, Status).
+run_dot(Source, Engine, JSON, E, Status, Message) :-
+    setup_call_cleanup(
+        ( dot_file(Source, Path, Tmp),
+          tmp_file_stream(text, ErrFile, ErrStream)
         ),
-        JSON = JSON0
-    ;   throw(error(graphviz(Engine, Status, Message), _))
-    ).
+        ( call_cleanup(
+              process_create(path(Engine), ['-Tjson', Path],
+                             [ stdin(null),
+                               stdout(pipe(Out)),
+                               stderr(stream(ErrStream)),
+                               process(PID)
+                             ]),
+              close(ErrStream)),
+          call_cleanup(catch(json_read_dict(Out, JSON), E, true),
+                       close(Out)),
+          process_wait(PID, Status),
+          read_file_to_string(ErrFile, Message, [])
+        ),
+        ( delete_file(ErrFile),
+          (   Tmp == true
+          ->  delete_file(Path)
+          ;   true
+          )
+        )).
 
 %   read_stderr(+Err, +Queue)
 %
@@ -770,6 +807,19 @@ dot_input(Source, [Path], null, none) :-
     get(Source, name, Path).            % xpce file object → path atom
 dot_input(String, [], pipe(In), feed(In, Data)) :-
     object(String, string(Data)).
+
+%   dot_file(+Source, -Path, -Tmp)
+%
+%   Path is a file holding Source.  Tmp is `true` if we created it.
+
+dot_file(Source, Path, false) :-
+    send(Source, instance_of, file),
+    !,
+    get(Source, name, Path).
+dot_file(String, Path, true) :-
+    object(String, string(Data)),
+    tmp_file_stream(utf8, Path, Out),
+    call_cleanup(format(Out, '~s', [Data]), close(Out)).
 
 send_to_dot(String, ToDOT) :-
     set_stream(ToDOT, encoding(utf8)),
