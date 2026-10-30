@@ -418,6 +418,26 @@ test(methods_sort_by_name, Keys == [Hvf, Ka, 'p/1']) :-
     chain_list(Chain, Keys),
     free(F).
 
+%   Edit uses edit/1, which finds the C source of a method.  Neither it
+%   nor the Documentation item needs the manual tools of manpce/0, which
+%   open their window.
+
+test(a_method_can_be_edited_without_manpce, Manual == false) :-
+    get(@display_manager?class, send_method, has_visible_frames, M),
+    new(T, prof_node_text(M, child)),
+    send(T, has_source),
+    ignore(send(T, has_help)),
+    truth(object(@manual), Manual),
+    free(T).
+
+test(edit_finds_the_method_not_its_class, [nondet, Files == [File]]) :-
+    get(@display_manager?class, send_method, has_visible_frames, M),
+    findall(F, ( prolog_edit:locate(M, Loc), get_dict(file, Loc, F) ),
+            Files0),
+    sort(Files0, Files),
+    Files = [File],
+    file_base_name(File, 'displaymgr.c').
+
 :- end_tests(profiler).
 
 %!  method_profiler(-Profiler, -Method, -Callee) is det.

@@ -58,9 +58,10 @@
 :- use_module(library(xdot), []).
 :- use_module(library(pce_filter_item), []).
 :- use_module(library(plot/hierarchy_chart), [hierarchy_from_term/2]).
+:- autoload(library(edit), [edit/1]).
+:- autoload(library(pce_html_manual), [man_documented/1, man_html_object/1]).
 
-:- require([ auto_call/1,
-	     reset_profiler/0,
+:- require([ reset_profiler/0,
 	     is_dict/1,
 	     profile_data/1,
 	     www_open_url/1,
@@ -1102,7 +1103,7 @@ edit(W, Node:xdot_node) :->
 
 edit_predicate(Pred) :-
     (   object(Pred)
-    ->  send(Pred, edit)
+    ->  edit(Pred)
     ;   new(PP, prolog_predicate(Pred)),
         send(PP, edit)
     ).
@@ -1822,10 +1823,10 @@ make_prof_node_text_recogniser(G) :-
                           message(Text, details),
                           condition := Text?role \== self),
                 menu_item(edit,
-                          message(Pred, edit),
-                          condition := Pred?source),
+                          message(Text, edit),
+                          condition := message(Text, has_source)),
                 menu_item(documentation,
-                          message(Pred, help),
+                          message(Text, help),
                           condition := message(Text, has_help))
               ]),
     new(C, click_gesture(left, '', single,
@@ -1839,14 +1840,51 @@ event(T, Ev:event) :->
     ;   send(@prof_node_text_recogniser, event, Ev)
     ).
 
-has_help(T) :->
+%       The context is a prolog_predicate or an xpce method.  A method
+%       is looked up in the HTML manual and edited using edit/1, which
+%       also finds the C source of a built-in method.  The manual tools
+%       of manpce/0 are not involved: loading them opens their window.
+
+has_source(T) :->
+    "Succeed if the source of my context can be edited"::
     get(T, context, Ctx),
-    (   send(Ctx, instance_of, method) % hack
-    ->  auto_call(manpce)
-    ;   true
-    ),
-    send(Ctx, has_send_method, has_help),
-    send(Ctx, has_help).
+    (   send(Ctx, instance_of, method)
+    ->  method_has_source(Ctx)
+    ;   get(Ctx, source, _)
+    ).
+
+method_has_source(M) :-
+    get(M, slot, source, Loc),
+    Loc \== @nil,
+    !.
+method_has_source(M) :-
+    get(M, slot, function, Address),
+    Address \== 0.
+
+edit(T) :->
+    "Edit the source of my context"::
+    get(T, context, Ctx),
+    (   send(Ctx, instance_of, method)
+    ->  edit(Ctx)
+    ;   send(Ctx, edit)
+    ).
+
+has_help(T) :->
+    "Succeed if the manual documents my context"::
+    get(T, context, Ctx),
+    (   send(Ctx, instance_of, method)
+    ->  man_documented(Ctx)
+    ;   send(Ctx, has_send_method, has_help),
+        send(Ctx, has_help)
+    ).
+
+help(T) :->
+    "Show the documentation of my context"::
+    get(T, context, Ctx),
+    (   send(Ctx, instance_of, method)
+    ->  man_html_object(Ctx)
+    ;   send(Ctx, help)
+    ).
 
 details(T) :->
     "Show details of clicked predicate"::

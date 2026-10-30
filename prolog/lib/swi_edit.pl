@@ -67,6 +67,7 @@ prolog_edit:locate(Object, Location) :-                 % @reference
     source(Object, Location).
 prolog_edit:locate(Object, Location) :-                 % @reference
     object(Object),
+    \+ source(Object, _),               % e.g., not class send_method
     get(Object, class, Class),
     source(Class, Location).
 prolog_edit:locate(send(Receiver, Selector), Location) :-
