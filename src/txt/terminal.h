@@ -219,6 +219,9 @@ typedef struct rlc_data
   uchar_t		link[ANSI_MAX_LINK];	/* Max URL length */
   uchar_t      *link_url;		/* Open OSC 8 hyperlink or NULL */
   href	       *armed_href;		/* href the mouse is hovering, or NULL */
+  bool		hover_valid;		/* hover_x,hover_y hold the pointer */
+  int		hover_x;		/* last pointer position over the */
+  int		hover_y;		/* terminal (terminal coordinates) */
   bool		shift_in;		/* select G1 */
 					/* HTS/TBC tab stops.  Columns past
 					   the map (a line holds at most

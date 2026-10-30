@@ -375,6 +375,38 @@ test(armed_rewrap, [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     hover(TI, 5, 0),
     assertion(forall(between(0, 59, C), armed(TI, C, 0))).
 
+% Output that scrolls the hovered link away from a pointer that stands
+% still disarms it, and output that scrolls a link under the pointer
+% arms it.
+
+test(armed_scroll_away, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                          [Before, After, Cell] == [@on, @off, false]
+                        ]) :-
+    insert_link(TI, 'file:///tmp/scroll', 20),
+    hover(TI, 5, 0),
+    get(TI, armed_link, Before),
+    newlines(TI, 100),
+    get(TI, armed_link, After),
+    (   armed(TI, 5, 0) -> Cell = true ; Cell = false ).
+
+test(armed_scroll_under, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                           [Before, After] == [@off, @on]
+                         ]) :-
+    get(TI, rows, Rows),
+    Row is Rows-2,
+    hover(TI, 5, Row),
+    get(TI, armed_link, Before),
+    newlines(TI, Rows),
+    insert_link(TI, 'file:///tmp/scroll', 20),
+    send(TI, insert, '\r\n'),
+    get(TI, armed_link, After).
+
+newlines(TI, N) :-
+    length(L, N),
+    maplist(=('\r\n'), L),
+    atomic_list_concat(L, Text),
+    send(TI, insert, Text).
+
 insert_link(TI, URL, Len) :-
     send(TI, link_armed_style, style(colour := red)),
     send(TI, link_message, message(@prolog, true)),

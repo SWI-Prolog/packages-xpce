@@ -1176,31 +1176,70 @@ dragScrollTerminalImage(TerminalImage ti)
 #define BUTTON_follow_link (BUTTON_control)
 #endif
 
+/* Decide what the pointer at (b->hover_x,b->hover_y) hovers: a link or
+ * the marker of a fold.  This runs when the pointer moves and when the
+ * text moves under a pointer that stands still: output that scrolls the
+ * window must not leave a link armed that is no longer under the
+ * pointer.  Sets *link_changed if the armed link changed, which means
+ * its runs must be repainted.  Returns true if the displayed cursor may
+ * have changed.
+ */
+
+static bool
+rlc_update_hover(TerminalImage ti, bool *link_changed)
+{ RlcData b = ti->data;
+  bool was_armed = isOn(ti->armed_link) || isOn(ti->armed_fold);
+  TerminalBlock fold = NULL;
+  href *hr = NULL;
+
+  if ( b->hover_valid )
+  { fold = rlc_fold_at_gutter(ti, b->hover_x, b->hover_y);
+    if ( notNil(ti->link_message) )
+      hr = rlc_href_at(b, b->hover_x, b->hover_y, NULL, NULL);
+  }
+
+  assign(ti, armed_fold, fold ? ON : OFF);
+  *link_changed = (hr != b->armed_href);
+  if ( *link_changed )
+  { b->armed_href = hr;
+    assign(ti, armed_link, hr ? ON : OFF);
+  }
+
+  return was_armed != (isOn(ti->armed_link) || isOn(ti->armed_fold));
+}
+
 static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
 { if ( ev->id == NAME_locMove )
   { Int x, y;
-    get_xy_event(ev, ti, ON, &x, &y);
     RlcData b = ti->data;
-    TerminalBlock fold = rlc_fold_at_gutter(ti, valInt(x), valInt(y));
+    bool link_changed;
+
+    get_xy_event(ev, ti, ON, &x, &y);
+    b->hover_x = valInt(x);
+    b->hover_y = valInt(y);
+    b->hover_valid = true;
+    rlc_update_hover(ti, &link_changed);	/* window updates the cursor */
+    if ( link_changed )
+      refreshTerminalImage(ti);		/* repaint old + new armed run */
 
     if ( isNil(ti->link_message) )
-    { assign(ti, armed_fold, fold ? ON : OFF);
       fail;				/* nothing else here is ours */
-    }
-
-    assign(ti, armed_fold, fold ? ON : OFF);
-    href *hr = rlc_href_at(b, valInt(x), valInt(y), NULL, NULL);
-    if ( hr != b->armed_href )
-    { b->armed_href = hr;
-      assign(ti, armed_link, hr ? ON : OFF);
-      refreshTerminalImage(ti);		/* repaint old + new armed run */
-    }
 
     if ( rlc_mouse_event(ti, ev) )	/* the link is ours, the motion */
       succeed;				/* may be the application's */
 
     fail;
+  }
+
+  if ( isAEvent(ev, NAME_areaExit) )
+  { RlcData b = ti->data;
+    bool link_changed;
+
+    b->hover_valid = false;
+    rlc_update_hover(ti, &link_changed);
+    if ( link_changed )
+      refreshTerminalImage(ti);
   }
 
   DEBUG(NAME_event, Cprintf("Event: %s\n", pp(ev->id)));
@@ -7496,6 +7535,17 @@ rlc_request_redraw(RlcData b)
    */
   rlc_update_selection_string(b);
   rlc_autolink_page(b);		/* marks the lines it (un)links changed */
+
+  if ( b->hover_valid || b->armed_href || isOn(ti->armed_fold) )
+  { bool link_changed;			/* the text may have moved under */
+    if ( rlc_update_hover(ti, &link_changed) )	/* the pointer */
+    { PceWindow sw = getWindowGraphical((Graphical)ti);
+      if ( sw )
+	updateCursorWindow(sw);
+    }
+    if ( link_changed )
+      b->changed |= CHG_CHANGED;	/* repaint old + new armed run */
+  }
 
   if ( b->changed & CHG_CHANGED )
   { changedEntireImageGraphical(ti);
