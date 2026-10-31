@@ -995,7 +995,19 @@ using the option blob(resolve).  Named references remain the term @Name.
 The blob is PL_BLOB_UNIQUE, so one object   maps to one atom and ==/2,
 compare/3 and sort/2 on references behave as they should.  It is
 PL_BLOB_NOCOPY, so the blob data *is* the object pointer.
+
+It is PL_BLOB_LOCAL: a reference starts as a local atom of the thread
+that creates it, which reclaims it in a sweep of its own as soon as it
+is no longer reachable, instead of waiting for the next global atom
+garbage collection.  The reference becomes an ordinary atom when it may
+be reachable from another thread, e.g., when another thread gets a
+reference to the same object, or when it is recorded (see pcecall.c).
+The gc_margin counts per thread for local references.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+#ifndef PL_BLOB_LOCAL			/* SWI-Prolog without local blobs */
+#define PL_BLOB_LOCAL 0
+#endif
 
 static void
 acquire_pce_object(atom_t symbol)
@@ -1007,7 +1019,9 @@ acquire_pce_object(atom_t symbol)
 
 
 /* Runs in the atom garbage collector, on a thread that does not hold the
-   XPCE lock and cannot take it.  Only queue the object.
+   XPCE lock and cannot take it, or, for a local reference, in the sweep
+   of its thread, at a safe point that may be deep inside XPCE.  Only
+   queue the object.
 */
 
 static int
@@ -1074,7 +1088,7 @@ load_pce_object(IOSTREAM *fd)
 
 static PL_blob_t pce_blob =
 { PL_BLOB_MAGIC,
-  PL_BLOB_UNIQUE|PL_BLOB_NOCOPY,
+  PL_BLOB_UNIQUE|PL_BLOB_NOCOPY|PL_BLOB_LOCAL,
   "pce",
   release_pce_object,
   compare_pce_object,

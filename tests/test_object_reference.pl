@@ -288,11 +288,56 @@ freed_points(N) :-
     get(@pce, convert, point, class, Class),
     get(Class, no_freed, N).
 
-test(transient_objects_do_not_accumulate) :-
+test(transient_objects_do_not_accumulate, true(Freed >= 4990)) :-
+    freed_points(F0),
     forall(between(1, 5000, _), new(_, point(1,2))),
     reclaim,
-    aggregate_all(count, current_blob(_, pce), N),
-    assertion(N =< 10).                 % only what this frame still holds
+    freed_points(F1),
+    Freed is F1-F0.                     % but what this frame still holds
+
+%  References are thread-local blobs (PL_BLOB_LOCAL): the thread reclaims
+%  them in its own sweep, which runs when it has created enough of them,
+%  without global atom garbage collection.
+
+test(local_reference, [true(Local), cleanup(free(P))]) :-
+    new(P, point(1,2)),
+    ( '$local_atom'(P) -> Local = true ; Local = false ).
+test(local_sweep_reclaims, true(Freed >= 4000)) :-
+    thread_create(local_churn(5000, Freed), Id),
+    thread_join(Id, Status),
+    Status = exited(Freed).
+test(other_thread_promotes, [ true(Before == true),
+                              true(Same == true), true(Local == false),
+                              cleanup(free(@tor_chain))
+                            ]) :-
+    new(P, point(1,2)),
+    ( '$local_atom'(P) -> Before = true ; Before = false ),
+    new(@tor_chain, chain(P)),
+    thread_create(other_reference, Id),
+    thread_join(Id, exited(Local-P2)),
+    ( P2 == P -> Same = true ; Same = false ).
+
+%  Create N transient objects in a new thread and tell how many of them
+%  were freed before the thread ends.  Only the local sweep of the
+%  thread runs, as we do not call garbage_collect_atoms/0.
+
+local_churn(N, Freed) :-
+    freed_points(F0),
+    forall(between(1, N, _), new(_, point(1,2))),
+    ignore(get(@pce, version, _)),	% drain the released references
+    freed_points(F1),
+    Freed is F1-F0,
+    thread_exit(Freed).
+
+%  Get a reference to the object in @tor_chain in another thread.  We
+%  may not pass the reference itself, as copying it to the thread
+%  promotes it.  Local tells whether the reference was local after the
+%  lookup, i.e., before thread_exit/1 copies it.
+
+other_reference :-
+    get(@tor_chain, head, P),
+    ( '$local_atom'(P) -> Local = true ; Local = false ),
+    thread_exit(Local-P).
 
 test(object_survives_done, [cleanup(free(P))]) :-
     new(P, point(1,2)),
