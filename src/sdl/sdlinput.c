@@ -81,6 +81,7 @@ static int meta_id[MAX_FDS];
 static FDWatch fd_meta[MAX_FDS] = {0};
 static atomic_int watch_max = 0;
 static SDL_Thread *watcher_thread = NULL;
+static SDL_AtomicInt watcher_stop;	/* see stop_fd_watcher_thread() */
 
 static void lock_watch_userdata(FDWatch *watch);
 static void unlock_watch_userdata(FDWatch *watch);
@@ -315,7 +316,7 @@ watch_has_data(FDWatch *watch)
 
 static int
 poll_thread_fn(void *unused)
-{ while (true)
+{ while ( !SDL_GetAtomicInt(&watcher_stop) )
   { int nfds = 1;		/* 0 is for our control pipe */
     bool removed = false;
     FDWatch *watch = fd_meta;
@@ -464,6 +465,22 @@ start_fd_watcher_thread(void)
 
   watcher_thread = SDL_CreateThread(poll_thread_fn, "fd-watcher", NULL);
   return watcher_thread != NULL;
+}
+
+static void signal_watcher(char c);
+
+/* Stop the watcher thread and wait for it.  Called when xpce exits:
+ * the code of the thread must not be unloaded while it runs.
+ */
+
+void
+stop_fd_watcher_thread(void)
+{ if ( watcher_thread )
+  { SDL_SetAtomicInt(&watcher_stop, 1);
+    signal_watcher('q');
+    SDL_WaitThread(watcher_thread, NULL);
+    watcher_thread = NULL;
+  }
 }
 
 

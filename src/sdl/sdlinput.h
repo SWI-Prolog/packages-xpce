@@ -100,6 +100,7 @@ typedef struct
 bool cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new);
 
 bool	 start_fd_watcher_thread(void);
+void	 stop_fd_watcher_thread(void);
 FDWatch *add_fd_to_watch(waitable_t fd, int32_t code, void *userdata);
 FDWatch *add_socket_to_watch(socket_t fd, int32_t code, void *userdata);
 void	 remove_fd_watch(FDWatch *watch);

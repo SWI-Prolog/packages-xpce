@@ -69,6 +69,19 @@ ws_initialise(int argc, char **argv)
 
 static int sdl_main_thread = 0;
 
+/* Exit hook, run after the others.  Our threads and SDL's (timers,
+ * audio) must have stopped before Prolog unloads pl2xpce.so and with it
+ * libSDL3, or they continue in unmapped code.
+ */
+
+static void
+sdl_cleanup(int rval)
+{ (void)rval;
+
+  stop_fd_watcher_thread();
+  SDL_Quit();
+}
+
 bool
 setPceThread(const char *app_name)
 { if ( !sdl_main_thread )
@@ -120,6 +133,7 @@ setPceThread(const char *app_name)
 #endif
     sdl_start_live_resize_watch();
     start_fd_watcher_thread();
+    at_pce_exit(sdl_cleanup, ATEXIT_FILO);
 
     /* Register the program's stdin as a drainable console iff it is a
        real terminal/console.  Used by ws_discard_input() when a modal
