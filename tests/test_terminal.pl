@@ -2528,6 +2528,78 @@ test(placing_the_caret_over_a_closed_fold_counts_rows,
     out(T, '\e[3;1HXX'),                 % the third row holds `?- two.'
     assert_rows(T, [top, '?- one.', 'XX two.', t1, t2, t3]).
 
+test(newlines_over_a_closed_fold_count_rows,
+     [setup(current_test_terminal(T))]) :-
+    %  `top' homes the caret and writes its rows with a newline after
+    %  each.  Stepping a line rather than a row put all but its first
+    %  row in the text a closed fold hides.
+    folded_screen(T, _),
+    out(T, '\e[Hr0\e[K\r\nr1\e[K\r\nr2\e[K\r\nr3\e[K'),
+    assert_rows(T, [r0, r1, r2, r3, t2, t3]).
+
+test(moving_up_over_a_closed_fold_counts_rows,
+     [setup(current_test_terminal(T))]) :-
+    %  CUU and RI the other way about.
+    folded_screen(T, _),
+    out(T, '\e[3;1H\e[AXX\e[3;1H\eMYY'),
+    assert_rows(T, [top, 'YY one.', '?- two.', t1, t2, t3]).
+
+test(a_scroll_region_over_a_closed_fold_counts_rows,
+     [ setup(current_test_terminal(T)),
+       cleanup(out(T, '\e[r'))
+     ]) :-
+    %  DECSTBM names rows of the window, and so does the line feed on
+    %  its bottom row that scrolls it.  Counting lines scrolled the text
+    %  a closed fold hides into the window.
+    folded_screen(T, _),
+    out(T, '\e[2;4r\e[4;1H\nXX'),
+    assert_rows(T, [top, '?- two.', t1, 'XX', t2, t3]).
+
+test(inserting_lines_over_a_closed_fold_counts_rows,
+     [ setup(current_test_terminal(T)),
+       cleanup(out(T, '\e[r'))
+     ]) :-
+    %  IL and DL move the rows of the region below the caret, not the
+    %  lines a closed fold hides between them.
+    folded_screen(T, _),
+    out(T, '\e[2;4r\e[2;1H\e[L'),
+    assert_rows(T, [top, '', '?- one.', '?- two.', t2, t3]),
+    out(T, '\e[2;1H\e[M'),
+    assert_rows(T, [top, '?- one.', '?- two.', '', t2, t3]).
+
+test(scrolling_a_window_with_a_closed_fold_up_keeps_the_caret_row,
+     [ setup(current_test_terminal(T)),
+       cleanup(out(T, '\e[r'))
+     ]) :-
+    %  SU over the whole window scrolls it into the scroll back and puts
+    %  the caret back on the row it was on.
+    folded_screen(T, _),
+    term_rows(T, Rows),
+    format(atom(Fill), '\e[~w;1H', [Rows]),
+    out(T, [Fill, '\e[2;1H\e[SXX']),
+    assert_rows(T, ['?- one.', 'XX two.', t1, t2, t3]).
+
+test(saving_the_caret_over_a_closed_fold_counts_rows,
+     [setup(current_test_terminal(T))]) :-
+    %  `CSI s' saves the row the caret is on and `CSI u' goes back to
+    %  it.  Saving the lines above it put the caret back far below.
+    folded_screen(T, _),
+    out(T, '\e[3;1H\e[s\e[6;1HZZ\e[uXX'),
+    assert_rows(T, [top, '?- one.', 'XX two.', t1, t2, 'ZZ']).
+
+test(reporting_the_caret_over_a_closed_fold_counts_rows,
+     [ condition(needs([pty_signals])),
+       setup(( current_test_terminal(T),
+               start_echo_client(T)
+             )),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  `CSI 6n' answers the row of the window the caret is on.
+    %  Counting lines added what a closed fold hides above it.
+    folded_screen(T, _),                % the caret is on the 7th row
+    out(T, '\e[6n'),
+    assertion(client_reads(T, '^[[7;1R')).
+
 test(the_alternate_screen_gives_back_what_a_fold_hides,
      [setup(current_test_terminal(T))]) :-
     %  A fold hides text from the eye and not from the buffer: what is

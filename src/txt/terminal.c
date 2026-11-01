@@ -8977,11 +8977,14 @@ rlc_window_row(RlcData b, int line)
 }
 
 
-/** First line of the scrolling region (DECSTBM, `CSI r'). */
+/** First line of the scrolling region (DECSTBM, `CSI r').  The region
+ * is rows of the window, and a closed fold takes lines off those: all
+ * that has to do with the region counts rows.
+ */
 
 static int
 rlc_region_start(RlcData b)
-{ return rlc_add_lines(b, b->window_start, b->scroll_top);
+{ return rlc_view_line_at_row(b, b->scroll_top);
 }
 
 
@@ -9015,7 +9018,7 @@ rlc_region_bottom(RlcData b, int grow)
   }
 
   if ( rows > b->scroll_bottom )
-    return rlc_add_lines(b, b->window_start, b->scroll_bottom);
+    return rlc_view_add(b, b->window_start, b->scroll_bottom);
 
   return b->last;
 }
@@ -9031,9 +9034,34 @@ rlc_region_size(RlcData b, int line, int bottom)
 
   if ( row < b->scroll_top || row > b->scroll_bottom )
     return 0;
-  int rows = rlc_count_lines(b, line, bottom)+1;
+  int rows = rlc_view_count(b, line, bottom)+1;
 
   return rows > b->window_size ? 0 : rows;	/* `line' past `bottom' */
+}
+
+
+/* A row up or down: the line before or after `line' that is not in a
+ * closed fold.
+ */
+
+static int
+rlc_view_step(RlcData b, int line, int step)
+{ return step > 0 ? rlc_view_next(b, line) : rlc_view_add(b, line, -1);
+}
+
+/* Clear a line of the scrolling region, keeping the fold marker of its
+ * slot (see rlc_scroll_region()).
+ */
+
+static void
+rlc_region_clear_line(RlcData b, int line, bool free)
+{ bool head = b->lines[line].fold_head;
+
+  if ( free )
+    rlc_free_line(b, line);
+  else
+    rlc_reinit_line(b, line);
+  b->lines[line].fold_head = head;
 }
 
 
@@ -9051,6 +9079,12 @@ rlc_region_size(RlcData b, int line, int bottom)
  * As in xterm, the empty lines take the current background colour
  * (`bce'), as does a line a line feed scrolls into the window (see
  * rlc_caret_down()).
+ *
+ * What moves is the rows.  The lines a closed fold hides between them
+ * stay where they are, and so do the fold bits: they belong to the
+ * slot, which is what the anchors of a block name, and not to the text
+ * that passes through it.  Moving lines rather than rows scrolled what
+ * a fold hides into the window.
  */
 
 static void
@@ -9068,25 +9102,29 @@ rlc_scroll_region(RlcData b, int line, int shift)
   int step = shift > 0 ? -1 : 1;
   int off  = shift > 0 ? -count : count;	/* destination to source */
 
+  int l = from;
   for(int i=0; i<count; i++)		/* lines that leave the region */
-    rlc_free_line(b, rlc_add_lines(b, from, i*step));
+  { rlc_region_clear_line(b, l, true);
+    l = rlc_view_step(b, l, step);
+  }
+
+  int dst = from;
+  int src = rlc_view_add(b, from, off);
   for(int i=0; i<move; i++)
-  { int dst = rlc_add_lines(b, from, i*step);
-    int src = rlc_add_lines(b, dst, off);
+  { bool head = b->lines[dst].fold_head;
 
     b->lines[dst] = b->lines[src];
     b->lines[dst].line_no = dst;
+    b->lines[dst].fold_head = head;
     b->lines[dst].changed |= CHG_CHANGED;
+    dst = rlc_view_step(b, dst, step);
+    src = rlc_view_step(b, src, step);
   }
   for(int i=0; i<count; i++)		/* the new empty lines */
-  { int l = rlc_add_lines(b, from, (move+i)*step);
-
-    rlc_reinit_line(b, l);
-    rlc_erase_tail(b, &b->lines[l], true); /* bce: takes the background */
+  { rlc_region_clear_line(b, dst, false);
+    rlc_erase_tail(b, &b->lines[dst], true); /* bce: takes the background */
+    dst = rlc_view_step(b, dst, step);
   }
-
-  if ( b->folds )			/* the fold bits travelled with the */
-    rlc_restamp_folds(b);		/* lines; the blocks say where they go */
 
   b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
 }
@@ -9109,9 +9147,9 @@ rlc_scroll_up(RlcData b, int count)
   { int row = rlc_window_row(b, b->caret_y);
     int x = b->caret_x;
 
-    b->caret_y = rlc_add_lines(b, b->window_start, b->window_size-1);
+    b->caret_y = rlc_view_add(b, b->window_start, b->window_size-1);
     rlc_caret_down(b, count);		/* scrolls the window along */
-    b->caret_y = rlc_add_lines(b, b->window_start, row);
+    b->caret_y = rlc_view_add(b, b->window_start, row);
     b->caret_x = x;
     b->changed |= CHG_CARET;
   }
@@ -9194,8 +9232,8 @@ rlc_need_arg(RlcData b, int arg, int def)
 
 static void
 rlc_caret_up(RlcData b, int arg)
-{ while(arg-- > 0 && b->caret_y != b->first)
-    b->caret_y = PrevLine(b, b->caret_y);
+{ if ( arg > 0 )			/* in rows, as rlc_caret_down() */
+    b->caret_y = rlc_view_add(b, b->caret_y, -arg);
 
   b->changed |= CHG_CARET;
 }
@@ -9210,7 +9248,7 @@ rlc_reverse_index(RlcData b)
 { if ( rlc_window_row(b, b->caret_y) == b->scroll_top )
   { rlc_scroll_region(b, b->caret_y, 1);
   } else
-  { b->caret_y = PrevLine(b, b->caret_y);
+  { b->caret_y = rlc_view_add(b, b->caret_y, -1);
     b->changed |= CHG_CARET;
   }
 }
@@ -9229,7 +9267,13 @@ rlc_caret_down(RlcData b, int arg)
       if ( rlc_window_row(b, b->last) >= b->window_size )
 	rlc_erase_tail(b, &b->lines[b->last], true); /* scrolls in: bce */
     }
-    b->caret_y = NextLine(b, b->caret_y);
+    /* A row down, not a line: the lines a closed fold hides are not on
+     * the screen the client writes to.  Stepping into them is what
+     * `top' did, which homes the caret and writes its rows with a
+     * newline after each: everything below the first row went into
+     * the fold and the window kept showing the session under it.
+     */
+    b->caret_y = rlc_view_next(b, b->caret_y);
     /* Do NOT clear softreturn here.  Moving the caret says nothing
      * about how the line it lands on ends, and a client that walks
      * down its input with newlines -- libedit going to the end of a
@@ -9531,7 +9575,7 @@ rlc_set_caret_x(RlcData b, int x)
 
 static void
 rlc_save_caret_position(RlcData b)
-{ b->scaret_y = rlc_count_lines(b, b->window_start, b->caret_y);
+{ b->scaret_y = rlc_window_row(b, b->caret_y);	/* a row, as DECSC */
   /* Save the VISUAL column so rlc_restore_caret_position (which goes
    * through rlc_set_caret) restores to the same visual position even
    * if the line contents have changed meanwhile. */
@@ -11809,7 +11853,7 @@ rlc_putansi(RlcData b, int chr)
 	case 'n':
 	  /* \e[6n: report row and column */
 	  if ( b->argc == 1 && b->argv[0] == 6 )
-	  { int row = rlc_count_lines(b, b->window_start, b->caret_y)+1;
+	  { int row = rlc_window_row(b, b->caret_y)+1; /* not lines: folds */
 	    int col = rlc_caret_vcol(b)+1;	/* the column, not the cell */
 	    char buf[100];
 	    snprintf(buf, sizeof(buf), S_ESC"[%d;%dR", row, col);
