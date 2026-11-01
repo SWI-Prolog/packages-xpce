@@ -926,8 +926,10 @@ postEventWindow(PceWindow sw, EventObj ev)
   { ScrollBar sb;
     Any obj;
 
+    /* <-vertical_scrollbar is @nil if the window has no bar (now) */
     if ( hasGetMethodObject(sw, NAME_verticalScrollbar) &&
-	 (sb = get(sw, NAME_verticalScrollbar, EAV)) )
+	 (sb = get(sw, NAME_verticalScrollbar, EAV)) &&
+	 notNil(sb) )
       obj = sb->object;
     else
       obj = sw;

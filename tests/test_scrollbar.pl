@@ -254,6 +254,19 @@ test(a_horizontal_wheel_on_a_vertical_window_is_not_used, [X-Y == X0-Y0]) :-
     wheel(P, horizontal_wheel, 1, 0),
     visible_xy(P, X-Y).
 
+%   Without a vertical bar, the wheel goes to the window itself.  Its
+%   <-vertical_scrollbar is @nil, which was taken for a bar: its
+%   <-object was read from beyond @nil, which crashed on macOS.
+
+test(the_wheel_without_a_vertical_bar_goes_to_the_window) :-
+    new(F, frame('Test')),
+    send(F, append, new(P, picture('', size(200,100)))),
+    send(P?decoration, vertical_scrollbar, @off),
+    send(F, open),
+    new(Ev, event(wheel, P, 50, 50, 0, 0)),
+    send(Ev, slot, rotation, -15),
+    send(P, post_event, Ev).
+
 test(the_wheel_on_the_horizontal_bar_scrolls_right, [Y == Y0, true(X > X0)]) :-
     wide_picture(P),
     visible_xy(P, X0-Y0),
