@@ -1059,8 +1059,7 @@ user_expands(T, Node) :-
 :- meta_predicate with_loaded_tree(-, -, 0).
 
 with_loaded_tree(T, Dir, Goal) :-
-    tmp_file(navigator, Dir),
-    make_directory(Dir),
+    tmp_directory(navigator, Dir),
     numlist(1, 20, Is),
     findall(Name, ( member(I, Is),
                     format(atom(Name), 'm~|~`0t~d~2+.pl', [I])

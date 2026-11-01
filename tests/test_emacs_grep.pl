@@ -135,8 +135,7 @@ report(BM, Kind:name, Fmt:[char_array], Args:any ...) :->
 :- dynamic test_dir/1.
 
 make_tree :-
-    tmp_file(grep, Dir),
-    make_directory(Dir),
+    tmp_directory(grep, Dir),
     asserta(test_dir(Dir)),
     directory_file_path(Dir, sub, Sub),
     make_directory(Sub),

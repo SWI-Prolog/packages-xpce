@@ -51,8 +51,7 @@ Run with:
 :- use_module(library(filesex)).
 
 setup_audio :-
-    tmp_file(sound, Dir),
-    make_directory(Dir),
+    tmp_directory(sound, Dir),
     directory_file_path(Dir, 'out.raw', Out),
     directory_file_path(Dir, 'in.raw', In),
     setenv('SDL_AUDIO_DRIVER', disk),

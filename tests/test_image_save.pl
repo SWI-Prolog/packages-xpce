@@ -54,8 +54,7 @@ setup_headless :-
 :- initialization(setup_headless, now).
 
 test_image_save :-
-    tmp_file(image_save, Dir),
-    make_directory(Dir),
+    tmp_directory(image_save, Dir),
     nb_setval(test_image_save_dir, Dir),
     call_cleanup(run_tests([ image_save ]),
                  delete_directory_and_contents(Dir)).

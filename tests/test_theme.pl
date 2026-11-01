@@ -617,7 +617,7 @@ test(not_edited, error(existence_error(edited_theme, test_dark))) :-
 %   is not a Prolog source, and add it to the library search path.
 
 user_theme_dir(Dir-Ref) :-
-    tmp_file(themes, Dir),
+    tmp_directory(themes, Dir),
     directory_file_path(Dir, theme, ThemeDir),
     make_directory_path(ThemeDir),
     forall(member(File-Content,

@@ -78,8 +78,7 @@ sandbox_app_config(Dir) :-
 %   Dir is a new temporary directory that is removed when xpce exits.
 
 sandbox_dir(Prefix, Dir) :-
-    tmp_file(Prefix, Dir),
-    make_directory(Dir),
+    tmp_directory(Prefix, Dir),
     assertz(created_dir(Dir)).
 
 %!  remove_sandbox_at_exit is det.

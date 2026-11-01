@@ -56,8 +56,7 @@ setup_headless :-
 :- initialization(setup_headless, now).
 
 test_animation :-
-    tmp_file(animation, Dir),
-    make_directory(Dir),
+    tmp_directory(animation, Dir),
     nb_setval(test_animation_dir, Dir),
     call_cleanup(run_tests([ animation ]),
                  delete_directory_and_contents(Dir)).

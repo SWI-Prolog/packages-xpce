@@ -962,9 +962,7 @@ ensure_terminfo(Backend) :-
     ).
 
 terminfo_scratch_dir(Dir) :-
-    tmp_file(terminfo, Base),
-    atom_concat(Base, '.d', Dir),
-    make_directory(Dir).
+    tmp_directory(terminfo, Dir).
 
 compile_terminfo(Source, Dir) :-
     process_create(path(tic), ['-o', file(Dir), file(Source)],

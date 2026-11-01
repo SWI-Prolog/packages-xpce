@@ -71,8 +71,7 @@ run_demo(File, Goal) :-
     forall(member(F, New), send(F, destroy)).
 
 scan_tree(Dir) :-
-    tmp_file(du, Dir),
-    make_directory(Dir),
+    tmp_directory(du, Dir),
     directory_file_path(Dir, sub, Sub),
     make_directory(Sub),
     sized_file(Dir, 'a.txt', 100),

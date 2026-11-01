@@ -60,8 +60,7 @@ test_emacs_init :-
 :- meta_predicate with_dir(-, 0).
 
 with_dir(Dir, Goal) :-
-    tmp_file(emacs_init, Dir),
-    make_directory(Dir),
+    tmp_directory(emacs_init, Dir),
     call_cleanup(Goal, delete_directory_and_contents(Dir)).
 
 %!  with_path(+Alias, +Dir, :Goal)
