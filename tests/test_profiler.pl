@@ -439,13 +439,27 @@ test(a_method_can_be_edited_without_manpce, Manual == false) :-
     truth(object(@manual), Manual),
     free(T).
 
-test(edit_finds_the_method_not_its_class, [nondet, Files == [File]]) :-
+%   This needs the C source of the method, which requires addr2line(1)
+%   or atos(1) and debug information, which is not available in every
+%   build, notably not on Windows.
+
+test(edit_finds_the_method_not_its_class,
+     [ condition(has_visible_frames_c_source),
+       nondet, Files == [File]
+     ]) :-
     get(@display_manager?class, send_method, has_visible_frames, M),
     findall(F, ( prolog_edit:locate(M, Loc), get_dict(file, Loc, F) ),
             Files0),
     sort(Files0, Files),
     Files = [File],
     file_base_name(File, 'displaymgr.c').
+
+has_visible_frames_c_source :-
+    get(@display_manager?class, send_method, has_visible_frames, M),
+    get(M, slot, function, Address),
+    Address \== 0,
+    '$addr2line'(Address, Source),
+    '$addr2line_location'(Source, _File, _Line).
 
 :- end_tests(profiler).
 
