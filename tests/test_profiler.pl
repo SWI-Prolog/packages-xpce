@@ -254,15 +254,17 @@ test(limit_changed, Stale == @on) :-
         send(CV, value, Old)),
     free(F).
 
-%   The call tree below p/1.  Ticks are 5 ms.  q/1 spends 10 ticks
-%   itself and 80 below it on behalf of p/1, all in p/1, which is not
-%   expanded again as it is on the path.  r/1 calls nothing.
+%   The call tree below p/1.  Ticks are 5 ms.  p/1 and q/1 call each
+%   other, so they are shown once each, q/1 below p/1 through which the
+%   recursion is entered.  The time below the recursive call of q/1 is
+%   not counted again.  p/1 owns 10 ticks itself and 5 in r/1, q/1 owns
+%   10 ticks.  These are scaled up to the 100 ticks of p/1.
 
-test(call_tree, [ Tree == node('p/1', 0.05,
-                               [ node('q/1', 0.05, [node('p/1', 0.45, [])]),
-                                 node('r/1', 0.025, [])
+test(call_tree, [ Tree == node('p/1', 0.2,
+                               [ node('q/1', 0.2, []),
+                                 node('r/1', 0.1, [])
                                ]),
-                  Total =:= 0.575
+                  Total =:= 0.5
                 ]) :-
     profiler(F),
     get(F, window, prof_tree, T),
@@ -277,7 +279,8 @@ test(call_tree, [ Tree == node('p/1', 0.05,
 %   cycle of its own in the profile.  The calls of ev/1 to od/1 are
 %   nested: the outer one includes the inner one.  Its calls to work/0
 %   at the two levels are distinct.  The tree and the graph have one
-%   node for each.
+%   node for each.  All time is spent in work/0: 40 ticks called by the
+%   outer ev/1 and 20 by each deeper level.
 
 recursion_profile(
     profile{summary:summary{samples:100, ticks:100, accounting:0,
@@ -286,33 +289,35 @@ recursion_profile(
             nodes:[ node{predicate:user:ev/1,
                          ticks_self:0, ticks_siblings:100,
                          call:2, redo:0, exit:2,
-                         callers:[node(user:od/1,1,0,60,1,0,1)],
-                         callees:[node(user:work/0,0,10,0,1,0,1),
-                                  node(user:od/1,0,0,80,1,0,1),
-                                  node(user:work/0,1,10,0,1,0,1),
-                                  node(user:od/1,1,0,60,1,0,1)]},
+                         callers:[node(user:od/1,1,0,40,1,0,1)],
+                         callees:[node(user:work/0,0,40,0,1,0,1),
+                                  node(user:od/1,0,0,60,1,0,1),
+                                  node(user:work/0,1,20,0,1,0,1),
+                                  node(user:od/1,1,0,20,1,0,1)]},
                     node{predicate:user:od/1,
-                         ticks_self:0, ticks_siblings:80,
+                         ticks_self:0, ticks_siblings:60,
                          call:2, redo:0, exit:2,
-                         callers:[node(user:ev/1,0,0,80,1,0,1),
-                                  node(user:ev/1,1,0,60,1,0,1)],
-                         callees:[node(user:ev/1,1,0,70,1,0,1),
-                                  node(user:work/0,0,10,0,1,0,1)]},
+                         callers:[node(user:ev/1,0,0,60,1,0,1),
+                                  node(user:ev/1,1,0,20,1,0,1)],
+                         callees:[node(user:ev/1,1,0,40,1,0,1),
+                                  node(user:work/0,0,20,0,1,0,1),
+                                  node(user:work/0,1,20,0,1,0,1)]},
                     node{predicate:user:work/0,
-                         ticks_self:30, ticks_siblings:0,
-                         call:3, redo:0, exit:3,
-                         callers:[node(user:ev/1,0,10,0,1,0,1),
-                                  node(user:ev/1,1,10,0,1,0,1),
-                                  node(user:od/1,0,10,0,1,0,1)],
+                         ticks_self:100, ticks_siblings:0,
+                         call:4, redo:0, exit:4,
+                         callers:[node(user:ev/1,0,40,0,1,0,1),
+                                  node(user:ev/1,1,20,0,1,0,1),
+                                  node(user:od/1,0,20,0,1,0,1),
+                                  node(user:od/1,1,20,0,1,0,1)],
                          callees:[]}
                   ]}).
 
 test(tree_merges_cycles,
-     [ Children == [ node('work/0', 0.1, []),
-                     node('od/1', 0, [ node('ev/1', 0.35, []),
-                                       node('work/0', 0.05, [])
-                                     ])
-                   ]
+     [ Children == [ node('work/0', 0.3, []),
+                     node('od/1', 0.0, [ node('work/0', 0.2, [])
+                                       ])
+                   ],
+       Total =:= 0.5
      ]) :-
     recursion_profile(Data),
     profiler(true, Data, F),
@@ -320,11 +325,12 @@ test(tree_merges_cycles,
     get(F, node_data, user:ev/1, EvData),
     send(T, render, EvData),
     get(T, root, Root),
+    get(Root, total, Total),
     tree_term(Root, node(_, _, Children0)),
     msort(Children0, Sorted),
     reverse(Sorted, Children),
     free(F).
-test(graph_merges_cycles, [ Work-Od == 20-80 ]) :-
+test(graph_merges_cycles, [ Work-Od == 60-60 ]) :-
     recursion_profile(Data),
     profiler(true, Data, F),
     call_graph(F, user:ev/1, Edges),
@@ -342,14 +348,15 @@ test(components, [ Same-Other == true-false ]) :-
 %   Clicking a node of the call tree, also one with children, makes its
 %   predicate the current node of the profiler, which all tabs show.
 
-test(tree_click, [Current-Graph == (user:q/1)-(user:q/1)]) :-
-    profiler(F),
+test(tree_click, [Current-Graph == (user:od/1)-(user:od/1)]) :-
+    recursion_profile(Profile),
+    profiler(true, Profile, F),
     get(F, window, prof_tree, T),
-    get(F, node_data, user:p/1, Data),
+    get(F, node_data, user:ev/1, Data),
     send(F, details, Data),
     send(T, render, Data),
     get(T, root, Root),
-    get(Root?children, find, @arg1?label == 'q/1', Q),
+    get(Root?children, find, @arg1?label == 'od/1', Q),
     send(Q, has_children),
     send(T?chart, clicked, Q),
     get(T, node, TData),
@@ -496,7 +503,7 @@ method_profiler(F, M, K) :-
 tree_term(Node, node(Label, Value, Children)) :-
     get(Node?label, value, Label),
     get(Node, value, Value0),
-    Value is round(Value0*1000)/1000,
+    Value is round(Value0*1000)/1000.0,
     (   get(Node, children, Chain),
         Chain \== @nil
     ->  chain_list(Chain, Nodes),

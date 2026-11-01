@@ -1127,8 +1127,16 @@ node.  A callee gets the time spent in it on behalf of its caller, and
 its own callees share the time spent below it on behalf of that caller
 in proportion to all the time spent below it: the profile does not tell
 the calls made on behalf of one caller apart.  A callee is not expanded
-if it is already on the path to the current node (recursion), if it
-takes less than `min_share' of the current node, or below `max_depth'.
+if it takes less than `min_share' of the current node, or below
+`max_depth'.
+
+The predicates of a recursion (a strongly connected component of the
+call graph) are shown once each, as a tree of the calls by which they
+are first reached from the predicate through which the recursion is
+entered.  Each gets the time it spent itself and in the calls it made
+out of the recursion.  The time of a call into the recursion includes
+that of the recursive calls inside it, so following those would count
+it again.
 
 As the call graph, the tree is only built when its tab can be seen.
 */
@@ -1212,10 +1220,34 @@ render(W, Data:prolog) :->
     MinTicks is Total*MinShare,
     get(Tool, components, Components),
     Ctx = tree(Nodes, Components, TickTime, MinTicks, MaxDepth),
-    call_tree(Ctx, Data.predicate, Data.ticks_self, Data.callees,
-              1.0, [Data.predicate], Term),
+    pred_tree(Ctx, Data, Data.ticks_self, Data.ticks_siblings,
+              [Data.predicate], Term),
     hierarchy_from_term(Term, Root),
     send(W, root, Root).
+
+%   pred_tree(+Ctx, +Data, +Self, +Below, +Path, -Term)
+%
+%   Term is the tree for the predicate of Data, called such that it
+%   spent Self ticks itself and Below in its callees.
+
+pred_tree(Ctx, Data, Self, Below, Path, Term) :-
+    Ctx = tree(_, Components, _, _, _),
+    Pred = Data.predicate,
+    (   recursive(Pred, Data.callees, Components)
+    ->  Edge is Self+Below,
+        component_tree(Ctx, Pred, Edge, Path, Term)
+    ;   (   Data.ticks_siblings > 0
+        ->  Scale is Below/Data.ticks_siblings
+        ;   Scale = 0
+        ),
+        call_tree(Ctx, Pred, Self, Data.callees, Scale, Path, Term)
+    ).
+
+recursive(Pred, Callees, Components) :-
+    member(node(Callee, _, _, _, _, _, _), Callees),
+    Callee \== '<recursive>',
+    same_component(Pred, Callee, Components),
+    !.
 
 %   call_tree(+Ctx, +Pred, +Self, +Callees, +Scale, +Path, -Term)
 %
@@ -1244,13 +1276,77 @@ callee_tree(Ctx, Callee, Self, Below, Path, Term) :-
         Depth < MaxDepth,
         get_assoc(Callee, Nodes, Data),
         Data.ticks_siblings > 0
-    ->  Scale is Below/Data.ticks_siblings,
-        call_tree(Ctx, Callee, Self, Data.callees, Scale,
-                  [Callee|Path], Term)
+    ->  pred_tree(Ctx, Data, Self, Below, [Callee|Path], Term)
     ;   tree_labels(Callee, Label, Title),
         Seconds is Edge*TickTime,
         Term = node(Label, Seconds, [], [data(Callee), title(Title)])
     ).
+
+%   component_tree(+Ctx, +Entry, +Edge, +Path, -Term)
+%
+%   Term is the tree for the recursion entered through Entry by a call
+%   that took Edge ticks.  The members of the recursion form a tree
+%   by the calls through which they are first reached from Entry.  Each
+%   owns the time it spent itself and in its calls out of the
+%   recursion.  These are scaled such that they add up to Edge.
+
+component_tree(Ctx, Entry, Edge, Path, Term) :-
+    Ctx = tree(Nodes, Components, _, _, _),
+    component_members([Entry-[]], [Entry], Components, Nodes, Members),
+    aggregate_all(sum(Own), member(m(_, _, _, _, Own), Members), Total),
+    (   Total > 0
+    ->  Scale is Edge/Total
+    ;   Scale = 0
+    ),
+    maplist(arg(1), Members, Preds),
+    append(Preds, Path, Path1),
+    member_tree(Ctx, Entry, Members, Scale, Path1, Term).
+
+%   component_members(+Queue, +Seen, +Components, +Nodes, -Members)
+%
+%   Queue holds Pred-Parent pairs.  Members is a list m(Pred, Parent, Self, Out, Own) for the members
+%   of the recursion, found breadth first.  Parent is the member from
+%   which Pred was first reached (`[]` for the entry), Out are the
+%   calls out of the recursion as Callee-t(Self, Children, Calls) and
+%   Own is the time spent in Pred itself and in Out.
+
+component_members([], _, _, _, []).
+component_members([P-Parent|Queue], Seen, Components, Nodes,
+                  [m(P, Parent, Self, Out, Own)|Members]) :-
+    (   get_assoc(P, Nodes, Data)
+    ->  Self = Data.ticks_self,
+        merged_relatives(P, Data.callees, Components, Merged)
+    ;   Self = 0,
+        Merged = []
+    ),
+    partition(in_component(P, Components), Merged, In, Out),
+    aggregate_all(sum(T+CT), member(_-t(T, CT, _), Out), OutTicks),
+    Own is Self+OutTicks,
+    findall(Q, ( member(Q-_, In), \+ memberchk(Q, Seen) ), New),
+    append(Seen, New, Seen1),
+    findall(Q-P, member(Q, New), Children),
+    append(Queue, Children, Queue1),
+    component_members(Queue1, Seen1, Components, Nodes, Members).
+
+in_component(P, Components, Q-_) :-
+    same_component(P, Q, Components).
+
+member_tree(Ctx, P, Members, Scale, Path,
+            node(Label, Seconds, Children, [data(P), title(Title)])) :-
+    Ctx = tree(_, _, TickTime, _, _),
+    memberchk(m(P, _, Self, Out, _), Members),
+    tree_labels(P, Label, Title),
+    Seconds is Self*Scale*TickTime,
+    findall(Child,
+            ( member(m(Q, P, _, _, _), Members),
+              Q \== P,
+              member_tree(Ctx, Q, Members, Scale, Path, Child)
+            ), InChildren),
+    findall(Child,
+            ( member(Callee-t(T, CT, _), Out),
+              callee_tree(Ctx, Callee, T*Scale, CT*Scale, Path, Child)
+            ), OutChildren),
+    append(InChildren, OutChildren, Children).
 
 %   As the boxes of the call graph, the segments leave out the module.
 %   The balloon shows it.
