@@ -333,7 +333,8 @@ pce_preferences:preferences(prof_frame,
     [ prof_frame   - [ auto_reset ],
       prof_browser - [ max_width ],
       prof_graph   - [ caller_depth, callee_depth, prune_above,
-                       max_relatives, max_nodes, natural_zoom
+                       max_relatives, max_nodes, max_edge_width,
+                       natural_zoom
                      ],
       prof_tree    - [ view, min_share, max_depth ],
       prof_details - [ header_colour, header_background ]
@@ -344,6 +345,7 @@ pce_preferences:edit_type(prof_graph, callee_depth,  '1..5').
 pce_preferences:edit_type(prof_graph, prune_above,   '1..20').
 pce_preferences:edit_type(prof_graph, max_relatives, '1..30').
 pce_preferences:edit_type(prof_graph, max_nodes,     '10..100').
+pce_preferences:edit_type(prof_graph, max_edge_width, '1.0..5.0').
 pce_preferences:edit_type(prof_graph, natural_zoom,  '0.5..3.0').
 pce_preferences:edit_type(prof_tree,  min_share,     '0.0..0.1').
 pce_preferences:edit_type(prof_tree,  max_depth,     '5..100').
@@ -968,7 +970,8 @@ status(T, Status:{on_top,hidden}) :->
 node in the middle, its callers above and its callees below, each box
 tinted by the time spent in it and its children, and each arrow
 labelled with the number of calls and as thick as the time that flows
-along it.
+along it, up to `max_edge_width'.  Set that to 1 for all edges to be
+thin.
 
 A graph is only of use as long as it can be read, so it is pruned once
 it grows, but no sooner.  The callers or callees of a predicate are all
@@ -1001,6 +1004,8 @@ class_variable(max_relatives, '1..', 12,
                "Most callers or callees shown").
 class_variable(max_nodes,    '1..', 30,
                "Nodes beyond which no further levels are added").
+class_variable(max_edge_width, num, 5,
+               "Width of an edge that takes all of the time").
 
 initialise(W) :->
     send_super(W, initialise, @default, call_graph, size(300,200)),
@@ -1049,6 +1054,7 @@ render(W, Data:prolog) :->
     get(W, class_variable_value, prune_above, PruneAbove),
     get(W, class_variable_value, max_relatives, MaxRelatives),
     get(W, class_variable_value, max_nodes, MaxNodes),
+    get(W, class_variable_value, max_edge_width, MaxWidth),
     get(Tool, ticks, Ticks),
     get(Tool, accounting_ticks, Accounting),
     Total is max(1, Ticks-Accounting),
@@ -1061,7 +1067,8 @@ render(W, Data:prolog) :->
     numbered_ids(Preds, 0, IdList),
     send(W, slot, ids, Ids),
     graph_colours(W, Colours),
-    phrase(dot_graph(Tool, Data.predicate, Total, Colours, Ids, Edges),
+    phrase(dot_graph(Tool, Data.predicate, Total, Colours, MaxWidth,
+                     Ids, Edges),
            Codes),
     string_codes(Dot, Codes),
     debug(profile(graph), '~s', [Dot]),
@@ -1620,11 +1627,12 @@ graph_preds(Pred, Edges, [Pred|Preds]) :-
             Preds0),
     list_to_set(Preds0, Preds).
 
-%!  dot_graph(+Tool, +Pred, +Total, +Colours, +Ids, +Edges)//
+%!  dot_graph(+Tool, +Pred, +Total, +Colours, +MaxWidth, +Ids, +Edges)//
 %
-%   The call graph in the dot language.
+%   The call graph in the dot language.  MaxWidth is the width of an
+%   edge along which all of the time flows.
 
-dot_graph(Tool, Pred, Total, colours(FG), Ids, Edges) -->
+dot_graph(Tool, Pred, Total, colours(FG), MaxWidth, Ids, Edges) -->
     "digraph calls {\n",
     "  graph [rankdir=TB nodesep=0.25 ranksep=0.45];\n",
     "  node [shape=box style=filled fontname=\"Helvetica\" \c
@@ -1632,7 +1640,7 @@ dot_graph(Tool, Pred, Total, colours(FG), Ids, Edges) -->
     "  edge [fontname=\"Helvetica\" fontsize=9 arrowsize=0.7 ",
     "color=", dot_string(FG), " fontcolor=", dot_string(FG), "];\n",
     dot_nodes(Ids, Tool, Pred, Total),
-    dot_edges(Edges, Tool, Total, Ids),
+    dot_edges(Edges, Tool, Total, MaxWidth, Ids),
     "}\n".
 
 dot_nodes([], _, _, _) --> [].
@@ -1714,25 +1722,26 @@ heat_colour(Ticks, Total, Colour) :-
     B is round(215 - F*165),
     format(atom(Colour), '#ff~|~`0t~16r~2+~|~`0t~16r~2+', [G, B]).
 
-dot_edges([], _, _, _) --> [].
-dot_edges([Edge|T], Tool, Total, Ids) -->
+dot_edges([], _, _, _, _) --> [].
+dot_edges([Edge|T], Tool, Total, MaxWidth, Ids) -->
     { Edge = edge(From, To, _, _),
       memberchk(FromId-From, Ids),
       memberchk(ToId-To, Ids),
-      edge_attrs(Tool, Edge, Total, Attrs)
+      edge_attrs(Tool, Edge, Total, MaxWidth, Attrs)
     },
     "  ", atom(FromId), " -> ", atom(ToId), " [", dot_attrs(Attrs), "];\n",
-    dot_edges(T, Tool, Total, Ids).
+    dot_edges(T, Tool, Total, MaxWidth, Ids).
 
 %   An edge is labelled with the number of calls only.  The time of a
 %   call into a cycle does not add up to anything that reads well: the
 %   time of a call at an outer level includes that of the calls further
 %   in.  It does set the width of the edge, and the tooltip tells it.
 
-edge_attrs(Tool, edge(From, To, Ticks, Calls), Total,
+edge_attrs(Tool, edge(From, To, Ticks, Calls), Total, MaxWidth,
            [label=Label, tooltip=Tooltip, penwidth=Width]) :-
     format(string(Label), '~D×', [Calls]),
-    Width is round(10*(1 + 4*min(1.0, Ticks/float(Total))))/10.0,
+    Share = min(1.0, Ticks/float(Total)),
+    Width is round(10*(1 + (max(1, MaxWidth)-1)*Share))/10.0,
     edge_tooltip(Tool, From, To, Ticks, Calls, Tooltip).
 
 edge_tooltip(_Tool, P, P, _Ticks, Calls, Tooltip) :-

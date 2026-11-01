@@ -210,7 +210,7 @@ test(cycle_edge, [Ticks-Calls == 90-8, Label == "8×"]) :-
     call_graph(F, user:p/1, Edges),
     Edge = edge(user:q/1, user:p/1, Ticks, Calls),
     memberchk(Edge, Edges),
-    pce_profile:edge_attrs(F, Edge, 100, Attrs),
+    pce_profile:edge_attrs(F, Edge, 100, 5, Attrs),
     memberchk(label=Label, Attrs),
     free(F).
 
@@ -222,7 +222,7 @@ test(edge_tooltip, Tooltip == "q/1 → p/1\nCalls: 8, time: 90.0%") :-
     call_graph(F, user:p/1, Edges),
     Edge = edge(user:q/1, user:p/1, _, _),
     memberchk(Edge, Edges),
-    pce_profile:edge_attrs(F, Edge, 100, Attrs),
+    pce_profile:edge_attrs(F, Edge, 100, 5, Attrs),
     memberchk(tooltip=Tooltip, Attrs),
     free(F).
 test(recursive_edge_tooltip, Tooltip == "p/1 calls itself\nCalls: 7") :-
@@ -230,7 +230,7 @@ test(recursive_edge_tooltip, Tooltip == "p/1 calls itself\nCalls: 7") :-
     call_graph(F, user:p/1, Edges),
     Edge = edge(user:p/1, user:p/1, _, _),
     memberchk(Edge, Edges),
-    pce_profile:edge_attrs(F, Edge, 100, Attrs),
+    pce_profile:edge_attrs(F, Edge, 100, 5, Attrs),
     memberchk(tooltip=Tooltip, Attrs),
     free(F).
 
