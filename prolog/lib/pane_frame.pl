@@ -1305,7 +1305,8 @@ restore_report(F, Pane:window) :->
     ->  get(F, ensure_status_dialog, SD),
         get(Report, kind, Kind),
         get(Report, text, Text),
-        send(SD, report, Kind, '%s', Text)
+        get(Report, time, Time),
+        send(SD, restore_report, Kind, Text, Time)
     ;   true
     ).
 
@@ -2506,7 +2507,11 @@ The label on it is *named* `reporter', which is what makes `dialog
 variable(prompter,     dialog_item*, get,  "Item being prompted with").
 variable(report_count, number,       get,  "Count down to erasing a report").
 variable(report_type,  name*,        both, "Kind of the last report").
+variable(report_time,  num*,         both, "When the last report was shown").
 variable(keep,         bool := @off, both, "Keep me if no pane uses me").
+
+class_variable(report_hold, num, 2,
+               "Seconds a warning or error holds against lesser reports").
 
 initialise(D) :->
     "Create the reporter and the line counter"::
@@ -2563,9 +2568,30 @@ clear(D) :->
 
 report(D, Type:name, Fmt:[char_array], Args:any...) :->
     "Show a message on my reporter"::
+    get_time(Now),
+    show_report(D, Type, Fmt, Args, Now, report).
+
+restore_report(D, Kind:name, Text:char_array, Time:num) :->
+    "Show again what a pane said at Time, without alerting"::
+    show_report(D, Kind, '%s', [Text], Time, format).
+
+%!  show_report(+StatusDialog, +Kind, +Fmt, +Args, +Time, +How) is det.
+%
+%   Show a message of Kind given at Time, unless a standing warning or
+%   error holds against it.  How is `report` for a new message, which
+%   alerts on a warning or error, and `format` for one that is said
+%   again.
+
+show_report(D, Type, Fmt, Args, Time, How) :-
     (   get(D, report_type, ReportType),
-        ok_to_overrule(Type, ReportType)
+        (   ok_to_overrule(Type, ReportType)
+        ->  true
+        ;   held_since(D, Age),
+            get(D, report_hold, Hold),
+            Age >= Hold
+        )
     ->  send(D, report_type, Type),
+        send(D, report_time, Time),
         get(D, member, reporter, Label),
         get(D, report_count, RC),
         (   Fmt == '', Type == status       % clear
@@ -2576,17 +2602,35 @@ report(D, Type:name, Fmt:[char_array], Args:any...) :->
             ;   send(Label, x, 0)
             ),
             send(Label, displayed, @on),
-            Msg =.. [report, Type, Fmt|Args],
+            (   How == report
+            ->  Msg =.. [report, Type, Fmt|Args]
+            ;   Msg =.. [format, Fmt|Args]
+            ),
             send(Label, Msg),
             send(RC, value, 10)
         )
     ;   true
     ).
 
+%!  held_since(+StatusDialog, -Age) is semidet.
+%
+%   Age is the number of seconds since the report on StatusDialog was
+%   shown.
+
+held_since(D, Age) :-
+    get(D, report_time, Time),
+    Time \== @nil,
+    get_time(Now),
+    Age is Now - Time.
+
 %!  ok_to_overrule(+New, +Standing) is semidet.
 %
 %   True when a report of kind New may take the place of one of kind
-%   Standing.  A warning does not push aside an error.
+%   Standing.  A warning does not push aside an error.  Otherwise a
+%   warning or error holds only for `report_hold` seconds: a command
+%   cannot hide the warning it gave with the status message that
+%   follows, but a later command started with the mouse, which does not
+%   pass ->editor_event, is not silenced.
 
 ok_to_overrule(_, @nil).
 ok_to_overrule(_, status).
@@ -3499,9 +3543,12 @@ tab_name(Options, Name) :-
 
 variable(kind, name,   get, "Kind of report").
 variable(text, string, get, "Text of the report").
+variable(time, num,    get, "When the report was given").
 
 initialise(R, Kind:name, Text:string) :->
     send(R, slot, kind, Kind),
-    send(R, slot, text, Text).
+    send(R, slot, text, Text),
+    get_time(Now),
+    send(R, slot, time, Now).
 
 :- pce_end_class(report_memory).

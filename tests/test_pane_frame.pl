@@ -2453,6 +2453,75 @@ test(a_prompt_ends_a_warning, Text == 'Found 2 matches') :-
     send(Item, free),
     send(P1, report, status, 'Found %d matches', 2),
     status_text(F, Text).
+
+%       A command cannot hide the warning it gave with the status
+%       message that follows.  A warning holds for `report_hold` seconds
+%       only though: a command started with the mouse does not end it as
+%       a key does, and its status messages used to be lost for good.
+
+test(a_status_message_does_not_hide_a_fresh_warning,
+     Text == 'Trailing backslash') :-
+    two_pane_frame(F, P1, _P2),
+    send(P1, report, warning, 'Trailing backslash'),
+    send(P1, report, status, 'Found %d matches', 2),
+    status_text(F, Text).
+test(an_older_warning_gives_way, Text == 'Found 2 matches') :-
+    two_pane_frame(F, P1, _P2),
+    send(P1, report, warning, 'Trailing backslash'),
+    age_report(F),
+    send(P1, report, status, 'Found %d matches', 2),
+    status_text(F, Text).
+test(an_older_error_gives_way, Text == 'Found 2 matches') :-
+    two_pane_frame(F, P1, _P2),
+    send(P1, report, error, 'No such file'),
+    age_report(F),
+    send(P1, report, status, 'Found %d matches', 2),
+    status_text(F, Text).
+
+%       Switching panes says a warning again.  That does not alert, and
+%       the warning holds from when it was given, not from when it was
+%       said again.
+
+test(a_restored_warning_does_not_alert,
+     [Alerts, Text] == [0, 'Trailing backslash']) :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, warning, 'Trailing backslash'),
+    show(F, P2),
+    get(F, status_dialog, SD),
+    get(SD, member, reporter, Label),
+    new(Count, number(0)),
+    send(Label, send_method,
+         send_method(alert, new(vector), message(Count, plus, 1))),
+    show(F, P1),
+    get(Count, value, Alerts),
+    status_text(F, Text).
+test(a_restored_warning_holds_from_when_it_was_given,
+     Text == 'Found 2 matches') :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, warning, 'Trailing backslash'),
+    get(P1, attribute, last_report, Report),
+    get(Report, time, T0),
+    get(F, status_dialog, SD),
+    get(SD, report_hold, Hold),
+    T is T0 - Hold - 1,
+    send(Report, slot, time, T),
+    show(F, P2),
+    show(F, P1),
+    send(P1, report, status, 'Found %d matches', 2),
+    status_text(F, Text).
+
+%   age_report(+Frame)
+%
+%   Pretend the report on the bar of Frame was shown longer ago than
+%   `report_hold`.
+
+age_report(F) :-
+    get(F, status_dialog, SD),
+    get(SD, report_time, T0),
+    get(SD, report_hold, Hold),
+    T is T0 - Hold - 1,
+    send(SD, report_time, T).
+
 %       A pane that starts something new forgets what it said about the
 %       previous one, e.g., a hit list that runs another search.
 
