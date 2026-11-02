@@ -134,6 +134,13 @@ variable(time_view,        {percentage,seconds} := percentage,
 variable(components,       prolog, none,
          "Cached strongly connected components of the call graph").
 
+%!  .auto_reset
+%
+%   If @on (default), the profiler forgets what it collected as soon as
+%   it is shown here, so the next profile starts afresh.  If @off, a
+%   next profile adds to it, which accumulates several runs into one
+%   report.
+
 class_variable(auto_reset, bool, @on, "Reset profiler after collecting").
 
 initialise(F) :->
@@ -342,7 +349,7 @@ pce_preferences:preferences(prof_frame,
                        max_relatives, max_nodes, max_edge_width,
                        natural_zoom
                      ],
-      prof_tree    - [ view, min_share, max_depth ],
+      prof_tree    - [ view, min_share, max_depth, group_small ],
       prof_details - [ header_colour, header_background ]
     ]).
 
@@ -408,6 +415,12 @@ the filter hides.
                    "Show flat profile in browser").
 
 class_variable(size, size, size(40,20)).
+%!  .max_width
+%
+%   The list of predicates at the left is made as wide as the longest
+%   predicate name, but no wider than this percentage of the window, so
+%   a single long name does not push the other panes aside.
+
 class_variable(max_width, '1..100', 60,
                "Most percentage of the profiler ->fit_width takes").
 
@@ -677,7 +690,18 @@ variable(tabular, tabular, get, "Displayed table").
 variable(node,    prolog,  get, "Currently shown node").
 
 class_variable(background,        colour, ui_dialog_background).
+%!  .header_colour
+%
+%   Colour of the text of the row in the details that shows the current
+%   predicate, between its callers above and its callees below.
+
 class_variable(header_colour,     colour, black,  "Predicate header colour").
+
+%!  .header_background
+%
+%   Background colour of the row in the details that shows the current
+%   predicate.  The default follows the theme.
+
 class_variable(header_background, colour, prof_header_background,
                "Predicate header background").
 
@@ -996,8 +1020,11 @@ them are, and at most `max_relatives': ten callees that take about the
 same time all stay, while of a callee that takes most of the time and
 twenty that take next to nothing, only the first does.  Beyond the
 direct relatives of the node in the middle, the graph grows level by
-level, the heaviest calls first, up to `max_nodes'.  The details list
-all relatives.  The times on a call further out are
+level, the heaviest calls first, up to `max_nodes'.  The callers or
+callees that are left out are shown as a dashed "… N more" node.
+Clicking it adds them to the graph, connected to the predicates already
+there, until another predicate becomes the current one.  The details
+list all relatives.  The times on a call further out are
 those of all its calls, not only of the ones made on behalf of the node
 in the middle: the profile does not tell those apart.
 */
@@ -1008,22 +1035,76 @@ in the middle: the profile does not tell those apart.
 variable(node,  prolog,       get, "Currently shown node").
 variable(stale, bool := @off, get, "The node changed since it was drawn").
 variable(ids,   prolog,       get, "Id-Predicate pairs of the graph nodes").
+variable(expanded, prolog,    get, "Dir-Pred of the \"… N more\" clicked").
+
+%!  .caller_depth
+%
+%   How many levels of callers the call graph shows above the current
+%   predicate: 1 shows its direct callers, 2 also their callers, etc.
+%   Levels beyond the first are only added while the graph has fewer
+%   than `max_nodes` nodes.
 
 class_variable(caller_depth, '1..', 2,   "Levels of callers shown").
+
+%!  .callee_depth
+%
+%   How many levels of callees the call graph shows below the current
+%   predicate: 1 shows the predicates it calls, 2 also the predicates
+%   those call, etc.  Levels beyond the first are only added while the
+%   graph has fewer than `max_nodes` nodes.
+
 class_variable(callee_depth, '1..', 2,   "Levels of callees shown").
+
+%!  .natural_zoom
+%
+%   Scale at which a call graph that fits the window is shown.  A graph
+%   that does not fit at this scale is scaled down until it does.
+
 class_variable(natural_zoom, num, 1.5,
                "Zoom of a graph that fits at this scale").
+
+%!  .prune_above
+%
+%   A predicate with at most this many callers (or callees) has all of
+%   them shown.  Of a predicate with more, only those that take a fair
+%   share of the time are shown, at most `max_relatives`.  The others
+%   are combined into a dashed "… N more" node; clicking it adds them
+%   to the graph.  The details always list all of them.
+
 class_variable(prune_above,  '1..', 6,
                "Callers or callees that are all shown").
+
+%!  .max_relatives
+%
+%   The largest number of callers (or callees) of a predicate the call
+%   graph shows if it has more than `prune_above`, the heaviest first.
+%   Those left out are combined into a dashed "… N more" node; clicking
+%   it adds them to the graph.
+
 class_variable(max_relatives, '1..', 12,
                "Most callers or callees shown").
+
+%!  .max_nodes
+%
+%   The call graph stops adding levels of callers and callees once it
+%   has this many nodes, so it stays readable.  The direct callers and
+%   callees of the current predicate are always shown.
+
 class_variable(max_nodes,    '1..', 30,
                "Nodes beyond which no further levels are added").
+
+%!  .max_edge_width
+%
+%   Line width of an arrow in the call graph along which all of the
+%   time is spent.  Arrows are drawn thinner in proportion to the time
+%   spent in the calls they stand for.  Use 1 to draw all arrows thin.
+
 class_variable(max_edge_width, num, 5,
                "Width of an edge that takes all of the time").
 
 initialise(W) :->
     send_super(W, initialise, @default, call_graph, size(300,200)),
+    send(W, slot, expanded, []),
     send(@prof_graphs, append, W),
     get(W, xdot, X),
     send(X, node_clicked, message(W, clicked, @arg1)),
@@ -1035,8 +1116,17 @@ unlink(W) :->
     send(@prof_graphs, delete_all, W),
     send_super(W, unlink).
 
+%   The "… N more" nodes that were clicked stay open while the graph
+%   shows the same predicate.
+
 node(W, Data:prolog) :->
     "Show the call graph around a node"::
+    (   get(W, node, Old),
+        is_dict(Old),
+        Old.predicate == Data.predicate
+    ->  true
+    ;   send(W, slot, expanded, [])
+    ),
     send(W, slot, node, Data),
     send(W, refresh).
 
@@ -1076,7 +1166,11 @@ render(W, Data:prolog) :->
     call_graph(Tool, Data,
                limits(CallerDepth, CalleeDepth,
                       PruneAbove, MaxRelatives, MaxNodes),
-               Edges),
+               Edges0),
+    get(W, expanded, Expanded),
+    expand_hidden(Tool, Data, Expanded, Edges0, Edges1),
+    hidden_edges(Tool, Data, Edges1, Hidden),
+    append(Edges1, Hidden, Edges),
     graph_preds(Data.predicate, Edges, Preds),
     pairs_keys_values(Ids, IdList, Preds),
     numbered_ids(Preds, 0, IdList),
@@ -1100,21 +1194,38 @@ star(W) :->
     get(W, xdot, X),
     ignore(send(X, star, n0)).
 
+%   A node that stands for the hidden relatives of a predicate acts as
+%   that predicate, except that clicking it adds them to the graph.
+
 pred(W, Node:xdot_node, Pred:prolog) :<-
     "Predicate shown by a node of the graph"::
     get(W, ids, Ids),
     get(Node, name, Id),
-    memberchk(Id-Pred, Ids).
+    memberchk(Id-P, Ids),
+    (   P = more(_, Pred, _)
+    ->  true
+    ;   Pred = P
+    ).
 
 clicked(W, Node:xdot_node) :->
-    "Make the clicked predicate the current one"::
-    get(W, pred, Node, Pred),
+    "Make the clicked predicate the current one or show hidden ones"::
+    get(W, ids, Ids),
+    get(Node, name, Id),
+    memberchk(Id-P, Ids),
     get(W, node, Data),
-    (   Pred == Data.predicate
+    (   P = more(Dir, Pred, _)
+    ->  send(W, expand, Dir, Pred)
+    ;   P == Data.predicate
     ->  true
     ;   prof_tool(W, Tool),
-        send(Tool, details, Pred)
+        send(Tool, details, P)
     ).
+
+expand(W, Dir:{callers,callees}, Pred:prolog) :->
+    "Add all callers or callees of Pred to the graph"::
+    get(W, expanded, Expanded),
+    send(W, slot, expanded, [Dir-Pred|Expanded]),
+    send(W, refresh).
 
 edit(W, Node:xdot_node) :->
     "Edit the predicate of a node"::
@@ -1143,7 +1254,9 @@ its own callees share the time spent below it on behalf of that caller
 in proportion to all the time spent below it: the profile does not tell
 the calls made on behalf of one caller apart.  A callee is not expanded
 if it takes less than `min_share' of the current node, or below
-`max_depth'.
+`max_depth'.  If `group_small' is @on, the callees of a node that are
+not expanded because they take less than `min_share' are combined into
+a single "… N more" node, so their time stays visible in the chart.
 
 The predicates of a recursion (a strongly connected component of the
 call graph) are shown once each, as a tree of the calls by which they
@@ -1162,9 +1275,33 @@ As the call graph, the tree is only built when its tab can be seen.
 variable(node,  prolog,       get, "Currently shown node").
 variable(stale, bool := @off, get, "The node changed since it was drawn").
 
+%!  .min_share
+%
+%   A callee in the call tree that takes less than this fraction of the
+%   time of the current predicate is not opened up: it shows as a
+%   single segment, with its own callees included.  The default 0.002
+%   is 0.2%.  See also `group_small`.
+
 class_variable(min_share, num,   0.002,
                "Callees taking less of the time are not expanded").
+
+%!  .max_depth
+%
+%   The call tree is not opened up further than this many levels below
+%   the current predicate.
+
 class_variable(max_depth, '1..', 40, "Deepest level built").
+
+%!  .group_small
+%
+%   If @on, the callees of a predicate in the call tree that take less
+%   than `min_share` are combined into a single grey "… N more"
+%   segment.  The chart leaves out segments that are too small to see,
+%   so with many small callees this shows where their time went.  If
+%   @off (default), each callee has a segment of its own.
+
+class_variable(group_small, bool, @off,
+               "Combine callees below min_share into one node").
 
 initialise(W) :->
     send_super(W, initialise, @nil),
@@ -1189,7 +1326,8 @@ can_edit(W) :->
     get(W, popup_node, Node),
     Node \== @nil,
     get(Node, data, Pred),
-    Pred \= '<recursive>'.
+    Pred \= '<recursive>',
+    Pred \= more(_).
 
 edit(W) :->
     "Edit the predicate the popup is on"::
@@ -1232,9 +1370,10 @@ render(W, Data:prolog) :->
     Total is Data.ticks_self + Data.ticks_siblings,
     get(W, class_variable_value, min_share, MinShare),
     get(W, class_variable_value, max_depth, MaxDepth),
+    get(W, class_variable_value, group_small, GroupSmall),
     MinTicks is Total*MinShare,
     get(Tool, components, Components),
-    Ctx = tree(Nodes, Components, TickTime, MinTicks, MaxDepth),
+    Ctx = tree(Nodes, Components, TickTime, MinTicks, MaxDepth, GroupSmall),
     pred_tree(Ctx, Data, Data.ticks_self, Data.ticks_siblings,
               [Data.predicate], Term),
     hierarchy_from_term(Term, Root),
@@ -1264,7 +1403,7 @@ time_view(W) :->
 %   spent Self ticks itself and Below in its callees.
 
 pred_tree(Ctx, Data, Self, Below, Path, Term) :-
-    Ctx = tree(_, Components, _, _, _),
+    Ctx = tree(_, Components, _, _, _, _),
     Pred = Data.predicate,
     (   recursive(Pred, Data.callees, Components)
     ->  Edge is Self+Below,
@@ -1289,19 +1428,57 @@ recursive(Pred, Callees, Components) :-
 
 call_tree(Ctx, Pred, Self, Callees, Scale, Path,
           node(Label, Seconds, Children, [data(Pred), title(Title)])) :-
-    Ctx = tree(_, Components, TickTime, _, _),
+    Ctx = tree(_, Components, TickTime, _, _, _),
     tree_labels(Pred, Label, Title),
     Seconds is Self*TickTime,
     merged_relatives(Pred, Callees, Components, Merged),
-    findall(Child,
-            ( member(Callee-t(T, CT, _), Merged),
-              callee_tree(Ctx, Callee, T*Scale, CT*Scale, Path, Child)
-            ), Children).
+    callee_trees(Ctx, Pred, Merged, Scale, Path, Children).
+
+%   callee_trees(+Ctx, +Pred, +Callees, +Scale, +Path, -Children)
+%
+%   Children are the trees for Callees of Pred, a list Callee-t(Self,
+%   Children, Calls) whose ticks are multiplied by Scale.  If small
+%   callees are grouped and there are at least two of them, they are
+%   combined into one node.
+
+callee_trees(Ctx, Pred, Callees, Scale, Path, Children) :-
+    Ctx = tree(_, _, _, MinTicks, _, GroupSmall),
+    findall(c(Callee, Self, Below),
+            ( member(Callee-t(T, CT, _), Callees),
+              Self is T*Scale,
+              Below is CT*Scale,
+              Self+Below > 0
+            ), Cs),
+    (   GroupSmall == @on,
+        partition(small_callee(MinTicks), Cs, Small, Large),
+        Small = [_,_|_]
+    ->  maplist(callee_tree(Ctx, Path), Large, Children0),
+        more_tree(Ctx, Pred, Small, More),
+        append(Children0, [More], Children)
+    ;   maplist(callee_tree(Ctx, Path), Cs, Children)
+    ).
+
+small_callee(MinTicks, c(_, Self, Below)) :-
+    Self+Below < MinTicks.
+
+more_tree(Ctx, Pred, Small, node(Label, Seconds, [],
+                                 [ data(more(Pred)), title(Title),
+                                   colour(grey75)
+                                 ])) :-
+    Ctx = tree(_, _, TickTime, _, _, _),
+    length(Small, N),
+    aggregate_all(sum(S+B), member(c(_, S, B), Small), Ticks),
+    Seconds is Ticks*TickTime,
+    format(atom(Label), '\u2026 ~D more', [N]),
+    pred_label(Pred, Name),
+    format(string(Title), '~D small callees of ~w', [N, Name]).
+
+callee_tree(Ctx, Path, c(Callee, Self, Below), Term) :-
+    callee_tree(Ctx, Callee, Self, Below, Path, Term).
 
 callee_tree(Ctx, Callee, Self, Below, Path, Term) :-
-    Ctx = tree(Nodes, _, TickTime, MinTicks, MaxDepth),
+    Ctx = tree(Nodes, _, TickTime, MinTicks, MaxDepth, _),
     Edge is Self+Below,
-    Edge > 0,
     (   Below > 0,
         Edge >= MinTicks,
         \+ memberchk(Callee, Path),
@@ -1324,7 +1501,7 @@ callee_tree(Ctx, Callee, Self, Below, Path, Term) :-
 %   recursion.  These are scaled such that they add up to Edge.
 
 component_tree(Ctx, Entry, Edge, Path, Term) :-
-    Ctx = tree(Nodes, Components, _, _, _),
+    Ctx = tree(Nodes, Components, _, _, _, _),
     component_members([Entry-[]], [Entry], Components, Nodes, Members),
     aggregate_all(sum(Own), member(m(_, _, _, _, Own), Members), Total),
     (   Total > 0
@@ -1366,7 +1543,7 @@ in_component(P, Components, Q-_) :-
 
 member_tree(Ctx, P, Members, Scale, Path,
             node(Label, Seconds, Children, [data(P), title(Title)])) :-
-    Ctx = tree(_, _, TickTime, _, _),
+    Ctx = tree(_, _, TickTime, _, _, _),
     memberchk(m(P, _, Self, Out, _), Members),
     tree_labels(P, Label, Title),
     Seconds is Self*Scale*TickTime,
@@ -1375,10 +1552,7 @@ member_tree(Ctx, P, Members, Scale, Path,
               Q \== P,
               member_tree(Ctx, Q, Members, Scale, Path, Child)
             ), InChildren),
-    findall(Child,
-            ( member(Callee-t(T, CT, _), Out),
-              callee_tree(Ctx, Callee, T*Scale, CT*Scale, Path, Child)
-            ), OutChildren),
+    callee_trees(Ctx, P, Out, Scale, Path, OutChildren),
     append(InChildren, OutChildren, Children).
 
 %   As the boxes of the call graph, the segments leave out the module.
@@ -1468,6 +1642,110 @@ call_graph(Tool, Data, Limits, Edges) :-
     unique_edges(Edges1, Edges2),
     graph_preds(Pred, Edges2, Preds),
     foldl(recursion_edge(Tool, Data), Preds, Edges, Edges2).
+
+%!  expand_hidden(+Tool, +Data, +Expanded, +Edges0, -Edges) is det.
+%
+%   Add all callers or callees of the predicates in Expanded, a list of
+%   Dir-Pred whose "… N more" node was clicked, to the graph Edges0 and
+%   connect them to the predicates that are already there.  An added
+%   predicate may have been expanded itself, so this repeats until
+%   nothing is added.
+
+expand_hidden(Tool, Data, Expanded, Edges0, Edges) :-
+    Pred = Data.predicate,
+    graph_preds(Pred, Edges0, Shown),
+    get(Tool, components, Components),
+    findall(Edge,
+            ( member(Dir-P, Expanded),
+              memberchk(P, Shown),
+              pred_data(Tool, Data, P, PData),
+              merged_relatives(P, PData.Dir, Components, Merged),
+              member(Other-t(Self, Children, Calls), Merged),
+              \+ memberchk(Other, Shown),
+              Ticks is Self+Children,
+              edge(Dir, P, Other, Ticks, Calls, Edge)
+            ), Opened),
+    (   Opened == []
+    ->  Edges = Edges0
+    ;   findall(Other, ( member(edge(F, T, _, _), Opened),
+                         ( Other = F ; Other = T ),
+                         \+ memberchk(Other, Shown)
+                       ), New0),
+        list_to_set(New0, New),
+        append(Shown, New, Shown1),
+        findall(Edge,
+                ( member(N, New),
+                  pred_data(Tool, Data, N, NData),
+                  member(Dir, [callers, callees]),
+                  merged_relatives(N, NData.Dir, Components, Merged),
+                  member(Other-t(Self, Children, Calls), Merged),
+                  Other \== N,
+                  memberchk(Other, Shown1),
+                  Ticks is Self+Children,
+                  edge(Dir, N, Other, Ticks, Calls, Edge)
+                ), Connections),
+        foldl(recursion_edge(Tool, Data), New, Recursion, []),
+        append([Edges0, Opened, Connections, Recursion], Edges1),
+        unique_edges(Edges1, Edges2),
+        expand_hidden(Tool, Data, Expanded, Edges2, Edges)
+    ).
+
+pred_data(_, Data, P, Data) :-
+    P == Data.predicate,
+    !.
+pred_data(Tool, _, P, Data) :-
+    get(Tool, node_data, P, Data).
+
+%!  hidden_edges(+Tool, +Data, +Edges, -Hidden) is det.
+%
+%   Hidden are edges to or from a node more(Dir, P, N) that stands for
+%   the N callers or callees (Dir) of P that are not in the graph of
+%   Edges, with their summed time and calls.  The node in the middle and
+%   the predicates above it get one for their callers, the node in the
+%   middle and those below it one for their callees.
+
+hidden_edges(Tool, Data, Edges, Hidden) :-
+    Pred = Data.predicate,
+    graph_preds(Pred, Edges, Shown),
+    reachable(callers, Edges, [Pred], Above),
+    reachable(callees, Edges, [Pred], Below),
+    get(Tool, components, Components),
+    findall(Edge,
+            ( (   Dir = callers, member(P, Above)
+              ;   Dir = callees, member(P, Below)
+              ),
+              pred_data(Tool, Data, P, PData),
+              merged_relatives(P, PData.Dir, Components, Merged),
+              findall(Ticks-Calls,
+                      ( member(Other-t(Self, Children, Calls), Merged),
+                        \+ memberchk(Other, Shown),
+                        Ticks is Self+Children
+                      ), Pairs),
+              Pairs \== [],
+              length(Pairs, N),
+              aggregate_all(sum(T), member(T-_, Pairs), Ticks),
+              aggregate_all(sum(C), member(_-C, Pairs), Calls),
+              edge(Dir, P, more(Dir, P, N), Ticks, Calls, Edge)
+            ), Hidden).
+
+%   reachable(+Dir, +Edges, +Preds, -Reached)
+%
+%   Reached are Preds and the predicates reached from them by following
+%   the callers or callees (Dir) in Edges.
+
+reachable(Dir, Edges, Preds, Reached) :-
+    reachable(Preds, Dir, Edges, Preds, Reached).
+
+reachable([], _, _, Reached, Reached).
+reachable([P|Queue], Dir, Edges, Seen, Reached) :-
+    findall(Q, ( edge(Dir, P, Q, _, _, E),
+                 member(E, Edges),
+                 \+ memberchk(Q, Seen)
+               ), New0),
+    list_to_set(New0, New),
+    append(Seen, New, Seen1),
+    append(Queue, New, Queue1),
+    reachable(Queue1, Dir, Edges, Seen1, Reached).
 
 %   Recursion shows as one call of a predicate to itself.  That is for
 %   every predicate in the graph, also those of which the relatives are
@@ -1778,6 +2056,16 @@ dot_nodes([Id-P|T], Tool, Pred, Total) -->
     "  ", atom(Id), " [", dot_attrs(Attrs), "];\n",
     dot_nodes(T, Tool, Pred, Total).
 
+node_attrs(_Tool, more(Dir, P, N), _Pred, _Total, Attrs) :-
+    !,
+    format(string(Label), '\u2026 ~D more', [N]),
+    relatives_text(Dir, N, What),
+    pred_label(P, Name),
+    format(string(Tooltip), '~D more ~w of ~w\n(click to show them)',
+           [N, What, Name]),
+    Attrs = [ label=Label, tooltip=Tooltip, style='dashed,rounded',
+              color='#909090', fontcolor='#909090'
+            ].
 node_attrs(Tool, P, Pred, Total, Attrs) :-
     pred_label(P, Name),
     short_pred_label(P, Short),
@@ -1866,13 +2154,36 @@ dot_edges([Edge|T], Tool, Total, MaxWidth, Ids) -->
 %   time of a call at an outer level includes that of the calls further
 %   in.  It does set the width of the edge, and the tooltip tells it.
 
-edge_attrs(Tool, edge(From, To, Ticks, Calls), Total, MaxWidth,
-           [label=Label, tooltip=Tooltip, penwidth=Width]) :-
+edge_attrs(Tool, edge(From, To, Ticks, Calls), Total, MaxWidth, Attrs) :-
     format(string(Label), '~D×', [Calls]),
     Share = min(1.0, Ticks/float(Total)),
     Width is round(10*(1 + (max(1, MaxWidth)-1)*Share))/10.0,
-    edge_tooltip(Tool, From, To, Ticks, Calls, Tooltip).
+    edge_tooltip(Tool, From, To, Ticks, Calls, Tooltip),
+    Attrs0 = [label=Label, tooltip=Tooltip, penwidth=Width],
+    (   ( From = more(_, _, _) ; To = more(_, _, _) )
+    ->  append(Attrs0, [style=dashed, color='#909090'], Attrs)
+    ;   Attrs = Attrs0
+    ).
 
+relatives_text(callers, 1, caller) :- !.
+relatives_text(callers, _, callers).
+relatives_text(callees, 1, callee) :- !.
+relatives_text(callees, _, callees).
+
+edge_tooltip(Tool, more(callers, P, N), P, Ticks, Calls, Tooltip) :-
+    !,
+    relatives_text(callers, N, What),
+    pred_label(P, Name),
+    time_text(Tool, Ticks, Time),
+    format(string(Tooltip), '~D more ~w → ~w\nCalls: ~D, time: ~w',
+           [N, What, Name, Calls, Time]).
+edge_tooltip(Tool, P, more(callees, P, N), Ticks, Calls, Tooltip) :-
+    !,
+    relatives_text(callees, N, What),
+    pred_label(P, Name),
+    time_text(Tool, Ticks, Time),
+    format(string(Tooltip), '~w → ~D more ~w\nCalls: ~D, time: ~w',
+           [Name, N, What, Calls, Time]).
 edge_tooltip(_Tool, P, P, _Ticks, Calls, Tooltip) :-
     !,
     pred_label(P, Name),

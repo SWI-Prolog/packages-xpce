@@ -371,6 +371,128 @@ test(components, [ Same-Other == true-false ]) :-
     truth(pce_profile:same_component(user:ev/1, user:work/0, Cs), Other),
     free(F).
 
+%   m/0, called by z/0, spends nearly all its time in a/0 and a tick
+%   in each of seven other callees.  The graph prunes those, but shows them as one node.
+%   The tree shows them apart, unless asked to group the small ones.
+
+fan_profile(
+    profile{summary:summary{samples:100, ticks:100, accounting:0,
+                            time:0.5, nodes:10, sample_period:5000,
+                            ports:true},
+            nodes:[ node{predicate:user:m/0,
+                         ticks_self:1, ticks_siblings:99,
+                         call:1, redo:0, exit:1,
+                         callers:[node(user:z/0,0,1,99,1,0,1)],
+                         callees:Callees},
+                    node{predicate:user:z/0,
+                         ticks_self:0, ticks_siblings:100,
+                         call:3, redo:0, exit:3,
+                         callers:[node('<recursive>',0,0,0,2,0,2)],
+                         callees:[node(user:m/0,0,1,99,1,0,1)]},
+                    node{predicate:user:a/0,
+                         ticks_self:92, ticks_siblings:0,
+                         call:1, redo:0, exit:1,
+                         callers:[node(user:m/0,0,92,0,1,0,1)],
+                         callees:[]}
+                  ]}) :-
+    findall(node(user:Name/0,0,1,0,1,0,1),
+            ( between(1, 7, I),
+              atom_concat(c, I, Name)
+            ), Small),
+    Callees = [node(user:a/0,0,92,0,1,0,1)|Small].
+
+test(graph_hidden_callees,
+     [ Hidden-Tooltip ==
+       [edge(user:m/0, more(callees, user:m/0, 7), 7, 7)]-
+       "m/0 → 7 more callees\nCalls: 7, time: 7.0%"
+     ]) :-
+    fan_profile(Profile),
+    profiler(true, Profile, F),
+    get(F, node_data, user:m/0, Data),
+    pce_profile:call_graph(F, Data, limits(2, 2, 6, 12, 30), Edges),
+    pce_profile:hidden_edges(F, Data, Edges, Hidden),
+    Hidden = [Edge],
+    pce_profile:edge_attrs(F, Edge, 100, 5, Attrs),
+    memberchk(tooltip=Tooltip, Attrs),
+    free(F).
+%   The callees of m/0 are hidden as well if the graph is around z/0,
+%   which calls itself.  That call must not stop the walk to m/0.
+
+test(graph_hidden_below_recursion,
+     Hidden == [edge(user:m/0, more(callees, user:m/0, 7), 7, 7)]) :-
+    fan_profile(Profile),
+    profiler(true, Profile, F),
+    get(F, node_data, user:z/0, Data),
+    pce_profile:call_graph(F, Data, limits(2, 2, 6, 12, 30), Edges),
+    pce_profile:hidden_edges(F, Data, Edges, Hidden),
+    free(F).
+%   Clicking the "… 7 more" node of m/0 adds its callees to the graph.
+%   They are kept while the graph is around m/0 and forgotten once
+%   another predicate becomes the current one.
+
+test(graph_expand_hidden, [Added-Hidden == 7-[]]) :-
+    fan_profile(Profile),
+    profiler(true, Profile, F),
+    get(F, node_data, user:m/0, Data),
+    pce_profile:call_graph(F, Data, limits(2, 2, 6, 12, 30), Edges0),
+    pce_profile:expand_hidden(F, Data, [callees-(user:m/0)],
+                              Edges0, Edges),
+    findall(C, ( member(edge(user:m/0, user:C/0, _, _), Edges),
+                 sub_atom(C, 0, _, _, c)
+               ), Cs),
+    length(Cs, Added),
+    pce_profile:hidden_edges(F, Data, Edges, Hidden),
+    free(F).
+test(graph_expand_until_moved, [Same-Moved == [callees-(user:m/0)]-[]]) :-
+    fan_profile(Profile),
+    profiler(true, Profile, F),
+    get(F, window, prof_graph, G),
+    get(F, node_data, user:m/0, M),
+    get(F, node_data, user:z/0, Z),
+    send(G, node, M),
+    send(G, expand, callees, user:m/0),
+    send(G, node, M),
+    get(G, expanded, Same),
+    send(G, node, Z),
+    get(G, expanded, Moved),
+    free(F).
+test(tree_small_apart, Labels == 8) :-
+    fan_profile(Profile),
+    profiler(true, Profile, F),
+    fan_tree(F, @off, node(_, _, Children)),
+    length(Children, Labels),
+    free(F).
+test(tree_groups_small,
+     Children == [ node('a/0', 0.46, []),
+                   node('\u2026 7 more', 0.035, [])
+                 ]) :-
+    fan_profile(Profile),
+    profiler(true, Profile, F),
+    fan_tree(F, @on, node(_, _, Children)),
+    free(F).
+
+%   The tree of m/0 with min_share set to 5%, so the callees of a tick
+%   are small.
+
+fan_tree(F, Group, Tree) :-
+    get(class(prof_tree), class_variable, group_small, GCV),
+    get(class(prof_tree), class_variable, min_share, MCV),
+    get(GCV, value, Group0),
+    get(MCV, value, Min0),
+    setup_call_cleanup(
+        ( send(GCV, value, Group),
+          send(MCV, value, 0.05)
+        ),
+        ( get(F, window, prof_tree, T),
+          get(F, node_data, user:m/0, Data),
+          send(T, render, Data),
+          get(T, root, Root),
+          tree_term(Root, Tree)
+        ),
+        ( send(GCV, value, Group0),
+          send(MCV, value, Min0)
+        )).
+
 %   Clicking a node of the call tree, also one with children, makes its
 %   predicate the current node of the profiler, which all tabs show.
 

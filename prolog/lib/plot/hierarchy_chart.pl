@@ -1204,6 +1204,12 @@ show_label(C, Text, Fill, X, Y) :-
 :- pce_begin_class(hierarchy_window, picture,
                    "Window showing a hierarchy chart").
 
+%!  .view
+%
+%   How the chart is shown when the window opens: as `rings`, a disc
+%   with a ring per level around it, or as a `treemap`, nested
+%   rectangles.  The menu of the window switches between the two.
+
 class_variable(view, {rings,treemap}, rings, "Initial view").
 
 variable(view,         {rings,treemap}, get,  "Current view").
