@@ -109,6 +109,9 @@ their tabs are called.
 :- pce_begin_class(emacs_bookmark_editor, tool_pane,
                    "PceEmacs bookmark administration and viewing").
 
+class_variable(pane_icon, name*, 'ide/tools/bookmarks.svg',
+               "Image shown on my tab").
+
 class_variable(pane_side, {above,below,left,right}, below,
                "A list of places to go to is added below the editor").
 

@@ -118,6 +118,9 @@ it did when each was a frame.
 :- pce_begin_class(prof_frame, tool_pane,
                    "Show Prolog profile data").
 
+class_variable(pane_icon, name*, 'ide/tools/profiler.svg',
+               "Image shown on my tab").
+
 variable(samples,          int,  get, "Total # samples").
 variable(ticks,            int,  get, "Total # ticks").
 variable(accounting_ticks, int,  get, "# ticks while accounting").

@@ -493,6 +493,9 @@ window it ends up in, so it carries no reporter of its own.
 :- pce_begin_class(symbol_picker, tool_pane,
                    "Pick a Unicode symbol from a code range").
 
+class_variable(pane_icon, name*, 'logo/New_Unicode_logo.svg',
+               "Image shown on my tab").
+
 variable(pick_mode,
          {type,clipboard,return} := type, get,
          "What to do when a symbol is clicked").

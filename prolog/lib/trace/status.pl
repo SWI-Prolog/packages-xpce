@@ -73,6 +73,9 @@ resource(spy,    image, library('trace/icons/spy.svg')).
                    "View/change debug_status information").
 :- use_class_template(pane).
 
+class_variable(pane_icon, name*, 'dbgsettings.svg',
+               "Image shown on my tab").
+
 initialise(D) :->
     send_super(D, initialise),
     send(D, append, new(TB, tool_bar(D))),

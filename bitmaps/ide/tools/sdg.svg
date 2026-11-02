@@ -1,0 +1,18 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- strongly connected tables: three that depend on each other in a cycle -->
+  <g fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round">
+    <path d="M10 5.5 Q4.5 8.5 5 15"/>
+    <path d="M7.5 19.5 Q12 22 16.5 19.5"/>
+    <path d="M19 15 Q19.5 8.5 14 5.5"/>
+  </g>
+  <g fill="#64748b">
+    <path d="M3.2 13.6 L5.1 16.6 L6.9 13.4 Z"/>
+    <path d="M15.2 17.6 L18 19 L15.6 21.1 Z"/>
+    <path d="M15.6 4 L12.4 5.1 L14.9 7.4 Z"/>
+  </g>
+  <g stroke="#334155" stroke-width="1">
+    <circle cx="12" cy="4.5" r="2.8" fill="#10b981"/>
+    <circle cx="5" cy="18.5" r="2.8" fill="#10b981"/>
+    <circle cx="19" cy="18.5" r="2.8" fill="#f43f5e"/>
+  </g>
+</svg>

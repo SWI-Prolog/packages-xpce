@@ -878,6 +878,9 @@ result that arrives after a newer refresh started is dropped.
 :- pce_begin_class(prolog_idg_viewer, tool_pane,
                    "Show the incremental dependency graph").
 
+class_variable(pane_icon, name*, 'ide/tools/idg.svg',
+               "Image shown on my tab").
+
 variable(thread,     any*,     get, "Thread whose IDG is shown").
 variable(graph,      prolog,   get, "idg(Nodes, Edges) per predicate").
 variable(predicate,  prolog,   get, "Current predicate or `none`").
@@ -2008,6 +2011,9 @@ reusable_variants_pane(P) :-
 
 :- pce_begin_class(idg_variants, tool_pane,
                    "Browse the variants of a predicate").
+
+class_variable(pane_icon, name*, 'ide/tools/variants.svg',
+               "Image shown on my tab").
 
 class_variable(page_size, '1..', 10, "Variants shown initially").
 

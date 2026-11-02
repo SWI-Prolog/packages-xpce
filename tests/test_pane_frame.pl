@@ -92,6 +92,7 @@ test_pane_frame_ :-
                 menu_bar_chains,
                 pane_menu_bar_order,
                 pane_frame_label,
+                pane_frame_icon,
                 pane_frame_focus,
                 pane_frame_move,
                 pane_frame_opacity,
@@ -173,6 +174,15 @@ pane_term(P, Options:prolog) :->
 
 %       A pane whose class insists on an argument, as `prolog_debugger'
 %       does: it is made for something live and cannot come from a term.
+
+%       A pane that names the icon of its tab, as the tools of the IDE do.
+
+:- pce_begin_class(tp_icon_pane, tp_pane, "Pane with an icon on its tab").
+
+class_variable(pane_icon, name*, 'ide/tools/profiler.svg',
+               "Image shown on my tab").
+
+:- pce_end_class(tp_icon_pane).
 
 :- pce_begin_class(tp_needs, window, "Pane that needs an argument").
 
@@ -752,6 +762,53 @@ test(a_tab_the_user_renamed_keeps_the_name_they_gave_it,
 
 %       One class variable says whether the pointer entering a pane is
 %       enough to give it the focus, for every pane of every window.
+
+:- begin_tests(pane_frame_icon).
+
+/* A pane names the icon of its tab with the class variable pane_icon.
+   The tab gets it when it is made and whenever the pane gets the
+   keyboard in a tab it shares.
+*/
+
+icon_pane(Name, P) :-
+    new(P, tp_icon_pane),
+    send(P, name, Name).
+
+tab_of(P, Tab) :-
+    get(P, container, tab_frame, Tab).
+
+test(a_new_tab_shows_the_icon_of_its_pane, true(Icon \== @nil)) :-
+    frame(F, _App, _P1),
+    icon_pane(two, P2),
+    send(F, append_pane, P2, @default, @on),
+    tab_of(P2, Tab),
+    get(Tab, icon, Icon).
+
+test(a_pane_without_one_has_no_icon, Icon == @nil) :-
+    frame(F, _App, _P1),
+    pane(two, beta, P2),
+    send(F, append_pane, P2, @default, @on),
+    tab_of(P2, Tab),
+    get(Tab, icon, Icon).
+
+test(tabs_share_the_image, true((I2 == I3, I2 \== @nil))) :-
+    frame(F, _App, _P1),
+    icon_pane(two, P2),
+    icon_pane(three, P3),
+    send(F, append_pane, P2, @default, @on),
+    send(F, append_pane, P3, @default, @on),
+    tab_of(P2, T2), get(T2, icon, I2),
+    tab_of(P3, T3), get(T3, icon, I3).
+
+test(the_icon_follows_the_pane_with_the_keyboard, true(Icon \== @nil)) :-
+    frame(F, _App, P1),
+    icon_pane(two, P2),
+    send(F, split, P2, P1, vertically),
+    send(F, current_pane, P2),
+    tab_of(P1, Tab),
+    get(Tab, icon, Icon).
+
+:- end_tests(pane_frame_icon).
 
 :- begin_tests(pane_frame_focus).
 

@@ -443,6 +443,9 @@ refresh started is dropped.
 :- pce_begin_class(prolog_sdg_viewer, tool_pane,
                    "Show the subgoal dependency graph of a thread").
 
+class_variable(pane_icon, name*, 'ide/tools/sdg.svg',
+               "Image shown on my tab").
+
 variable(thread,     any*,     get, "Thread whose SDG is shown").
 variable(sdg,        prolog,   get, "The last snapshot").
 variable(graph_level, {auto,variants,predicates} := auto, get,

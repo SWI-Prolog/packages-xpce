@@ -963,6 +963,9 @@ whatever window it ends up in.
 :- pce_begin_class(prolog_thread_monitor, tool_pane,
                    "Monitor thread-activity").
 
+class_variable(pane_icon, name*, 'ide/threads/thread-running.svg',
+               "Image shown on my tab").
+
 variable(timer,           timer*,  get, "Update timer").
 variable(graphs,          chain,   get, "Which graphs are shown").
 variable(update_interval, num*,    get, "Update interval").

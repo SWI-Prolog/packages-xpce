@@ -1042,6 +1042,9 @@ to refresh it every so many seconds.
 :- pce_begin_class(prolog_memory_viewer, tool_pane,
                    "Show how Prolog uses its memory").
 
+class_variable(pane_icon, name*, 'ide/tools/memory.svg',
+               "Image shown on my tab").
+
 class_variable(view, {overview,application,program,data,threads,tables,xpce}, overview,
                "View shown initially").
 

@@ -735,6 +735,9 @@ is a window of the IDE now, so it asks for <-container(man_frame).
 
 :- pce_begin_class(man_frame(label), tool_pane).
 
+class_variable(pane_icon, name*, 'ide/tools/manual.svg',
+               "Image shown on my tab").
+
 variable(manual,        man_manual,     get,
          "Manual we are related to").
 variable(tool_name,     name,           get,

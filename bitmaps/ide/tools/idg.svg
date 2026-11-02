@@ -1,0 +1,15 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- incremental dependency graph: a table depends on two that depend on one -->
+  <g stroke="#64748b" stroke-width="1.5">
+    <line x1="12" y1="4" x2="6" y2="12"/>
+    <line x1="12" y1="4" x2="18" y2="12"/>
+    <line x1="6" y1="12" x2="12" y2="20"/>
+    <line x1="18" y1="12" x2="12" y2="20"/>
+  </g>
+  <g stroke="#334155" stroke-width="1">
+    <circle cx="12" cy="4" r="2.8" fill="#6366f1"/>
+    <circle cx="6" cy="12" r="2.8" fill="#38bdf8"/>
+    <circle cx="18" cy="12" r="2.8" fill="#38bdf8"/>
+    <circle cx="12" cy="20" r="2.8" fill="#f59e0b"/>
+  </g>
+</svg>

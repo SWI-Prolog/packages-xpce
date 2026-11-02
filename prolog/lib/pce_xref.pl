@@ -158,6 +158,9 @@ bar of whatever window it ends up in.
 :- pce_begin_class(xref_tool, tool_pane,
                    "GUI for the Prolog cross-referencer").
 
+class_variable(pane_icon, name*, 'ide/tools/xref.svg',
+               "Image shown on my tab").
+
 class_variable(warn_autoload,      bool, @off,
                "Warn about predicates that are autoloaded or global").
 class_variable(warn_not_called,    bool, @on,

@@ -99,6 +99,9 @@ up in, so it carries no reporter of its own.
 :- pce_begin_class(prolog_navigator, tool_pane,
                    "Prolog source navigator").
 
+class_variable(pane_icon, name*, 'butterfly.svg',
+               "Image shown on my tab").
+
 class_variable(pane_side, {above,below,left,right}, left,
                "A navigator is added down the left").
 

@@ -235,6 +235,9 @@ own.
 :- pce_begin_class(term_viewer, tool_pane,
                    "Pretty-print a Prolog term").
 
+class_variable(pane_icon, name*, 'ide/tools/term_viewer.svg',
+               "Image shown on my tab").
+
 variable(tool_label, name*, get, "What my tab is called").
 
 initialise(TV) :->

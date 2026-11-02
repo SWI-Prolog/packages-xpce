@@ -2280,6 +2280,11 @@ new_tab(_TW, Window:window, Label:[name], Tab:tab) :<-
     ;   TheLabel = Label
     ),
     new(Tab, pane_tab(Window, TheLabel)),
+    (   send(Window, has_get_method, pane_icon),
+        get(Window, pane_icon, Icon)
+    ->  send(Tab, icon, Icon)
+    ;   true
+    ),
     %  A pane that keeps pushing a label out -- an editor showing a
     %  buffer -- would take a hand-typed one straight back off again.
     (   send(Window, has_get_method, tab_editable_label)
@@ -2748,6 +2753,22 @@ handles_prefix(_, _:name) :->
 pane_label(P, Label:name) :<-
     "What my tab is called; my name unless I say otherwise"::
     get(P?name, label_name, Label).   % as class tab would have written it
+
+%       The icon of my tab is an image file named by the class variable
+%       `pane_icon', so a tool says which by declaring one and the user
+%       may overrule it from a Defaults file:
+%
+%           prof_frame.pane_icon: 'ide/tools/profiler.svg'
+%
+%       A pane that has no such class variable has no icon.  A pane whose
+%       icon says what state it is in defines <-pane_icon itself; see
+%       `epilog_window'.
+
+pane_icon(P, Icon:image) :<-
+    "The icon of my tab"::
+    get(P, class_variable_value, pane_icon, File),
+    File \== @nil,
+    pane_icon_image(File, Icon).
 
 %       A pane has no window of its own, so ->open means "put me in one
 %       and bring it up".  It keeps the signature class window gives it:
@@ -3299,6 +3320,21 @@ close_pane(TP) :->
     forall(member(W, List), close_pane(W)).
 
 :- pce_end_class(pane_stack).
+
+
+%!  pane_icon_image(+File, -Image) is det.
+%
+%   The image in File, an image file found as `image(File)' finds it.
+%   Tabs share it: the image is read once.
+
+:- pce_global(@pane_icon_images, new(hash_table)).
+
+pane_icon_image(File, Image) :-
+    (   get(@pane_icon_images, member, File, Image0)
+    ->  Image = Image0
+    ;   new(Image, image(File)),
+        send(@pane_icon_images, append, File, Image)
+    ).
 
 
                  /*******************************

@@ -58,6 +58,9 @@ carries no reporter of its own.
 :- pce_begin_class(emacs_buffer_menu, tool_pane,
                    "List showing all PceEmacs buffers").
 
+class_variable(pane_icon, name*, 'ide/tools/buffers.svg',
+               "Image shown on my tab").
+
 class_variable(pane_side, {above,below,left,right}, left,
                "The list of buffers is added down the left").
 

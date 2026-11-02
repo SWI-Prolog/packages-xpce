@@ -65,6 +65,9 @@ on the bar of whatever window it ends up in.
 :- pce_begin_class(prolog_debug_monitor, tool_pane,
                    "Manage debug topics").
 
+class_variable(pane_icon, name*, 'ide/tools/debug_messages.svg',
+               "Image shown on my tab").
+
 initialise(M) :->
     send_super(M, initialise, debug_monitor),
     send(M, append_window, new(B, prolog_debug_browser)),

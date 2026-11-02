@@ -466,6 +466,9 @@ level, as there always was.
 :- pce_begin_class(prolog_debugger, tool_pane,
                    "Toplevel driver for the debugger").
 
+class_variable(pane_icon, name*, 'ide/tools/debugger.svg',
+               "Image shown on my tab").
+
 variable(source,        any,            both, "Source view").
 variable(break_level,   int,            get,  "Break-level I'm associated to").
 variable(thread,        'int|name*',    get,  "Associated thread").

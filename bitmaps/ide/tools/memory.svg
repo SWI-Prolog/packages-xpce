@@ -1,0 +1,10 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- memory: rings of what uses how much -->
+  <g transform="rotate(-90 12 12)" fill="none">
+    <circle cx="12" cy="12" r="9.8" stroke="#22c55e" stroke-width="2.6" stroke-dasharray="21 100"/>
+    <circle cx="12" cy="12" r="9.8" stroke="#f43f5e" stroke-width="2.6" stroke-dasharray="0 22.5 14 100"/>
+    <circle cx="12" cy="12" r="6.6" stroke="#38bdf8" stroke-width="3" stroke-dasharray="21 100"/>
+    <circle cx="12" cy="12" r="6.6" stroke="#f59e0b" stroke-width="3" stroke-dasharray="0 22.5 16 100"/>
+  </g>
+  <circle cx="12" cy="12" r="4" fill="#6366f1"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- cross-referencer: two files that use each other -->
+  <path d="M2.5 1.5 h6 l3 3 v8.5 h-9 z" fill="#bfdbfe" stroke="#334155" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M8.5 1.5 v3 h3" fill="none" stroke="#334155" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M12.5 10.5 h6 l3 3 v8.5 h-9 z" fill="#bbf7d0" stroke="#334155" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M18.5 10.5 v3 h3" fill="none" stroke="#334155" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M7 13.5 Q7 18 10.8 18" fill="none" stroke="#4f46e5" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M10 15.8 L12.3 18 L10 20.2 Z" fill="#4f46e5"/>
+  <path d="M17 10 Q17 6 13.2 6" fill="none" stroke="#4f46e5" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M14 3.8 L11.7 6 L14 8.2 Z" fill="#4f46e5"/>
+</svg>

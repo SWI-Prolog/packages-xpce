@@ -692,6 +692,9 @@ rows_of_table([R|Rs], [R|Mine], Rest) :-
 :- pce_begin_class(key_binding_browser, tool_pane,
                    "Browse the key bindings of an object").
 
+class_variable(pane_icon, name*, 'ide/tools/keyboard.svg',
+               "Image shown on my tab").
+
 class_variable(pane_side, {above,below,left,right}, below,
                "A list of keys goes below the window it is about").
 

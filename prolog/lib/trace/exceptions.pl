@@ -239,6 +239,9 @@ as there always was: the exception hook reaches it by that name.
                    "Configure tracing exceptions").
 :- use_class_template(pane).
 
+class_variable(pane_icon, name*, 'port_except.svg',
+               "Image shown on my tab").
+
 class_variable(size, size, size(500, 250),
                "Size I ask the window I am docked in for").
 

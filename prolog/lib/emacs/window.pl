@@ -193,6 +193,9 @@ pce_preferences:preferences(emacs_view,
                    "View running an emacs_editor").
 :- use_class_template(pane).
 
+class_variable(pane_icon, name*, 'ide/tools/editor.svg',
+               "Image shown on my tab").
+
 :- pce_global(@emacs_image_recogniser,
               new(handler(button,
                           message(@receiver?device?(mode), event, @event)))).
@@ -728,6 +731,9 @@ make_emacs_tab_popup(P) :-
 
 :- pce_begin_class(emacs_pane, pane_stack,
                    "The editor of a window of the IDE: sources in tabs").
+
+class_variable(pane_icon, name*, 'ide/tools/editor.svg',
+               "Image shown on my tab").
 
 tab_stack_class(_EP, Class:name) :<-
     "One source needs no tab strip; see class pane_tab_stack"::
@@ -1305,11 +1311,6 @@ initialise(M) :->
     send(M, load_user_extensions),
     send(M, bindings),
     send(M, obtain_class_variables).
-
-
-icon(_, I:image) :<-
-    "Return icon for mode"::
-    new(I, image(resource(mode_x_icon))).
 
 
 mode_name(emacs_mode, default) :- !.

@@ -1,0 +1,19 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- debugger: a ladybird -->
+  <g stroke="#64748b" stroke-width="1.3" stroke-linecap="round">
+    <line x1="10.2" y1="3.6" x2="8" y2="1.2"/>
+    <line x1="13.8" y1="3.6" x2="16" y2="1.2"/>
+  </g>
+  <circle cx="12" cy="6" r="3.6" fill="#334155" stroke="#64748b" stroke-width="0.8"/>
+  <circle cx="10.6" cy="4.9" r="0.7" fill="#f8fafc"/>
+  <circle cx="13.4" cy="4.9" r="0.7" fill="#f8fafc"/>
+  <circle cx="12" cy="14.2" r="8" fill="#e11d48" stroke="#334155" stroke-width="1.2"/>
+  <line x1="12" y1="6.4" x2="12" y2="22.2" stroke="#334155" stroke-width="1.2"/>
+  <g fill="#334155">
+    <circle cx="8.2" cy="11" r="1.7"/>
+    <circle cx="15.8" cy="11" r="1.7"/>
+    <circle cx="7.6" cy="16.8" r="1.5"/>
+    <circle cx="16.4" cy="16.8" r="1.5"/>
+  </g>
+  <ellipse cx="8.6" cy="8.6" rx="1.4" ry="0.8" fill="#f8fafc" opacity="0.6" transform="rotate(-35 8.6 8.6)"/>
+</svg>

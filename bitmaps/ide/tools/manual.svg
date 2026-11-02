@@ -1,0 +1,18 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- manual: a pile of books -->
+  <g stroke="#334155" stroke-width="1.1" stroke-linejoin="round">
+    <rect x="2" y="16.5" width="19.5" height="5" rx="1" fill="#6366f1"/>
+    <rect x="4" y="11" width="17" height="5" rx="1" fill="#10b981"/>
+    <rect x="2.5" y="5.5" width="16.5" height="5" rx="1" fill="#f43f5e"/>
+  </g>
+  <g fill="#f8fafc">
+    <rect x="17" y="17.6" width="3.4" height="2.8"/>
+    <rect x="17.4" y="12.1" width="2.5" height="2.8"/>
+    <rect x="15" y="6.6" width="2.9" height="2.8"/>
+  </g>
+  <g stroke="#f8fafc" stroke-width="0.9" opacity="0.8">
+    <line x1="5" y1="19" x2="12" y2="19"/>
+    <line x1="7" y1="13.5" x2="12" y2="13.5"/>
+    <line x1="5.5" y1="8" x2="11" y2="8"/>
+  </g>
+</svg>
