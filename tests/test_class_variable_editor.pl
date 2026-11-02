@@ -1148,6 +1148,7 @@ test(profiler, [ condition(current_prolog_flag(threads, true)),
                            prof_tree-view,
                            prof_tree-min_share,
                            prof_tree-max_depth,
+                           prof_tree-group_small,
                            prof_details-header_colour,
                            prof_details-header_background
                          ]
