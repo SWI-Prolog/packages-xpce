@@ -1290,10 +1290,26 @@ status(TF, Status:{on_top,hidden}) :->
 window_label(TF, Label:char_array) :->
     "Show the title a window in me asked for on my label"::
     (   send(Label, equal, '')          % asking for no title at all is
-    ->  send(TF, slot, window_label, @nil),   % asking for my own name back
-        send(TF, label, TF?name)
+    ->  send(TF, slot, window_label, @nil),   % asking for my own label back
+        get(TF, own_label, Own),
+        send(TF, label, Own)
     ;   send(TF, slot, window_label, Label),
         send(TF, label, Label)
+    ).
+
+%       My name is unique within the tabs I am in, so it may carry a
+%       number the label has no need for (see `tabbed_window ->tab').
+%       The window in view may know better what I am called.
+
+own_label(TF, Label:name) :<-
+    "What I am called if no window asked for a title"::
+    (   get(TF, current, Window),
+        Window \== @nil,
+        send(Window, has_get_method, pane_label),
+        get(Window, pane_label, Label)
+    ->  true
+    ;   get(TF, name, Name),
+        get(TF, label_name, Name, Label)
     ).
 
 label(TF, Label:'name|image') :->

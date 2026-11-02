@@ -324,9 +324,14 @@ clear(W) :->
     get_super(W, member, tab_stack, TS),
     send(TS, clear).
 
+%       A tab is found by its <-name (see ->on_top and <-tab), so no two
+%       of mine may share one.  Its <-label is what the user sees and
+%       may say anything, so making the name unique keeps the label.
+
 tab(W, Tab:tab) :->
     "Add normal tab"::
     get_super(W, member, tab_stack, TS),
+    unique_tab_name(TS, Tab),
     send(TS, append, Tab),
     (   get(W, is_displayed, @on)
     ->  send(W, resize, Tab)
@@ -337,6 +342,34 @@ tab(W, Name:name, Tab:tab) :<-
     "Find named tab"::
     get_super(W, member, tab_stack, TS),
     get(TS, member, Name, Tab).
+
+%!  unique_tab_name(+TabStack, +Tab) is det.
+%
+%   Rename Tab if TabStack holds something of the same name already,
+%   to its name with the first free number after it.  `->name' would
+%   also make a new label from the new name, so we put its own back.
+
+unique_tab_name(TS, Tab) :-
+    get(Tab, name, Name),
+    (   name_taken(TS, Tab, Name)
+    ->  free_tab_name(TS, Tab, Name, 2, Free),
+        get(Tab, label, Label),
+        send(Tab, name, Free),
+        send(Tab, label, Label)
+    ;   true
+    ).
+
+free_tab_name(TS, Tab, Name, N, Free) :-
+    format(atom(Try), '~w ~d', [Name, N]),
+    (   name_taken(TS, Tab, Try)
+    ->  N2 is N+1,
+        free_tab_name(TS, Tab, Name, N2, Free)
+    ;   Free = Try
+    ).
+
+name_taken(TS, Tab, Name) :-
+    get(TS, member, Name, Other),
+    Other \== Tab.
 
 empty(_W) :->
     "Abstract method.  Called if last window disappears"::

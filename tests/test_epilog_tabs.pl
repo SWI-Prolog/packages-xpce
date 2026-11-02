@@ -95,6 +95,15 @@ tabs(F, Tabs) :-
             ),
             Tabs).
 
+%!  tab_names(+Frame, -Names) is det.
+%
+%   The name of every tab, in order.
+
+tab_names(F, Names) :-
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    findall(Name, (member_chain(Tab, Chain), get(Tab, name, Name)), Names).
+
 %!  terminals(+Frame, -Count) is det.
 
 terminals(F, Count) :-
@@ -272,10 +281,10 @@ test(create_takes_the_parent_window) :-
     get(class(epilog_window), send_method, create, Method),
     get(Method?types, size, 1).
 
-test(a_new_tab_gets_a_label_of_its_own) :-
+test(a_new_tab_is_labelled_after_what_it_runs) :-
     epilog(F, W),
     send(W, new_tab),
-    tabs(F, ['Prolog'-1, 'Prolog 2'-1]).
+    tabs(F, ['Prolog'-1, 'Prolog'-1]).
 
 %       A tab is named when it is added, which is before its terminal has
 %       a thread.  Once the thread is there a Prolog toplevel goes by its
@@ -315,20 +324,41 @@ test(a_window_opened_with_a_profile_says_so_on_its_tab) :-
     epilog([profile(shell), object(F)]),
     tabs(F, ['OS shell'-1]).
 
-%       Two tabs may not carry the same label: a tab is found back by it.
-%       A tab keeps the name it was made with however it is labelled
-%       later, so it is the labels that have to be compared.
+%       Two tabs may carry the same label, but not the same name: a tab
+%       is found by its name.  A name that is taken gets a number.
 
-test(a_second_tab_of_the_same_kind_is_numbered) :-
+%       epilog/1 names the first tab before it knows the profile, so
+%       that one is called Prolog whatever it says.
+
+test(a_second_tab_of_the_same_kind_shares_the_label,
+     Names == ['Prolog', 'OS shell']) :-
     epilog([profile(shell), object(F)]),
     send(F, new_pane, shell),
-    tabs(F, ['OS shell'-1, 'OS shell 2'-1]).
+    tabs(F, ['OS shell'-1, 'OS shell'-1]),
+    tab_names(F, Names).
 
-test(and_a_name_no_tab_carries_is_left_unnumbered) :-
-    epilog([profile(shell), object(F)]),
+test(a_name_that_is_taken_is_numbered,
+     Names == ['OS shell', 'OS shell 2', 'Prolog']) :-
+    epilog(F, W),
+    send(W?terminal, profile, shell),
     send(F, new_pane, shell),
+    send(F, new_pane, shell),
+    get(F, tabs, TW),
+    get(TW, tab, 'Prolog', First),
+    send(First, free),
     send(F, new_pane, prolog),
-    tabs(F, ['OS shell'-1, 'OS shell 2'-1, 'Prolog'-1]).
+    tab_names(F, Names).
+
+test(a_tab_is_found_by_its_name, Label == 'OS shell') :-
+    epilog(F, _),
+    send(F, new_pane, shell),
+    get(F, current_pane, Shell1),
+    send(F, new_pane, shell),
+    get(F, tabs, TW),
+    send(TW, on_top, 'OS shell'),
+    get(TW, on_top, Tab),
+    get(Tab, label, Label),
+    get(Tab, current, Shell1).
 
 %       A tab coming to the front takes the name of what it runs, which
 %       it may only know then.  A client that has asked for a title -- a
@@ -350,7 +380,7 @@ test(terminal_windows_counts_over_all_tabs) :-
     send(W, split, horizontally),
     send(W, new_tab),
     terminals(F, 3),
-    tabs(F, ['Prolog'-2, 'Prolog 2'-1]).
+    tabs(F, ['Prolog'-2, 'Prolog'-1]).
 
 :- end_tests(epilog_tabs).
 
@@ -395,10 +425,12 @@ test(splitting_stays_in_the_tab) :-
 %   to another tab or another Epilog window.  The terminal fills the
 %   window, so the grip is drawn over it, clear of the scrollbar.
 
-%   A client that asks for no title at all is asking for the name the tab
-%   was given back, not for a blank tab.
+%   A client that asks for no title at all is asking for the label the
+%   tab was given back, not for a blank tab, nor for its name, which may
+%   carry a number to keep it unique.
 
-test(an_empty_title_puts_the_tab_name_back) :-
+test(an_empty_title_puts_the_tab_label_back,
+     [Name, Label] == ['Prolog 2', 'Prolog']) :-
     epilog(F, W),
     send(W, new_tab),
     get(F, current_pane, New),
@@ -407,7 +439,7 @@ test(an_empty_title_puts_the_tab_name_back) :-
     send(Tab, window_label, 'claude'),
     get(Tab, label, claude),
     send(Tab, window_label, ''),
-    get(Tab, label, Name),
+    get(Tab, label, Label),
     get(Tab, window_label, @nil).
 
 test(a_terminal_tab_carries_a_close_button) :-
@@ -423,7 +455,7 @@ test(a_terminal_tab_carries_a_close_button) :-
     send(event(ms_left_down, Window, CX, CY), post, B),
     send(event(ms_left_up, Window, CX, CY), post, B),
     terminals(F, 1),                    % it closed the terminal with it
-    tabs(F, ['Prolog 2'-1]).
+    tab_names(F, ['Prolog 2']).
 
 test(the_tab_bar_offers_a_new_terminal) :-
     epilog(F, W),
@@ -445,7 +477,7 @@ test(a_terminal_tab_can_be_renamed) :-
     send(Item, selection, 'build log'),
     send(Item, execute),
     get(Tab, label, 'build log'),
-    tabs(F, ['build log'-1, 'Prolog 2'-1]).
+    tabs(F, ['build log'-1, 'Prolog'-1]).
 
 %   Editing the label takes the keyboard from the terminal and gives it
 %   back.  A frame on dummy-SDL never gets the input focus from the window
@@ -563,9 +595,9 @@ test(delete_window_leaves_the_others) :-
 test(delete_window_closes_the_only_terminal_of_a_tab) :-
     epilog(F, W),
     send(W, new_tab),
-    tabs(F, ['Prolog'-1, 'Prolog 2'-1]),
+    tab_names(F, ['Prolog', 'Prolog 2']),
     send(W?terminal, delete_window),
-    tabs(F, ['Prolog 2'-1]).
+    tab_names(F, ['Prolog 2']).
 
 test(delete_window_keeps_the_last_terminal) :-
     epilog(F, W),
@@ -580,7 +612,7 @@ test(closing_a_tab_closes_its_terminals) :-
     get(F, current_pane, Other),
     get(W, container, tab_frame, Tab),
     send(Tab, close),
-    tabs(F, ['Prolog 2'-1]),
+    tab_names(F, ['Prolog 2']),
     get(F, current_pane, Other).
 
 test(close_other_tabs_leaves_just_this_one) :-
@@ -588,7 +620,7 @@ test(close_other_tabs_leaves_just_this_one) :-
     send(W, split, horizontally),
     send(W, new_tab),
     send(F, new_pane, shell),
-    tabs(F, ['Prolog'-2, 'Prolog 2'-1, 'OS shell'-1]),
+    tabs(F, ['Prolog'-2, 'Prolog'-1, 'OS shell'-1]),
     get(W, container, tab_frame, Tab),
     send(Tab, close_other_tabs),
     tabs(F, ['Prolog'-2]).

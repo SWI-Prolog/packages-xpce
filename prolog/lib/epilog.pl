@@ -2181,16 +2181,15 @@ pane_exposed(T) :->
         ignore(send(T, retitle_tab, Base))
     ).
 
-retitle_tab(T, Base:name) :->
-    "Put Base on my tab, made unique, unless the user named it"::
-    get(T, pane_frame, F),
+retitle_tab(T, Label:name) :->
+    "Put Label on my tab, unless the user named it"::
     get(T, pane_tab, Tab),
     get(Tab, renamed, @off),            % the user named it themselves
-    get(Tab, label, Now),
-    \+ says_the_same(Now, Base),        % renaming would only bump the
-    unique_tab_label(F, Base, 1, Label), % number after it
     send(T, tab_label, Label),
-    send(Tab, label, Label).
+    (   get(Tab, label, Label)
+    ->  true
+    ;   send(Tab, label, Label)
+    ).
 
 sibling(T, W:epilog_window) :<-
     "A new terminal window that continues mine"::
@@ -2822,18 +2821,17 @@ stop_timer(R) :->
                  *        TERMINALS IN IT       *
                  *******************************/
 
-%       A window of terminals.  ->append_terminal names the tab after the
-%       thread or the profile the terminal runs; a tab is found back by
-%       its label (see `tabbed_window ->on_top'), so no two of them may
-%       carry the same one.
+%       A window of terminals.  ->append_terminal labels the tab after
+%       the thread or the profile the terminal runs.  Two tabs may carry
+%       the same label: a tab is found by its name, which `tabbed_window
+%       ->tab' keeps unique.
 
 :- pce_extend_class(pane_frame).
 
 append_terminal(F, W:epilog_window, Expose:[bool]) :->
     "Add a terminal in a tab of its own, named after its profile"::
     get(W, terminal, PT),
-    terminal_base_label(PT, Base),
-    unique_tab_label(F, Base, 1, Label),
+    terminal_base_label(PT, Label),
     send(W, tab_label, Label),
     send(F, append_pane, W, Label, Expose).
 
@@ -2887,8 +2885,7 @@ inject(F, Command:prolog,
 
 %!  terminal_base_label(+PrologTerminal, -Label) is det.
 %
-%   What a tab holding PrologTerminal is called, before it is made
-%   unique within its window.
+%   What a tab holding PrologTerminal is called.
 
 terminal_base_label(PT, Label) :-
     get(PT, profile, prolog),
@@ -2902,50 +2899,6 @@ terminal_base_label(PT, Label) :-
     ->  true
     ;   Label = Profile
     ).
-
-%!  unique_tab_label(+Frame, +Base, +N, -Label) is det.
-%
-%   Base, or Base with a number after it, such that no tab of Frame
-%   carries it already.
-
-%!  says_the_same(+Label, +Base) is semidet.
-%
-%   Label is Base, or Base with a number after it as `unique_tab_label/4'
-%   writes them.  Either way it already says what Base says.
-
-says_the_same(Label, Base) :-
-    (   Label == Base
-    ->  true
-    ;   atom_concat(Base, Rest, Label),
-        atom_concat(' ', Digits, Rest),
-        atom_number(Digits, _)
-    ).
-
-unique_tab_label(F, Base, N, Label) :-
-    (   N == 1
-    ->  Try = Base
-    ;   format(atom(Try), '~w ~d', [Base, N])
-    ),
-    (   tab_labelled(F, Try)
-    ->  N2 is N+1,
-        unique_tab_label(F, Base, N2, Label)
-    ;   Label = Try
-    ).
-
-%!  tab_labelled(+Frame, +Label) is semidet.
-%
-%   A tab of Frame carries Label.  Not `tabbed_window <-tab', which finds
-%   a tab by its name: a tab keeps the name it was made with however it
-%   is labelled afterwards, and it is the label that has to be unique.
-
-tab_labelled(F, Label) :-
-    get(F, tabs, TW),
-    get(TW, tabs, Chain),
-    member_chain(Tab, Chain),
-    get(Tab, label, Label),
-    !.
-
-
 
                 /*******************************
                 *     XPCE CONSOLE OUTPUT      *
