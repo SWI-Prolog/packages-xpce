@@ -347,8 +347,10 @@ variable(focus_node,     hierarchy_node*, get,  "Node shown as a whole (zoomed i
 variable(hover,          hierarchy_segment*, get, "Segment below the pointer").
 variable(extent,         size,    get,  "Size of the chart").
 variable(max_depth,      int,     get,  "Number of levels shown").
-variable(unit,           {bytes,seconds,count,plain} := plain, get,
-         "How values are shown").
+variable(unit,           {bytes,seconds,count,percentage,plain} := plain,
+         get, "How values are shown").
+variable(reference,      num*,    get,
+         "100% for unit percentage; @nil: the total of the root").
 variable(select_message, code*,   both,
          "Called with a node without children that is clicked").
 variable(click_message,  code*,   both,
@@ -414,8 +416,12 @@ max_depth(C, Depth:'1..') :->
     send(C, slot, max_depth, Depth),
     send(C, layout).
 
-unit(C, Unit:{bytes,seconds,count,plain}) :->
+unit(C, Unit:{bytes,seconds,count,percentage,plain}) :->
     send(C, slot, unit, Unit),
+    send(C, layout).
+
+reference(C, Reference:num*) :->
+    send(C, slot, reference, Reference),
     send(C, layout).
 
 layout(C) :->
@@ -587,7 +593,28 @@ describe(C, Node:hierarchy_node, Text:string) :<-
 format_value(C, Value:num, Text:name) :<-
     "Format a value using <-unit"::
     get(C, unit, Unit),
-    format_value(Unit, Value, Text).
+    (   Unit == percentage
+    ->  get(C, percentage_reference, Reference),
+        format_percentage(Value, Reference, Text)
+    ;   format_value(Unit, Value, Text)
+    ).
+
+percentage_reference(C, Reference:num) :<-
+    "Value that is shown as 100%"::
+    (   get(C, reference, Reference),
+        Reference \== @nil
+    ->  true
+    ;   get(C, root, Root),
+        Root \== @nil
+    ->  get(Root, total, Reference)
+    ;   Reference = 0
+    ).
+
+format_percentage(V, Reference, Text) :-
+    (   Reference =:= 0
+    ->  Text = '0.0%'
+    ;   format(atom(Text), '~1f%', [100*V/Reference])
+    ).
 
 format_value(bytes, V, Text) :-
     !,
@@ -1244,9 +1271,13 @@ focus_node(W, Focus:hierarchy_node*) :->
 focus_node(W, Focus:hierarchy_node*) :<-
     get(W?chart, focus_node, Focus).
 
-unit(W, Unit:{bytes,seconds,count,plain}) :->
+unit(W, Unit:{bytes,seconds,count,percentage,plain}) :->
     "How values are shown"::
     send(W?chart, unit, Unit).
+
+reference(W, Reference:num*) :->
+    "100% for unit percentage"::
+    send(W?chart, reference, Reference).
 
 can_zoom_out(W) :->
     get(W?chart, focus_node, Focus),
@@ -1262,7 +1293,9 @@ view(W, View:{rings,treemap}) :->
         view_class(View, Class),
         new(New, Class),
         maplist(copy_slot(Old, New),
-                [unit, select_message, click_message, focus_message]),
+                [ unit, reference,
+                  select_message, click_message, focus_message
+                ]),
         send(W, chart_messages, New),
         get(Old, root, Root),
         get(Old, focus_node, Focus),

@@ -435,9 +435,12 @@ Resize the chart.
     \sendmethod{hierarchy_chart}{max_depth}{1..}
 The number of levels shown below the focus.  The default is the class
 variable \classvar{hierarchy_chart}{max_depth}: 5 for rings and 4 for a treemap.
-    \sendmethod{hierarchy_chart}{unit}{\{bytes,seconds,count,plain\}}
+    \sendmethod{hierarchy_chart}{unit}{\{bytes,seconds,count,percentage,plain\}}
 How values are shown.  Redefine <-format_value in a subclass for other
 units.
+    \sendmethod{hierarchy_chart}{reference}{num*}
+The value shown as 100\% if <-unit is \const{percentage}.  The default,
+\const{@nil}, uses the total of the root.
     \sendmethod{hierarchy_chart}{select_message}{code*}
 Called with a node without children that is clicked.
     \sendmethod{hierarchy_chart}{click_message}{code*}
@@ -471,5 +474,6 @@ popup.
 The node below the pointer when the popup opened, for items that act on
 it.  Add such items to `window<-popup'.
     \getmethod{hierarchy_window}{chart}{}{hierarchy_chart}
-The chart shown.  ->root, ->focus_node and ->unit are passed to it.
+The chart shown.  ->root, ->focus_node, ->unit and ->reference are
+passed to it.
 \end{description}

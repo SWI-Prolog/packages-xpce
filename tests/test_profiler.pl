@@ -275,6 +275,20 @@ test(call_tree, [ Tree == node('p/1', 0.2,
     tree_term(Root, Tree),
     free(F).
 
+%   The tree shows times as `Show time as' says: as a percentage of
+%   the time of the profile or in seconds.
+
+test(tree_time_view, Texts == ['50.0%', '250.0 ms']) :-
+    profiler(F),
+    get(F, window, prof_tree, T),
+    get(F, node_data, user:p/1, Data),
+    send(T, render, Data),
+    get(T?chart, format_value, 0.25, Percentage),
+    send(F, time_view, seconds),
+    get(T?chart, format_value, 0.25, Seconds),
+    Texts = [Percentage, Seconds],
+    free(F).
+
 %   ev/1 and od/1 call each other; each level of the recursion is a
 %   cycle of its own in the profile.  The calls of ev/1 to od/1 are
 %   nested: the outer one includes the inner one.  Its calls to work/0

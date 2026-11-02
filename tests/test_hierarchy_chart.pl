@@ -266,6 +266,18 @@ test(format_value, Texts == ['1.5 kB', '2.50 s', '12.0 ms', '1,234,567']) :-
             [bytes-1500, seconds-2.5, seconds-0.012, count-1234567],
             Texts).
 
+%   A percentage is of <-reference, by default the total of the root.
+
+test(percentage, Texts == ['50.0%', '25.0%']) :-
+    tree(R),                            % total 24
+    new(C, rings_chart(R)),
+    send(C, unit, percentage),
+    get(C, format_value, 12, T1),
+    send(C, reference, 48),
+    get(C, format_value, 12, T2),
+    Texts = [T1, T2],
+    free(C).
+
 format_value(Unit-Value, Text) :-
     hierarchy_chart:format_value(Unit, Value, Text).
 

@@ -285,9 +285,11 @@ time_view(F, TV:name) :->
     get(F, window, prof_browser, B),
     get(F, window, prof_details, W),
     get(F, window, prof_graph, G),
+    get(F, window, prof_tree, T),
     send(B, update_labels),
     send(W, refresh),
-    send(G, refresh).
+    send(G, refresh),
+    send(T, time_view).
 
 render_time(F, Ticks:int, Rendered:any) :<-
     "Render a time constant"::
@@ -1223,7 +1225,25 @@ render(W, Data:prolog) :->
     pred_tree(Ctx, Data, Data.ticks_self, Data.ticks_siblings,
               [Data.predicate], Term),
     hierarchy_from_term(Term, Root),
+    send(W, time_view),
     send(W, root, Root).
+
+%   As the other tabs, the tree shows times in seconds or as a
+%   percentage of the time of the profile, as `Show time as' says.
+
+time_view(W) :->
+    "Show times as the profiler's <-time_view says"::
+    prof_tool(W, Tool),
+    get(Tool, time_view, View),
+    (   View == percentage
+    ->  get(Tool, ticks, Ticks),
+        get(Tool, accounting_ticks, Accounting),
+        get(Tool, time, Time),
+        Reference is (Ticks-Accounting)*Time/max(1, Ticks),
+        send(W, reference, Reference),
+        send(W, unit, percentage)
+    ;   send(W, unit, seconds)
+    ).
 
 %   pred_tree(+Ctx, +Data, +Self, +Below, +Path, -Term)
 %
