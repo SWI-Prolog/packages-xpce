@@ -301,9 +301,7 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     draw_line.png draw_path.png draw_proto.png draw_resize.png draw_text.png
     ellipse.png fatleft_arrow.png fatright_arrow.png file.png folder.png
     fragment.png globe.png go.png group.png hand.png happy.png hierarchy.png
-    hourgl10.png hourgl1.png hourgl2.png hourgl3.png hourgl4.png hourgl5.png
-    hourgl6.png hourgl7.png hourgl8.png hourgl9.png hourgl.png king.png
-    knight.png left_arrow.png line.png link.png linking.png magnify.png
+    king.png knight.png left_arrow.png line.png link.png linking.png magnify.png
     main_link.png nosticky.png note.png other_link.png pawn.png
     pce16.png pinned.png pin.png printer.png queen.png question.png
     README right_arrow.png rook_64.png rook.png sad.png select.png
@@ -319,19 +317,14 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     juggler5.svg)
 
 
-set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png
-    arrow_wing.png binocular.png book2.png bookmarks.png
-    cpalette1.png cpalette2.png delete.png doc.png done.png down.png
-    drawing.png drive.png error.png exclamation.png eye.png false.png
-    fatleft_arrow.png fatright_arrow.png fillpattern.png font.png foot.png
-    funcdoc.png ghost.png graph.png hierarchy.png manual.png
-    new.png noimg.png note.png ok.png pce.png pen.png preddoc.png
-    profiler.png redo.png saveall.png valign.png
-    vcr_fast_forward.png vcr_forward.png vga16.png wipeall.png)
+set(XPCE_DATA_bitmaps_16x16 arrow_length.png arrows.png arrow_wing.png
+    binocular.png book2.png bookmarks.png cpalette1.png cpalette2.png
+    doc.png drawing.png eye.png fatleft_arrow.png
+    fatright_arrow.png fillpattern.png font.png graph.png manual.png
+    noimg.png note.png pce.png pen.png redo.png saveall.png valign.png
+    vcr_fast_forward.png vcr_forward.png)
 
-set(XPCE_DATA_bitmaps_32x32 books.png buffers.png
-    doc_pl.png doc_x.png drawing.png pensil.png viewer.png
-    vishier.png)
+set(XPCE_DATA_bitmaps_32x32 books.png)
 
 set(XPCE_DATA_bitmaps_ide_lsp
     error.svg warning.svg information.svg hint.svg

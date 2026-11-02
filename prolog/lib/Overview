@@ -68,9 +68,6 @@ pce_prompter.pl		Generic simple prompt library
 keybinding.pl		show_keybindings/1: show keybindings of editors, etc.
 dragdrop.pl		Class drag_and_drop_gesture
 dragdict.pl		Class drag_and_drop_dict_item_gesture
-twm_geometry_box.pl	TWM-type of window resize-box painted on the display
-twm_resize_button.pl	TWM-type window-resizer
-subframe.pl		Class subframe: Manipulate windows in windows
 pce_font_item.pl	Font selector (as used in PceDraw).
 pce_style_item.pl	Specify a style object (text attributes)
 pce_tagged_connection.plConnection with a tag in the middle.
