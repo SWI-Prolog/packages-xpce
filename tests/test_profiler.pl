@@ -289,6 +289,18 @@ test(tree_time_view, Texts == ['50.0%', '250.0 ms']) :-
     Texts = [Percentage, Seconds],
     free(F).
 
+%   Seconds are scaled to a unit that shows short times: an exact
+%   profile is often over in milliseconds.
+
+test(seconds, Texts == ['50.0 ms', '2.50 s']) :-
+    profiler(F),
+    send(F, time_view, seconds),
+    get(F, render_time, 10, T1),        % of 100 ticks in 0.5 sec
+    send(F, slot, time, 25),
+    get(F, render_time, 10, T2),
+    Texts = [T1, T2],
+    free(F).
+
 %   ev/1 and od/1 call each other; each level of the recursion is a
 %   cycle of its own in the profile.  The calls of ev/1 to od/1 are
 %   nested: the outer one includes the inner one.  Its calls to work/0

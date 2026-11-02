@@ -33,7 +33,8 @@
 */
 
 :- module(hierarchy_chart,
-          [ hierarchy_from_term/2       % +Term, -Node
+          [ hierarchy_from_term/2,      % +Term, -Node
+            format_value/3              % +Unit, +Value, -Text
           ]).
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
@@ -615,6 +616,12 @@ format_percentage(V, Reference, Text) :-
     ->  Text = '0.0%'
     ;   format(atom(Text), '~1f%', [100*V/Reference])
     ).
+
+%!  format_value(+Unit, +Value, -Text) is det.
+%
+%   Text shows Value in Unit, one of `bytes`, `seconds`, `count` or
+%   `plain`, as the charts do.  Bytes and seconds are scaled to a unit
+%   that keeps the number short, e.g., `1.5 kB` or `12.0 ms`.
 
 format_value(bytes, V, Text) :-
     !,

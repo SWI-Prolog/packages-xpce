@@ -57,7 +57,8 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(xdot), []).
 :- use_module(library(pce_filter_item), []).
-:- use_module(library(plot/hierarchy_chart), [hierarchy_from_term/2]).
+:- use_module(library(plot/hierarchy_chart),
+              [hierarchy_from_term/2, format_value/3]).
 :- autoload(library(edit), [edit/1]).
 :- autoload(library(pce_html_manual), [man_documented/1, man_html_object/1]).
 
@@ -305,11 +306,11 @@ render_time(F, Ticks:int, Rendered:any) :<-
     ;   View == seconds
     ->  get(F, ticks, Total),
         (   Total == 0
-        ->  Rendered = '0.0 s.'
+        ->  Time = 0
         ;   get(F, time, TotalTime),
-            Time is TotalTime*(Ticks/float(Total)),
-            new(Rendered, string('%.2f s.', Time))
-        )
+            Time is TotalTime*(Ticks/float(Total))
+        ),
+        format_value(seconds, Time, Rendered)
     ).
 
 help(_) :->
@@ -421,11 +422,18 @@ initialise(B) :->
 resize(B) :->
     send_super(B, resize),
     get(B?text_image, width, W),
-    get(B?font, width, '100.0%', ColW),
+    time_width(B?font, ColW),
     send(B, tab_stops, vector(W-ColW-15)).
 
+%   The width of the widest time, as a percentage or in seconds.
+
+time_width(Font, Width) :-
+    get(Font, width, '100.0%', W1),
+    get(Font, width, '999.9 µs', W2),
+    Width is max(W1, W2).
+
 %       The column holding me and the filter above me is made as wide as
-%       the longest predicate, a space and the widest time, "100.0%".
+%       the longest predicate, a space and the widest time.
 %       Not wider than max_width of the profiler, though: one long name
 %       would push the details off the window.
 
@@ -436,7 +444,9 @@ fit_width(B) :->
     send(B?all_items, for_all,
          message(Max, maximum, ?(Font, width, @arg1?key))),
     get(Max, value, KeyW),
-    get(Font, width, ' 100.0%', ColW),
+    get(Font, width, ' ', SpaceW),
+    time_width(Font, TimeW),
+    ColW is SpaceW + TimeW,
     get(B?scroll_bar, width, SBW),      % <-text_image is not laid out yet
     Wanted is KeyW + ColW + 15 + SBW + 10,
     (   get(B, tile, Tile),
