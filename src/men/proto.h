@@ -107,6 +107,7 @@ COMMON(status)	makeClassTextItem(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/men/tab.c */
 COMMON(status)	changedLabelImageTab(Tab t);
 COMMON(int)	labelHeightTab(Tab t);
+COMMON(int)	naturalLabelWidthTab(Tab t);
 COMMON(status)	makeClassTab(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/diagroup.c */

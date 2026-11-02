@@ -66,6 +66,7 @@ test_epilog_tabs :-
                 epilog_split,
                 epilog_move,
                 epilog_close,
+                epilog_label,
                 epilog_focus
               ]).
 
@@ -115,6 +116,19 @@ terminals(F, Count) :-
 
 process_groups :-
     \+ current_prolog_flag(windows, true).
+
+%!  process_names is semidet.
+%
+%   True if a terminal can tell the name of the program in its
+%   foreground (see terminal_image <-foreground_command).
+
+process_names :-
+    current_prolog_flag(arch, Arch),
+    (   sub_atom(Arch, _, _, _, linux)
+    ;   sub_atom(Arch, _, _, _, darwin)
+    ;   sub_atom(Arch, _, _, _, freebsd)
+    ),
+    !.
 
 %!  wait_until(:Goal) is semidet.
 %
@@ -367,8 +381,7 @@ test(a_tab_is_found_by_its_name, Label == 'OS shell') :-
 %       it with the name of the shell it runs.
 
 test(a_title_a_client_asked_for_outlives_a_look_at_another_tab) :-
-    epilog([profile(shell), object(F)]),
-    get(F, current_pane, W),
+    epilog(F, W),
     send(W, window_label, claude),
     send(F, new_pane, shell),
     tabs(F, [claude-1, 'OS shell'-1]),
@@ -665,6 +678,220 @@ test(a_command_in_a_shell_asks_before_closing,
     \+ send(W, can_close, @off).
 
 :- end_tests(epilog_close).
+
+
+                 /*******************************
+                 *            LABELS            *
+                 *******************************/
+
+:- begin_tests(epilog_label).
+
+%       The toplevel marks its prompts with OSC 133 (see library(editline)).
+%       Here we write those marks ourselves, as the toplevel would.
+
+prompt(PT, Prompt) :-
+    format(atom(Out), '\e]133;D\a\e]133;A\a~w\e]133;B\a', [Prompt]),
+    send(PT, insert, Out).
+
+enter(PT, Line) :-
+    format(atom(Out), '~w\r\n\e]133;C\a', [Line]),
+    send(PT, insert, Out).
+
+tab_icon(W, Icon) :-
+    get(W, container, tab_frame, Tab),
+    get(Tab, icon, Icon).
+
+test(a_query_labels_its_tab_and_keeps_it,
+     [Running, Done] == ['member(X, [a,b])'-1, 'member(X, [a,b])'-1]) :-
+    epilog(F, W),
+    get(W, terminal, PT),
+    prompt(PT, '?- '),
+    enter(PT, 'member(X, [a,b]).'),
+    tabs(F, [Running]),
+    prompt(PT, '?- '),
+    tabs(F, [Done]).
+
+test(the_icon_says_whether_the_query_runs,
+     [Running, Done] == [@pce_image, @epilog_done_icon]) :-
+    epilog(_F, W),
+    get(W, terminal, PT),
+    prompt(PT, '?- '),
+    enter(PT, 'true.'),
+    tab_icon(W, Running),
+    prompt(PT, '?- '),
+    tab_icon(W, Done).
+
+test(a_renamed_tab_still_shows_the_state, Icon == @epilog_done_icon) :-
+    epilog(_F, W),
+    get(W, container, tab_frame, Tab),
+    send(Tab, label_edited, mine),
+    get(W, terminal, PT),
+    prompt(PT, '?- '),
+    enter(PT, 'true.'),
+    prompt(PT, '?- '),
+    tab_icon(W, Icon).
+
+test(a_line_read_by_the_query_is_not_a_query,
+     Tabs == ['sleep(1)'-1]) :-
+    epilog(F, W),
+    get(W, terminal, PT),
+    prompt(PT, '?- '),
+    enter(PT, 'sleep(1).'),
+    prompt(PT, '|: '),
+    enter(PT, 'hello.'),
+    tabs(F, Tabs).
+
+%       The label says all of it; the tab stack shows it shortened if
+%       it is wider than `pane_tab_stack.max_label_width'.
+
+long_query('between(1, 1000000000, X), X > 999999999, format("~w~n", [X])').
+
+test(a_long_query_is_shown_shortened_at_its_end,
+     [ Label == Query,
+       Shown == true
+     ]) :-
+    long_query(Query),
+    epilog(F, W),
+    send(W, new_tab),                   % a lone tab shows no label
+    get(W, terminal, PT),
+    prompt(PT, '?- '),
+    atom_concat(Query, '.', Line),
+    enter(PT, Line),
+    tabs(F, [Label-1, _]),
+    get(W, container, tab_frame, Tab),
+    get(Tab, shown_label, ShownObj),
+    get(ShownObj, value, ShownText),
+    (   sub_atom(ShownText, 0, _, _, 'between'),
+        sub_atom(ShownText, _, 1, 0, '\u2026')
+    ->  Shown = true
+    ;   Shown = ShownText
+    ).
+
+test(a_renamed_tab_does_not_follow_the_query, Tabs == [mine-1]) :-
+    epilog(F, W),
+    get(W, container, tab_frame, Tab),
+    send(Tab, label_edited, mine),
+    get(W, terminal, PT),
+    prompt(PT, '?- '),
+    enter(PT, 'true.'),
+    tabs(F, Tabs).
+
+test(a_tab_can_be_told_not_to_follow, Tabs == ['Prolog'-1]) :-
+    get(class(epilog_window), class_variable, follow_activity, CV),
+    setup_call_cleanup(
+        send(CV, value, @off),
+        ( epilog(F, W),
+          get(W, terminal, PT),
+          prompt(PT, '?- '),
+          enter(PT, 'true.'),
+          tabs(F, Tabs)
+        ),
+        send(CV, value, @on)).
+
+%       A shell runs in a process of its own.  While it waits for a
+%       command its tab says where it is; while it runs one, what it
+%       runs.
+
+shell_tab(Dir, F, W, PT) :-
+    epilog([profile(shell), cwd(Dir), object(F)]),
+    get(F, current_pane, W),
+    get(W, terminal, PT),
+    wait_until(get(PT, foreground_process, _)).
+
+tab_says(F, Label) :-
+    wait_until(tabs(F, [Label-1])).
+
+test(an_idle_shell_labels_its_tab_with_its_directory,
+     [ condition(process_groups)
+     ]) :-
+    shell_tab(/, F, _W, _PT),
+    tab_says(F, /).
+
+%       Unless the shell reports it (OSC 7), nothing tells us it changed
+%       directory: we look after it was given a line.
+
+test(a_shell_tab_follows_cd,
+     [ condition(process_groups)
+     ]) :-
+    shell_tab(/, F, _W, PT),
+    tab_says(F, /),
+    send(PT, send, 'cd /tmp\n'),
+    tab_says(F, '/tmp').
+
+%       A directory is shortened at its start: where it ends is where
+%       the shell is.
+
+test(a_long_directory_is_shown_shortened_at_its_start,
+     [ condition(process_groups),
+       setup(long_directory(Dir)),
+       cleanup(delete_directory(Dir)),
+       Shown == true
+     ]) :-
+    shell_tab(Dir, _F, W, PT),
+    tab_label_says(W, Dir),
+    get(W, container, tab_frame, Tab),
+    wait_until(( get(Tab, shown_label, S), S \== @nil )),
+    get(Tab, shown_label, ShownObj),
+    get(ShownObj, value, ShownText),
+    (   sub_atom(ShownText, 0, 1, _, '\u2026'),
+        sub_atom(ShownText, _, _, 0, '_tab')
+    ->  Shown = true
+    ;   Shown = ShownText
+    ),
+    send(PT, send, 'exit\n').
+
+long_directory(Dir) :-
+    tmp_file(epilog, Tmp),
+    atom_concat(Tmp, '_a_directory_with_a_name_too_long_for_a_tab', Dir),
+    make_directory(Dir).
+
+tab_label_says(W, Label) :-
+    get(W, container, tab_frame, Tab),
+    wait_until(get(Tab, label, Label)).
+
+test(a_program_labels_its_tab_while_it_runs,
+     [ condition(process_names)
+     ]) :-
+    shell_tab(/, F, W, PT),
+    send(PT, send, 'sleep 30\n'),
+    tab_says(F, sleep),
+    tab_icon(W, @epilog_process_icon),
+    send(PT, send, '\x3\'),
+    tab_says(F, /).
+
+test(the_title_of_a_program_goes_with_it,
+     [ condition(process_groups)
+     ]) :-
+    shell_tab(/, F, _W, PT),
+    send(PT, send, 'sh -c \'printf "\\033]0;claude\\007"; sleep 30\'\n'),
+    tab_says(F, claude),
+    send(PT, send, '\x3\'),
+    tab_says(F, /).
+
+test(a_title_the_shell_asks_for_is_not_shown,
+     [ condition(process_groups),
+       Tabs == [(/)-1]
+     ]) :-
+    shell_tab(/, F, W, PT),
+    send(PT, send, 'printf "\\033]0;mine\\007"\n'),
+    wait_until(get(W, window_label, mine)),
+    tabs(F, Tabs).
+
+test(a_terminal_tells_the_program_it_runs,
+     [ condition(process_names),
+       cleanup(send(PT, send, '\x3\')),
+       Command == sleep
+     ]) :-
+    epilog([profile(shell), object(F)]),
+    get(F, current_pane, W),
+    get(W, terminal, PT),
+    wait_until(get(PT, foreground_process, _)),
+    get(PT, foreground_process, Shell),
+    send(PT, send, 'sleep 30\n'),
+    wait_until(( get(PT, foreground_process, Group), Group \== Shell )),
+    get(PT, foreground_command, Command).
+
+:- end_tests(epilog_label).
 
 
                  /*******************************

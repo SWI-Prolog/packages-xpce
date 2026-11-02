@@ -709,39 +709,6 @@ draw_separator(Menu m, int x1, int y1, int x2, int y2)
 }
 
 
-/* A cycle menu may be narrower than its labels, see ->max_value_width.
- * label_fit() returns the number of characters of `s' that fit in `w'
- * pixels if they are followed by an ellipsis, or -1 if `s' fits as a
- * whole.
- */
-
-#define ELLIPSIS 0x2026			/* … */
-
-static int
-label_fit(PceString s, FontObj f, int w)
-{ if ( str_width(s, 0, s->s_size, f) <= w )
-    return -1;
-
-  LocalString(ell, true, 1);
-  str_store(ell, 0, ELLIPSIS);
-  double room = w - str_width(ell, 0, 1, f);
-  int lo = 0, hi = s->s_size;		/* lo fits, hi does not */
-
-  while( hi - lo > 1 )
-  { int n = (lo+hi)/2;
-
-    if ( str_width(s, 0, n, f) <= room )
-      lo = n;
-    else
-      hi = n;
-  }
-  while( lo > 0 && str_fetch(s, lo-1) == ' ' )
-    lo--;
-
-  return lo;
-}
-
-
 /* The width available for the label of an item */
 
 static int
@@ -754,28 +721,34 @@ label_room(Menu m, MenuItem mi, int w)
 }
 
 
-/* The number of characters of the label of `mi' we show, or -1 if we
- * show all of it.
+/* A cycle menu may be narrower than its labels, see ->max_value_width.
+ * label_shown() puts the label of `mi' as we show it in `buf', which
+ * must be wide and have room for one more character than the label,
+ * and returns true if it ends in an ellipsis.  A markup label gets the
+ * ellipsis from Pango, so `buf' may be NULL for it.
  */
 
-static int
-label_shown(Menu m, MenuItem mi)
+static bool
+label_shown(Menu m, MenuItem mi, PceString buf)
 { if ( is_cycle_menu(m) && notNil(m->max_value_width) &&
        is_markup_label(mi) )		/* Pango adds the ellipsis */
   { int w, h;
 
     markup_size_menu_item(m, mi, &w, &h);
-    return w > label_room(m, mi, valInt(m->item_size->w)) ? 0 : -1;
+    return w > label_room(m, mi, valInt(m->item_size->w));
   }
   if ( is_cycle_menu(m) && notNil(m->max_value_width) &&
        instanceOfObject(mi->label, ClassCharArray) )
   { PceString s = &((CharArray)mi->label)->data;
 
-    return label_fit(s, getFontMenuItemMenu(m, mi),
-		     label_room(m, mi, valInt(m->item_size->w)));
+    LocalString(tmp, true, s->s_size+1);
+
+    return str_ellipsize(s, getFontMenuItemMenu(m, mi),
+			 label_room(m, mi, valInt(m->item_size->w)),
+			 NAME_end, buf ? buf : tmp);
   }
 
-  return -1;
+  return false;
 }
 
 
@@ -954,16 +927,10 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h)
   { FontObj f = getFontMenuItemMenu(m, mi);
     int fw = valInt(getAvgCharWidthFont(f));
     PceString s = &((Name) mi->label)->data;
-    int n = label_shown(m, mi);
+    LocalString(buf, true, s->s_size+1);
 
-    if ( n >= 0 )			/* label followed by an ellipsis */
-    { LocalString(buf, true, n+1);
-
-      str_ncpy(buf, 0, s, 0, n);
-      str_store(buf, n, ELLIPSIS);
-      buf->s_size = n+1;
+    if ( label_shown(m, mi, buf) )	/* label followed by an ellipsis */
       s = buf;
-    }
 
     str_label(s,
 	      ( instanceOfObject(m, ClassPopup) &&
@@ -2447,7 +2414,7 @@ getEllipsizedLabelMenu(Menu m)
 { MenuItem mi;
 
   ComputeGraphical(m);
-  if ( (mi = getItemSelectionMenu(m)) && label_shown(m, mi) >= 0 )
+  if ( (mi = getItemSelectionMenu(m)) && label_shown(m, mi, NULL) )
   { if ( is_markup_label(mi) )
       return get(mi->label, NAME_text, EAV);
     answer(mi->label);

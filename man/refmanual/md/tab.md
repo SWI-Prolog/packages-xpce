@@ -37,14 +37,23 @@ See also class tab_stack.
 ## Instance variables {#class-tab-instvars}
 
 - tab<->icon: image*
-    Image shown left of the text of the label, scaled to the height
-    of the text.  It sits in the half circle at the left end of the
+    Image shown left of the text of the label, scaled to 80% of the
+    height of the text.  It sits in the half circle at the left end of the
     label, as a close button (see <-closable) sits in the one at the
     right end.  It is dimmed with the label of a hidden tab.  Default
     @nil.
 
 - tab<-label_format: {left,center,right}
     Deternines how the label is aligned the box.
+
+- tab<-label_limit: int*
+    The widest the label box may be, or @nil if it may be as wide as
+    its label.  Set by `tab_stack ->layout_labels`.  A label that does
+    not fit is shown as `<-ellipsize_label` makes it.
+
+- tab<-shown_label: char_array*
+    The label as shown if `<-label_limit` made it shorter, @nil if it
+    is shown whole.
 
 - tab<-label_offset: int
     Distance from the left-side of the object to the left-side of
@@ -97,6 +106,18 @@ See also class tab_stack.
     rectangle used for displaying the contents.
 
 ## Get methods {#class-tab-get}
+
+- tab<-ellipsize_label: width=int -> char_array
+    The label shortened to fit `width` pixels, used if it does not fit
+    `<-label_limit`.  This one puts an ellipsis (…) at the end using
+    `char_array <-ellipsize`.  A subclass may refine it to shorten the
+    label elsewhere, e.g., a file name at its start.  Fails if the
+    label is not plain text, which is then clipped.
+
+- tab<-ellipsized_label: -> char_array
+    The full label if it is shown shortened.  Fails otherwise.
+    library(help_message) shows it as the tooltip of the label, also
+    of a tab that is not on top.
 
 - tab<-label_area: area
     The box (pill) of the label, relative to the area of the tab.

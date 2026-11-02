@@ -23,6 +23,25 @@ specify a PC:
 	send(D, open).
 
 
+## Class variables {#class-tab_stack-classvars}
+
+- tab_stack.max_label_width: 0.. = 0
+    The widest a label may be.  A longer label is shortened; see
+    `tab <-ellipsize_label`.  0 puts no limit on it.
+
+
+## Instance variables {#class-tab_stack-instvars}
+
+- tab_stack<->label_room: 0..*
+    The width the row of labels must fit in, or @nil (default) for no
+    limit.  If the labels are wider, the long ones are shortened: the
+    labels narrower than their share are shown whole and the others
+    share what is left.  It is not the width of the tabs: in a dialog a
+    tab is as wide as its label.  Whoever gives the stack its width
+    sets it, as library(tabbed_window) does, keeping room for its
+    button to add a tab.
+
+
 ## Send methods {#class-tab_stack-send}
 
 - tab_stack->append: tab

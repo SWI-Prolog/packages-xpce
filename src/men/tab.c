@@ -53,6 +53,8 @@ static status
 initialiseTab(Tab t, Name name)
 { assign(t, label_offset, ZERO);
   assign(t, icon,	  NIL);
+  assign(t, label_limit,  NIL);
+  assign(t, shown_label,  NIL);
   assign(t, status,	  NAME_onTop);
   assign(t, size,	  DEFAULT);
 
@@ -92,15 +94,18 @@ pill_padding(int lh)
 }
 
 
-/* The <-icon is drawn as high as the text, keeping its aspect ratio, and
-   centred in the half circle at the left end of the pill, as the close
-   button is in the one at the right end.
+/* The <-icon is drawn a little lower than the text (ICON_SCALE of its
+   height), keeping its aspect ratio, and centred in the half circle at
+   the left end of the pill, as the close button is in the one at the
+   right end.
 */
+
+#define ICON_SCALE 0.8
 
 static void
 icon_size(Tab t, int *iw, int *ih)
 { Image img = t->icon;
-  int fh = valInt(getHeightFont(t->label_font));
+  int fh = (int)(valInt(getHeightFont(t->label_font))*ICON_SCALE + 0.5);
   int w = valInt(img->size->w);
   int h = valInt(img->size->h);
 
@@ -141,25 +146,67 @@ text_right(Tab t, int lh)
 }
 
 
+/* The size of my label box if it shows all of my label */
+
+static void
+natural_label_size(Tab t, int *wp, int *hp)
+{ int w, h;
+  Size minsize = getClassVariableValueObject(t, NAME_labelSize);
+  int ex = valInt(getAvgCharWidthFont(t->label_font));
+
+  if ( notNil(t->label) && t->label != NAME_ )
+  { compute_label_size_dialog_group((DialogGroup) t, &w, &h);
+    h += 2*PILL_VPAD + PILL_GAP;
+    h = max(h, valInt(minsize->h));
+    w += text_left(t, h) + text_right(t, h);
+  } else				/* no label: the box shrinks to its */
+  { h = valInt(getHeightFont(t->label_font)) + 2*PILL_VPAD + PILL_GAP;
+    h = max(h, valInt(minsize->h));	/* minimum rather than keeping the */
+    w = 2*ex +				/* size of a label it no longer has */
+	text_left(t, h) + text_right(t, h) - 2*pill_padding(h);
+  }
+
+  *wp = max(w, valInt(minsize->w));
+  *hp = h;
+}
+
+
+int
+naturalLabelWidthTab(Tab t)
+{ int w, h;
+
+  obtainClassVariablesObject(t);
+  natural_label_size(t, &w, &h);
+
+  return w;
+}
+
+
+/* A label wider than <-label_limit is shortened by <-ellipsize_label to
+   the room the box leaves for its text.
+*/
+
 static status
 computeLabelTab(Tab t)
 { if ( notNil(t->label_size) )
   { int w, h;
     Size minsize = getClassVariableValueObject(t, NAME_labelSize);
-    int ex = valInt(getAvgCharWidthFont(t->label_font));
+    CharArray shown = NIL;
 
-    if ( notNil(t->label) && t->label != NAME_ )
-    { compute_label_size_dialog_group((DialogGroup) t, &w, &h);
-      h += 2*PILL_VPAD + PILL_GAP;
-      h = max(h, valInt(minsize->h));
-      w += text_left(t, h) + text_right(t, h);
-    } else				/* no label: the box shrinks to its */
-    { h = valInt(getHeightFont(t->label_font)) + 2*PILL_VPAD + PILL_GAP;
-      h = max(h, valInt(minsize->h));	/* minimum rather than keeping the */
-      w = 2*ex +			/* size of a label it no longer has */
-	  text_left(t, h) + text_right(t, h) - 2*pill_padding(h);
+    natural_label_size(t, &w, &h);
+    if ( notNil(t->label_limit) && w > valInt(t->label_limit) )
+    { int room;
+
+      w = max(valInt(t->label_limit), valInt(minsize->w));
+      room = w - text_left(t, h) - text_right(t, h);
+      if ( room > 0 )
+      { CharArray s = get(t, NAME_ellipsizeLabel, toInt(room), EAV);
+
+	if ( s && s != t->label )
+	  shown = s;
+      }
     }
-    w = max(w, valInt(minsize->w));
+    assign(t, shown_label, shown);
 
     if ( t->label_size != minsize )
       setSize(t->label_size, toInt(w), toInt(h));
@@ -232,6 +279,46 @@ getLabelButtonAreaTab(Tab t)
   }
 
   fail;
+}
+
+
+/* My label shortened to fit `width' pixels.  This one puts the ellipsis
+   at the end; a subclass may know better where it goes, e.g., at the
+   start of a file name.  Fails for a label that is not plain text, which
+   is then clipped.
+*/
+
+static CharArray
+getEllipsizeLabelTab(Tab t, Int width)
+{ if ( instanceOfObject(t->label, ClassCharArray) &&
+       !instanceOfObject(t->label, ClassMarkup) )
+    return get(t->label, NAME_ellipsize, t->label_font, width, NAME_end, EAV);
+
+  fail;
+}
+
+
+/* The full label if it is shown shortened, e.g., for a tooltip */
+
+static CharArray
+getEllipsizedLabelTab(Tab t)
+{ ComputeGraphical(t);
+
+  if ( notNil(t->shown_label) )
+    answer(t->label);
+
+  fail;
+}
+
+
+static status
+labelLimitTab(Tab t, Int limit)
+{ if ( t->label_limit != limit )
+  { assign(t, label_limit, limit);
+    qadSendv(t, NAME_ChangedLabel, 0, NULL);
+  }
+
+  succeed;
 }
 
 
@@ -359,8 +446,8 @@ ChangedLabelTab(Tab t)
 }
 
 
-/* ->icon: an image left of the text of the label, drawn as high as the
-   text.  See icon_size().
+/* ->icon: an image left of the text of the label, drawn a little lower
+   than the text.  See icon_size().
 */
 
 static status
@@ -527,11 +614,17 @@ draw_label(Tab t, int x, int y, int lw, int lh, bool on_top, int lflags)
 
   if ( lfg )
     r_colour(lfg);
-  RedrawLabelDialogGroup((DialogGroup)t, 0,
-			 x+text_left(t, lh), py,
-			 lw-text_left(t, lh)-text_right(t, lh), ph,
-			 t->label_format, NAME_center,
-			 lflags);
+  if ( notNil(t->shown_label) )
+    dia_draw_text_label(t->shown_label, 0, t->label_font,
+			x+text_left(t, lh), py,
+			lw-text_left(t, lh)-text_right(t, lh), ph,
+			t->label_format, NAME_center, lflags);
+  else
+    RedrawLabelDialogGroup((DialogGroup)t, 0,
+			   x+text_left(t, lh), py,
+			   lw-text_left(t, lh)-text_right(t, lh), ph,
+			   t->label_format, NAME_center,
+			   lflags);
   if ( lfg )
     r_colour(fg);
 }
@@ -670,6 +763,10 @@ static vardecl var_tab[] =
      NAME_appearance, "Currently displayed status"),
   IV(NAME_previousTop, "name*", IV_NONE,
      NAME_update, "Name of tab on top before me"),
+  SV(NAME_labelLimit, "int*", IV_GET|IV_STORE, labelLimitTab,
+     NAME_layout, "Widest my label box may be (set by the tab_stack)"),
+  IV(NAME_shownLabel, "char_array*", IV_GET,
+     NAME_layout, "My label as shown if it is shortened"),
   SV(NAME_labelFormat, "{left,center,right}", IV_GET|IV_STORE|IV_REDEFINE,
      labelFormatDialogGroup,
      NAME_appearance, "Alignment of label in box")
@@ -713,6 +810,10 @@ static getdecl get_tab[] =
      NAME_area, "Left-side of tab"),
   GM(NAME_y, 0, "int", NULL, getYGraphical,
      NAME_area, "Top-side of tab"),
+  GM(NAME_ellipsizeLabel, 1, "char_array", "width=int", getEllipsizeLabelTab,
+     NAME_layout, "My label shortened by an ellipsis to fit width pixels"),
+  GM(NAME_ellipsizedLabel, 0, "char_array", NULL, getEllipsizedLabelTab,
+     NAME_layout, "My full label if it is shown shortened"),
   GM(NAME_labelHeight, 0, "int", NULL, getLabelHeightTab,
      NAME_layout, "Height my label takes (0 if it is not shown)"),
   GM(NAME_closeButtonArea, 0, "area", NULL, getCloseButtonAreaTab,

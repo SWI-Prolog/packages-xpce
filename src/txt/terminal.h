@@ -283,6 +283,7 @@ typedef struct rlc_data
     FDWatch  *watch;			/* Watch for write to terminal */
     bool      has_client_thread;
     pthread_t client_thread;		/* Thread that opened this terminal */
+    int	      foreground;		/* Last reported foreground group */
   } pty;
 #else
   struct

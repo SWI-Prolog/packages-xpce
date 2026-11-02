@@ -210,6 +210,8 @@ double s_descent(FontObj f);
 double s_height(FontObj f);
 double c_width(uchar_t c, FontObj font);
 double str_width(PceString s, int from, int to, FontObj f);
+bool   str_ellipsize(PceString s, FontObj f, double width, Name where,
+		     PceString buf);
 double str_advance(PceString s, int from, int to, FontObj f);
 double str_advance_utf8(const char *u, int ulen, FontObj font);
 double str_advance_W(charW *s, int l, FontObj font);

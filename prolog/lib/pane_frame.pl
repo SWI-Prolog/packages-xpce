@@ -1131,12 +1131,21 @@ tab_label(F, Label:name) :<-
 %       tab holding two of them says which.  A tab the user has renamed by
 %       hand keeps the name they gave it.
 
+%       A pane may also give its tab an icon (<-pane_icon), which says
+%       what state it is in, so it follows the pane even on a tab the
+%       user named.
+
 update_tab_label(F) :->
-    "Put the label of the current pane on its tab"::
+    "Put the label and icon of the current pane on its tab"::
     get(F, current_pane, Pane),
+    get(F, tab, Tab),
+    ignore(( send(Pane, has_get_method, pane_icon),
+             get(Pane, pane_icon, Icon),
+             \+ get(Tab, icon, Icon),
+             send(Tab, icon, Icon)
+           )),
     send(Pane, has_get_method, pane_label),
     get(Pane, pane_label, Label),
-    get(F, tab, Tab),
     get(Tab, renamed, @off),
     send(Tab, label, Label).
 
@@ -2240,6 +2249,8 @@ untick_commands(P) :->
 
 class_variable(hide_single_label, bool, @on,
                "Do not label a tab if there is only one").
+class_variable(max_label_width, '0..', 250,
+               "Widest a label may be (0: as wide as it is)").
 
 :- pce_end_class(pane_tab_stack).
 
@@ -2318,6 +2329,29 @@ class_variable(closable,       bool, @on,
 
 variable(renamed, bool := @off, get,
          "The user typed my label; it is not the pane's to set").
+
+%       A pane may know better than `tab <-ellipsize_label' where to
+%       shorten the label it gave me, e.g., at the start of a directory.
+%       A label the user typed is theirs, so it is shortened at the end.
+
+ellipsize_label(Tab, Width:int, Short:char_array) :<-
+    "My label shortened to fit Width pixels"::
+    (   get(Tab, renamed, @off),
+        tab_pane(Tab, Pane),
+        send(Pane, has_get_method, ellipsize_tab_label),
+        get(Pane, ellipsize_tab_label, Tab, Width, Short0)
+    ->  Short = Short0
+    ;   get_super(Tab, ellipsize_label, Width, Short)
+    ).
+
+tab_pane(Tab, Pane) :-
+    get(Tab, current, Pane),
+    Pane \== @nil,
+    !.
+tab_pane(Tab, Pane) :-
+    get(Tab, windows, Windows),
+    get(Windows, size, 1),
+    get(Windows, head, Pane).
 
 label_edited(Tab, Label:name) :->
     "Take the label typed into the editor, and keep it"::

@@ -63,6 +63,7 @@ test_tab_frame :-
                 frame_gap_colour,
                 tab_frame_single_tab,
                 tab_frame_label,
+                tab_label_room,
                 tab_frame_buttons,
                 tab_frame_members,
                 tab_frame_resize,
@@ -692,6 +693,144 @@ tab_names(TW, Names) :-
 
 :- end_tests(tab_frame_label).
 
+
+:- begin_tests(tab_label_room).
+
+/* A stack told how wide its row of labels may be shortens the labels
+   that make the row too wide: the short ones stay as they are and the
+   long ones share what remains.  <-ellipsize_label does the shortening,
+   putting the ellipsis at the end unless a subclass knows better.
+*/
+
+:- pce_begin_class(start_ellipsis_tab, tab,
+                   "A tab whose label is shortened at its start").
+
+ellipsize_label(T, Width:int, Short:char_array) :<-
+    "Put the ellipsis at the start"::
+    get(T, label, Label),
+    get(Label, ellipsize, T?label_font, Width, start, Short).
+
+:- pce_end_class(start_ellipsis_tab).
+
+long_label('A label that is far too long to fit in the room it has').
+
+label_stack(Class, TS, Short, Long) :-
+    long_label(Label),
+    Term =.. [Class, long],
+    new(TS, tab_stack(new(Short, tab(short)), new(Long, Term))),
+    send(Long, label, Label).
+
+shown(Tab, Shown) :-
+    get(Tab, shown_label, Obj),
+    (   Obj == @nil
+    ->  Shown = @nil
+    ;   get(Obj, value, Shown)
+    ).
+
+row_width(TS, Width) :-
+    get(TS, tabs, Tabs),
+    chain_list(Tabs, List),
+    foldl(add_label_width, List, 0, Width).
+
+add_label_width(Tab, W0, W) :-
+    get(Tab?label_size, width, TW),
+    W is W0+TW.
+
+test(without_room_a_label_is_shown_whole, Shown == @nil) :-
+    label_stack(tab, _TS, _Short, Long),
+    shown(Long, Shown).
+
+test(a_row_too_wide_shortens_its_long_label,
+     [ ShortShown == @nil,
+       true(sub_atom(LongShown, _, 1, 0, '\u2026')),
+       true(Width =< 200)
+     ]) :-
+    label_stack(tab, TS, Short, Long),
+    send(TS, label_room, 200),
+    shown(Short, ShortShown),
+    shown(Long, LongShown),
+    row_width(TS, Width).
+
+test(more_room_shows_it_whole_again, Shown == @nil) :-
+    label_stack(tab, TS, _Short, Long),
+    send(TS, label_room, 200),
+    send(TS, label_room, @nil),
+    shown(Long, Shown).
+
+test(the_full_label_is_there_for_a_tooltip, Label == Full) :-
+    long_label(Full),
+    label_stack(tab, TS, _Short, Long),
+    send(TS, label_room, 200),
+    get(Long, ellipsized_label, Label).
+
+test(a_label_is_never_wider_than_max_label_width,
+     [ true(W =< 100),
+       cleanup(send(CV, value, 0))
+     ]) :-
+    get(class(tab_stack), class_variable, max_label_width, CV),
+    send(CV, value, 100),
+    label_stack(tab, _TS, _Short, Long),
+    get(Long?label_size, width, W).
+
+test(a_subclass_decides_where_the_ellipsis_goes,
+     true(sub_atom(Shown, 0, 1, _, '\u2026'))) :-
+    label_stack(start_ellipsis_tab, TS, _Short, Long),
+    send(TS, label_room, 200),
+    shown(Long, Shown).
+
+%   A shortened label shows its full text as a tooltip, also on a tab
+%   that is not on top (see library(help_message)).
+
+label_still(TS, Tab, Ev) :-
+    get(Tab, label_area, area(AX, AY, AW, AH)),
+    get(Tab, area, area(TX, TY, _, _)),
+    get(TS, window, W),
+    get(TS, position, point(SX, SY)),
+    X is SX+TX+AX+AW//2,
+    Y is SY+TY+AY+AH//2,
+    new(Ev, event(loc_still, W, X, Y)).
+
+tooltip_stack(D, TS, Short, Long) :-
+    new(D, dialog),
+    label_stack(tab, TS, Short, Long),
+    send(D, append, TS),
+    send(TS, label_room, 200),
+    send(D, compute).
+
+test(a_shortened_label_has_its_full_text_as_tooltip, Text == Full) :-
+    long_label(Full),
+    tooltip_stack(D, TS, _Short, Long),
+    label_still(TS, Long, Ev),
+    get(TS, help_message, tag, Ev, Msg),
+    get(Msg, value, Text),
+    free(D).
+
+test(a_label_shown_whole_has_no_tooltip, fail) :-
+    tooltip_stack(D, TS, Short, _Long),
+    label_still(TS, Short, Ev),
+    call_cleanup(get(TS, help_message, tag, Ev, _), free(D)).
+
+%   The shortening itself: char_array <-ellipsize
+
+ellipsize(Where, Short) :-
+    new(F, font(sans, normal, 12)),
+    get('/home/someone/src/project/subdir', ellipsize, F, 100, Where, S),
+    get(S, value, Short).
+
+test(ellipsize_end, true(sub_atom(S, 0, _, _, '/home'))) :-
+    ellipsize(end, S),
+    sub_atom(S, _, 1, 0, '\u2026').
+test(ellipsize_start, true(sub_atom(S, _, _, 0, 'subdir'))) :-
+    ellipsize(start, S),
+    sub_atom(S, 0, 1, _, '\u2026').
+test(ellipsize_middle, true(sub_atom(S, _, _, 0, 'dir'))) :-
+    ellipsize(middle, S),
+    sub_atom(S, 0, _, _, '/home'),
+    sub_atom(S, _, 1, _, '\u2026').
+test(ellipsize_fits, S == short) :-
+    get(short, ellipsize, font(sans, normal, 12), 100, S).
+
+:- end_tests(tab_label_room).
 
 :- begin_tests(tab_frame_buttons).
 

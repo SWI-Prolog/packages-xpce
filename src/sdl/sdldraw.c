@@ -3320,6 +3320,73 @@ str_width(PceString s, int from, int to, FontObj font)
     return 0.0;
 }
 
+/* Put in `buf' the text of `s' with `n' of its characters kept and an
+ * ellipsis where the others were: after them (`end'), before them
+ * (`start') or between the first and the second half (`middle').
+ * Spaces next to the ellipsis are dropped.
+ */
+
+#define ELLIPSIS 0x2026			/* … */
+
+static void
+str_ellipsized(PceString s, int n, Name where, PceString buf)
+{ int len = s->s_size;
+  int head, tail;			/* characters kept at either end */
+
+  if ( where == NAME_start )
+  { head = 0;
+    tail = n;
+  } else if ( where == NAME_middle )
+  { head = (n+1)/2;
+    tail = n/2;
+  } else
+  { head = n;
+    tail = 0;
+  }
+
+  while( head > 0 && str_fetch(s, head-1) == ' ' )
+    head--;
+  while( tail > 0 && str_fetch(s, len-tail) == ' ' )
+    tail--;
+
+  buf->s_size = 0;
+  str_ncpy(buf, 0, s, 0, head);
+  str_store(buf, head, ELLIPSIS);
+  str_ncpy(buf, head+1, s, len-tail, tail);
+  buf->s_size = head+1+tail;
+}
+
+/**
+ * Shorten `s' to fit in `width' pixels by replacing characters by an
+ * ellipsis (…) at the `start', `middle' or `end'.
+ *
+ * @param buf receives the result.  It must be wide and have room for
+ * s->s_size+1 characters.
+ * @return false if `s' fits as it is, leaving `buf' alone.
+ */
+
+bool
+str_ellipsize(PceString s, FontObj f, double width, Name where,
+	      PceString buf)
+{ if ( str_width(s, 0, s->s_size, f) <= width )
+    return false;
+
+  int lo = 0, hi = s->s_size;		/* keeping lo fits, hi does not */
+
+  while( hi - lo > 1 )
+  { int n = (lo+hi)/2;
+
+    str_ellipsized(s, n, where, buf);
+    if ( str_width(buf, 0, buf->s_size, f) <= width )
+      lo = n;
+    else
+      hi = n;
+  }
+  str_ellipsized(s, lo, where, buf);
+
+  return true;
+}
+
 /**
  * Calculate the advance width (cursor movement) of a substring within
  * a string using a specific font.

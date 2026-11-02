@@ -63,6 +63,7 @@
               [el_unwrap/1, el_history_events/2, el_add_history/2, el_wrap/1]).
 :- use_module(library(solution_sequences), [distinct/2]).
 :- use_module(library(lists), [reverse/2, member/2, nth0/3]).
+:- use_module(library(apply), [exclude/3]).
 :- use_module(library(option),
               [meta_options/3, option/3, option/2, merge_options/3,
                select_option/3]).
@@ -602,6 +603,24 @@ default_profile(shell,  [ title('SWI-Prolog OS shell'),
 
 
                 /*******************************
+                *            ICONS             *
+                *******************************/
+
+%   The icons of a terminal's tab; see `epilog_window <-pane_icon'.
+
+resource(epilog_process, image, library('trace/icons/terminal.svg')).
+
+:- pce_global(@epilog_done_icon, make_done_icon).
+:- pce_global(@epilog_process_icon,
+              new(image(resource(epilog_process)))).
+
+make_done_icon(Ref) :-
+    get(@pce_image, grayscale, Grey),
+    Ref = @Name,
+    send(Grey, name_reference, Name).
+
+
+                /*******************************
                 *           CLASSES            *
                 *******************************/
 
@@ -624,6 +643,10 @@ variable(fold_previous, bool,                 both,
          "Fold the previous command when one is entered").
 variable(current_link,	name*,                get,  "Link under popup").
 variable(current_block,	terminal_block*,      get,  "Block under popup").
+variable(query,         string*,              get,  "Last toplevel query").
+variable(query_status,  {none,running,done} := none, get,
+         "Whether <-query still runs").
+variable(toplevel_prompt, bool := @off,       none, "Line read is a query").
 
 class_variable(inject_tries, int, [windows(5), unix(20)]).
 %!  .fold_previous
@@ -940,6 +963,7 @@ run_link_action(copy(Link), _PT) :-
 prompt_mark(PT, Kind:{prompt,input,output,end}, Cont:[bool]) :->
     "Fold the previous command; restore the line ->inject took out"::
     send_super(PT, prompt_mark, Kind, Cont),
+    ignore(track_query(PT, Kind)),
     (   Kind == output,                 % the line was entered
         get(PT, fold_previous, @on),
         get(PT, blocks, Blocks),
@@ -953,6 +977,55 @@ prompt_mark(PT, Kind:{prompt,input,output,end}, Cont:[bool]) :->
         restore_input(PT, Text, Tail)
     ;   true
     ).
+
+%!  track_query(+PT, +Kind) is semidet.
+%
+%   Keep <-query, the last query of the toplevel, and <-query_status,
+%   whether it still runs.  Every line the commandline editor reads is
+%   marked, also those read/1 and the debugger ask for, so a query is a
+%   line entered after a prompt of the toplevel, which is one that holds
+%   `?-`.  It runs until the toplevel asks for the next.  A query that
+%   spans lines is entered after its last, so the command of the block
+%   is all of it.
+
+track_query(PT, input) :-
+    get(PT?blocks, tail, Block),
+    get(Block, content, all, PromptObj), % no input yet: just the prompt
+    get(PromptObj, value, Prompt),
+    (   sub_atom(Prompt, _, _, _, '?-')
+    ->  send(PT, slot, toplevel_prompt, @on),
+        (   get(PT, query_status, running)
+        ->  send(PT, slot, query_status, done),
+            send(PT, activity_changed)
+        ;   true
+        )
+    ;   send(PT, slot, toplevel_prompt, @off)
+    ).
+track_query(PT, output) :-
+    get(PT, slot, toplevel_prompt, @on),
+    get(PT?blocks, tail, Block),
+    get(Block, content, command, Command),
+    get(Command, value, Text),
+    query_label(Text, Query),
+    send(PT, slot, query, Query),
+    send(PT, slot, query_status, running),
+    send(PT, activity_changed).
+
+%!  query_label(+Text, -Label:atom) is semidet.
+%
+%   A query as one line, without its full stop.  The tab stack shortens
+%   it if it does not fit.
+
+query_label(Text, Label) :-
+    split_string(Text, " \t\r\n", " \t\r\n", Parts0),
+    exclude(==(""), Parts0, Parts),
+    atomic_list_concat(Parts, ' ', Line0),
+    (   sub_atom(Line0, B, 1, 0, '.')
+    ->  sub_atom(Line0, 0, B, _, Line)
+    ;   Line = Line0
+    ),
+    Line \== '',
+    Label = Line.
 
 %!  restore_input(+PT, +Text, +Tail) is det.
 %
@@ -1876,6 +1949,38 @@ rejection_text(Files, Msg) :-
 
 :- pce_group(process).
 
+%       What a terminal runs: a query, a program another process group
+%       runs, or a shell waiting in some directory.  The window it is on
+%       may label itself after it; see `epilog_window <-pane_label'.
+
+activity_changed(PT) :->
+    "Tell my window that what I run may have changed"::
+    (   get(PT, window, W),
+        send(W, has_send_method, activity_changed)
+    ->  send(W, activity_changed)
+    ;   true
+    ).
+
+foreground_changed(PT) :->
+    "Another program holds the terminal, or the shell is back"::
+    send_super(PT, foreground_changed),
+    send(PT, activity_changed).
+
+%       A shell that does not report its directory (OSC 7) may have
+%       changed it with any line it was given, and nothing tells us.
+%       ->check_foreground runs shortly after each line sent, which is
+%       when we look.
+
+check_foreground(PT) :->
+    "A line was sent a little while ago: look at what runs now"::
+    send_super(PT, check_foreground),
+    send(PT, activity_changed).
+
+working_directory(PT, Dir:name*, Host:name*) :->
+    "The client reported its directory (OSC 7)"::
+    send_super(PT, working_directory, Dir, Host),
+    send(PT, activity_changed).
+
 working_directory(PT, CWD:name) :<-
     "Get the directory for running commands"::
     (   get_super(PT, working_directory, CWD),  % OSC 7 or 9
@@ -2034,7 +2139,8 @@ pce_preferences:preferences(epilog_window,
                          ansi_colours,
                          exact_case, auto_copy, fold_previous
                        ],
-      epilog_report  - [ placement, hide_after, background, colour ]
+      epilog_report  - [ placement, hide_after, background, colour ],
+      epilog_window  - [ follow_activity ]
     ]).
 
 :- pce_begin_class(epilog_window, window, "Implement an embedded terminal").
@@ -2043,8 +2149,19 @@ pce_preferences:preferences(epilog_window,
 variable(terminal, prolog_terminal, get, "The terminal_image").
 variable(tab_label,    name*, get, "Name my tab was given").
 variable(window_label, name*, get, "Title a client asked for").
+variable(window_label_owner, int*, none,
+         "Process group that asked for it (@nil: Prolog)").
 variable(tid,      [name|int],      get, "Attached thread").
 delegate_to(terminal).
+
+%!  .follow_activity
+%
+%   If @on (default), the tab of a terminal says what it runs: the
+%   query, the program another process runs or the directory of a shell
+%   waiting for a command.  A tab the user renamed keeps their name.
+
+class_variable(follow_activity, bool, @on,
+               "Label my tab after the query, program or directory").
 
 initialise(T, Title:title=[name],
            Width:width=[int], Height:height=[int], TID:[name|int]) :->
@@ -2169,23 +2286,48 @@ thread_connected(T, Thread:name) :->
     "Name my tab after the thread that has just been connected"::
     get(T, terminal, PT),
     get(PT, profile, prolog),
-    send(T, retitle_tab, Thread).
+    send(T, tab_label, Thread),
+    ignore(send(T, update_tab_icon)),
+    get(T, pane_label, Label),
+    send(T, retitle_tab, Label).
 
 pane_exposed(T) :->
     "Take the name of what I run, which I may only know now"::
-    (   get(T, slot, window_label, Label),
-        Label \== @nil                  % a client asked for a title, and
-    ->  true                            % that is what my tab already says
-    ;   get(T, terminal, PT),
-        terminal_base_label(PT, Base),
-        ignore(send(T, retitle_tab, Base))
+    send(T, activity_changed).
+
+activity_changed(T) :->
+    "What I run may have changed: relabel my tab"::
+    ignore(( get(T, pane_label, Label),
+             send(T, retitle_tab, Label)
+           )),
+    ignore(send(T, update_tab_icon)).
+
+update_tab_icon(T) :->
+    "Put <-pane_icon on my tab"::
+    my_tab(T, Tab),
+    get(T, pane_icon, Icon),
+    (   get(Tab, icon, Icon)
+    ->  true
+    ;   send(Tab, icon, Icon)
     ).
+
+%!  my_tab(+Window, -Tab) is semidet.
+%
+%   Tab is the tab I am in, if I am the pane it is named after: a tab
+%   holding more than one pane is named after the one that has the
+%   keyboard; see `pane_frame ->update_tab_label'.
+
+my_tab(T, Tab) :-
+    get(T, pane_tab, Tab),
+    \+ ( get(Tab, current, Current),
+         Current \== @nil,
+         Current \== T
+       ).
 
 retitle_tab(T, Label:name) :->
     "Put Label on my tab, unless the user named it"::
-    get(T, pane_tab, Tab),
+    my_tab(T, Tab),
     get(Tab, renamed, @off),            % the user named it themselves
-    send(T, tab_label, Label),
     (   get(Tab, label, Label)
     ->  true
     ;   send(Tab, label, Label)
@@ -2213,16 +2355,122 @@ new_tab(T) :->
     send(Frame, keyboard_focus, W),
     send(Frame, arranged).              % asked for by hand
 
+%       What my tab says.  A program another process runs is named by
+%       the title it asked for, else by the name the OS has for it.  A
+%       shell waiting for a command is in a directory: what it says in
+%       its title is the same, or old.  A query of Prolog runs here
+%       rather than in another process, so it comes next, before a title
+%       asked for from Prolog.  Failing all, my tab is named after the
+%       thread or the profile.
+
 pane_label(T, Label:name) :<-
     "What my tab is called"::
-    (   get(T, slot, window_label, L),          % a client asked for a title
-        L \== @nil
+    get(T, terminal, PT),
+    (   get(T, class_variable_value, follow_activity, @on)
+    ->  activity_label(T, PT, Label)
+    ;   client_title(T, _, L)
     ->  Label = L
-    ;   get(T, slot, tab_label, L),             % the name my tab was given
-        L \== @nil
-    ->  Label = L
-    ;   get(T, terminal, PT),                   % failing both, what I run
-        terminal_base_label(PT, Label)
+    ;   base_label(T, PT, Label)
+    ).
+
+activity_label(T, PT, Label) :-
+    get(PT, foreground_process, Group),
+    !,
+    (   shell_directory(PT, Group, Dir)
+    ->  Label = Dir
+    ;   client_title(T, Group, Title)
+    ->  Label = Title
+    ;   get(PT, foreground_command, Command)
+    ->  Label = Command
+    ;   base_label(T, PT, Label)
+    ).
+activity_label(T, PT, Label) :-
+    (   get(PT, query_status, running)
+    ->  get(PT, query, Label)
+    ;   client_title(T, @nil, Title)
+    ->  Label = Title
+    ;   get(PT, query, Query),
+        Query \== @nil
+    ->  Label = Query
+    ;   base_label(T, PT, Label)
+    ).
+
+%       The icon of my tab says what state what it names is in.  Prolog
+%       is shown by its logo, greyed once the query has finished; a
+%       program another process runs, and a shell, by a terminal.
+
+pane_icon(T, Icon:image) :<-
+    "Icon for my tab: what runs and whether it finished"::
+    get(T, class_variable_value, follow_activity, @on),
+    get(T, terminal, PT),
+    (   get(PT, foreground_process, _)
+    ->  Icon = @epilog_process_icon
+    ;   get(PT, query_status, done)
+    ->  Icon = @epilog_done_icon
+    ;   Icon = @pce_image
+    ).
+
+%!  shell_directory(+PT, ?Group, -Label) is semidet.
+%
+%   True when the shell in PT waits for a command, in the directory that
+%   Label names.
+
+shell_directory(PT, Group, Label) :-
+    (   var(Group)
+    ->  get(PT, foreground_process, Group)
+    ;   true
+    ),
+    shell_process(PT, Group),
+    get(PT, working_directory, Dir),
+    directory_label(Dir, Label).
+
+%       A directory is shortened at its start: where it ends is where
+%       the shell is.
+
+ellipsize_tab_label(T, Tab:tab, Width:int, Short:char_array) :<-
+    "Shorten the label of my tab if it names my directory"::
+    get(T, class_variable_value, follow_activity, @on),
+    get(T, terminal, PT),
+    shell_directory(PT, _, Dir),
+    get(Tab, label, Dir),
+    get(Dir, ellipsize, Tab?label_font, Width, start, Short).
+
+client_title(T, Owner, Title) :-
+    get(T, slot, window_label, Title),
+    Title \== @nil,
+    get(T, slot, window_label_owner, Owner).
+
+%!  base_label(+Window, +PT, -Label) is det.
+%
+%   What my tab is called when nothing runs.  `->thread_connected' may
+%   tell us the thread before it is registered.
+
+base_label(T, PT, Label) :-
+    get(PT, profile, prolog),
+    \+ ( current_prolog_terminal(Thread, PT), atom(Thread) ),
+    get(T, slot, tab_label, Label),
+    Label \== @nil,
+    !.
+base_label(_, PT, Label) :-
+    terminal_base_label(PT, Label).
+
+%!  directory_label(+Dir, -Label) is det.
+%
+%   Dir, with the home directory as `~`.
+
+directory_label(Dir0, Label) :-
+    (   atom_concat(Dir, '/', Dir0),
+        Dir \== ''
+    ->  true
+    ;   Dir = Dir0
+    ),
+    (   expand_file_name(~, [Home]),
+        atom_concat(Home, Rest, Dir),
+        (   Rest == ''
+        ;   sub_atom(Rest, 0, 1, _, '/')
+        )
+    ->  atom_concat(~, Rest, Label)
+    ;   Label = Dir
     ).
 
 tab_label(T, Label:name) :->
@@ -2369,13 +2617,26 @@ fill_menu_bar(_T, MD:tool_dialog) :->
     send(TraceMode, condition, message(Term, update_trace_mode, TraceMode)),
     send(GuiDebug,  condition, message(Term, update_gui_debug, GuiDebug)).
 
+%       A title is the client's that asked for it: the program in the
+%       foreground, or Prolog itself if none is.  See <-pane_label for
+%       when it is shown.
+
 window_label(T, Label:char_array) :->
     "Show the title a client asked for on my tab"::
     (   send(Label, equal, '')          % no title: my tab gets its own
-    ->  send(T, slot, window_label, @nil)
-    ;   send(T, slot, window_label, Label)
+    ->  send(T, slot, window_label, @nil),
+        send(T, slot, window_label_owner, @nil)
+    ;   send(T, slot, window_label, Label),
+        (   get(T?terminal, foreground_process, Owner)
+        ->  true
+        ;   Owner = @nil
+        ),
+        send(T, slot, window_label_owner, Owner)
     ),
-    (   get(T, container, tab_frame, Tab)
+    (   get(T, pane_tab, Tab),
+        send(Tab, instance_of, pane_tab)
+    ->  send(T, activity_changed)
+    ;   get(T, container, tab_frame, Tab)
     ->  send(Tab, window_label, Label)
     ;   send_super(T, window_label, Label)
     ).
@@ -2502,8 +2763,7 @@ set_process_working_directory(Dir) :-
 
 epilog_run(PT, _:shell) :-
     !,
-    run_shell(PT),
-    send(PT, window_label, 'Shell').
+    run_shell(PT).
 epilog_run(_, Goal) :-
     call(Goal).
 

@@ -333,6 +333,7 @@ NewClass(terminal_image)
   Name		host;			/* ... and the host it is on */
   Chain		blocks;			/* terminal_block objects, oldest first */
   Timer		drag_scroll_timer;	/* Scrolls while dragging outside */
+  Timer		foreground_timer;	/* Looks again for a new program */
   struct rlc_data *data;		/* The buffered data */
 End;
 

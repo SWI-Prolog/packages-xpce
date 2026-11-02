@@ -410,6 +410,11 @@ static int	rlc_foreground_process(RlcData b);
 static int	rlc_tty_echo(RlcData b);
 static bool	rlc_client_owns_terminal(RlcData b);
 static bool	rlc_foreground_directory(RlcData b, char *buf, size_t size);
+static bool	rlc_foreground_command(RlcData b, char *buf, size_t size);
+static void	rlc_check_foreground(RlcData b);
+#ifdef HAVE_POSIX_OPENPT
+static void	rlc_expect_foreground_change(RlcData b);
+#endif
 static int	rlc_interrupt_char(RlcData b);
 static int	rlc_suspend_char(RlcData b);
 static bool	rlc_caret_to_selection_end(RlcData b, int x, int y);
@@ -559,6 +564,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   assign(ti, working_directory, NIL);
   assign(ti, blocks, newObject(ClassChain, EAV));
   assign(ti, drag_scroll_timer, NIL);
+  assign(ti, foreground_timer, NIL);
   assign(ti, auto_links, NIL);
   obtainClassVariablesObject(ti);
   /* The class variables name the variant fonts by alias; they need the
@@ -586,6 +592,10 @@ unlinkTerminalImage(TerminalImage ti)
 { ScrollBar sb = ti->scroll_bar;
 
   stopDragScrollTerminalImage(ti);
+  if ( notNil(ti->foreground_timer) )
+  { stopTimer(ti->foreground_timer);
+    assign(ti, foreground_timer, NIL);
+  }
   if ( sb && notNil(sb) )
   { assign(ti, scroll_bar, NIL);
     send(sb, NAME_destroy, EAV);
@@ -2897,6 +2907,46 @@ getForegroundDirectoryTerminalImage(TerminalImage ti)
 }
 
 /**
+ * Name of the program in <-foreground_process.  See
+ * rlc_foreground_command().
+ */
+
+static Name
+getForegroundCommandTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;			/* NULL after ->unlink */
+  char buf[256];
+
+  if ( b && rlc_foreground_command(b, buf, sizeof(buf)) )
+    answer(CtoName(buf));
+
+  fail;
+}
+
+/**
+ * Another program took the terminal or gave it back: the foreground
+ * process group changed.  We notice when the client writes and once
+ * more shortly after a line is sent to it (see
+ * rlc_expect_foreground_change()), so a program that starts without
+ * writing anything is seen as well.  Nothing to do here; a subclass
+ * may follow the program, e.g., to label its window.
+ */
+
+static status
+foregroundChangedTerminalImage(TerminalImage ti)
+{ (void)ti;
+
+  succeed;
+}
+
+static status
+checkForegroundTerminalImage(TerminalImage ti)
+{ if ( ti->data )
+    rlc_check_foreground(ti->data);
+
+  succeed;
+}
+
+/**
  * The client reported where it is; see osc7_directory().  A subclass
  * may trap this to follow the client, e.g., to label the window or to
  * open file dialogs in the right place.
@@ -4344,6 +4394,8 @@ static vardecl var_terminal_image[] =
      NAME_process, "terminal_block objects, oldest first"),
   IV(NAME_dragScrollTimer, "timer*", IV_NONE,
      NAME_scroll, "Scrolls while the selection is dragged outside"),
+  IV(NAME_foregroundTimer, "timer*", IV_NONE,
+     NAME_process, "Looks for a program started by a line sent"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
      NAME_cache, "Line buffer and related data")
 };
@@ -4440,6 +4492,10 @@ static senddecl send_terminal_image[] =
      NAME_process, "Called on OSC 7 or OSC 9;9 <directory>"),
   SM(NAME_promptMark, 2, T_promptMark, promptMarkTerminalImage,
      NAME_process, "Called on OSC 133 <semantic prompt mark>"),
+  SM(NAME_foregroundChanged, 0, NULL, foregroundChangedTerminalImage,
+     NAME_process, "Called when <-foreground_process changed"),
+  SM(NAME_checkForeground, 0, NULL, checkForegroundTerminalImage,
+     NAME_process, "Send ->foreground_changed if it changed"),
 #ifdef __WINDOWS__
   SM(NAME_launch, 1, "char_array", launchTerminalImage,
      NAME_process, "Run process in the terminal"),
@@ -4460,6 +4516,9 @@ static getdecl get_terminal_image[] =
   GM(NAME_foregroundDirectory, 0, "directory=name", NULL,
      getForegroundDirectoryTerminalImage,
      NAME_process, "Working directory of <-foreground_process"),
+  GM(NAME_foregroundCommand, 0, "command=name", NULL,
+     getForegroundCommandTerminalImage,
+     NAME_process, "Program name of <-foreground_process"),
   GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
      getDisplayedCursorTerminalImage,
      NAME_event, "Indicate normal cursor or link"),
@@ -12201,7 +12260,9 @@ rlc_close_connection(RlcData b)
 static ssize_t
 rlc_send(RlcData b, const char *buffer, size_t count)
 { if ( b->pty.master_fd > 0 )
-  { return write(b->pty.master_fd, buffer, count);
+  { if ( memchr(buffer, '\r', count) || memchr(buffer, '\n', count) )
+      rlc_expect_foreground_change(b);
+    return write(b->pty.master_fd, buffer, count);
   } else
   { Cprintf("Nowhere to send data\n");
     return -1;
@@ -12335,6 +12396,94 @@ rlc_foreground_directory(RlcData b, char *buf, size_t size)
 }
 
 /**
+ * Name of the program that owns the pty: what the OS calls the leader
+ * of the foreground process group.  Like rlc_foreground_directory()
+ * this needs no cooperation from the client.  The name is the one the
+ * kernel keeps for the process, which is short (15 bytes on Linux) and
+ * for a script is the name of the script rather than of its
+ * interpreter.
+ *
+ * @return true if `buf` was filled with the name.
+ */
+
+static bool
+rlc_foreground_command(RlcData b, char *buf, size_t size)
+{ pid_t pid = rlc_foreground_process(b);
+
+  if ( pid <= 0 || size == 0 )
+    return false;
+
+#if defined(__linux__)
+  char procfile[64];
+  int fd;
+
+  snprintf(procfile, sizeof(procfile), "/proc/%d/comm", (int)pid);
+  if ( (fd=open(procfile, O_RDONLY)) >= 0 )
+  { ssize_t len = read(fd, buf, size-1);
+
+    close(fd);
+    if ( len > 0 && buf[len-1] == '\n' )
+      len--;
+    if ( len > 0 )
+    { buf[len] = 0;
+      return true;
+    }
+  }
+#elif defined(__APPLE__)
+  if ( proc_name(pid, buf, (uint32_t)size) > 0 )
+    return true;
+#elif defined(__FreeBSD__) && defined(KERN_PROC_PID)
+  struct kinfo_proc kp;
+  int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, (int)pid };
+  size_t len = sizeof(kp);
+
+  if ( sysctl(mib, 4, &kp, &len, NULL, 0) == 0 && len >= sizeof(kp) )
+    return rlc_copy_path(buf, size, kp.ki_comm, sizeof(kp.ki_comm));
+#else
+  (void)buf;
+#endif
+
+  return false;
+}
+
+/**
+ * Send ->foreground_changed if another program holds the terminal than
+ * when we last looked.
+ */
+
+static void
+rlc_check_foreground(RlcData b)
+{ int pgid = rlc_foreground_process(b);
+
+  if ( pgid != b->pty.foreground && b->object )
+  { b->pty.foreground = pgid;
+    send(b->object, NAME_foregroundChanged, EAV);
+  }
+}
+
+/**
+ * A line was sent, which may make the client start a program.  It
+ * takes the terminal some time after the line arrives, and need not
+ * write anything when it does, so we look again a little later.
+ */
+
+#define FOREGROUND_DELAY 0.25		/* seconds */
+
+static void
+rlc_expect_foreground_change(RlcData b)
+{ TerminalImage ti = b->object;
+
+  if ( !ti )
+    return;
+  if ( isNil(ti->foreground_timer) )
+    assign(ti, foreground_timer,
+	   newObject(ClassTimer, toNum(FOREGROUND_DELAY),
+		     newObject(ClassMessage, ti, NAME_checkForeground, EAV),
+		     EAV));
+  startTimer(ti->foreground_timer, NAME_once, DEFAULT);
+}
+
+/**
  * Character that makes the line discipline raise `which` (VINTR,
  * VSUSP, ...) in the client, or -1 if the client turned signal
  * generation off.  The master side reports the settings of the slave.
@@ -12387,13 +12536,18 @@ receiveTerminalImage(TerminalImage ti)
        pty, so a main-thread write that fills it could never complete. */
     count = read_watch(b->pty.watch, buf+MAX_INCOMPLETE, PTY_READ_CHUNK);
     if ( count < 0 )
-      succeed;				/* nothing buffered right now */
+      break;				/* nothing buffered right now */
     if ( count == 0 && rlc_reclaim_pty(b) )
       succeed;				/* revoked rather than closed */
     TRY(processClientOutputTerminalImage(ti, buf+MAX_INCOMPLETE, count));
     if ( mclock() - start >= PTY_DRAIN_MS )
-      succeed;
+      break;
   }
+
+  if ( ti->data )			/* the output may have closed us */
+    rlc_check_foreground(ti->data);
+
+  succeed;
 }
 
 static void
@@ -12829,6 +12983,22 @@ rlc_foreground_directory(RlcData b, char *buf, size_t size)
   (void)size;
 
   return false;
+}
+
+static bool
+rlc_foreground_command(RlcData b, char *buf, size_t size)
+{ (void)b;
+  (void)buf;
+  (void)size;
+
+  return false;
+}
+
+/* No process groups, so nothing ever changes; see rlc_foreground_process() */
+
+static void
+rlc_check_foreground(RlcData b)
+{ (void)b;
 }
 
 static bool

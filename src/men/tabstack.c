@@ -162,7 +162,8 @@ hideSingleLabelTabStack(TabStack ts, BoolObj hide)
 
 static status
 initialiseTabStack(TabStack t, int argc, Tab tabs[])
-{ int n;
+{ assign(t, label_room, NIL);
+ int n;
 
   initialiseDevice((Device) t);
   obtainClassVariablesObject(t);	/* e.g., <-hide_single_label */
@@ -328,16 +329,111 @@ eraseTabStack(TabStack ts, Graphical gr)
 		 *	      LAYOUT		*
 		 *******************************/
 
+/* The width the labels must fit in.  It is not that of the tabs: in a
+   dialog a tab is as wide as its label.  Whoever gives the stack its
+   width tells it, e.g., library(tabbed_window), which keeps room for its
+   button to add a tab.  @nil: no limit.
+*/
+
+static status
+labelRoomTabStack(TabStack ts, Int room)
+{ if ( ts->label_room != room )
+  { assign(ts, label_room, room);
+    send(ts, NAME_layoutLabels, EAV);
+  }
+
+  succeed;
+}
+
+
+static int
+cmp_int(const void *a, const void *b)
+{ int ia = *(const int*)a;
+  int ib = *(const int*)b;
+
+  return ia < ib ? -1 : ia > ib ? 1 : 0;
+}
+
+
+/* The widest a label may be such that all of them fit in `room': the
+   narrow ones are left as they are and the others share what remains.
+   Never wider than `max' if that is > 0.  Answers INT_MAX if there is
+   no limit.
+*/
+
+static int
+label_limit(int *widths, int n, int room, int max)
+{ int limit = INT_MAX;
+  int *sorted = alloca(n*sizeof(int));
+
+  memcpy(sorted, widths, n*sizeof(int));
+  qsort(sorted, n, sizeof(int), cmp_int);
+  for(int i=0; i<n; i++)
+  { int left = n-i;
+
+    if ( sorted[i] <= room/left )
+    { room -= sorted[i];
+    } else
+    { limit = room/left;
+      break;
+    }
+  }
+
+  if ( max > 0 && max < limit )
+    limit = max;
+
+  return limit;
+}
+
+
 static status
 layoutLabelsTabStack(TabStack ts)
 { int offset = 0;
+  int n = 0;
   Cell cell;
+
+  for_cell(cell, ts->graphicals)
+  { if ( instanceOfObject(cell->value, ClassTab) )
+      n++;
+  }
+
+  if ( n > 0 )
+  { int *widths = alloca(n*sizeof(int));
+    int i = 0;
+    Int room = ts->label_room;
+    Int max = getClassVariableValueObject(ts, NAME_maxLabelWidth);
+    int limit;
+
+    for_cell(cell, ts->graphicals)
+    { if ( instanceOfObject(cell->value, ClassTab) )
+	widths[i++] = naturalLabelWidthTab(cell->value);
+    }
+    limit = label_limit(widths, n,
+			notNil(room) ? valInt(room) : INT_MAX,
+			max ? valInt(max) : 0);
+
+    i = 0;
+    for_cell(cell, ts->graphicals)
+    { Tab t = cell->value;
+
+      if ( instanceOfObject(t, ClassTab) )
+      { Int l = widths[i++] > limit ? toInt(limit) : (Int)NIL;
+
+	if ( t->label_limit != l )
+	{ changedLabelImageTab(t);
+	  assign(t, label_limit, l);
+	  requestComputeGraphical(t, DEFAULT);
+	}
+      }
+    }
+  }
 
   for_cell(cell, ts->graphicals)
   { Tab t = cell->value;
 
     if ( instanceOfObject(t, ClassTab) )
     { ComputeGraphical(t);		/* the label box may have a new width */
+      changedLabelImageTab(t);
 
       if ( t->label_offset != toInt(offset) )
       { changedLabelImageTab(t);	/* clear old and new location */
@@ -555,7 +651,9 @@ getOnTopTabStack(TabStack ts)
 
 static vardecl var_tab_stack[] =
 { SV(NAME_hideSingleLabel, "bool", IV_GET|IV_STORE, hideSingleLabelTabStack,
-     NAME_appearance, "Give a lone tab the room its label would take")
+     NAME_appearance, "Give a lone tab the room its label would take"),
+  SV(NAME_labelRoom, "0..*", IV_GET|IV_STORE, labelRoomTabStack,
+     NAME_layout, "Width the labels must fit in (@nil: any)")
 };
 
 /* Send Methods */
@@ -594,7 +692,9 @@ static getdecl get_tab_stack[] =
 
 static classvardecl rc_tab_stack[] =
 { RC(NAME_hideSingleLabel, "bool", "@off",
-     "Give a lone tab the room its label would take")
+     "Give a lone tab the room its label would take"),
+  RC(NAME_maxLabelWidth, "0..", "0",
+     "Widest a label may be (0: as wide as it is)")
 };
 
 /* Class Declaration */

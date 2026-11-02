@@ -237,6 +237,18 @@ keystrokes and hovered hyperlinks.
 - terminal_image->paste: which=[{primary,clipboard}]
     Paste the contents of the primary selection or clipboard.
 
+- terminal_image->foreground_changed:
+    Called when `<-foreground_process` changed: a program took the
+    terminal or gave it back.  The terminal looks after the client
+    wrote something and, as a program may start without doing so, once
+    more shortly after a line was sent to it.  Does nothing; a subclass
+    may refine it, as `prolog_terminal` does to label its tab after
+    the program.  Unix only.
+
+- terminal_image->check_foreground:
+    Send `->foreground_changed` if `<-foreground_process` changed since
+    the last time it was sent.
+
 - terminal_image->prompt_mark: kind={prompt,input,output,end}, continuation=[bool]
     Called on OSC 133, the semantic prompt marks: `A`, `B`, `C` and `D`
     decoded to where a prompt starts, where the line the user edits
@@ -398,6 +410,15 @@ keystrokes and hovered hyperlinks.
     the case while the terminal is driven by a thread of this process.
     While it succeeds the control keys are passed to that process
     rather than looked up in `<-bindings`.  Unix only.
+
+- terminal_image<-foreground_directory: -> directory=name
+    Working directory of `<-foreground_process`, asked of the OS.
+    Fails where the OS cannot tell, e.g., on OpenBSD and Windows.
+
+- terminal_image<-foreground_command: -> command=name
+    Name of the program `<-foreground_process` runs, as the OS keeps
+    it: short (15 bytes on Linux), and for a script the name of the
+    script.  Linux, macOS and FreeBSD only.
 
 - terminal_image<-displayed_cursor: -> cursor=cursor
     Cursor reflecting whether the pointer is on text or over a link.

@@ -248,6 +248,37 @@ help_message(Gr, What:{tag,summary}, Ev:[event], Msg:string) :<-
 :- pce_end_class.
 
 
+:- pce_extend_class(tab_stack).
+
+%   A label that does not fit is shown shortened (see `tab_stack
+%   ->label_room'); its tooltip is the full label.  The labels are drawn
+%   by the tabs, so we find the one below the pointer.
+
+help_message(TS, What:{tag,summary}, Ev:[event], Msg:string) :<-
+    "The full label of a shortened tab label below the pointer"::
+    (   What == tag,
+        Ev \== @default,
+        get(Ev, position, TS, point(X, Y)),
+        get(TS?graphicals, find,
+            and(message(@arg1, instance_of, tab),
+                message(@prolog, label_at, @arg1, X, Y)),
+            Tab),
+        get(Tab, ellipsized_label, Label)
+    ->  new(Msg, string('%s', Label))
+    ;   get(TS, get_super, help_message, What, Ev, Msg)
+    ).
+
+:- pce_end_class.
+
+:- public label_at/3.
+
+label_at(Tab, X, Y) :-
+    get(Tab, label_area, area(AX, AY, AW, AH)),
+    get(Tab, area, area(TX, TY, _, _)),
+    X >= TX+AX, X < TX+AX+AW,
+    Y >= TY+AY, Y < TY+AY+AH.
+
+
 :- pce_extend_class(list_browser).
 
 help_message(LB, What:{tag,summary}, Ev:[event], Msg:string) :<-

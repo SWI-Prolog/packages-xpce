@@ -192,6 +192,8 @@ NewClass(tab)
   Image		icon;			/* Image left of the label text */
   Name		status;			/* {on_top, hidden} */
   Name		previous_top;		/* Name of element on top before me */
+  Int		label_limit;		/* Widest the stack lets my label be */
+  CharArray	shown_label;		/* Label as shown if shortened */
 End;
 
 NewClass(label_box)
@@ -208,6 +210,7 @@ End;
 NewClass(tab_stack)
   ABSTRACT_DEVICE
   BoolObj	hide_single_label;	/* Drop the label of a lone tab */
+  Int		label_room;		/* Width the labels must fit in */
 End;
 
 		/********************************

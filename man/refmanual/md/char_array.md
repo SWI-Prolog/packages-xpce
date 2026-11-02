@@ -364,6 +364,13 @@ regex for searching in text.
     See also `regex->for_all`, which may be used to realise more
     complicated breaking of text.
 
+- char_array<-ellipsize: font=font, width=int, where=[{start,middle,end}] -> char_array
+    Shortened to fit `width` pixels in `font` by replacing characters
+    by an ellipsis (…) at the `start`, in the `middle` or at the `end`
+    (default).  Spaces next to the ellipsis are dropped.  Answers the
+    receiver if it fits.  For example, a path is best shortened at its
+    start, as its end says where it leads.
+
 - char_array<-strip: [{canonicalise,leading,trailing,both}] -> char_array
     Canonicalise leading, trailing and internal blanks.  Depending
     on the argument, the behaviour is defined as:

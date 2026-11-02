@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>			/* storeStringFile() prototype */
+#include <h/graphics.h>			/* FontObj, for <-ellipsize */
 
 static CharArray	stringToCharArray(PceString s);
 
@@ -337,6 +338,24 @@ getDowncaseCharArray(CharArray n)
   for(i=0; i<size; i++)
     str_store(buf, i, tolower(str_fetch(s, i)));
   buf->s_size = size;
+
+  answer(ModifiedCharArray(n, buf));
+}
+
+
+/* Shortened by an ellipsis (…) to fit `width' pixels in `font'; see
+ * str_ellipsize().  Answers the receiver if it fits.
+ */
+
+static CharArray
+getEllipsizeCharArray(CharArray n, FontObj font, Int width, Name where)
+{ PceString s = &n->data;
+  LocalString(buf, true, s->s_size+1);
+
+  if ( isDefault(where) )
+    where = NAME_end;
+  if ( !str_ellipsize(s, font, valInt(width), where, buf) )
+    answer(n);
 
   answer(ModifiedCharArray(n, buf));
 }
@@ -900,6 +919,8 @@ stringToCharArray(PceString s)
 
 static char *T_ofAchar_fromADintD[] =
         { "of=char", "from=[int]" };
+static char *T_ellipsize[] =
+        { "font=font", "width=int", "where=[{start,middle,end}]" };
 static char *T_gsub[] =
         { "start=int", "end=[int]" };
 static char *T_match[] =
@@ -956,6 +977,8 @@ static getdecl get_charArray[] =
      NAME_accelerator, "Preferred accelerator letter for an item called me"),
   GM(NAME_upcase, 0, "char_array", NULL, getUpcaseCharArray,
      NAME_case, "Map all lowercase letters to uppercase"),
+  GM(NAME_ellipsize, 3, "char_array", T_ellipsize, getEllipsizeCharArray,
+     NAME_content, "Shortened by an ellipsis (…) to fit width pixels"),
   GM(NAME_strip, 1, "char_array", "[{canonicalise,leading,trailing,both}]", getStripCharArray,
      NAME_content, "Strip leading/trailing blanks"),
   GM(NAME_compare, 2, "{smaller,equal,larger}", T_match, getCompareCharArray,

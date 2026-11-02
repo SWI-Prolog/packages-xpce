@@ -95,7 +95,28 @@ resize(W, Tab:[tab]) :->
              message(@arg1, size, size(Width,TabH)))
     ;   send(Tab, size, size(Width,TabH))
     ),
-    send(TS, set, 0, 0).          % see below
+    send(TS, set, 0, 0),          % see below
+    send(W, update_label_room).
+
+%       The labels must fit beside each other in my width, which is not
+%       how wide they want to be: the stack shortens them if they do not
+%       (see `tab_stack ->label_room').  The new-tab button goes after
+%       the last label, so we keep room for it, about as wide as a label
+%       is high.
+
+update_label_room(W) :->
+    "Tell my stack how wide the row of labels may be"::
+    get_super(W, member, tab_stack, TS),
+    get(W, area, area(_,_,Width,_)),
+    (   get(W, new_tab_message, Message),
+        Message \== @nil,
+        get(TS, tabs, Tabs),
+        get(Tabs, head, First)
+    ->  get(First?label_size, height, LH),
+        Room is max(0, Width - LH - LH//2)
+    ;   Room = Width
+    ),
+    send(TS, label_room, Room).
 
 %       The stack starts at my top-left, always.  A device is placed by
 %       its <-offset, which the dialog works out so that the bounding box
@@ -132,7 +153,8 @@ new_tab_message(W, Message:'code*') :->
     "What the new-tab button is to do; @nil takes the button away"::
     send(W, slot, new_tab_message, Message),
     get_super(W, member, tab_stack, TS),
-    send(TS, layout_labels).
+    send(TS, layout_labels),
+    send(W, update_label_room).
 
 cycle(W, Direction:{next,previous}) :->
     "Put the next or previous tab on top"::
