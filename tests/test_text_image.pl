@@ -104,4 +104,33 @@ test(the_pixels_of_a_window_are_something_else) :-
     catch(get(V, image, Pixels), _, Pixels = none),
     Pixels \== Text.                    % <-image is not the text image
 
+%   Centering a position beyond the end of the text shows the end.  It
+%   used to fill the screen map with the entire text, raising "More than
+%   500 lines???" and crashing on large texts.
+
+test(scroll_to_beyond_the_end, Start-EOF == true - @on) :-
+    beyond_the_end(scroll_to, Start, EOF).
+test(center_beyond_the_end, Start-EOF == true - @on) :-
+    beyond_the_end(center, Start, EOF).
+
+beyond_the_end(How, InText, EOF) :-
+    new(V, view),
+    new(TB, text_buffer),
+    forall(between(1, 2000, I), send(TB, append, string('line %d\n', I))),
+    get(V, editor, E),
+    send(E, text_buffer, TB),
+    send(V, size, size(40, 10)),
+    get(TB, size, Size),
+    Beyond is 100*Size,
+    get(E, text_image, TI),
+    (   How == scroll_to
+    ->  send(E, scroll_to, Beyond)
+    ;   send(TI, center, Beyond)
+    ),
+    send(TI, compute),
+    get(TI, start, Start0),
+    get(TI, eof_in_window, EOF),
+    (   Start0 > 0, Start0 < Size -> InText = true ; InText = Start0 ),
+    send(V, destroy).
+
 :- end_tests(text_image).

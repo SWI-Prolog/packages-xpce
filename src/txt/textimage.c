@@ -1831,6 +1831,24 @@ shift_lines_down(TextScreen map, int from, int n)
 }
 
 
+/* If pos is beyond the end of the text, return the position of the
+   last character.  Without this, centering a position beyond the end
+   never finds its line and fills the map with the entire text.
+*/
+
+static long
+clip_to_eof(TextScreen map, long pos)
+{ for(int i=0; i < map->skip + map->length; i++)
+  { TextLine l = &map->lines[i];
+
+    if ( (l->ends_because & END_EOF) && pos >= l->end )
+      return l->end > l->start ? l->end-1 : l->start;
+  }
+
+  return pos;
+}
+
+
 static status
 center_from_screen(TextImage ti, long int pos, int line)
 { TextScreen map = ti->map;
@@ -1895,6 +1913,7 @@ centerTextImage(TextImage ti, Int position, Int screen_line)
       } while ( idx <= here &&
 		!(ti->map->lines[ln++].ends_because & END_EOF) );
 
+      pos = clip_to_eof(map, pos);
       if ( center_from_screen(ti, pos, line) )
 	succeed;
     }

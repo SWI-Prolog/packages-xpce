@@ -4296,7 +4296,7 @@ scrollToEditor(Editor e, Int pos, Int screenline)
 { if ( isDefault(pos) )
     pos = toInt(e->text_buffer->size);
 
-  centerTextImage(e->text_image, pos, screenline);
+  centerTextImage(e->text_image, normalise_index(e, pos), screenline);
   return ensureCaretInWindowEditor(e);
 }
 
