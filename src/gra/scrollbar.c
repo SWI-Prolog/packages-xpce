@@ -266,13 +266,38 @@ compute_bubble(ScrollBar s, struct bubble_info *bi,
     else
       bi->start = (free * above) / (above + below);
   } else
-  { double bubble_prom = (len != 0 ? (double)start/(double)len
-				   : 0.0);
-    double bubble_lp   = (len != 0 ? (double)valInt(s->view)/(double)len
-				   : 1.0);
+  { int breadth = (s->orientation == NAME_vertical
+			 ? valInt(s->area->w)
+			 : valInt(s->area->h));
+    double bubble_lp = (len > 0 ? (double)view/(double)len : 1.0);
+    double scrolled;
 
-    bi->length = (int)((double)bi->bar_length * bubble_lp) + min_bubble;
-    bi->start  = (int)((double)bi->bar_length * bubble_prom) - min_bubble/2;
+    Any mtl = getClassVariableValueObject(s, NAME_minThumbLength);
+
+    /* The thumb is at least `min_thumb_length` (default twice the
+       width of the bar), so it remains a target on huge documents.
+       It then travels over the remaining free space, which is the
+       inverse of the drag mapping and of the receivers that scroll to
+       (len-view)*prom.
+    */
+    if ( isInteger(mtl) )
+    { if ( min_bubble < valInt(mtl) )
+	min_bubble = valInt(mtl);
+    } else if ( min_bubble < 2*breadth )
+      min_bubble = 2*breadth;
+    if ( min_bubble > bi->bar_length )
+      min_bubble = bi->bar_length;
+    if ( bubble_lp > 1.0 )
+      bubble_lp = 1.0;
+
+    bi->length = (int)((double)bi->bar_length * bubble_lp);
+    if ( bi->length < min_bubble )
+      bi->length = min_bubble;
+    scrolled   = (len > view ? (double)start/(double)(len-view) : 0.0);
+    if ( scrolled > 1.0 )
+      scrolled = 1.0;
+    bi->start  = (int)((double)(bi->bar_length - bi->length) * scrolled);
+    min_bubble = bi->length;		/* for BOUNDS() below */
   }
 
   bi->start    = BOUNDS(bi->start, 0, bi->bar_length-min_bubble);
@@ -685,7 +710,11 @@ promilage_event_scrollbar(ScrollBar s, EventObj ev)
   int rval;
 
   compute_bubble(s, &bi, ah, MIN_BUBBLE, FALSE);
-  rval = ((offset - bi.bar_start) * 1000) / bi.bar_length;
+  if ( bi.bar_length <= bi.length )	/* centre the thumb at the pointer */
+    rval = 0;
+  else
+    rval = ((offset - bi.bar_start - bi.length/2) * 1000) /
+	   (bi.bar_length - bi.length);
 
   return toInt(BOUNDS(rval, 0, 1000));
 }
@@ -983,6 +1012,8 @@ static classvardecl rc_scrollBar[] =
      "OpenLook: time to wait until start of repeat"),
   RC(NAME_repeatInterval, "num", "0.06",
      "OpenLook: interval between repeats"),
+  RC(NAME_minThumbLength, "[int]", "@default",
+     "Minimal length of the thumb (@default: twice the width)"),
   RC(NAME_thumbColour, "[colour]", "@default",
      "Colour of the thumb (@default: from the background)"),
   RC(NAME_width, "[int]", UXWIN("4mm", "@default"),

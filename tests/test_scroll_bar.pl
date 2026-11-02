@@ -64,6 +64,30 @@ press_top(Arrows, Unit, Direction) :-
         press_top(Unit, Direction),
         send(Class, class_variable_value, arrows, Old)).
 
+%   thumb(+MinLength, +Start, -Thumb)
+%
+%   Thumb is Start-Length of the thumb of a 200 pixel vertical scroll
+%   bar over a document of a million lines with the view at Start, with
+%   the class variable `min_thumb_length` set to MinLength.
+
+thumb(MinLength, Start, Thumb) :-
+    get(@pce, convert, scroll_bar, class, Class),
+    get(Class, class_variable, min_thumb_length, CV),
+    get(CV, value, Old),
+    setup_call_cleanup(
+        send(Class, class_variable_value, min_thumb_length, MinLength),
+        thumb(Start, Thumb),
+        send(Class, class_variable_value, min_thumb_length, Old)).
+
+thumb(Start, ThumbStart-Length) :-
+    new(SB, scroll_bar(@nil, vertical, @nil)),
+    send(SB, height, 200),
+    send(SB, bubble, 1000000, Start, 50),
+    send(SB, compute),
+    get(SB, slot, bubble_start, ThumbStart),
+    get(SB, slot, bubble_length, Length),
+    free(SB).
+
 press_top(Unit, Direction) :-
     new(P, picture),
     send(P, display, new(SB, scroll_bar(@nil, vertical, @nil)), point(0, 0)),
@@ -93,5 +117,18 @@ test(width_is_whole_pixels, W =:= round(W)) :-
     new(SB, scroll_bar(@nil, vertical, @nil)),
     get(SB, width, W),
     free(SB).
+
+%   On a huge document the thumb keeps its minimal length and the
+%   thumb of a view at the end ends flush with the end of the bar.
+
+test(min_thumb_default, L =:= 2*W) :-
+    new(SB, scroll_bar(@nil, vertical, @nil)),
+    get(SB, width, W),
+    free(SB),
+    thumb(@default, 0, _-L).
+test(min_thumb_class_variable, T == 0-50) :-
+    thumb(50, 0, T).
+test(min_thumb_at_end, T == 150-50) :-
+    thumb(50, 999950, T).
 
 :- end_tests(scroll_bar).
