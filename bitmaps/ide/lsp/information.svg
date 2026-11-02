@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">
+  <!-- LSP diagnostic: information.  A disc with an "i" -->
+  <circle cx="12" cy="12" r="10" fill="#eab308" stroke="#a16207" stroke-width="1"/>
+  <circle cx="12" cy="6.9" r="1.7" fill="#fff"/>
+  <path d="M9.6 10h3.8v6.6h1.2v1.9H9.4v-1.9h1.3v-4.7H9.6z" fill="#fff"/>
+</svg>

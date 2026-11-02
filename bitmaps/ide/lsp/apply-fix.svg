@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">
+  <!-- LSP code action: apply a fix.  A wrench with a check mark -->
+  <path d="M14.5 2.5a5 5 0 0 0-4.7 6.7L3 16a2.1 2.1 0 0 0 3 3l6.8-6.8
+           a5 5 0 0 0 6.7-4.7l-2.9 2.9-2.8-.8-.8-2.8z"
+        fill="#64748b" stroke="#334155" stroke-width="1" stroke-linejoin="round"/>
+  <circle cx="17.5" cy="17.5" r="5.5" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+  <path d="M15 17.6l1.8 1.8 3.3-3.6" fill="none" stroke="#fff"
+        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

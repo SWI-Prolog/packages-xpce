@@ -137,8 +137,8 @@ set(XPCE_DATA_DIRS
 
     prolog/demo
 
-    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/64x64 bitmaps/tool
-    bitmaps/ide/threads bitmaps/ide/tools bitmaps/logo
+    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/tool
+    bitmaps/ide/threads bitmaps/ide/tools bitmaps/ide/lsp bitmaps/logo
 
     appl-help
 
@@ -333,9 +333,9 @@ set(XPCE_DATA_bitmaps_32x32 books.png buffers.png
     doc_pl.png doc_x.png drawing.png pensil.png viewer.png
     vishier.png)
 
-set(XPCE_DATA_bitmaps_64x64 lsp-error.png lsp-hint.png
-    dictionary.png lsp-information.png lsp-warning.png
-    lsp-apply-fix.png lsp-apply-tweak.png)
+set(XPCE_DATA_bitmaps_ide_lsp
+    error.svg warning.svg information.svg hint.svg
+    apply-fix.svg apply-tweak.svg dictionary.svg)
 
 set(XPCE_DATA_bitmaps_tool
     pencil.svg edit.svg refresh.svg up.svg help.svg handpoint.svg

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">
+  <!-- LSP diagnostic: error.  A stop sign with an exclamation mark -->
+  <path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"
+        fill="#ef4444" stroke="#b91c1c" stroke-width="1" stroke-linejoin="round"/>
+  <rect x="10.6" y="5.8" width="2.8" height="8.4" rx="1.4" fill="#fff"/>
+  <circle cx="12" cy="17.4" r="1.6" fill="#fff"/>
+</svg>

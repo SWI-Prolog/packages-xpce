@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">
+  <!-- Spelling: accept a word or add it to the dictionary.  A book with "Aa" -->
+  <path d="M5 2.5h13a1 1 0 0 1 1 1v15H6.5a1.5 1.5 0 0 0 0 3H19v1H6.5
+           A2.5 2.5 0 0 1 4 20V3.5a1 1 0 0 1 1-1z"
+        fill="#1d4ed8" stroke="#1e3a8a" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M6.5 18.5H19v3H6.5a1.5 1.5 0 0 1 0-3z" fill="#f1f5f9" stroke="#1e3a8a" stroke-width=".8"/>
+  <path d="M6.8 14l2.6-8h1.2l2.6 8M8 11.3h4" fill="none" stroke="#fff"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="15" cy="11.9" r="1.9" fill="none" stroke="#fff" stroke-width="1.4"/>
+  <path d="M16.9 9.6V14" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+</svg>
