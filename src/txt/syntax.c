@@ -52,9 +52,12 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
   if ( notDefault(def) )
   { flags = def->table;
     context = def->context;
-    assign(t, sentence_end, def->paragraph_end);
+    assign(t, sentence_end, def->sentence_end);
     assign(t, paragraph_end, def->paragraph_end);
+    assign(t, qq_start, def->qq_start);
+    assign(t, qq_end, def->qq_end);
     assign(t, language, def->language);
+    assign(t, line_comment, def->line_comment);
     if ( isNil(def->keywords) )
       assign(t, keywords, NIL);
     else
@@ -67,7 +70,11 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
 	   newObject(ClassRegex, CtoName("[.?!]\\s"), EAV));
     assign(t, paragraph_end,
 	   newObject(ClassRegex, CtoName("\\s*\n"), EAV));
+    assign(t, qq_start, NIL);
+    assign(t, qq_end, NIL);
     assign(t, language, NIL);
+    assign(t, line_comment, NIL);
+    assign(t, keywords, NIL);
     assign(t, keyword_case_sensitive, ON);
   }
 
