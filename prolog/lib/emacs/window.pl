@@ -1777,8 +1777,8 @@ report_to(M, E:editor) :<-
                 *       LSP INTEGRATION        *
                 *******************************/
 
-lsp_client(_M, _Client) :<-
-    "LSP client associated to this mode (virtual)"::
+lsp_client(_M, _Role:[name], _Client) :<-
+    "LSP client for Role associated to this mode (virtual)"::
     fail.
 
 :- pce_end_class.

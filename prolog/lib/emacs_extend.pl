@@ -34,7 +34,8 @@
 
 :- module(emacs_extend,
           [ declare_emacs_mode/2,
-            declare_emacs_mode/3
+            declare_emacs_mode/3,
+            lsp_mode_module/2           % +Mode, -Module
           ]).
 :- use_module(library(pce)).
 :- require([ atomic_list_concat/2,
@@ -141,6 +142,11 @@ emacs_expansion((:- emacs_extend_mode(Mode, Bindings)),
     emacs_mode_class(Mode, PceMode),
     prolog_load_context(module, Module).
 emacs_expansion((:- emacs_end_mode), (:- pce_end_class)).
+
+%!  lsp_mode_module(+Mode, -Module) is det.
+%
+%   True when Module is the Prolog module for dynamic extensions to
+%   Mode, such as its style/2 and def_style/2 rules.
 
 lsp_mode_module(Mode, Module) :-
     atomic_list_concat([emacs_, Mode, '_mode'], Module).

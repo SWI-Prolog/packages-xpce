@@ -88,6 +88,7 @@ pce_ifhostproperty(prolog(swi),
 :- consult(outline_mode).
 :- consult(bookmarks).
 :- consult(help_buffer).
+:- use_module(lsp_registry, []).
 
 
                  /*******************************
