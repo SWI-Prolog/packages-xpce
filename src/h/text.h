@@ -73,6 +73,8 @@ NewClass(text_buffer)
   intptr_t	allocated;		/* allocated size */
   UndoBuffer	undo_buffer;		/* Undo log */
   string	buffer;			/* Actual buffer (with gap) */
+  intptr_t	lsp_line;		/* <-lsp_offset cache: line */
+  intptr_t	lsp_sol;		/* <-lsp_offset cache: its start */
 End;
 
 #define tb_bufferA buffer.text_union.textA

@@ -84,6 +84,7 @@ test_libs(animation            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(image_save           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_init           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_lsp            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(lsp_offset           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(camera               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(sdl_texture          OPTIONS ${XPCE_TEST_OPTIONS})
 
@@ -219,6 +220,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:image_save
                      xpce:emacs_init
                      xpce:emacs_lsp
+                     xpce:lsp_offset
                      xpce:camera
                      xpce:sdl_texture
                      ${XPCE_VIDEO_TESTS}

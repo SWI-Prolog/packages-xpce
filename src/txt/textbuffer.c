@@ -2784,6 +2784,10 @@ static void
 start_change(TextBuffer tb, intptr_t where)
 { if ( tb->changed_start > where )
     tb->changed_start = where;
+  if ( where < tb->lsp_sol )		/* <-lsp_offset cache is invalid */
+  { tb->lsp_line = 0;
+    tb->lsp_sol  = 0;
+  }
 }
 
 
@@ -2910,11 +2914,29 @@ getLspColumnTextBuffer(TextBuffer tb, Int where)
   return toInt(pos.pos);
 }
 
+/* <-lsp_offset remembers the line it found and the start of that line
+ * (lsp_line, lsp_sol), so a series of lookups that moves towards the end
+ * of the buffer, such as for semantic tokens or diagnostics, scans each
+ * line once.  0,0 is always a valid pair.  A change before lsp_sol
+ * resets it (start_change()).  A result at the end of the buffer is not
+ * remembered, as the scan stops there if `line` is beyond the last line.
+ */
+
 Int
 getLspOffsetTextBuffer(TextBuffer tb, Int line, Int character)
 { size_t pos = isDefault(character) ? 0 : valInt(character);
-  size_t ln  = max(0,valInt(line));
-  size_t off = scan_textbuffer(tb, 0, NAME_line, ln, 'a');
+  intptr_t ln = max(0,valInt(line));
+  intptr_t from = 0, from_line = 0;
+
+  if ( ln >= tb->lsp_line )
+  { from      = tb->lsp_sol;
+    from_line = tb->lsp_line;
+  }
+  size_t off = scan_textbuffer(tb, from, NAME_line, ln-from_line, 'a');
+  if ( (intptr_t)off < tb->size )
+  { tb->lsp_line = ln;
+    tb->lsp_sol  = off;
+  }
 
   for(size_t i=0; i<pos; i++, off++)
   { /* LSP advances `pos` in UTF-16 units; each SMP code point in the
@@ -3020,7 +3042,11 @@ static vardecl var_textBuffer[] =
   IV(NAME_stringHeader, "alien:str_h", IV_NONE,
      NAME_storage, "Encoding description"),
   IV(NAME_buffer, "alien:char *", IV_NONE,
-     NAME_storage, "Actual storage bin")
+     NAME_storage, "Actual storage bin"),
+  IV(NAME_lspLine, "alien:int", IV_NONE,
+     NAME_lsp, "Line of the last <-lsp_offset lookup"),
+  IV(NAME_lspSol, "alien:int", IV_NONE,
+     NAME_lsp, "Start of <-lsp_line")
 };
 
 /* Send Methods */
