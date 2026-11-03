@@ -48,7 +48,8 @@ Run with:
 :- use_module(library(plunit)).
 
 test_native_keys :-
-    run_tests([ native_keys
+    run_tests([ native_keys,
+                non_ascii_keys
               ]).
 
 % Modifier bits of event <-buttons
@@ -170,3 +171,22 @@ test(editor_untouched, Fs == [beginning_of_line, beginning_of_line]) :-
     Fs = [F1, F2].
 
 :- end_tests(native_keys).
+
+%   A character from 128 up has no entry of its own in the table
+%   `insert`: a table that inherits it inserts such characters as it
+%   inserts the printable ASCII ones.  A table of shortcuts, such as the
+%   one `pane_frame ->shortcut` offers every key to, must leave them to
+%   the window with the focus: it used to call ->insert_self on the
+%   frame when the symbol picker typed into Epilog.
+
+:- begin_tests(non_ascii_keys).
+
+test(text_table_inserts, F == insert_self) :-
+    new(KB, key_binding(@nil, text_item)),
+    get(KB, function, 945, F).
+test(shortcut_table_ignores, fail) :-
+    new(KB, key_binding(@nil)),
+    send(KB, function, '\\C-x', prefix),
+    get(KB, function, 945, _).
+
+:- end_tests(non_ascii_keys).

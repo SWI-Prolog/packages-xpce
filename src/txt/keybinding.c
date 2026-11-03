@@ -157,6 +157,28 @@ get_default_function_key_binding(KeyBinding kb, Name key)
 }
 
 
+/* True if kb inherits the table `insert`, which binds the printable
+   characters to ->insert_self.  Only such a table inserts the characters
+   it has no room for, those from 128 up.  A table of shortcuts, such as
+   that of `pane_frame ->shortcut`, sees every key and must leave these
+   to the window that has the focus.
+*/
+
+static bool
+inserts_printable(KeyBinding kb)
+{ Cell cell;
+
+  if ( kb->name == NAME_insert )
+    return true;
+  for_cell(cell, kb->defaults)
+  { if ( inserts_printable(cell->value) )
+      return true;
+  }
+
+  return false;
+}
+
+
 Any
 getFunctionKeyBinding(KeyBinding kb, EventId id)
 { Any cmd;
@@ -172,7 +194,7 @@ getFunctionKeyBinding(KeyBinding kb, EventId id)
   if ( key->data.s_size == 1 )
   { int c = str_fetch(&key->data, 0);
 
-    if ( c >= 128 )
+    if ( c >= 128 && inserts_printable(kb) )
       return NAME_insertSelf;
   }
 
