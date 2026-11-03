@@ -171,7 +171,7 @@ keyword_type(_M, Keyword:name, Type:name) :<-
 %   Styles for C (and C++).  Users can overrule them using style/2 (see
 %   emacs_mode_style/3).  lsp(Type) is for semantic tokens of type Type
 %   from an LSP server such as clangd; the others are for comments,
-%   strings and keywords (see c_keyword/2).
+%   strings, keywords (see c_keyword/2) and preprocessor directives.
 
 def_style(lsp(comment),    [colour(orange)]).              % Inactive code
 def_style(lsp(variable),   [colour(red4)]).
@@ -191,6 +191,7 @@ def_style(type,            [colour(blue)]).
 def_style(qualifier,       [colour(blue)]).
 def_style(definition,      [colour(blue)]).
 def_style(operator,        [colour(blue)]).
+def_style(preprocessor,    [colour(purple4)]).
 
 setup_mode(M) :->
     "Define the C styles and connect to an LSP server"::
@@ -211,7 +212,8 @@ setup_mode(M) :->
 
 %   ->colourise_buffer
 %
-%   Colour comments, strings and keywords.  An LSP server for
+%   Colour comments, strings, keywords and preprocessor directives.  An
+%   LSP server for
 %   highlighting (see library(emacs/lsp_highlight)) adds the semantic
 %   tokens.
 
@@ -227,13 +229,80 @@ colourise_syntax(M) :->
          if(@arg1?class_name == emacs_colour_fragment,
             message(@arg1, free))),
     send(TB, for_all_syntax,
-         message(M, syntax_fragment, @arg1, @arg2 - @arg1, @arg3)).
+         message(M, syntax_fragment, @arg1, @arg2 - @arg1, @arg3)),
+    send(M, colourise_directives).
+
+%   ->colourise_directives
+%
+%   Colour the `#name` that starts a preprocessor directive.  A line
+%   that starts with `#` inside a comment or string is no directive.
+%   Both the directives and the comments and strings come in the order
+%   of the buffer, so we merge them.
+
+colourise_directives(M) :->
+    "Colour the #name of preprocessor directives"::
+    get(M, text_buffer, TB),
+    new(Directives, chain),
+    send(regex('^[ \t]*(#[ \t]*[a-z]+)'), for_all, TB,
+         message(Directives, append,
+                 create(point, ?(@arg1, register_start, 1),
+                        ?(@arg1, register_end, 1)))),
+    new(Skip, chain),
+    send(TB, for_all_syntax,
+         message(Skip, append, create(point, @arg1, @arg2)),
+         @default, @default, chain(comment, quoted)),
+    chain_list(Directives, DirectiveList),
+    chain_list(Skip, SkipList),
+    directive_fragments(DirectiveList, SkipList, TB).
+
+directive_fragments([], _, _) :-
+    !.
+directive_fragments([D|Ds], [S|Ss], TB) :-
+    get(S, y, SEnd),
+    get(D, x, DStart),
+    SEnd =< DStart,
+    !,
+    directive_fragments([D|Ds], Ss, TB).
+directive_fragments([D|Ds], Skip, TB) :-
+    get(D, x, DStart),
+    (   Skip = [S|_],
+        get(S, x, SStart),
+        SStart =< DStart
+    ->  true
+    ;   get(D, y, DEnd),
+        Len is DEnd - DStart,
+        new(_, emacs_colour_fragment(TB, DStart, Len, preprocessor))
+    ),
+    directive_fragments(Ds, Skip, TB).
 
 syntax_fragment(M, From:int, Len:int, Style:name) :->
     "Add a fragment for a comment, string or keyword"::
     get(M, text_buffer, TB),
-    syntax_style(Style, M, TB, From, Len, TheStyle),
-    new(_, emacs_colour_fragment(TB, From, Len, TheStyle)).
+    (   Style == keyword,
+        directive_name(TB, From)
+    ->  true                            % e.g., the `if` of `#if`
+    ;   syntax_style(Style, M, TB, From, Len, TheStyle),
+        new(_, emacs_colour_fragment(TB, From, Len, TheStyle))
+    ).
+
+%   directive_name(+TB, +From) is semidet.
+%
+%   True when the word at From follows the `#` of a preprocessor
+%   directive.  ->colourise_directives colours it.
+
+directive_name(TB, From) :-
+    Before is From - 1,
+    directive_name_(TB, Before).
+
+directive_name_(TB, I) :-
+    I >= 0,
+    get(TB, character, I, C),
+    (   C == 0'#
+    ->  true
+    ;   memberchk(C, [0'\s, 0'\t])
+    ->  I1 is I - 1,
+        directive_name_(TB, I1)
+    ).
 
 syntax_style(keyword, M, TB, From, Len, Style) =>
     get(TB, contents, From, Len, string(KeywordS)),
