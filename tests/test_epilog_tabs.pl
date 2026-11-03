@@ -801,6 +801,12 @@ shell_tab(Dir, F, W, PT) :-
 tab_says(F, Label) :-
     wait_until(tabs(F, [Label-1])).
 
+%   The OS may name a directory by its real path (macOS: /tmp is
+%   /private/tmp), so we compare directories as files.
+
+tab_says_dir(F, Dir) :-
+    wait_until(( tabs(F, [Label-1]), same_file(Label, Dir) )).
+
 test(an_idle_shell_labels_its_tab_with_its_directory,
      [ condition(process_groups)
      ]) :-
@@ -816,7 +822,7 @@ test(a_shell_tab_follows_cd,
     shell_tab(/, F, _W, PT),
     tab_says(F, /),
     send(PT, send, 'cd /tmp\n'),
-    tab_says(F, '/tmp').
+    tab_says_dir(F, '/tmp').
 
 %       A directory is shortened at its start: where it ends is where
 %       the shell is.
@@ -828,7 +834,7 @@ test(a_long_directory_is_shown_shortened_at_its_start,
        Shown == true
      ]) :-
     shell_tab(Dir, _F, W, PT),
-    tab_label_says(W, Dir),
+    tab_label_says_dir(W, Dir),
     get(W, container, tab_frame, Tab),
     wait_until(( get(Tab, shown_label, S), S \== @nil )),
     get(Tab, shown_label, ShownObj),
@@ -845,9 +851,9 @@ long_directory(Dir) :-
     atom_concat(Tmp, '_a_directory_with_a_name_too_long_for_a_tab', Dir),
     make_directory(Dir).
 
-tab_label_says(W, Label) :-
+tab_label_says_dir(W, Dir) :-
     get(W, container, tab_frame, Tab),
-    wait_until(get(Tab, label, Label)).
+    wait_until(( get(Tab, label, Label), same_file(Label, Dir) )).
 
 test(a_program_labels_its_tab_while_it_runs,
      [ condition(process_names)
