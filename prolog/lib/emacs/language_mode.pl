@@ -67,6 +67,8 @@
           find_references               = key('\\e?') + button(browse),
           camelcase_word                = key('\\C-c\\C-c'),
           underscores_word              = key('\\C-c\\C--'),
+          goto_next_error               = key('\\egn'),
+          goto_prev_error               = key('\\egp'),
 
                                         % Commands for M-x
           align_with_previous_line      = command,
@@ -1024,6 +1026,38 @@ prolog_manual(M, On:[name]) :->
 
 prolog_manual(Topic) :-
     help(Topic).
+
+
+                 /*******************************
+                 *         DIAGNOSTICS          *
+                 *******************************/
+
+%   Diagnostics are emacs_lsp_diagnostic fragments created from the
+%   messages of an LSP server (see library(emacs/lsp_diagnostics)).
+
+goto_next_error(M) :->
+    "Go to the next diagnostic"::
+    send(M, goto_diagnostic, next).
+
+goto_prev_error(M) :->
+    "Go to the previous diagnostic"::
+    send(M, goto_diagnostic, prev).
+
+goto_diagnostic(M, Dir:direction={next,prev}) :->
+    "Select the next/previous diagnostic"::
+    get(M, caret, Caret),
+    (   get(@classes, member, emacs_lsp_diagnostic, _),
+        Diag = message(@arg1, instance_of, emacs_lsp_diagnostic),
+        (   Dir == next
+        ->  get(M, find_fragment, and(Diag, @arg1?start > Caret), Fragment)
+        ;   get(M, find_all_fragments, and(Diag, @arg1?end < Caret), All),
+            get(All, tail, Fragment)
+        )
+    ->  get(Fragment, start, Start),
+        get(Fragment, end, End),
+        send(M, selection, End, Start, highlight)
+    ;   send(M, report, status, "No further diagnostics")
+    ).
 
 :- emacs_end_mode.
 

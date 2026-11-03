@@ -40,6 +40,7 @@
             lsp_delete_document_region/1 % +RegionURI
           ]).
 :- use_module(library(pce)).
+:- use_module(library(emacs/emacs), []).    % classes we extend
 :- use_module(library(process)).
 :- use_module(library(json_rpc_client)).
 :- use_module(library(json_rpc_server)).
@@ -776,14 +777,24 @@ lsp_offset(#{line:Line, character:Char}, Buffer, Offset) =>
 
 %!  'window/showMessage'(+Data)
 %
-%   @tbd Should use ->report to the current PceEmacs window.
+%   Show a message from the server in the PceEmacs frame the user is
+%   working in, or print it if there is no such frame.
 
 :- det('window/showMessage'/1).
 'window/showMessage'(Data) :-
     #{type: Type,		% 1: error, 2: warning, 3:info, 4: log
       message: Message} :< Data,
-    message_level(Type, Kind),
-    print_message(Kind, lsp(show(Message))).
+    (   object(@emacs),
+        get(@emacs, current_frame, Frame)
+    ->  report_kind(Type, Kind),
+        send(Frame, report, Kind, '%s', Message)
+    ;   message_level(Type, Kind),
+        print_message(Kind, lsp(show(Message)))
+    ).
+
+report_kind(1, error) :- !.
+report_kind(2, warning) :- !.
+report_kind(_, status).
 
 message_level(1, error).
 message_level(2, warning).
@@ -1103,7 +1114,16 @@ prolog:message(lsp(Msg)) -->
 lsp_message(log(Message)) -->
     [ '~s'-[Message] ].
 lsp_message(show(Message)) -->
-    [ 'TODO: show ~s'-[Message] ].
+    [ '~s'-[Message] ].
 lsp_message(rpc_error(Message, Error)) -->
     { message_to_string(Error, ErrorMsg) },
     [ '~p: ~s'-[Message, ErrorMsg] ].
+
+
+                /*******************************
+                *        EDITOR FEATURES       *
+                *******************************/
+
+:- use_module(lsp_diagnostics, []).
+:- use_module(lsp_highlight, []).
+:- use_module(lsp_symbol_item, []).
