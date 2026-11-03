@@ -44,13 +44,11 @@
 :- use_module(library(swi_compatibility),
               [ pce_error/1
               , pce_info/1
-              , pce_warn/1
               ]).
 :- use_module(library(lists),
               [ append/3
               , flatten/2
               , member/2
-              , memberchk/2
               , reverse/2
               ]).
 :- use_module(library(apply),
