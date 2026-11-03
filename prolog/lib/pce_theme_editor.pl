@@ -497,9 +497,9 @@ css_ansi(background(C), bg(C)).
 look(Attrs, look(Fg, Bg, Bold, Italic, Underline)) :-
     look_colour(foreground, Attrs, Fg),
     look_colour(background, Attrs, Bg),
-    flag(bold, Attrs, Bold),
-    flag(italic, Attrs, Italic),
-    flag(underline, Attrs, Underline).
+    flag_bool(bold, Attrs, Bold),
+    flag_bool(italic, Attrs, Italic),
+    flag_bool(underline, Attrs, Underline).
 
 look_colour(Which, Attrs, Colour) :-
     member(A, Attrs),
@@ -508,7 +508,7 @@ look_colour(Which, Attrs, Colour) :-
     Colour = Colour0.
 look_colour(_, _, @default).
 
-flag(Flag, Attrs, Value) :-
+flag_bool(Flag, Attrs, Value) :-
     (   memberchk(Flag, Attrs)
     ->  Value = @on
     ;   Value = @off

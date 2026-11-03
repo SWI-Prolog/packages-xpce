@@ -86,7 +86,7 @@ system_predicate(Head) :-
 %   current output.
 
 pce_require(File) :-
-    clean,
+    pce_clean,
     collect(File),
     report.
 
@@ -104,7 +104,7 @@ pce_require(File, Directive, Message) :-
     get(M, value, Message).
 
 
-clean :-
+pce_clean :-
     retractall(called(_)),
     retractall(defined(_)),
     retractall(current_require_declaration(_)).
