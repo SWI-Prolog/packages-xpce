@@ -47,7 +47,8 @@ Run with:
 test_menu :-
     run_tests([menu_kind, menu_solo, menu_keyboard, menu_accelerator,
                menu_mnemonic,
-               menu_layout, menu_max_value_width, menu_markup]).
+               menu_layout, menu_max_value_width, menu_markup,
+               menu_bar]).
 
 %   toggle_menu(-Dialog, -Menu, -Log)
 %
@@ -459,3 +460,21 @@ test(markup_ellipsized_label, Text == "Bold and italic text") :-
     atom_string(Value, Text).
 
 :- end_tests(menu_markup).
+
+:- begin_tests(menu_bar).
+
+%   ->clear lets go of the popup that is showing: it usually goes away
+%   with the bar's contents, and a freed popup left in <-current was
+%   freed for real by the next popup shown, which then sent ->close to
+%   it.  ->slot stands in for ->show_popup, as popups cannot open on the
+%   dummy video driver.
+
+test(clear_resets_current, C == @nil) :-
+    new(MB, menu_bar),
+    send(MB, append, new(P, popup(file))),
+    send(MB, slot, current, P),
+    send(MB, clear),
+    get(MB, current, C),
+    send(MB, free).
+
+:- end_tests(menu_bar).

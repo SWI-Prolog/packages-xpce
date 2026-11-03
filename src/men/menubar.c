@@ -275,14 +275,19 @@ showPopupMenuBar(MenuBar mb, PopupObj p)
   PopupObj close = NIL;
 
   if ( notNil(mb->current) && mb->current->displayed == ON )
-    close = mb->current;
+  { close = mb->current;		/* currentMenuBar() may drop the */
+    addCodeReference(close);		/* last reference to it */
+  }
   currentMenuBar(mb, p);
   send(mb->current, NAME_update, mb, EAV);
   assign(mb->current, default_item, NIL); /* Initialy do not select */
   send(mb->current, NAME_open, mb, pos, OFF, OFF, ON, EAV);
   considerPreserveObject(pos);
   if ( notNil(close) )
-    send(close, NAME_close, EAV);
+  { if ( !isFreedObj(close) )
+      send(close, NAME_close, EAV);
+    delCodeReference(close);
+  }
 
   succeed;
 }
@@ -606,9 +611,30 @@ unlinkMenuBar(MenuBar mb)
 }
 
 
+/* Let go of the popups as ->delete does.  <-current in particular: the
+   popups usually go away with the bar's contents, and a freed popup
+   left there is freed for real by the next currentMenuBar().
+*/
+
 static status
 clearMenuBar(MenuBar mb)
-{ clearChain(mb->members);
+{ Cell cell;
+
+  if ( notNil(mb->current) )
+  { PopupObj current = mb->current;
+
+    if ( current->displayed == ON )
+      send(current, NAME_close, EAV);
+    assign(mb, current, NIL);
+  }
+  for_cell(cell, mb->members)
+  { PopupObj p = cell->value;
+
+    if ( p->context == (Any)mb )
+      assign(p, context, NIL);
+  }
+
+  clearChain(mb->members);
   clearChain(mb->buttons);
   ws_menubar_changed(mb);
 
