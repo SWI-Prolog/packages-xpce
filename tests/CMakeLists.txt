@@ -87,6 +87,7 @@ test_libs(emacs_lsp            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(lsp_offset           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_lsp_editor     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(syntax_table         OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(emacs_c_mode         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(camera               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(sdl_texture          OPTIONS ${XPCE_TEST_OPTIONS})
 
@@ -225,6 +226,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:lsp_offset
                      xpce:emacs_lsp_editor
                      xpce:syntax_table
+                     xpce:emacs_c_mode
                      xpce:camera
                      xpce:sdl_texture
                      ${XPCE_VIDEO_TESTS}

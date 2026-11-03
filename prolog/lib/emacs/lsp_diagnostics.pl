@@ -46,6 +46,7 @@
 :- use_module(library(uri)).
 
 :- use_module(library(emacs/lsp_client)).
+:- use_module(library(emacs_extend), [emacs_mode_style/3]).
 
 /** <module> Handle LSP disagnostic messages
 
@@ -134,7 +135,8 @@ lsp_enable_margin(M, Enable:[bool]) :->
 %   ->lsp_setup_diagnostic_styles
 %
 %   Define the styles for the diagnostic fragments in the editor.  The
-%   style/2 rules of the mode override lsp_diagnostic_style/2.
+%   styles of the mode (see emacs_mode_style/3) override
+%   lsp_diagnostic_style/2.
 
 lsp_setup_diagnostic_styles(M) :->
     "Define the styles for LSP diagnostics"::
@@ -152,8 +154,7 @@ lsp_setup_diagnostic_styles(M) :->
     ).
 
 diagnostic_style(Mode, Name, Attributes) :-
-    lsp_mode_module(Mode, Module),
-    catch(Module:style(Name, Attributes), error(existence_error(_,_),_), fail),
+    emacs_mode_style(Mode, Name, Attributes),
     !.
 diagnostic_style(_Mode, Name, Attributes) :-
     lsp_diagnostic_style(Name, Attributes).

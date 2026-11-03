@@ -34,10 +34,14 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(emacs_c_mode, []).
+:- module(emacs_c_mode, [c_keyword/2]).                % ?Keyword, ?Type
 :- use_module(library(pce)).
-:- use_module(library(emacs_extend), []).
+:- use_module(library(emacs_extend), [emacs_mode_pce_style/4]).
 :- use_module(library(debug)).
+:- autoload(library(apply), [convlist/3]).
+:- autoload(library(lists), [member/2]).
+:- autoload(library(uri), [uri_file_name/2]).
+:- autoload(library(pce_util), [chain_list/2]).
 :- require([ between/3
            , default/3
            , forall/2
@@ -115,9 +119,12 @@ c_keyword('_Alignof',       operator).
                       gdb_next          = button(gdb) + key('\\C-c\\C-n'),
                       gdb_print         = button(gdb) + key('\\C-c\\C-p'),
                       prolog_manual     = button(prolog),
+                      find_definition   = key('\\e.') + button(browse),
+                      find_references   = key('\\e?') + button(browse),
 
                                         % Commands for M-x
                       add_prototype      = command,
+                      goto_symbol        = command,
                       backward_statement = command,
                       insert_NAME_       = command
                     ],
@@ -132,6 +139,8 @@ c_keyword('_Alignof',       operator).
 
 variable(indent_level, int, both, "Indentation level in spaces").
 class_variable(indent_level, '0..', 2).
+class_variable(auto_colourise_size_limit, '0..', 400000).
+class_variable(idle_timeout,              '0.0..', 0.3).
 
 :- initialization
     send(@class, attribute, outline_regex_list,
@@ -151,6 +160,255 @@ set_keywords :-
 keyword_type(_M, Keyword:name, Type:name) :<-
     "Classify a C keyword"::
     c_keyword(Keyword, Type).
+
+
+                 /*******************************
+                 *            STYLES            *
+                 *******************************/
+
+%   def_style(?Class, -Attributes)
+%
+%   Styles for C (and C++).  Users can overrule them using style/2 (see
+%   emacs_mode_style/3).  lsp(Type) is for semantic tokens of type Type
+%   from an LSP server such as clangd; the others are for comments,
+%   strings and keywords (see c_keyword/2).
+
+def_style(lsp(comment),    [colour(orange)]).              % Inactive code
+def_style(lsp(variable),   [colour(red4)]).
+def_style(lsp(parameter),  [colour(red4), underline(true)]).
+def_style(lsp(function),   [bold(true)]).
+def_style(lsp(macro),      [colour('#006e6e')]).
+def_style(lsp(type),       [colour(blue), underline(true)]).
+def_style(lsp(class),      [colour(blue), underline(true)]).
+def_style(lsp(enumMember), [colour(magenta)]).
+def_style(lsp(enum),       [colour(magenta), bold(true)]).
+def_style(lsp(operator),   [colour(blue)]).
+
+def_style(comment,         [colour(darkgreen)]).
+def_style(quoted,          [colour(navyblue)]).
+def_style(control,         [bold(true), colour(navyblue)]).
+def_style(type,            [colour(blue)]).
+def_style(qualifier,       [colour(blue)]).
+def_style(definition,      [colour(blue)]).
+def_style(operator,        [colour(blue)]).
+
+setup_mode(M) :->
+    "Define the C styles and connect to an LSP server"::
+    send_super(M, setup_mode),
+    get(M, editor, E),
+    get(M, name, Mode),
+    forall(emacs_mode_pce_style(Mode, _Class, Name, Style),
+           send(E, style, Name, Style)),
+    (   send(M, has_send_method, lsp_setup_highlight)
+    ->  ignore(send(M, lsp_setup_highlight))
+    ;   true
+    ).
+
+
+                 /*******************************
+                 *          COLOURING           *
+                 *******************************/
+
+%   ->colourise_buffer
+%
+%   Colour comments, strings and keywords.  An LSP server for
+%   highlighting (see library(emacs/lsp_highlight)) adds the semantic
+%   tokens.
+
+colourise_buffer(M) :->
+    "Colour using LSP tokens and syntax"::
+    send_super(M, colourise_buffer),
+    send(M, colourise_syntax).
+
+colourise_syntax(M) :->
+    "Colour comments, strings and keywords"::
+    get(M, text_buffer, TB),
+    send(TB, for_all_fragments,
+         if(@arg1?class_name == emacs_colour_fragment,
+            message(@arg1, free))),
+    send(TB, for_all_syntax,
+         message(M, syntax_fragment, @arg1, @arg2 - @arg1, @arg3)).
+
+syntax_fragment(M, From:int, Len:int, Style:name) :->
+    "Add a fragment for a comment, string or keyword"::
+    get(M, text_buffer, TB),
+    syntax_style(Style, M, TB, From, Len, TheStyle),
+    new(_, emacs_colour_fragment(TB, From, Len, TheStyle)).
+
+syntax_style(keyword, M, TB, From, Len, Style) =>
+    get(TB, contents, From, Len, string(KeywordS)),
+    atom_string(Keyword, KeywordS),
+    get(M, keyword_type, Keyword, Style).
+syntax_style(Style0, _M, _TB, _From, _Len, Style) =>
+    Style = Style0.
+
+
+                 /*******************************
+                 *      CROSS-REFERENCING       *
+                 *******************************/
+
+%   These commands use an LSP server in the role `symbol` (`clangd`,
+%   see library(emacs/lsp_registry)) if there is one, and the tag
+%   table otherwise.
+
+find_definition(M) :->
+    "Find the definition of the symbol at the caret"::
+    (   get(M, lsp_client, symbol, LSP)
+    ->  (   send(M, on_symbol)
+        ->  (   get(M, 'LD_symbol', LDSymbol)
+            ->  send(M, goto_symbol, LDSymbol)
+            ;   send(M, find_symbol_at_caret, LSP)
+            )
+        ;   send(M, noarg_call, goto_symbol)
+        )
+    ;   send(M, noarg_call, find_tag)
+    ).
+
+%   <-'LD_symbol'
+%
+%   SWI-Prolog's sources define many functions using the LDFUNC()
+%   macro.  Jump to the actual function, Name___LD, rather than the
+%   macro definition.
+
+'LD_symbol'(M, LDSymbol:lsp_tag) :<-
+    "Find a SWI-Prolog <Function>___LD symbol"::
+    get(M, lsp_client, symbol, LSP),
+    get(M, word, string(Symbol)),
+    atom_concat(Symbol, '___LD', LDSymbol),
+    get(LSP, call,
+        'workspace/symbol'(
+            #{ query: LDSymbol
+             }),
+        Result),
+    member(R, Result),
+    atom_string(LDSymbol, R.name),
+    !.
+
+%   ->find_symbol_at_caret(+LSP)
+%
+%   Ask LSP for the definition of the symbol at the caret.  If it has
+%   none, e.g., because the code around it has errors, look the symbol
+%   up by name.
+
+find_symbol_at_caret(M, LSP:lsp_client) :->
+    "Find definition from current location"::
+    get(M, lsp_position, Pos),
+    get(LSP, call, 'textDocument/definition'(Pos), Result),
+    (   Result == []
+    ->  get(M, word, Word),
+        send(M, goto_symbol, Word)
+    ;   send(M, lsp_goto, Result)
+    ).
+
+goto_symbol(M, Tag:symbol=lsp_tag) :->
+    "Go to the definition of a symbol"::
+    (   get(M, lsp_client, symbol, LSP)
+    ->  get(LSP, call,
+            'workspace/symbol'(
+                #{ query: Tag
+                 }),
+            Symbols),
+        (   member(Symbol, Symbols),
+            atom_string(Tag, Symbol.name)
+        ->  send(M, lsp_goto, Symbol.location)
+        ;   send(M, report, warning, 'Could not find symbol %s', Tag)
+        )
+    ;   send(M, find_tag, Tag)
+    ).
+
+lsp_goto(M, Location:prolog) :->
+    "Go to a location returned by the LSP server"::
+    (   is_list(Location)
+    ->  lsp_select_hit(Location, M, Hit)
+    ;   Hit = Location
+    ),
+    send(M, save_word_location),
+    get(M, word, Identifier),
+    #{ uri:URI, range:Range } :< Hit,
+    #{ start: Start } :< Range,
+    #{ line:SL, character: SP } :< Start,
+    uri_file_name(URI, File),
+    new(B, emacs_buffer(File)),
+    get(B, open, tab, Frame),
+    get(Frame, editor, Editor),
+    get(B, lsp_offset, SL, SP, Offset),
+    send(Editor, caret, Offset),
+    new(Title, string('%s (definition)', Identifier)),
+    send(Editor?mode, location_history, title := Title).
+
+lsp_select_hit([Hit], _, Hit) :-
+    !.
+lsp_select_hit(Hits, M, _) :-
+    format(string(String), '~p', [Hits]),
+    send(M, report, warning, 'LSP Locations: %s', String),
+    fail.
+
+save_word_location(M) :->
+    "Push the current word to the history"::
+    get(M, text_buffer, TB),
+    get(M, caret, Caret),
+    get(TB, scan, Caret, word, 0, start, SW),
+    get(TB, scan, Caret, word, 0, end, EW),
+    WLen is EW-SW,
+    get(TB, contents, SW, WLen, Identifier),
+    new(Title, string('%s (use)', Identifier)),
+    send(M, location_history, SW, WLen, always := @on, title := Title).
+
+find_references(M, For:[any]) :->
+    "Find references to symbol at caret"::
+    (   get(M, lsp_client, symbol, LSP)
+    ->  get(M, lsp_position, Pos),
+        get(LSP, call,
+            'textDocument/references'(
+                Pos.put(#{context:
+                            #{ includeDeclaration: true }
+                         })),
+            References),
+        get(M, word, Word),
+        get(@emacs, reference_viewer, string('References to %s', Word), BM),
+        length(References, Count),
+        forall(member(Ref, References),
+               add_lsp_reference(BM, Ref)),
+        send(BM, report, status,
+             'Found %d references to %s', Count, Word),
+        send(BM, open)
+    ;   send_super(M, find_references, For)
+    ).
+
+add_lsp_reference(BM, Ref) :-
+    #{range: Range, uri:URI} :< Ref,
+    uri_file_name(URI, File),
+    send(BM, lsp_add(File, Range)).
+
+%   <-dabbrev_candidates
+%
+%   Get candidates for dynamic abbreviations from the LSP server in the
+%   role `complete`.  The `user0` target is tried first.  After that we
+%   try backward search and then forward search in the buffer and than
+%   `user1`, `user2` and `user3`.
+
+dabbrev_candidates(M, user0:name, Target:name, Completions:chain) :<-
+    "Get additional candidates from the LSP server"::
+    get(M, text_buffer, TB),
+    get(TB, attribute, lsp_tracking, URI),
+    get(M, lsp_client, complete, LSP),
+    get(M, caret, Caret),
+    get(TB, line_number, Caret, Line0),
+    Line is Line0-1,
+    get(TB, lsp_column, Caret, Char),
+    get(LSP, call,
+        'textDocument/completion'(
+            #{ textDocument: #{ uri: URI },
+               position: #{line: Line, character: Char},
+               context: #{triggerKind: 1}
+             }),
+        Reply),
+    convlist(completion(Target), Reply.get(items, []), List),
+    chain_list(Completions, List).
+
+completion(Target, Dict, Completion) :-
+    Completion = Dict.get(insertText),
+    sub_string(Completion, 0, _, _, Target).
 
 :- pce_global(@c_undent_regex, new(regex('\\{|else|\\w+:'))).
 

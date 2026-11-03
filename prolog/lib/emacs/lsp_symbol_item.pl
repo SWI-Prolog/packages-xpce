@@ -36,8 +36,7 @@
 :- use_module(library(apply)).
 :- use_module(library(pce_util)).
 
-:- initialization
-   pce_define_type(lsp_tag, name).
+%   The type lsp_tag is defined by library(emacs/lsp_registry).
 
 :- multifile
     emacs_prompt:make_item_hook/6.

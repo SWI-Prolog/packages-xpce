@@ -37,6 +37,8 @@
 :- use_module(library(debug)).
 
 :- use_module(library(emacs/lsp_client)).
+:- use_module(library(emacs_extend),
+              [ emacs_mode_style/3, emacs_mode_pce_style/4, emacs_style_name/2 ]).
 
 /** <module> Generic LSP based highlighting
 
@@ -147,8 +149,8 @@ token_styles(LSP, Mode, Styles) :-
            ( Tid is I-1,
              (   lsp_token_type(LSP, Tid, TokenType),
                  StyleClass = lsp(TokenType),
-                 mode_style(Mode, StyleClass, _)
-             ->  style_name(StyleClass, Name)
+                 emacs_mode_style(Mode, StyleClass, _)
+             ->  emacs_style_name(StyleClass, Name)
              ;   Name = (-)
              ),
              nb_setarg(I, Styles, Name)
@@ -200,7 +202,7 @@ lsp_setup_styles(M) :->
     (   get(E, attribute, lsp_styles_assigned, @on)
     ->  true
     ;   get(M, name, ModeName),
-        forall(style(ModeName, _Class, Name, Style),
+        forall(emacs_mode_pce_style(ModeName, _Class, Name, Style),
                send(E, style, Name, Style)),
         send(E, attribute, lsp_styles_assigned, @on)
     ),
@@ -217,65 +219,9 @@ colourise_buffer(M) :->
         )
     ->  send(M, update_bookmarks)
     ;   send_super(M, colourise_buffer)
-    ),
-    (   send(M, has_send_method, colourise_buffer_no_lsp)
-    ->  send(M, colourise_buffer_no_lsp)
-    ;   true
     ).
 
 :- emacs_end_mode.
-
-
-%!  style(+Mode, ?Class, -Name, -Style) is nondet.
-%
-%   Define the styles.
-
-style(Mode, Class, Name, Style) :-
-    mode_style(Mode, Class, Attributes),
-    style_name(Class, Name),
-    maplist(style_attribute, Attributes, PceArgs),
-    (   PceArgs == []
-    ->  Style = @default
-    ;   Style =.. [style|PceArgs]
-    ).
-
-style_attribute(Attr, Name := Value) :-
-    Attr =.. [Name,Value].
-
-%!  mode_style(+Mode, +StyleClass, -Attributes) is semidet.
-%!  mode_style(+Mode, -StyleClass, -Attributes) is nondet.
-
-mode_style(Mode, StyleClass, Attributes) :-
-    nonvar(StyleClass),
-    !,
-    lsp_mode_module(Mode, Module),
-    (   Module:style(StyleClass, Attributes)
-    ->  true
-    ;   Module:def_style(StyleClass, Attributes)
-    ).
-mode_style(Mode, StyleClass, Attributes) :-
-    lsp_mode_module(Mode, Module),
-    (   Module:style(StyleClass, Attributes)
-    ;   Module:def_style(StyleClass, Attributes),
-        \+ ( Module:style(UserClass, _),
-             UserClass =@= StyleClass )
-    ).
-
-%!  style_name(?Term, ?StyleName:atom) is det.
-%
-%   Map between the term representation for styles and the (atom) name
-%   we need to use for the xpce style name.
-
-:- table style_name/2.
-style_name(Class, StyleName) :-
-    nonvar(Class),
-    !,
-    copy_term(Class, Copy),
-    numbervars(Copy, 0, _, [singletons(true)]),
-    term_string(Copy, S, [numbervars(true)]),
-    atom_string(StyleName, S).
-style_name(Class, StyleName) :-
-    term_string(Class, StyleName).
 
 
                 /*******************************
@@ -298,7 +244,7 @@ identify(F) :->
     ->  get(LSP, modifiers, Mask, Modifiers)
     ;   Modifiers = []
     ),
-    style_name(Style, StyleName),
+    emacs_style_name(Style, StyleName),
     get(F, text_buffer, TB),
     (   get(TB?editors, head, Editor),
         get(Editor, mode, Mode),

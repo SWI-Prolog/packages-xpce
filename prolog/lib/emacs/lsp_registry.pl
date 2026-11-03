@@ -73,6 +73,9 @@ lsp_registry:lsp_server('vale-ls',
 */
 
 :- initialization
+    pce_define_type(lsp_tag, name).     % symbol, completed using the server
+
+:- initialization
     ( unlisten(lsp_registry),
       listen(lsp_registry, pce_emacs(opened(Buffer)), lsp_opened(Buffer))
     ).

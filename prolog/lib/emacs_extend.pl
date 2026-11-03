@@ -35,12 +35,17 @@
 :- module(emacs_extend,
           [ declare_emacs_mode/2,
             declare_emacs_mode/3,
-            lsp_mode_module/2           % +Mode, -Module
+            lsp_mode_module/2,          % +Mode, -Module
+            emacs_mode_style/3,         % +Mode, ?Class, -Attributes
+            emacs_mode_pce_style/4,     % +Mode, ?Class, -Name, -Style
+            emacs_style_name/2          % ?Class, ?Name
           ]).
 :- use_module(library(pce)).
 :- require([ atomic_list_concat/2,
              send_list/3
            ]).
+:- autoload(library(apply), [exclude/3, maplist/3]).
+:- autoload(library(lists), [member/2]).
 
                 /********************************
                 *         DECLARE MODES         *
@@ -150,6 +155,113 @@ emacs_expansion((:- emacs_end_mode), (:- pce_end_class)).
 
 lsp_mode_module(Mode, Module) :-
     atomic_list_concat([emacs_, Mode, '_mode'], Module).
+
+
+                 /*******************************
+                 *            STYLES            *
+                 *******************************/
+
+%!  emacs_mode_style(+Mode, +Class, -Attributes) is semidet.
+%!  emacs_mode_style(+Mode, -Class, -Attributes) is nondet.
+%
+%   True when fragments classified as Class are shown using Attributes,
+%   a list of Name(Value) terms for class style, in Mode.  The styles
+%   are the style/2 rules (for the user) and def_style/2 rules (for the
+%   mode) in the module of the mode (see lsp_mode_module/2).  A mode
+%   inherits the styles of its super modes, e.g., C++ those of C.  The
+%   first rule found wins, where a mode precedes its super mode and
+%   style/2 precedes def_style/2.
+
+emacs_mode_style(Mode, Class, Attributes) :-
+    nonvar(Class),
+    !,
+    mode_modules(Mode, Modules),
+    member(Module, Modules),
+    module_style(Module, Class, Attributes),
+    !.
+emacs_mode_style(Mode, Class, Attributes) :-
+    mode_modules(Mode, Modules),
+    findall(C-A,
+            ( member(Module, Modules),
+              module_style(Module, C, A)
+            ),
+            Pairs),
+    first_styles(Pairs, Unique),
+    member(Class-Attributes, Unique).
+
+module_style(Module, Class, Attributes) :-
+    (   catch(Module:style(Class, Attributes),
+              error(existence_error(procedure, _), _), fail)
+    ;   catch(Module:def_style(Class, Attributes),
+              error(existence_error(procedure, _), _), fail)
+    ).
+
+first_styles([], []).
+first_styles([C-A|T0], [C-A|T]) :-
+    exclude(same_class(C), T0, T1),
+    first_styles(T1, T).
+
+same_class(C, C1-_) :-
+    C1 =@= C.
+
+%!  mode_modules(+Mode, -Modules) is det.
+%
+%   Modules are the modules for Mode and its super modes.
+
+mode_modules(Mode, Modules) :-
+    emacs_mode_class(Mode, ClassName),
+    (   get(@classes, member, ClassName, Class)
+    ->  class_modules(Class, Modules)
+    ;   lsp_mode_module(Mode, Module),
+        Modules = [Module]
+    ).
+
+class_modules(Class, [Module|Modules]) :-
+    get(Class, name, ClassName),
+    emacs_mode_class(Mode, ClassName),
+    Mode \== @default,
+    !,
+    lsp_mode_module(Mode, Module),
+    get(Class, super_class, Super),
+    (   Super \== @nil
+    ->  class_modules(Super, Modules)
+    ;   Modules = []
+    ).
+class_modules(_, []).
+
+%!  emacs_mode_pce_style(+Mode, ?Class, -Name, -Style) is nondet.
+%
+%   As emacs_mode_style/3, translated for editor->style: Name is the
+%   style name for Class (see emacs_style_name/2) and Style a term
+%   style(Name := Value, ...) or `@default`.
+
+emacs_mode_pce_style(Mode, Class, Name, Style) :-
+    emacs_mode_style(Mode, Class, Attributes),
+    emacs_style_name(Class, Name),
+    maplist(style_attribute, Attributes, PceArgs),
+    (   PceArgs == []
+    ->  Style = @default
+    ;   Style =.. [style|PceArgs]
+    ).
+
+style_attribute(Attr, Name := Value) :-
+    Attr =.. [Name,Value].
+
+%!  emacs_style_name(?Class, ?StyleName:atom) is det.
+%
+%   Map between the term that classifies a fragment and the (atom) name
+%   of its style in the editor.
+
+:- table emacs_style_name/2.
+emacs_style_name(Class, StyleName) :-
+    nonvar(Class),
+    !,
+    copy_term(Class, Copy),
+    numbervars(Copy, 0, _, [singletons(true)]),
+    term_string(Copy, S, [numbervars(true)]),
+    atom_string(StyleName, S).
+emacs_style_name(Class, StyleName) :-
+    term_string(Class, StyleName).
 
 %!  emacs_mode_bindings(+Mode, +Module, +Bindings, +Syntax)
 
