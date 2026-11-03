@@ -302,11 +302,14 @@ test(transient_objects_do_not_accumulate, true(Freed >= 4990)) :-
 test(local_reference, [true(Local), cleanup(free(P))]) :-
     new(P, point(1,2)),
     ( '$local_atom'(P) -> Local = true ; Local = false ).
-test(local_sweep_reclaims, true(Freed >= 4000)) :-
+test(local_sweep_reclaims, [ condition(current_prolog_flag(threads, true)),
+                              true(Freed >= 4000)
+                            ]) :-
     thread_create(local_churn(5000, Freed), Id),
     thread_join(Id, Status),
     Status = exited(Freed).
-test(other_thread_promotes, [ true(Before == true),
+test(other_thread_promotes, [ condition(current_prolog_flag(threads, true)),
+                              true(Before == true),
                               true(Same == true), true(Local == false),
                               cleanup(free(@tor_chain))
                             ]) :-
