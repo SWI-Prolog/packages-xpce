@@ -1245,7 +1245,11 @@ initialise(W) :->
     get(W, xdot, X),
     send(X, node_clicked, message(W, clicked, @arg1)),
     new(P, popup),
-    send(P, append, menu_item(edit, message(W, edit, @arg1))),
+    send_list(P, append,
+              [ menu_item(edit, message(W, edit, @arg1)),
+                menu_item(info, message(W, info, @arg1),
+                          condition := message(W, has_info, @arg1))
+              ]),
     send(X, node_popup, P).
 
 unlink(W) :->
@@ -1366,6 +1370,16 @@ edit(W, Node:xdot_node) :->
     get(W, pred, Node, Pred),
     edit_predicate(Pred).
 
+has_info(W, Node:xdot_node) :->
+    "True if the predicate of a node has an info sheet"::
+    get(W, pred, Node, Pred),
+    predicate_has_info(Pred).
+
+info(W, Node:xdot_node) :->
+    "Show the info sheet of the predicate of a node"::
+    get(W, pred, Node, Pred),
+    predicate_info(Pred).
+
 :- pce_end_class(prof_graph).
 
 edit_predicate(Pred) :-
@@ -1374,6 +1388,34 @@ edit_predicate(Pred) :-
     ;   new(PP, prolog_predicate(Pred)),
         send(PP, edit)
     ).
+
+%!  predicate_has_info(+Pred) is semidet.
+%!  predicate_info(+Pred) is det.
+%
+%   The info sheet of a predicate of the profile, as the Info item of
+%   PceEmacs shows it (`prolog_predicate ->info`).  Pred is what the
+%   profile holds: a predicate indicator, or an xpce method, which has
+%   no sheet.
+
+predicate_has_info(Pred) :-
+    info_predicate(Pred, PP),
+    get(PP, head, Head),
+    predicate_property(Head, _),
+    !.
+
+predicate_info(Pred) :-
+    info_predicate(Pred, PP),
+    send(PP, info).
+
+info_predicate(Pred, PP) :-
+    object(Pred),
+    !,
+    send(Pred, instance_of, prolog_predicate),
+    PP = Pred.
+info_predicate(Pred, PP) :-
+    Pred \= '<recursive>',
+    Pred \= more(_),
+    new(PP, prolog_predicate(Pred)).
 
 
                  /*******************************
@@ -1446,7 +1488,12 @@ initialise(W) :->
     send(P, insert_before,
          menu_item(edit,
                    message(W, edit),
-                   condition := message(W, can_edit),
+                   condition := message(W, can_edit)),
+         zoom_out),
+    send(P, insert_before,
+         menu_item(info,
+                   message(W, info),
+                   condition := message(W, has_info),
                    end_group := @on),
          zoom_out).
 
@@ -1468,6 +1515,19 @@ edit(W) :->
     get(W, popup_node, Node),
     get(Node, data, Pred),
     edit_predicate(Pred).
+
+has_info(W) :->
+    "True if the predicate the popup is on has an info sheet"::
+    get(W, popup_node, Node),
+    Node \== @nil,
+    get(Node, data, Pred),
+    predicate_has_info(Pred).
+
+info(W) :->
+    "Show the info sheet of the predicate the popup is on"::
+    get(W, popup_node, Node),
+    get(Node, data, Pred),
+    predicate_info(Pred).
 
 node(W, Data:prolog) :->
     "Show the call tree below a node"::
@@ -2472,6 +2532,9 @@ make_prof_node_text_recogniser(G) :-
                 menu_item(edit,
                           message(Text, edit),
                           condition := message(Text, has_source)),
+                menu_item(info,
+                          message(Text, info),
+                          condition := message(Text, has_info)),
                 menu_item(documentation,
                           message(Text, help),
                           condition := message(Text, has_help))
@@ -2515,6 +2578,16 @@ edit(T) :->
     ->  edit(Ctx)
     ;   send(Ctx, edit)
     ).
+
+has_info(T) :->
+    "Succeed if my context has an info sheet"::
+    get(T, context, Ctx),
+    predicate_has_info(Ctx).
+
+info(T) :->
+    "Show the info sheet of my context"::
+    get(T, context, Ctx),
+    predicate_info(Ctx).
 
 has_help(T) :->
     "Succeed if the manual documents my context"::

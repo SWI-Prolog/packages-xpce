@@ -49,6 +49,7 @@
 :- autoload(library(prolog_code), [pi_head/2]).
 :- autoload(library(swi_compatibility), [auto_call/1]).
 :- autoload(library(gui_tracer), [gspy/1]).
+:- autoload(library(pce_emacs), [start_emacs/0]).
 
 :- if(exists_source(library(pldoc/man_index))).
 :- autoload(library(pldoc/man_index), [man_object_property/2]).
@@ -458,7 +459,9 @@ arm(TF, Val:bool) :->
     ).
 
 edit(T) :->
+    "Show the location in PceEmacs, starting it if needed"::
     get(T, location, Loc),
+    start_emacs,
     send(@emacs, goto_source_location, Loc).
 
 :- pce_end_class(source_location_text).
