@@ -131,6 +131,12 @@ variable(clock,            {cpu,wall} := cpu, get, "Time profiled").
 variable(exact,            bool := @off, get, "Exact (not sampled) timing").
 variable(time_view,        {percentage,seconds} := percentage,
                                  get, "How time is displayed").
+variable(measure,          {time,memory} := time,
+                                 get, "What the profile shows").
+variable(allocated,        int := 0, get, "Global stack allocated").
+variable(discarded,        int := 0, get, "Global stack discarded").
+variable(gc_reclaimed,     int := 0, get, "Global stack reclaimed by GC").
+variable(gc_count,         int := 0, get, "Garbage collections").
 variable(components,       prolog, none,
          "Cached strongly connected components of the call graph").
 
@@ -172,13 +178,15 @@ fill_menu_bar(F, MD:tool_dialog) :->
     forall(sort_by(Label, Field, Order),
            send(Sort, append,
                 menu_item(Label, message(F, sort_by, Field, Order)))),
-    send(Popup, append, new(Time, popup(show_time_as))),
-    get(F?class, instance_variable, time_view, TV),
-    get(TV, type, Type),
-    get_chain(Type, value_set, Values),
-    forall(member(TimeView, Values),
+    send(Popup, append, new(Measure, popup(measure))),
+    forall(measure(M, MLabel),
+           send(Measure, append,
+                menu_item(M, message(F, measure, M), MLabel))),
+    send(Popup, append, new(Time, popup(show_values_as))),
+    forall(time_view(TimeView, TLabel),
            send(Time, append,
-                menu_item(TimeView, message(F, time_view, TimeView)))),
+                menu_item(TimeView, message(F, time_view, TimeView),
+                          TLabel))),
     send(Popup, append, menu_item(help, message(F, help))).
 
 
@@ -197,6 +205,10 @@ load_profile(F, ProfData0:[prolog]) :->
     send(F, slot, ports, Summary.ports),
     send(F, slot, clock, Summary.get(clock, cpu)),
     send(F, slot, exact, Summary.get(exact, false)),
+    send(F, slot, allocated, Summary.get(allocated, 0)),
+    send(F, slot, discarded, Summary.get(discarded, 0)),
+    send(F, slot, gc_reclaimed, Summary.get(gc_reclaimed, 0)),
+    send(F, slot, gc_count, Summary.get(gc_count, 0)),
     get(F, window, prof_browser, B),
     send(F, report, progress, 'Loading profile data ...'),
     send(B, load_profile, ProfData.nodes),
@@ -217,15 +229,37 @@ show_statistics(F) :->
 
 statistics_summary(F, Text:string) :<-
     "Text describing the overall statistics of the profile"::
+    get(F, slot, nodes, Nodes),
+    get(F, window, prof_browser, B),
+    get(B?all_items, size, Predicates),
+    get(F, measure, Measure),
+    measure_summary(Measure, F, Predicates, Nodes, Text).
+
+%   measure_summary(+Measure, +Frame, +Predicates, +Nodes, -Text)
+%
+%   The status line describes the measure shown.  For memory, the
+%   number of predicates and nodes are left out: they are about the
+%   profile rather than the memory.
+
+measure_summary(memory, F, _Predicates, _Nodes, Text) :-
+    !,
+    get(F, allocated, Allocated),
+    get(F, discarded, Discarded),
+    get(F, gc_reclaimed, Reclaimed),
+    get(F, gc_count, Count),
+    maplist(format_value(bytes), [Allocated, Discarded, Reclaimed],
+            [AS, DS, RS]),
+    format_value(count, Count, CS),
+    new(Text, string('Global stack: allocated %s, discarded %s, \c
+                      reclaimed by GC %s in %s collections',
+                     AS, DS, RS, CS)).
+measure_summary(time, F, Predicates, Nodes, Text) :-
     get(F, samples, Samples),
     get(F, ticks, Ticks),
     get(F, accounting_ticks, Account),
     get(F, time, Time),
-    get(F, slot, nodes, Nodes),
     get(F, clock, Clock),
     clock_label(Clock, Label),
-    get(F, window, prof_browser, B),
-    get(B?all_items, size, Predicates),
     (   get(F, exact, @on)
     ->  Net is (Ticks-Account)/1e9,
         Overhead is Account/1e9,
@@ -292,7 +326,32 @@ sort_by(F, SortBy:name, Order:[{normal,reverse}]) :->
     send(B, sort_by, SortBy, Order).
 
 time_view(F, TV:name) :->
+    "Show values as a percentage of the total or absolute"::
     send(F, slot, time_view, TV),
+    send(F, refresh_views).
+
+%!  measure(+Measure)
+%
+%   Show the time (`time`) or the global stack allocated (`memory`).  The
+%   flat profile is sorted on the same key of the new measure.
+
+measure(F, Measure:{time,memory}) :->
+    "Show the time or the memory of the profile"::
+    send(F, slot, measure, Measure),
+    get(F, window, prof_browser, B),
+    get(B, sort_by, Key0),
+    (   measure_key(Key0, Measure, Key)
+    ->  send(B, sort_by, Key)
+    ;   true
+    ),
+    send(F, refresh_views),
+    (   get(F, pane_frame, _)           % else ->report pops up a window
+    ->  send(F, show_statistics)
+    ;   true
+    ).
+
+refresh_views(F) :->
+    "Show all views again after the time view or measure changed"::
     get(F, window, prof_browser, B),
     get(F, window, prof_details, W),
     get(F, window, prof_graph, G),
@@ -300,7 +359,7 @@ time_view(F, TV:name) :->
     send(B, update_labels),
     send(W, refresh),
     send(G, refresh),
-    send(T, time_view).
+    send(T, refresh).
 
 render_time(F, Ticks:int, Rendered:any) :<-
     "Render a time constant"::
@@ -321,6 +380,35 @@ render_time(F, Ticks:int, Rendered:any) :<-
             Time is TotalTime*(Ticks/float(Total))
         ),
         format_value(seconds, Time, Rendered)
+    ).
+
+render_cost(F, Value:int, Rendered:any) :<-
+    "Render a value of the current <-measure"::
+    get(F, measure, Measure),
+    get(F, render_measure, Measure, Value, Rendered).
+
+render_measure(F, Measure:{time,memory}, Value:int, Rendered:any) :<-
+    "Render a time (ticks) or memory (bytes) value"::
+    (   Measure == time
+    ->  get(F, render_time, Value, Rendered)
+    ;   get(F, time_view, percentage)
+    ->  get(F, allocated, Total),
+        (   Total =:= 0
+        ->  Rendered = '0.0%'
+        ;   Percentage is 100.0 * (Value/Total),
+            new(Rendered, string('%.1f%%', Percentage))
+        )
+    ;   format_value(bytes, Value, Rendered)
+    ).
+
+total_cost(F, Total:int) :<-
+    "Total of the current <-measure, at least 1"::
+    (   get(F, measure, time)
+    ->  get(F, ticks, Ticks),
+        get(F, accounting_ticks, Accounting),
+        Total is max(1, Ticks-Accounting)
+    ;   get(F, allocated, Allocated),
+        Total is max(1, Allocated)
     ).
 
 help(_) :->
@@ -441,12 +529,15 @@ resize(B) :->
     time_width(B?font, ColW),
     send(B, tab_stops, vector(W-ColW-15)).
 
-%   The width of the widest time, as a percentage or in seconds.
+%   The width of the widest value, as a percentage, in seconds or in
+%   bytes.
 
 time_width(Font, Width) :-
-    get(Font, width, '100.0%', W1),
-    get(Font, width, '999.9 µs', W2),
-    Width is max(W1, W2).
+    aggregate_all(max(W),
+                  ( member(Text, ['100.0%', '999.9 µs', '999 bytes']),
+                    get(Font, width, Text, W)
+                  ),
+                  Width).
 
 %       The column holding me and the filter above me is made as wide as
 %       the longest predicate, a space and the widest time.
@@ -517,9 +608,8 @@ select_interesting(B) :->
 interesting_item(SortBy, Items, F, DI) :-
     cumulative_key(SortBy),
     !,
-    get(F, ticks, Total),
-    get(F, accounting_ticks, Accounting),
-    Limit is 0.9*(Total-Accounting),
+    get(F, total_cost, Total),
+    Limit is 0.9*Total,
     (   member(DI, Items),
         get(DI, value, SortBy, Ticks),
         Ticks < Limit
@@ -530,6 +620,8 @@ interesting_item(_, [DI|_], _, DI).
 
 cumulative_key(ticks).
 cumulative_key(ticks_siblings).
+cumulative_key(alloc).
+cumulative_key(alloc_siblings).
 
 update_label(B) :->
     get(B, sort_by, Sort),
@@ -539,6 +631,12 @@ update_label(B) :->
 sort_by(B, SortBy:name, Order:[{normal,reverse}]) :->
     "Define key on which to sort"::
     send(B, slot, sort_by, SortBy),
+    (   measure_key(SortBy, Measure, SortBy),
+        prof_tool(B, F),
+        \+ get(F, measure, Measure)
+    ->  send(F, measure, Measure)       % sorts again
+    ;   true
+    ),
     send(B, update_label),
     send(B, sort, Order),
     send(B, update_labels).
@@ -657,18 +755,16 @@ update_label(DI, SortBy:name, F:prof_frame) :->
     "Update label considering sort key and frame"::
     get(DI, key, Key),
     (   SortBy == name
-    ->  send(DI, update_label, ticks_self, F)
+    ->  get(F, measure, Measure),
+        measure_key(ticks_self, Measure, Self),
+        send(DI, update_label, Self, F)
     ;   get(DI, value, SortBy, Value),
-        (   time_key(SortBy)
-        ->  get(F, render_time, Value, Rendered)
+        (   measure_key(SortBy, Measure, SortBy)
+        ->  get(F, render_measure, Measure, Value, Rendered)
         ;   Rendered = Value
         ),
         send(DI, label, string('%s\t%s', Key, Rendered))
     ).
-
-time_key(ticks).
-time_key(ticks_self).
-time_key(ticks_siblings).
 
 details(DI) :->
     "Show details"::
@@ -730,10 +826,18 @@ title(W) :->
     get(W, class_variable_value, header_colour, HC),
     get(W, class_variable_value, header_background, HBG),
     get(W, tabular, T),
+    prof_tool(W, Tool),
+    get(Tool, measure, Measure),
     BG = (background := HBG),
     FG = (colour := HC),
-    send(T, append, 'Time',   bold, center, colspan := 2, BG, FG),
-    (   prof_tool(W, Tool), get(Tool, ports, false)
+    measure_title(Measure, Title),
+    send(T, append, Title, bold, center, colspan := 2, BG, FG),
+    (   Measure == memory
+    ->  send(T, append, 'Discarded', bold, center,
+             valign := center, BG, FG, rowspan := 2)
+    ;   true
+    ),
+    (   get(Tool, ports, false)
     ->  send(T, append, '# Calls', bold, center, colspan := 1,
              valign := center, BG, FG, rowspan := 2)
     ;   send(T, append, 'Port',    bold, center, colspan := 4, BG, FG)
@@ -744,7 +848,7 @@ title(W) :->
     send(T, next_row),
     send(T, append, 'Self',   bold, center, BG, FG),
     send(T, append, 'Children',   bold, center, BG, FG),
-    (   prof_tool(W, Tool), get(Tool, ports, false)
+    (   get(Tool, ports, false)
     ->  true
     ;   send(T, append, 'Call',   bold, center, BG, FG),
         send(T, append, 'Redo',   bold, center, BG, FG),
@@ -753,16 +857,29 @@ title(W) :->
     ),
     send(T, next_row).
 
+measure_title(time,   'Time').
+measure_title(memory, 'Allocated').
+
 cluster_title(W, Cycle:int) :->
     get(W, tabular, T),
-    (   prof_tool(W, Tool), get(Tool, ports, false)
-    ->  Colspan = 4
-    ;   Colspan = 7
-    ),
+    get(W, columns, Columns),
     send(T, append, string('Cluster <%d>', Cycle),
-         bold, center, colspan := Colspan,
+         bold, center, colspan := Columns,
          background := navyblue, colour := yellow),
     send(T, next_row).
+
+columns(W, Columns:int) :<-
+    "Number of columns of the table"::
+    prof_tool(W, Tool),
+    (   get(Tool, ports, false)
+    ->  Ports = 1
+    ;   Ports = 4
+    ),
+    (   get(Tool, measure, memory)
+    ->  Measure = 3
+    ;   Measure = 2
+    ),
+    Columns is Measure+Ports+1.
 
 refresh(W) :->
     "Refresh to accomodate visualisation change"::
@@ -805,35 +922,42 @@ show_cluster(Callers, Callees, Data, Cycle, W) :-
     ->  true
     ;   send(W, cluster_title, Cycle)
     ),
+    prof_tool(W, Tool),
+    get(Tool, measure, Measure),
     sort_relatives(Callers, Callers1),
     show_relatives(Callers1, parent, W),
-    ticks(Callers1, Self, Children, Call, Redo, Exit),
-    send(W, show_predicate, Data, Self, Children, Call, Redo, Exit),
+    sum_relatives(Measure, Callers1, Sum),
+    send(W, show_predicate, Data, Sum),
     sort_relatives(Callees, Callees1),
     reverse(Callees1, Callees2),
     show_relatives(Callees2, child, W).
 
-ticks(Callers, Self, Children, Call, Redo, Exit) :-
-    ticks(Callers, 0, Self, 0, Children, 0, Call, 0, Redo, 0, Exit).
+%   sum_relatives(+Measure, +Callers, -Sum)
+%
+%   Sum is a term sum(Self, Children, Discarded, Call, Redo, Exit) that
+%   sums the cost of Measure and the ports over the Callers, which
+%   together are all calls of the predicate in a cluster.
 
-ticks([], Self, Self, Sibl, Sibl, Call, Call, Redo, Redo, Exit, Exit).
-ticks([H|T],
-      Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo, Exit0, Exit) :-
-    arg(1, H, '<recursive>'),
-    !,
-    ticks(T, Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo, Exit0, Exit).
-ticks([H|T], Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo, Exit0, Exit) :-
-    arg(3, H, ThisSelf),
-    arg(4, H, ThisSibings),
-    arg(5, H, ThisCall),
-    arg(6, H, ThisRedo),
-    arg(7, H, ThisExit),
-    Self1 is ThisSelf + Self0,
-    Sibl1 is ThisSibings + Sibl0,
-    Call1 is ThisCall + Call0,
-    Redo1 is ThisRedo + Redo0,
-    Exit1 is ThisExit + Exit0,
-    ticks(T, Self1, Self, Sibl1, Sibl, Call1, Call, Redo1, Redo, Exit1, Exit).
+sum_relatives(Measure, Callers, Sum) :-
+    foldl(add_relative(Measure), Callers, sum(0,0,0,0,0,0), Sum).
+
+add_relative(_, Rel, Sum, Sum) :-
+    arg(1, Rel, '<recursive>'),
+    !.
+add_relative(Measure, Rel,
+             sum(S0, C0, D0, Call0, Redo0, Exit0),
+             sum(S,  C,  D,  Call,  Redo,  Exit)) :-
+    rel_cost(Measure, Rel, ThisS, ThisC),
+    rel_discarded(Rel, ThisD),
+    arg(5, Rel, ThisCall),
+    arg(6, Rel, ThisRedo),
+    arg(7, Rel, ThisExit),
+    S is S0+ThisS,
+    C is C0+ThisC,
+    D is D0+ThisD,
+    Call is Call0+ThisCall,
+    Redo is Redo0+ThisRedo,
+    Exit is Exit0+ThisExit.
 
 
 %       clusters(+Relatives, -Cycles)
@@ -890,29 +1014,15 @@ show_relatives([H|T], Role, W) :-
     send(W, show_relative, H, Role),
     show_relatives(T, Role, W).
 
-show_predicate(W, Data:prolog,
-               Ticks:int, ChildTicks:int,
-               Call:int, Redo:int, Exit:int) :->
+show_predicate(W, Data:prolog, Sum:prolog) :->
     "Show the predicate we have details on"::
     get(W, class_variable_value, header_colour, HC),
     get(W, class_variable_value, header_background, HBG),
     BG = (background := HBG),
     FG = (colour := HC),
     Pred = Data.predicate,
-    prof_tool(W, Frame),
-    get(Frame, render_time, Ticks, Self),
-    get(Frame, render_time, ChildTicks, Children),
     get(W, tabular, T),
-    Fail is Call+Redo-Exit,
-    send(T, append, Self, halign := right, BG, FG),
-    send(T, append, Children, halign := right, BG, FG),
-    (   prof_tool(W, Tool), get(Tool, ports, false)
-    ->  send(T, append, Call, halign := right, BG, FG)
-    ;   send(T, append, Call, halign := right, BG, FG),
-        send(T, append, Redo, halign := right, BG, FG),
-        send(T, append, Exit, halign := right, BG, FG),
-        send(T, append, Fail, halign := right, BG, FG)
-    ),
+    send(W, show_numbers, Sum, [BG, FG]),
     (   object(Pred)
     ->  new(Txt, prof_node_text(Pred, self))
     ;   new(Txt, prof_predicate_text(Pred, self))
@@ -920,30 +1030,56 @@ show_predicate(W, Data:prolog,
     send(T, append, Txt, BG, FG),
     send(T, next_row).
 
-show_relative(W, Caller:prolog, Role:name) :->
-    Caller = node(Pred, _Cluster, Ticks, ChildTicks, Calls, Redos, Exits),
+%   ->show_numbers appends the cells before the predicate: the cost of
+%   the measure and the ports.  Attrs are additional attributes of the
+%   cells.
+
+show_numbers(W, Sum:prolog, Attrs:prolog) :->
+    "Append the cells for the numbers of a row"::
+    Sum = sum(Self, Children, Discarded, Call, Redo, Exit),
     get(W, tabular, T),
-    prof_tool(W, Frame),
+    prof_tool(W, Tool),
+    get(Tool, measure, Measure),
+    get(Tool, render_cost, Self, SelfText),
+    get(Tool, render_cost, Children, ChildrenText),
+    Cells0 = [SelfText, ChildrenText],
+    (   Measure == memory
+    ->  format_value(bytes, Discarded, DiscardedText),
+        append(Cells0, [DiscardedText], Cells1)
+    ;   Cells1 = Cells0
+    ),
+    (   get(Tool, ports, false)
+    ->  append(Cells1, [Call], Cells)
+    ;   Fail is Call+Redo-Exit,
+        append(Cells1, [Call, Redo, Exit, Fail], Cells)
+    ),
+    forall(member(Cell, Cells),
+           ( Msg =.. [append, Cell, halign := right|Attrs],
+             send(T, Msg)
+           )).
+
+show_relative(W, Rel:prolog, Role:name) :->
+    "Show a caller or callee as a row"::
+    arg(1, Rel, Pred),
+    get(W, tabular, T),
     (   Pred == '<recursive>'
-    ->  send(T, append, new(graphical), colspan := 2),
+    ->  arg(5, Rel, Calls),
+        prof_tool(W, Tool),
+        (   get(Tool, measure, memory)
+        ->  Empty = 3
+        ;   Empty = 2
+        ),
+        send(T, append, new(graphical), colspan := Empty),
         send(T, append, Calls, halign := right),
-        (   prof_tool(W, Tool), get(Tool, ports, false)
+        (   get(Tool, ports, false)
         ->  true
         ;   send(T, append, new(graphical), colspan := 3)
         ),
         send(T, append, Pred, italic)
-    ;   get(Frame, render_time, Ticks, Self),
-        get(Frame, render_time, ChildTicks, Children),
-        send(T, append, Self, halign := right),
-        send(T, append, Children, halign := right),
-        (   prof_tool(W, Tool), get(Tool, ports, false)
-        ->  send(T, append, Calls, halign := right)
-        ;   Fails is Calls+Redos-Exits,
-            send(T, append, Calls, halign := right),
-            send(T, append, Redos, halign := right),
-            send(T, append, Exits, halign := right),
-            send(T, append, Fails, halign := right)
-        ),
+    ;   prof_tool(W, Tool),
+        get(Tool, measure, Measure),
+        sum_relatives(Measure, [Rel], Sum),
+        send(W, show_numbers, Sum, []),
         (   Pred == '<spontaneous>'
         ->  send(T, append, Pred, italic)
         ;   object(Pred)
@@ -1160,9 +1296,7 @@ render(W, Data:prolog) :->
     get(W, class_variable_value, max_relatives, MaxRelatives),
     get(W, class_variable_value, max_nodes, MaxNodes),
     get(W, class_variable_value, max_edge_width, MaxWidth),
-    get(Tool, ticks, Ticks),
-    get(Tool, accounting_ticks, Accounting),
-    Total is max(1, Ticks-Accounting),
+    get(Tool, total_cost, Total),
     call_graph(Tool, Data,
                limits(CallerDepth, CalleeDepth,
                       PruneAbove, MaxRelatives, MaxNodes),
@@ -1364,38 +1498,58 @@ render(W, Data:prolog) :->
                  ), Pairs),
     sort(1, @<, Pairs, Unique),
     list_to_assoc(Unique, Nodes),
-    get(Tool, ticks, Ticks),
-    get(Tool, time, Time),
-    TickTime is Time/max(1, Ticks),
-    Total is Data.ticks_self + Data.ticks_siblings,
+    get(Tool, measure, Measure),
+    (   Measure == time
+    ->  get(Tool, ticks, Ticks),
+        get(Tool, time, Time),
+        TickTime is Time/max(1, Ticks)
+    ;   TickTime = 1                    % bytes are shown as they are
+    ),
+    node_cost(Measure, Data, Self, Children),
+    Total is Self + Children,
     get(W, class_variable_value, min_share, MinShare),
     get(W, class_variable_value, max_depth, MaxDepth),
     get(W, class_variable_value, group_small, GroupSmall),
     MinTicks is Total*MinShare,
     get(Tool, components, Components),
-    Ctx = tree(Nodes, Components, TickTime, MinTicks, MaxDepth, GroupSmall),
-    pred_tree(Ctx, Data, Data.ticks_self, Data.ticks_siblings,
-              [Data.predicate], Term),
+    Ctx = tree(Nodes, Components, TickTime, MinTicks, MaxDepth, GroupSmall,
+               Measure),
+    pred_tree(Ctx, Data, Self, Children, [Data.predicate], Term),
     hierarchy_from_term(Term, Root),
     send(W, time_view),
     send(W, root, Root).
 
 %   As the other tabs, the tree shows times in seconds or as a
-%   percentage of the time of the profile, as `Show time as' says.
+%   percentage of the time of the profile, as `Show values as' says.
 
 time_view(W) :->
-    "Show times as the profiler's <-time_view says"::
+    "Show values as the profiler's <-time_view and <-measure say"::
     prof_tool(W, Tool),
     get(Tool, time_view, View),
+    get(Tool, measure, Measure),
     (   View == percentage
-    ->  get(Tool, ticks, Ticks),
-        get(Tool, accounting_ticks, Accounting),
-        get(Tool, time, Time),
-        Reference is (Ticks-Accounting)*Time/max(1, Ticks),
+    ->  (   Measure == time
+        ->  get(Tool, ticks, Ticks),
+            get(Tool, accounting_ticks, Accounting),
+            get(Tool, time, Time),
+            Reference is (Ticks-Accounting)*Time/max(1, Ticks)
+        ;   get(Tool, allocated, Reference)
+        ),
         send(W, reference, Reference),
         send(W, unit, percentage)
-    ;   send(W, unit, seconds)
+    ;   Measure == time
+    ->  send(W, unit, seconds)
+    ;   send(W, unit, bytes)
     ).
+
+%   The unit changes at once; the tree of another measure is built as
+%   soon as it can be seen.
+
+refresh(W) :->
+    "Build the tree again, now if I can be seen, else when I can"::
+    send(W, time_view),
+    send(W, slot, stale, @on),
+    send(W, update).
 
 %   pred_tree(+Ctx, +Data, +Self, +Below, +Path, -Term)
 %
@@ -1403,20 +1557,22 @@ time_view(W) :->
 %   spent Self ticks itself and Below in its callees.
 
 pred_tree(Ctx, Data, Self, Below, Path, Term) :-
-    Ctx = tree(_, Components, _, _, _, _),
+    Ctx = tree(_, Components, _, _, _, _, Measure),
     Pred = Data.predicate,
     (   recursive(Pred, Data.callees, Components)
     ->  Edge is Self+Below,
         component_tree(Ctx, Pred, Edge, Path, Term)
-    ;   (   Data.ticks_siblings > 0
-        ->  Scale is Below/Data.ticks_siblings
+    ;   node_cost(Measure, Data, _, Children),
+        (   Children > 0
+        ->  Scale is Below/Children
         ;   Scale = 0
         ),
         call_tree(Ctx, Pred, Self, Data.callees, Scale, Path, Term)
     ).
 
 recursive(Pred, Callees, Components) :-
-    member(node(Callee, _, _, _, _, _, _), Callees),
+    member(Rel, Callees),
+    arg(1, Rel, Callee),
     Callee \== '<recursive>',
     same_component(Pred, Callee, Components),
     !.
@@ -1428,10 +1584,10 @@ recursive(Pred, Callees, Components) :-
 
 call_tree(Ctx, Pred, Self, Callees, Scale, Path,
           node(Label, Seconds, Children, [data(Pred), title(Title)])) :-
-    Ctx = tree(_, Components, TickTime, _, _, _),
+    Ctx = tree(_, Components, TickTime, _, _, _, Measure),
     tree_labels(Pred, Label, Title),
     Seconds is Self*TickTime,
-    merged_relatives(Pred, Callees, Components, Merged),
+    merged_relatives(Measure, Pred, Callees, Components, Merged),
     callee_trees(Ctx, Pred, Merged, Scale, Path, Children).
 
 %   callee_trees(+Ctx, +Pred, +Callees, +Scale, +Path, -Children)
@@ -1442,7 +1598,7 @@ call_tree(Ctx, Pred, Self, Callees, Scale, Path,
 %   combined into one node.
 
 callee_trees(Ctx, Pred, Callees, Scale, Path, Children) :-
-    Ctx = tree(_, _, _, MinTicks, _, GroupSmall),
+    Ctx = tree(_, _, _, MinTicks, _, GroupSmall, _),
     findall(c(Callee, Self, Below),
             ( member(Callee-t(T, CT, _), Callees),
               Self is T*Scale,
@@ -1465,7 +1621,7 @@ more_tree(Ctx, Pred, Small, node(Label, Seconds, [],
                                  [ data(more(Pred)), title(Title),
                                    colour(grey75)
                                  ])) :-
-    Ctx = tree(_, _, TickTime, _, _, _),
+    Ctx = tree(_, _, TickTime, _, _, _, _),
     length(Small, N),
     aggregate_all(sum(S+B), member(c(_, S, B), Small), Ticks),
     Seconds is Ticks*TickTime,
@@ -1477,7 +1633,7 @@ callee_tree(Ctx, Path, c(Callee, Self, Below), Term) :-
     callee_tree(Ctx, Callee, Self, Below, Path, Term).
 
 callee_tree(Ctx, Callee, Self, Below, Path, Term) :-
-    Ctx = tree(Nodes, _, TickTime, MinTicks, MaxDepth, _),
+    Ctx = tree(Nodes, _, TickTime, MinTicks, MaxDepth, _, Measure),
     Edge is Self+Below,
     (   Below > 0,
         Edge >= MinTicks,
@@ -1485,7 +1641,8 @@ callee_tree(Ctx, Callee, Self, Below, Path, Term) :-
         length(Path, Depth),
         Depth < MaxDepth,
         get_assoc(Callee, Nodes, Data),
-        Data.ticks_siblings > 0
+        node_cost(Measure, Data, _, Children),
+        Children > 0
     ->  pred_tree(Ctx, Data, Self, Below, [Callee|Path], Term)
     ;   tree_labels(Callee, Label, Title),
         Seconds is Edge*TickTime,
@@ -1501,8 +1658,9 @@ callee_tree(Ctx, Callee, Self, Below, Path, Term) :-
 %   recursion.  These are scaled such that they add up to Edge.
 
 component_tree(Ctx, Entry, Edge, Path, Term) :-
-    Ctx = tree(Nodes, Components, _, _, _, _),
-    component_members([Entry-[]], [Entry], Components, Nodes, Members),
+    Ctx = tree(Nodes, Components, _, _, _, _, Measure),
+    component_members([Entry-[]], [Entry], Measure, Components, Nodes,
+                      Members),
     aggregate_all(sum(Own), member(m(_, _, _, _, Own), Members), Total),
     (   Total > 0
     ->  Scale is Edge/Total
@@ -1512,7 +1670,8 @@ component_tree(Ctx, Entry, Edge, Path, Term) :-
     append(Preds, Path, Path1),
     member_tree(Ctx, Entry, Members, Scale, Path1, Term).
 
-%   component_members(+Queue, +Seen, +Components, +Nodes, -Members)
+%   component_members(+Queue, +Seen, +Measure, +Components, +Nodes,
+%                     -Members)
 %
 %   Queue holds Pred-Parent pairs.  Members is a list m(Pred, Parent, Self, Out, Own) for the members
 %   of the recursion, found breadth first.  Parent is the member from
@@ -1520,12 +1679,12 @@ component_tree(Ctx, Entry, Edge, Path, Term) :-
 %   calls out of the recursion as Callee-t(Self, Children, Calls) and
 %   Own is the time spent in Pred itself and in Out.
 
-component_members([], _, _, _, []).
-component_members([P-Parent|Queue], Seen, Components, Nodes,
+component_members([], _, _, _, _, []).
+component_members([P-Parent|Queue], Seen, Measure, Components, Nodes,
                   [m(P, Parent, Self, Out, Own)|Members]) :-
     (   get_assoc(P, Nodes, Data)
-    ->  Self = Data.ticks_self,
-        merged_relatives(P, Data.callees, Components, Merged)
+    ->  node_cost(Measure, Data, Self, _),
+        merged_relatives(Measure, P, Data.callees, Components, Merged)
     ;   Self = 0,
         Merged = []
     ),
@@ -1536,14 +1695,14 @@ component_members([P-Parent|Queue], Seen, Components, Nodes,
     append(Seen, New, Seen1),
     findall(Q-P, member(Q, New), Children),
     append(Queue, Children, Queue1),
-    component_members(Queue1, Seen1, Components, Nodes, Members).
+    component_members(Queue1, Seen1, Measure, Components, Nodes, Members).
 
 in_component(P, Components, Q-_) :-
     same_component(P, Q, Components).
 
 member_tree(Ctx, P, Members, Scale, Path,
             node(Label, Seconds, Children, [data(P), title(Title)])) :-
-    Ctx = tree(_, _, TickTime, _, _, _),
+    Ctx = tree(_, _, TickTime, _, _, _, _),
     memberchk(m(P, _, Self, Out, _), Members),
     tree_labels(P, Label, Title),
     Seconds is Self*Scale*TickTime,
@@ -1655,11 +1814,12 @@ expand_hidden(Tool, Data, Expanded, Edges0, Edges) :-
     Pred = Data.predicate,
     graph_preds(Pred, Edges0, Shown),
     get(Tool, components, Components),
+    get(Tool, measure, Measure),
     findall(Edge,
             ( member(Dir-P, Expanded),
               memberchk(P, Shown),
               pred_data(Tool, Data, P, PData),
-              merged_relatives(P, PData.Dir, Components, Merged),
+              merged_relatives(Measure, P, PData.Dir, Components, Merged),
               member(Other-t(Self, Children, Calls), Merged),
               \+ memberchk(Other, Shown),
               Ticks is Self+Children,
@@ -1677,7 +1837,8 @@ expand_hidden(Tool, Data, Expanded, Edges0, Edges) :-
                 ( member(N, New),
                   pred_data(Tool, Data, N, NData),
                   member(Dir, [callers, callees]),
-                  merged_relatives(N, NData.Dir, Components, Merged),
+                  merged_relatives(Measure, N, NData.Dir, Components,
+                                   Merged),
                   member(Other-t(Self, Children, Calls), Merged),
                   Other \== N,
                   memberchk(Other, Shown1),
@@ -1710,12 +1871,13 @@ hidden_edges(Tool, Data, Edges, Hidden) :-
     reachable(callers, Edges, [Pred], Above),
     reachable(callees, Edges, [Pred], Below),
     get(Tool, components, Components),
+    get(Tool, measure, Measure),
     findall(Edge,
             ( (   Dir = callers, member(P, Above)
               ;   Dir = callees, member(P, Below)
               ),
               pred_data(Tool, Data, P, PData),
-              merged_relatives(P, PData.Dir, Components, Merged),
+              merged_relatives(Measure, P, PData.Dir, Components, Merged),
               findall(Ticks-Calls,
                       ( member(Other-t(Self, Children, Calls), Merged),
                         \+ memberchk(Other, Shown),
@@ -1828,7 +1990,8 @@ new_end(callees, edge(_, End, _, _), End).
 
 pred_edges(Dir, Tool, Pred, Data, Limits, Edges) :-
     get(Tool, components, Components),
-    merged_relatives(Pred, Data.Dir, Components, Merged),
+    get(Tool, measure, Measure),
+    merged_relatives(Measure, Pred, Data.Dir, Components, Merged),
     findall(r(Ticks, Calls, Other),
             ( member(Other-t(Self, Children, Calls), Merged),
               Ticks is Self+Children
@@ -1848,7 +2011,10 @@ pred_edges(Dir, Tool, Pred, Data, Limits, Edges) :-
 
 recursive_calls(Data, Calls) :-
     aggregate_all(sum(C),
-                  member(node('<recursive>', _, _, _, C, _, _), Data.callers),
+                  ( member(Rel, Data.callers),
+                    arg(1, Rel, '<recursive>'),
+                    arg(5, Rel, C)
+                  ),
                   Calls).
 
 %!  prune_relatives(+Relatives, +Limits, -Kept) is det.
@@ -1880,11 +2046,13 @@ max_prefix(List, Max, Prefix) :-
     append(Prefix, _, List).
 max_prefix(List, _, List).
 
-%!  merged_relatives(+Pred, +Relatives, +Components, -Merged) is det.
+%!  merged_relatives(+Measure, +Pred, +Relatives, +Components,
+%!                   -Merged) is det.
 %
 %   Merge the callers or callees of Pred, which the profile splits by
 %   the cycles (recursion levels) of Pred, into a list Other-t(Self,
-%   Children, Calls) with one element per predicate.  The calls are
+%   Children, Calls) with one element per predicate.  Self and Children
+%   are the cost of Measure (see rel_cost/4).  The calls are
 %   summed.  The time depends on whether Other is part of the same
 %   recursion as Pred, i.e., in the same strongly connected component
 %   of the call graph:
@@ -1895,11 +2063,14 @@ max_prefix(List, _, List).
 %     - If not, the calls at the various levels are distinct, and their
 %       times are summed.
 
-merged_relatives(Pred, Relatives, Components, Merged) :-
+merged_relatives(Measure, Pred, Relatives, Components, Merged) :-
     findall(Other-r(Cycle, Self, Children, Calls),
-            ( member(node(Other, Cycle, Self, Children, Calls, _, _),
-                     Relatives),
-              Other \== '<recursive>'
+            ( member(Rel, Relatives),
+              arg(1, Rel, Other),
+              Other \== '<recursive>',
+              arg(2, Rel, Cycle),
+              rel_cost(Measure, Rel, Self, Children),
+              arg(5, Rel, Calls)
             ),
             Pairs0),
     keysort(Pairs0, Pairs),
@@ -1929,7 +2100,8 @@ call_graph_components(Nodes, Components) :-
     findall(P-Callees,
             ( member(N, Nodes),
               P = N.predicate,
-              findall(Q, ( member(node(Q, _, _, _, _, _, _), N.callees),
+              findall(Q, ( member(Rel, N.callees),
+                           arg(1, Rel, Q),
                            Q \== '<recursive>'
                          ), Qs0),
               sort(Qs0, Callees)
@@ -2070,14 +2242,17 @@ node_attrs(Tool, P, Pred, Total, Attrs) :-
     pred_label(P, Name),
     short_pred_label(P, Short),
     (   get(Tool, node_data, P, Data)
-    ->  Self = Data.ticks_self,
-        Incl is Self + Data.ticks_siblings,
+    ->  get(Tool, measure, Measure),
+        node_cost(Measure, Data, Self, Children),
+        Incl is Self + Children,
         time_text(Tool, Incl, InclText),
         time_text(Tool, Self, SelfText),
         format(string(Label), '~w\n~w (self ~w)', [Short, InclText, SelfText]),
         port_text(Tool, Data, PortText),
-        format(string(Tooltip), '~w\nTime: ~w, self ~w\n~w',
-               [Name, InclText, SelfText, PortText]),
+        measure_title(Measure, Title),
+        discarded_text(Measure, Data, DiscardedText),
+        format(string(Tooltip), '~w\n~w: ~w, self ~w~w\n~w',
+               [Name, Title, InclText, SelfText, DiscardedText, PortText]),
         heat_colour(Incl, Total, Fill)
     ;   Label = Short,
         Tooltip = Name,
@@ -2122,8 +2297,22 @@ short_pred_label(_:PI, Label) :-
 short_pred_label(P, Label) :-
     pred_label(P, Label).
 
-time_text(Tool, Ticks, Text) :-
-    get(Tool, render_time, Ticks, Rendered),
+%   discarded_text(+Measure, +Data, -Text)
+%
+%   For memory, the line telling the memory the predicate discarded.
+
+discarded_text(memory, Data, Text) :-
+    !,
+    format_value(bytes, Data.get(discarded_self, 0), Discarded),
+    format(string(Text), '\nDiscarded: ~w', [Discarded]).
+discarded_text(_, _, "").
+
+%   time_text(+Tool, +Value, -Text)
+%
+%   Text renders Value, a time or memory value of the current measure.
+
+time_text(Tool, Value, Text) :-
+    get(Tool, render_cost, Value, Rendered),
     (   atom(Rendered)
     ->  Text = Rendered
     ;   get(Rendered, value, Text)
@@ -2165,6 +2354,13 @@ edge_attrs(Tool, edge(From, To, Ticks, Calls), Total, MaxWidth, Attrs) :-
     ;   Attrs = Attrs0
     ).
 
+measure_word(Tool, Word) :-
+    get(Tool, measure, Measure),
+    measure_word_(Measure, Word).
+
+measure_word_(time,   time).
+measure_word_(memory, allocated).
+
 relatives_text(callers, 1, caller) :- !.
 relatives_text(callers, _, callers).
 relatives_text(callees, 1, callee) :- !.
@@ -2175,15 +2371,17 @@ edge_tooltip(Tool, more(callers, P, N), P, Ticks, Calls, Tooltip) :-
     relatives_text(callers, N, What),
     pred_label(P, Name),
     time_text(Tool, Ticks, Time),
-    format(string(Tooltip), '~D more ~w → ~w\nCalls: ~D, time: ~w',
-           [N, What, Name, Calls, Time]).
+    measure_word(Tool, Word),
+    format(string(Tooltip), '~D more ~w → ~w\nCalls: ~D, ~w: ~w',
+           [N, What, Name, Calls, Word, Time]).
 edge_tooltip(Tool, P, more(callees, P, N), Ticks, Calls, Tooltip) :-
     !,
     relatives_text(callees, N, What),
     pred_label(P, Name),
     time_text(Tool, Ticks, Time),
-    format(string(Tooltip), '~w → ~D more ~w\nCalls: ~D, time: ~w',
-           [Name, N, What, Calls, Time]).
+    measure_word(Tool, Word),
+    format(string(Tooltip), '~w → ~D more ~w\nCalls: ~D, ~w: ~w',
+           [Name, N, What, Calls, Word, Time]).
 edge_tooltip(_Tool, P, P, _Ticks, Calls, Tooltip) :-
     !,
     pred_label(P, Name),
@@ -2192,8 +2390,9 @@ edge_tooltip(Tool, From, To, Ticks, Calls, Tooltip) :-
     pred_label(From, FromName),
     pred_label(To, ToName),
     time_text(Tool, Ticks, Time),
-    format(string(Tooltip), '~w → ~w\nCalls: ~D, time: ~w',
-           [FromName, ToName, Calls, Time]).
+    measure_word(Tool, Word),
+    format(string(Tooltip), '~w → ~w\nCalls: ~D, ~w: ~w',
+           [FromName, ToName, Calls, Word, Time]).
 
 dot_attrs([]) --> [].
 dot_attrs([Name=Value|T]) -->
@@ -2375,15 +2574,84 @@ value(label, Data, Label) :-
 value(ticks, Data, Ticks) :-
     !,
     Ticks is Data.ticks_self + Data.ticks_siblings.
+value(alloc, Data, Bytes) :-
+    !,
+    node_cost(memory, Data, Self, Children),
+    Bytes is Self+Children.
 value(Name, Data, Value) :-
-    Value = Data.Name.
+    Value = Data.get(Name, 0).
 
-sort_by(cumulative_profile_by_time,          ticks,          reverse).
-sort_by(flat_profile_by_time_self,           ticks_self,     reverse).
-sort_by(cumulative_profile_by_time_children, ticks_siblings, reverse).
-sort_by(flat_profile_by_number_of_calls,     call,           reverse).
-sort_by(flat_profile_by_number_of_redos,     redo,           reverse).
-sort_by(flat_profile_by_name,                name,           normal).
+sort_by(cumulative_profile_by_time,            ticks,          reverse).
+sort_by(flat_profile_by_time_self,             ticks_self,     reverse).
+sort_by(cumulative_profile_by_time_children,   ticks_siblings, reverse).
+sort_by(cumulative_profile_by_memory,          alloc,          reverse).
+sort_by(flat_profile_by_memory_self,           alloc_self,     reverse).
+sort_by(cumulative_profile_by_memory_children, alloc_siblings, reverse).
+sort_by(flat_profile_by_memory_discarded,      discarded_self, reverse).
+sort_by(flat_profile_by_number_of_calls,       call,           reverse).
+sort_by(flat_profile_by_number_of_redos,       redo,           reverse).
+sort_by(flat_profile_by_name,                  name,           normal).
+
+measure(time,   'Time').
+measure(memory, 'Global stack memory').
+
+time_view(percentage, 'Percentage').
+time_view(seconds,    'Seconds or bytes').
+
+%!  measure_key(+Key, ?Measure, -MeasureKey) is semidet.
+%
+%   MeasureKey is the sort key of Measure that corresponds to Key, a
+%   sort key of either measure.  Fails if Key is not about a measure,
+%   e.g., the number of calls.
+
+measure_key(Key, Measure, MeasureKey) :-
+    key_pair(Time, Memory),
+    (   Key == Time
+    ;   Key == Memory
+    ),
+    !,
+    (   Measure = time,
+        MeasureKey = Time
+    ;   Measure = memory,
+        MeasureKey = Memory
+    ).
+
+key_pair(ticks,          alloc).
+key_pair(ticks_self,     alloc_self).
+key_pair(ticks_siblings, alloc_siblings).
+key_pair(ticks_self,     discarded_self).
+
+%!  node_cost(+Measure, +Data, -Self, -Children) is det.
+%
+%   The time (ticks) or global stack allocated (bytes) of the profile
+%   node Data, by the predicate itself and by its callees.
+
+node_cost(time, Data, Self, Children) :-
+    Self = Data.ticks_self,
+    Children = Data.ticks_siblings.
+node_cost(memory, Data, Self, Children) :-
+    Self = Data.get(alloc_self, 0),
+    Children = Data.get(alloc_siblings, 0).
+
+%!  rel_cost(+Measure, +Relative, -Self, -Children) is det.
+%
+%   As node_cost/4, for a caller or callee, a term node/8 (see
+%   profile_data/1).  An older node/7 has no memory.
+
+rel_cost(time, Rel, Self, Children) :-
+    arg(3, Rel, Self),
+    arg(4, Rel, Children).
+rel_cost(memory, Rel, Self, Children) :-
+    rel_mem(Rel, mem(Self, Children, _, _)).
+
+rel_discarded(Rel, Discarded) :-
+    rel_mem(Rel, mem(_, _, Discarded, _)).
+
+rel_mem(Rel, Mem) :-
+    (   arg(8, Rel, Mem0)
+    ->  Mem = Mem0
+    ;   Mem = mem(0, 0, 0, 0)
+    ).
 
 
 %!  pce_predicate_label(+PI, -Label)

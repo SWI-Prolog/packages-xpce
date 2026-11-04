@@ -113,8 +113,53 @@ profiler(Ports, Data0, F) :-
     send(F, slot, ports, Summary.ports),
     send(F, slot, clock, Summary.get(clock, cpu)),
     send(F, slot, exact, Summary.get(exact, false)),
+    send(F, slot, allocated, Summary.get(allocated, 0)),
+    send(F, slot, discarded, Summary.get(discarded, 0)),
+    send(F, slot, gc_reclaimed, Summary.get(gc_reclaimed, 0)),
+    send(F, slot, gc_count, Summary.get(gc_count, 0)),
     get(F, window, prof_browser, B),
     send(B, load_profile, Data.nodes).
+
+%!  mem_profile(-Data) is det.
+%
+%   A profile with global stack memory: p/0 calls q/0 and r/0, which
+%   allocate 800 and 200 bytes.  p/0 discards 400 bytes by
+%   backtracking.
+
+mem_profile(
+    profile{summary:summary{samples:10, ticks:10, accounting:0,
+                            time:0.05, nodes:4, sample_period:5000,
+                            ports:true,
+                            allocated:1000, discarded:400,
+                            gc_reclaimed:2000, gc_count:3},
+            nodes:[ node{predicate:user:p/0,
+                         ticks_self:0, ticks_siblings:10,
+                         alloc_self:0, alloc_siblings:1000,
+                         discarded_self:400, discarded_siblings:0,
+                         call:1, redo:0, exit:1,
+                         callers:[node('<spontaneous>',0,0,10,1,0,1,
+                                       mem(0,1000,400,0))],
+                         callees:[node(user:q/0,0,8,0,1,0,1,mem(800,0,0,0)),
+                                  node(user:r/0,0,2,0,1,0,1,mem(200,0,0,0))]},
+                    node{predicate:user:q/0,
+                         ticks_self:8, ticks_siblings:0,
+                         alloc_self:800, alloc_siblings:0,
+                         discarded_self:0, discarded_siblings:0,
+                         call:1, redo:0, exit:1,
+                         callers:[node(user:p/0,0,8,0,1,0,1,mem(800,0,0,0))],
+                         callees:[]},
+                    node{predicate:user:r/0,
+                         ticks_self:2, ticks_siblings:0,
+                         alloc_self:200, alloc_siblings:0,
+                         discarded_self:0, discarded_siblings:0,
+                         call:1, redo:0, exit:1,
+                         callers:[node(user:p/0,0,2,0,1,0,1,mem(200,0,0,0))],
+                         callees:[]}
+                  ]}).
+
+mem_profiler(F) :-
+    mem_profile(Data),
+    profiler(true, Data, F).
 
 %!  call_graph(+Profiler, +Pred, -Edges) is det.
 %
@@ -275,7 +320,7 @@ test(call_tree, [ Tree == node('p/1', 0.2,
     tree_term(Root, Tree),
     free(F).
 
-%   The tree shows times as `Show time as' says: as a percentage of
+%   The tree shows times as `Show values as' says: as a percentage of
 %   the time of the profile or in seconds.
 
 test(tree_time_view, Texts == ['50.0%', '250.0 ms']) :-
@@ -616,7 +661,137 @@ has_visible_frames_c_source :-
     '$addr2line'(Address, Source),
     '$addr2line_location'(Source, _File, _Line).
 
+%   Switching to memory sorts on the corresponding memory key and shows
+%   the share of the allocated global stack.
+
+test(measure_memory,
+     [ SortBy == alloc,
+       Labels == ['p/0\t100.0%', 'q/0\t80.0%', 'r/0\t20.0%']
+     ]) :-
+    mem_profiler(F),
+    send(F, measure, memory),
+    get(F, window, prof_browser, B),
+    get(B, sort_by, SortBy),
+    browser_labels(F, Labels),
+    free(F).
+
+%   Sorting on a memory key switches to memory.  Absolute values are
+%   bytes.
+
+test(sort_by_memory,
+     [ Measure == memory,
+       Labels == ['p/0\t400 bytes', 'q/0\t0 bytes', 'r/0\t0 bytes']
+     ]) :-
+    mem_profiler(F),
+    send(F, time_view, seconds),
+    send(F, sort_by, discarded_self),
+    get(F, measure, Measure),
+    browser_labels(F, Labels),
+    free(F).
+
+%   Switching back to time sorts on the corresponding time key.
+
+test(measure_time, SortBy == ticks_siblings) :-
+    mem_profiler(F),
+    send(F, sort_by, alloc_siblings),
+    send(F, measure, time),
+    get(F, window, prof_browser, B),
+    get(B, sort_by, SortBy),
+    free(F).
+
+%   The edges of the call graph and the tooltips follow the measure.
+
+test(graph_memory,
+     [ Bytes == 800,
+       Lines == ["p/0", "Allocated: 100.0%, self 0.0%",
+                 "Discarded: 400 bytes", "Call: 1, redo: 0, exit: 1, fail: 0"],
+       Tooltip == "p/0 → q/0\nCalls: 1, allocated: 80.0%"
+     ]) :-
+    mem_profiler(F),
+    send(F, measure, memory),
+    call_graph(F, user:p/0, Edges),
+    Edge = edge(user:p/0, user:q/0, Bytes, _),
+    memberchk(Edge, Edges),
+    tooltip(F, user:p/0, Lines),
+    pce_profile:edge_attrs(F, Edge, 1000, 5, Attrs),
+    memberchk(tooltip=Tooltip, Attrs),
+    free(F).
+
+%   The call tree shows the bytes allocated below the current node.
+
+test(tree_memory,
+     [ Tree == node('p/0', 0.0, [ node('q/0', 800.0, []),
+                                  node('r/0', 200.0, [])
+                                ]),
+       Unit == bytes
+     ]) :-
+    mem_profiler(F),
+    send(F, measure, memory),
+    send(F, time_view, seconds),
+    get(F, window, prof_tree, T),
+    get(F, node_data, user:p/0, Data),
+    send(T, render, Data),
+    get(T, root, Root),
+    tree_term(Root, Tree),
+    get(T?chart, unit, Unit),
+    free(F).
+
+%   The details have a column for the discarded memory.  Its header row
+%   sums the callers.
+
+test(details_memory,
+     [ Columns == 8,
+       Row == ['0 bytes', '1.0 kB', '400 bytes', 1, 0, 1, 0]
+     ]) :-
+    mem_profiler(F),
+    send(F, measure, memory),
+    send(F, time_view, seconds),
+    get(F, window, prof_details, W),
+    get(F, node_data, user:p/0, Data),
+    send(W, node, Data),
+    get(W, columns, Columns),
+    detail_row(W, 4, Row),
+    free(F).
+
+%   The status line describes the memory and the garbage collections
+%   if the memory is shown.
+
+test(summary_memory,
+     Text == 'Global stack: allocated 1.0 kB, discarded 400 bytes, \c
+              reclaimed by GC 2.0 kB in 3 collections') :-
+    mem_profiler(F),
+    send(F, measure, memory),
+    get(F, statistics_summary, Str),
+    get(Str, value, Text),
+    free(F).
+
 :- end_tests(profiler).
+
+%   detail_row(+Details, +RowIndex, -Values)
+%
+%   The values of the numeric cells of a row of the details: all but
+%   the predicate.
+
+detail_row(W, Index, Values) :-
+    get(W, tabular, T),
+    get(T, table, Table),
+    get(Table, row, Index, Row),
+    get(Row, size, Size),
+    Last is Size-1,
+    numlist(1, Last, Is),
+    maplist(cell_value(Row), Is, Values).
+
+cell_value(Row, I, Value) :-
+    get(Row, cell, I, Cell),
+    get(Cell, image, Image),
+    (   get(Image, string, Str)
+    ->  get(Str, value, V),
+        (   atom_number(V, Value)
+        ->  true
+        ;   Value = V
+        )
+    ;   Value = Image
+    ).
 
 %!  method_profiler(-Profiler, -Method, -Callee) is det.
 %

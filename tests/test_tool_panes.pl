@@ -2203,7 +2203,7 @@ test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Profile')) :-
     get(Frame, label, Label).
 
 test(its_menu_reaches_the_bar_of_the_window_it_is_in,
-     Items == [sort_by, show_time_as, help]) :-
+     Items == [sort_by, measure, show_values_as, help]) :-
     no_frames,
     profiler(F),
     get(F, frame, Frame),
