@@ -1219,12 +1219,22 @@ live_resize_watch(void *closure, SDL_Event *ev)
    * that the layout resizes has the backing store its open context
    * draws into destroyed by ws_geometry_window().  The event stays in
    * the queue, so the main loop deals with it when the paint is done.
+   *
+   * (**) More generally, the modal loop runs from ws_dispatch(), which
+   * waits for events without holding the xpce lock.  If we hold it,
+   * the event comes from an SDL call made by xpce itself.  On Wayland,
+   * SDL_SetWindowTitle() makes libdecor commit the decoration, which
+   * posts window events.  `frame ->label` is sent from the callbacks
+   * of a terminal_image that parses the output of its client: painting
+   * then paints the terminal halfway through, e.g., showing the caret
+   * where it was before the prompt.
    */
 
   if ( !live_resize_event(ev) ||
        !SDL_IsMainThread() ||	/* watches may be called from any thread */
        in_live_resize ||
-       getRedrawing() )		/* we are painting; see (*) */
+       getRedrawing() ||	/* we are painting; see (*) */
+       (XPCE_mt && pceMTOwnsLock()) ) /* xpce is busy; see (**) */
     return true;
 
   in_live_resize++;
