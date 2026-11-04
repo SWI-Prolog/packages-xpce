@@ -391,7 +391,7 @@ static void	rlc_link_end(RlcData b);
 static bool	rlc_href_armed(RlcData b, int line, href *hr);
 static bool	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
-static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
+static void	rlc_redraw(RlcData b, int x, int y, int w, int h, Area a);
 static void	rlc_resize(RlcData b, int w, int h);
 static void	rlc_adjust_line(RlcData b, int line);
 static int	chars_columns(const text_char *chars, int len);
@@ -639,7 +639,7 @@ RedrawAreaTerminalImage(TerminalImage ti, Area a)
    */
   obg = r_background(ti->background);
   d_clip(x, y, w, h);
-  rlc_redraw(ti->data, x, y, w, h);
+  rlc_redraw(ti->data, x, y, w, h, a);
   d_clip_done();
   r_background(obg);
 
@@ -7512,9 +7512,35 @@ rlc_draw_fold_tally(RlcData b, int line, int cx, int ty)
 }
 
 
+/* rlc_redraw() paints all lines of the window, but what reaches the
+ * screen is clipped to `a`, the area being repainted.  The changes of a
+ * line are therefore only forgotten if the line lies inside `a`, and
+ * those of the terminal as a whole, including that the caret moved,
+ * only if all lines do.  A repaint of a part of the terminal, e.g., one
+ * that ran between parsing output and rlc_update() (a callback to
+ * Prolog while parsing releases the xpce lock), otherwise made the
+ * changes that had not yet been turned into damage disappear: that text
+ * and the caret stayed unpainted until something repainted all of it.
+ */
+
+static bool
+rlc_line_painted(int lt, int lb, int y, int h, bool full_width,
+		 int ay, int ah)
+{ if ( lt < y )   lt = y;		/* the part inside the terminal */
+  if ( lb > y+h ) lb = y+h;
+  if ( lb <= lt )
+    return true;			/* not visible: nothing to paint */
+
+  return full_width && lt >= ay && lb <= ay+ah;
+}
+
 static void
-rlc_redraw(RlcData b, int x, int y, int w, int h)
+rlc_redraw(RlcData b, int x, int y, int w, int h, Area a)
 { TerminalImage ti = b->object;
+  int ax = valInt(a->x), ay = valInt(a->y);
+  int aw = valInt(a->w), ah = valInt(a->h);
+  bool full_width = ( ax <= x && ax+aw >= x+w );
+  bool all_painted = true;
   int sl = 0;
   int el = b->window_size;
   int l = b->window_start;
@@ -7562,7 +7588,11 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
     if ( tl->fold_head )
       rlc_draw_fold_tally(b, l, cx, ty);
 
-    tl->changed = CHG_RESET;
+    if ( rlc_line_painted(y+b->ch*pl, y+b->ch*(pl+1), y, h,
+			  full_width, ay, ah) )
+      tl->changed = CHG_RESET;
+    else
+      all_painted = false;
 
     if ( l == b->last )			/* clear to end of window */
     { int yb = y+b->ch * (pl+1);	/* both in window coordinates */
@@ -7575,7 +7605,8 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
   }
   rlc_draw_caret(b, x, y);
 
-  b->changed = CHG_RESET;
+  if ( all_painted )
+    b->changed = CHG_RESET;
 
   rlc_update_scrollbar(b);
 }

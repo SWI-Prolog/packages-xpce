@@ -47,7 +47,8 @@ nothing, so we draw the terminal into an image.
 */
 
 test_terminal_graphical :-
-    run_tests([ terminal_graphical
+    run_tests([ terminal_graphical,
+                terminal_damage
               ]).
 
 %   pixel_after_drawing(+X, +Y, -Name)
@@ -77,3 +78,100 @@ test(inside_is_painted, true(Name \== '#ff0000')) :-
     pixel_after_drawing(20, 200, Name).
 
 :- end_tests(terminal_graphical).
+
+%       Painting a part of the terminal must not make it forget the
+%       changes of the lines outside that part.  The terminal turns its
+%       changes into damage of the window when it has handled a chunk of
+%       output.  While handling it, ->prompt_mark calls Prolog, which
+%       releases the xpce lock, so the terminal may be painted before
+%       its changes are damage.  The prompt was then not painted.
+%
+%       A terminal_image, unlike the window of the SDL dummy driver,
+%       paints when drawn into an image.  An image of one pixel high
+%       paints a part of it.
+
+:- pce_begin_class(test_partial_paint_terminal, terminal_image,
+                   "Paints a part of itself when the input starts").
+
+prompt_mark(T, Kind:{prompt,input,output,end}, Cont:[bool]) :->
+    send_super(T, prompt_mark, Kind, Cont),
+    (   Kind == input
+    ->  new(I, image(@nil, 380, 1, pixmap)),
+        send(I, draw_in, T),
+        free(I)
+    ;   true
+    ).
+
+:- pce_end_class(test_partial_paint_terminal).
+
+%!  damage_window(-Window, -Terminal) is det.
+%
+%   A window with a terminal that shows two lines and has nothing to
+%   repaint.  The window of the dummy driver is not displayed: say it
+%   is, or changes do not reach it.
+
+damage_window(W, T) :-
+    new(W, window('', size(400, 200))),
+    new(T, test_partial_paint_terminal(380, 150)),
+    send(W, display, T, point(0, 0)),
+    send(W, open),
+    send(W, displayed, @on),
+    send(W, compute),
+    send(T, insert, 'one\r\ntwo\r\n'),
+    send(W, flush).
+
+%!  damage(+Window, -Damage) is det.
+%
+%   Damage is y(Top, Bottom), the vertical extent of the pending damage
+%   of Window in pixels, or `none`.
+
+damage(W, Damage) :-
+    (   get(W, changes_area, A)
+    ->  get(A, y, Y), get(A, height, H),
+        Bottom is Y+H,
+        Damage = y(Y, Bottom)
+    ;   Damage = none
+    ).
+
+%!  row(+Terminal, +Row, -Top, -Bottom) is det.
+%
+%   Pixels of text row Row.
+
+row(T, Row, Top, Bottom) :-
+    get(T?font, height, H),
+    Top is Row*H,
+    Bottom is Top+H.
+
+:- begin_tests(terminal_damage, [cleanup(free_damage_windows)]).
+
+free_damage_windows :-
+    forall(( get(@display, frames, Fs), chain_list(Fs, L), member(F, L),
+             get(F, member, window, W),
+             get(W, member, test_partial_paint_terminal, _)
+           ),
+           free(F)).
+
+test(prompt_painted_after_partial_paint,
+     [ Row == 2, true(Damage = y(Y0, Y1)), true(Y0 =< Top),
+       true(Y1 >= Bottom) ]) :-
+    damage_window(W, T),
+    send(T, insert, '\e]133;A\e\\PROMPT> \e]133;B\e\\'),
+    get(T, cursor_position, P), get(P, y, Row),
+    row(T, Row, Top, Bottom),
+    damage(W, Damage).
+test(full_paint_forgets_changes,
+     [ true(Damage = y(Y0, Y1)), true(Y1-Y0 < 2*(Bottom-Top)) ]) :-
+    %  A paint of all of the terminal must forget all its changes, or
+    %  every change after it repaints all of the terminal.  The window
+    %  of the dummy driver does not paint, so we paint into an image.
+    damage_window(W, T),
+    forall(between(1, 10, I), send(T, insert, string('line %d\r\n', I))),
+    new(I, image(@nil, 380, 150, pixmap)),
+    send(I, draw_in, T),
+    free(I),
+    send(W, flush),
+    send(T, insert, x),
+    row(T, 0, Top, Bottom),
+    damage(W, Damage).
+
+:- end_tests(terminal_damage).
