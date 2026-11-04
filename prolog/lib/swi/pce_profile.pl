@@ -996,8 +996,8 @@ key_with_calls([H|T0], [0-H|T]) :-      % get recursive on top
     !,
     key_with_calls(T0, T).
 key_with_calls([H|T0], [K-H|T]) :-
-    arg(4, H, Calls),
-    arg(5, H, Redos),
+    arg(5, H, Calls),
+    arg(6, H, Redos),
     K is Calls+Redos,
     key_with_calls(T0, T).
 

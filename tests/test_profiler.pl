@@ -753,6 +753,15 @@ test(details_memory,
     detail_row(W, 4, Row),
     free(F).
 
+%   The details list the relatives by the number of calls and redos,
+%   not by their time.
+
+test(relatives_by_calls, Preds == [few, many]) :-
+    pce_profile:sort_relatives([ node(many, 0, 0, 0, 5, 1, 5),
+                                 node(few,  0, 0, 100, 2, 0, 2)
+                               ], Sorted),
+    maplist(arg(1), Sorted, Preds).
+
 %   The status line describes the memory and the garbage collections
 %   if the memory is shown.
 
