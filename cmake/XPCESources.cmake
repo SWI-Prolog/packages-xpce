@@ -183,7 +183,8 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     swi_hooks.pl swi_ide.pl swi_preferences.pl tab_frame.pl
     tabbed_window.pl tabular.pl
     toc_filesystem.pl toolbar.pl url_image.pl pce_openframes.pl
-    pce_backcomp.pl xdot.pl graphviz_term.pl)
+    pce_backcomp.pl xdot.pl graphviz_term.pl
+    graphviz_layout.pl)
 if(EPILOG)
     list(APPEND XPCE_DATA_prolog_lib epilog.pl)
 endif()

@@ -38,13 +38,10 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pan_zoom)).
-:- use_module(library(process)).
-:- use_module(library(readutil)).
-:- use_module(library(json)).
+:- use_module(library(graphviz_layout)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
 :- use_module(library(apply)).
-:- use_module(library(json)).
 :- use_module(library(pce_util)).
 :- use_module(library(debug)).
 :- use_module(library(help_message)).
@@ -158,12 +155,15 @@ load(F, Source:'file|string') :->
     (   var(E)
     ->  send(F, slot, problem, @nil),
         render_json(F, JSON)
-    ;   print_message(warning, E),
-        problem_text(E, Engine, Problem),
-        send(F, slot, problem, Problem),
-        send(F, display, text(Problem, left))
+    ;   show_problem(F, Engine, E)
     ),
     send(F, slot, source, Source).
+
+show_problem(F, Engine, E) :-
+    print_message(warning, E),
+    problem_text(E, Engine, Problem),
+    send(F, slot, problem, Problem),
+    send(F, display, text(Problem, left)).
 
 %       A node may stand out by a star behind it, as the current node
 %       of a call graph in kcachegrind.  Its spikes reach out from an
@@ -609,6 +609,362 @@ edge_name(_, Tail, Head, Name) :-
 
 
                  /*******************************
+                 *      GRAPHICALS AS NODES     *
+                 *******************************/
+
+/* A graph whose nodes are XPCE graphicals that the application makes,
+laid out by graphviz.  Graphviz only gets the size of the nodes and the
+edge labels: see library(graphviz_layout).  The nodes and edges are
+subclasses of xdot_node and xdot_edge, so they have the same popups,
+click handlers and highlighting.
+
+    new(F, graphviz_figure),
+    send(F, display, new(A, graphviz_node(a))),
+    send(A, display, text(hello)),
+    ...
+    send(F, display, graphviz_edge(a, b, text('2x'))),
+    send(F, lay_out, [rankdir='LR']).
+*/
+
+:- pce_begin_class(graphviz_figure, xdot,
+                   "Graph of XPCE graphicals laid out by graphviz").
+
+lay_out(F, GraphAttrs:prolog) :->
+    "Place my graphviz_node and route my graphviz_edge members"::
+    send(F, transform, @nil),
+    get(F, graphicals, Chain),
+    chain_list(Chain, Grs),
+    include(instance_of(graphviz_node), Grs, Nodes),
+    include(instance_of(graphviz_cluster), Grs, Clusters),
+    include(instance_of(graphviz_edge), Grs, Edges),
+    append(Clusters, Nodes, Parts),
+    layout_items(@nil, Parts, GItems),
+    maplist(layout_edge, Edges, GEdges),
+    get(F, engine, Engine),
+    catch(graphviz_layout(graph(GraphAttrs, GItems, GEdges), Layout,
+                          [engine(Engine)]),
+          E, true),
+    (   var(E)
+    ->  send(F, slot, problem, @nil),
+        Layout = layout(_, Places, Routes),
+        forall(member(node(Node, Center), Places),
+               send(Node, center, Center)),
+        findall(C, member(cluster(C, _, _), Places), Outer2Inner),
+        forall(member(cluster(C, Area, LabelAt), Places),
+               send(C, frame, Area, LabelAt)),
+        reverse(Outer2Inner, Inner2Outer),
+        forall(member(C, Inner2Outer),  % outer clusters at the back
+               send(C, hide)),
+        edge_label_background(F, _{}, LabelBG),
+        maplist(route_edge(LabelBG), Edges, Routes)
+    ;   send(F, clear, destroy),
+        show_problem(F, Engine, E)
+    ).
+
+instance_of(Class, Obj) :-
+    send(Obj, instance_of, Class).
+
+%   layout_items(+Cluster, +Parts, -Items)
+%
+%   Items are the nodes and clusters of graphviz_layout/3 for the parts
+%   in Cluster (@nil: at the top).  The objects themselves are the
+%   identifiers of the nodes and clusters.
+
+layout_items(Cluster, Parts, Items) :-
+    include(in_cluster(Cluster), Parts, Mine),
+    maplist(layout_item(Parts), Mine, Items).
+
+in_cluster(Cluster, Part) :-
+    get(Part, cluster, Cluster).
+
+layout_item(Parts, C, cluster(C, Attrs, Items)) :-
+    send(C, instance_of, graphviz_cluster),
+    !,
+    get(C, graphviz_attributes, Attrs0),
+    (   get(C, label, Label),
+        Label \== @nil
+    ->  get(Label, size, size(LW, LH)),
+        Attrs = [label=size(LW,LH)|Attrs0]
+    ;   Attrs = Attrs0
+    ),
+    layout_items(C, Parts, Items).
+layout_item(_, N, node(N, size(W,H), Attrs)) :-
+    get(N, size, size(W,H)),
+    get(N, graphviz_attributes, Attrs).
+
+layout_edge(E, edge(Tail, Head, Attrs)) :-
+    get(E, device, Fig),
+    get(E, tail, TailName),
+    get(E, head, HeadName),
+    get(Fig, member, TailName, Tail),
+    get(Fig, member, HeadName, Head),
+    get(E, graphviz_attributes, Attrs0),
+    (   get(E, label, Label),
+        Label \== @nil
+    ->  get(Label, size, size(LW, LH)),
+        LW2 is LW+4,                    % room for the label background
+        Attrs = [label=size(LW2,LH)|Attrs0]
+    ;   Attrs = Attrs0
+    ).
+
+route_edge(LabelBG, E, edge(_, _, Route)) :-
+    send(E, route, Route),
+    send(E, label_background, LabelBG).
+
+:- pce_end_class(graphviz_figure).
+
+
+:- pce_begin_class(graphviz_node(name), xdot_node,
+                   "Node of a graphviz_figure: the graphicals in it").
+
+variable(graphviz_attributes, prolog, both,
+         "Extra graphviz node attributes, e.g., [shape=ellipse]").
+variable(cluster, graphviz_cluster*, both, "Cluster I am in").
+
+initialise(N, Name:name, Attrs:graphviz_attributes=[prolog]) :->
+    "Create an empty node; display graphicals in it"::
+    send_class(N, figure, initialise),
+    send(N, name, Name),
+    default(Attrs, [], TheAttrs),
+    send(N, graphviz_attributes, TheAttrs),
+    send(N, recogniser, @xdot_node_recogniser).
+
+%   An outline around Content with the margins graphviz gives a node:
+%   8 points to the sides and 4 above and below.  An ellipse is larger
+%   such that it holds the box of Content, and it tells graphviz its
+%   shape, so edges end at the ellipse.  The tab and folder shapes have
+%   a tab of 5 points on top, as those of graphviz.
+
+outline(N, Shape:{box,ellipse,tab,folder}, Content:graphical,
+        MinSize:[size]) :->
+    "Display Content in an outline of Shape, named outline"::
+    get(Content, size, size(CW, CH)),
+    W0 is CW+16,
+    H0 is CH+8,
+    (   MinSize = size(MW, MH)
+    ->  true
+    ;   MW = 0, MH = 0
+    ),
+    outline_graphical(Shape, W0, H0, MW, MH, Gr, CX, CY),
+    send(Gr, name, outline),
+    send(N, display, Gr),
+    send(N, display, Content),
+    send(Content, center, point(CX, CY)),
+    (   Shape == ellipse
+    ->  get(N, graphviz_attributes, Attrs),
+        send(N, graphviz_attributes, [shape=ellipse|Attrs])
+    ;   true
+    ).
+
+outline_graphical(box, W0, H0, MW, MH, Gr, CX, CY) :-
+    W is max(W0, MW), H is max(H0, MH),
+    new(Gr, box(W, H)),
+    CX is W/2, CY is H/2.
+outline_graphical(ellipse, W0, H0, MW, MH, Gr, CX, CY) :-
+    W is max(round(W0*1.3), MW),
+    H is max(round(H0*1.3), MH),
+    new(Gr, ellipse(W, H)),
+    CX is W/2, CY is H/2.
+outline_graphical(tab, W0, H0, MW, MH, Gr, CX, CY) :-
+    T = 5,
+    W is max(W0, MW), H1 is max(H0, MH-T), H is H1+T,
+    outline_polygon([0-0, 16-0, 16-T, W-T, W-H, 0-H], Gr),
+    CX is W/2, CY is T+H1/2.
+outline_graphical(folder, W0, H0, MW, MH, Gr, CX, CY) :-
+    T = 5,
+    W is max(W0, MW), H1 is max(H0, MH-T), H is H1+T,
+    X1 is W-22, X2 is W-18, X3 is W-8, X4 is W-4,
+    outline_polygon([0-T, X1-T, X2-0, X3-0, X4-T, W-T, W-H, 0-H], Gr),
+    CX is W/2, CY is T+H1/2.
+
+outline_polygon(Points, Path) :-
+    new(Path, path),
+    send(Path, closed, @on),
+    forall(member(X-Y, Points),
+           send(Path, append, point(X, Y))).
+
+outline(N, Gr:graphical) :<-
+    "The outline made by ->outline"::
+    get(N, member, outline, Gr).
+
+:- pce_end_class(graphviz_node).
+
+
+%   A cluster is drawn by graphviz_figure ->lay_out as a frame with its
+%   label.  It is an xdot_node, as a cluster rendered from xdot, so it
+%   has the same popup and click handler.
+
+:- pce_begin_class(graphviz_cluster(name), xdot_node,
+                   "Cluster of a graphviz_figure: a frame around nodes").
+
+variable(label,               graphical*,     get,  "Label of the cluster").
+variable(graphviz_attributes, prolog,         both,
+         "Extra graphviz cluster attributes, e.g., [margin=8]").
+variable(cluster,             graphviz_cluster*, both,
+         "Cluster I am in").
+variable(frame_colour,        [colour],       both, "Colour of the frame").
+variable(frame_width,         num := 1,       both, "Width of the frame").
+variable(frame_radius,        int := 0,       both,
+         "Radius of the corners of the frame").
+
+initialise(C, Name:name, Label:label=[graphical]*,
+           Attrs:graphviz_attributes=[prolog]) :->
+    "Create a cluster; nodes and clusters join by their ->cluster"::
+    send_class(C, figure, initialise),
+    send(C, name, Name),
+    default(Label, @nil, TheLabel),
+    send(C, slot, label, TheLabel),
+    default(Attrs, [], TheAttrs),
+    send(C, graphviz_attributes, TheAttrs),
+    send(C, recogniser, @xdot_node_recogniser).
+
+frame(C, Area:area, LabelAt:prolog) :->
+    "Draw the frame on Area and the label centred at LabelAt"::
+    get(C, label, Label),
+    get(C?graphicals, copy, Old),
+    send(Old, for_all, if(@arg1 \== Label, message(@arg1, destroy))),
+    free(Old),
+    get(Area, size, size(W, H)),
+    new(B, box(W, H)),
+    get(C, frame_radius, R),
+    send(B, radius, R),
+    send(B, name, frame),
+    get(C, frame_width, FW),
+    send(B, pen, FW),
+    get(C, frame_colour, FC),
+    (   FC == @default
+    ->  true
+    ;   send(B, colour, FC)
+    ),
+    send(C, display, B, Area?position),
+    (   Label \== @nil,
+        LabelAt = point(LX, LY)
+    ->  send(C, display, Label),
+        send(Label, center, point(LX, LY))
+    ;   true
+    ).
+
+%   As a cluster drawn from xdot, I can be clicked on my label and on
+%   my frame, not inside it: there are the nodes and the edges.
+
+in_event_area(C, X:int, Y:int) :->
+    "Succeed if X,Y is on my label or frame"::
+    get(C, position, point(CX, CY)),
+    LX is X - CX,
+    LY is Y - CY,
+    (   get(C, label, Label),
+        Label \== @nil,
+        send(Label, in_event_area, LX, LY)
+    ->  true
+    ;   get(C, member, frame, B),
+        get(B, area, area(BX, BY, BW, BH)),
+        Margin = 4,
+        LX >= BX-Margin, LX =< BX+BW+Margin,
+        LY >= BY-Margin, LY =< BY+BH+Margin,
+        (   LX =< BX+Margin ; LX >= BX+BW-Margin
+        ;   LY =< BY+Margin ; LY >= BY+BH-Margin
+        )
+    ).
+
+:- pce_end_class(graphviz_cluster).
+
+
+:- pce_begin_class(graphviz_edge(name), xdot_edge,
+                   "Edge of a graphviz_figure, routed by graphviz").
+
+variable(label,               graphical*,     get,  "Label of the edge").
+variable(graphviz_attributes, prolog,         both,
+         "Extra graphviz edge attributes, e.g., [arrowsize=0.7]").
+variable(line_width,          num := 1,       both, "Width of the line").
+variable(line_colour,         [colour],       both, "Colour of the line").
+variable(line_texture,        texture_name := none, both,
+         "Texture of the line").
+
+initialise(E, Tail:name, Head:name, Label:label=[graphical]*,
+           Attrs:graphviz_attributes=[prolog]) :->
+    "Create an edge from Tail to Head, named Tail-Head"::
+    send_class(E, figure, initialise),
+    send(E, slot, tail, Tail),
+    send(E, slot, head, Head),
+    atomic_list_concat([Tail, Head], -, Name),
+    send(E, name, Name),
+    default(Label, @nil, TheLabel),
+    send(E, slot, label, TheLabel),
+    default(Attrs, [], TheAttrs),
+    send(E, graphviz_attributes, TheAttrs),
+    send(E, recogniser, @xdot_edge_recogniser).
+
+%   Route is what graphviz_layout/3 says: a B-spline, the tips of the
+%   arrows at either end and the centre of the label.
+
+route(E, Route:prolog) :->
+    "Draw the edge along a route of graphviz_layout/3"::
+    get(E, label, Label),
+    get(E?graphicals, copy, Old),
+    send(Old, for_all, if(@arg1 \== Label, message(@arg1, destroy))),
+    free(Old),
+    Route = route(Points, Start, End, LabelAt),
+    (   Points = [P0|Rest]
+    ->  route_beziers(Rest, P0, E)
+    ;   true
+    ),
+    (   Start == none
+    ->  true
+    ;   Points = [First|_],
+        arrow_head(E, First, Start)
+    ),
+    (   End == none
+    ->  true
+    ;   last(Points, Last),
+        arrow_head(E, Last, End)
+    ),
+    (   Label \== @nil,
+        LabelAt \== none
+    ->  send(E, display, Label),
+        send(Label, center, LabelAt)
+    ;   true
+    ).
+
+route_beziers([C1,C2,P|T], P0, E) :-
+    !,
+    send(E, display, new(B, bezier_curve(P0, P, C1, C2))),
+    send(E, paint_line, B),
+    route_beziers(T, P, E).
+route_beziers(_, _, _).
+
+paint_line(E, Gr:graphical) :->
+    "Give Gr my line width, colour and texture"::
+    get(E, line_width, W),
+    get(E, line_colour, C),
+    get(E, line_texture, T),
+    send(Gr, pen, W),
+    send(Gr, texture, T),
+    (   C == @default
+    ->  true
+    ;   send(Gr, colour, C)
+    ).
+
+%   An arrow from From to its tip at To.  Graphviz ends the line where
+%   the arrow starts, so its length is the distance between the two.
+
+arrow_head(E, point(X0,Y0), point(X1,Y1)) :-
+    Length is sqrt((X1-X0)**2 + (Y1-Y0)**2),
+    get(E, line_width, W),
+    Wing is max(Length*0.7, W*2),
+    new(A, arrow(Length, Wing, closed)),
+    send(A, pen, 1),
+    get(E, line_colour, C),
+    (   C == @default
+    ->  true
+    ;   send(A, colour, C)              % fills with its colour
+    ),
+    send(A, points, X1, Y1, X0, Y0),    % tip, reference
+    send(E, display, A).
+
+:- pce_end_class(graphviz_edge).
+
+
+                 /*******************************
                  *       CLASS XDOT_WINDOW      *
                  *******************************/
 
@@ -628,12 +984,28 @@ initialise(W, Source:[file]*, Label:[name], Size:[size]) :->
     default(Size,  size(800,600),   TheSize),
     send_super(W, initialise, TheLabel, TheSize),
     send(W, slot, fitted, none),
-    new(F, xdot(Source)),
+    get(W, figure_class, Class),
+    Figure =.. [Class, Source],
+    new(F, Figure),
+    send(F, name, xdot),
     send(F, recogniser, @pan_zoom_recogniser),
     send(W, display, F),
     (   send(Source, instance_of, file)
     ->  send(W, fit)
     ;   true
+    ).
+
+%   A subclass that declares the class variable `renderer` as
+%   {xdot,graphicals} makes its graph from graphicals if it says
+%   `graphicals`: it then shows a graphviz_figure.
+
+figure_class(W, Class:name) :<-
+    "Class of the figure I show: xdot or graphviz_figure"::
+    (   get(W, class, MyClass),
+        get(MyClass, class_variable, renderer, _),
+        get(W, class_variable_value, renderer, graphicals)
+    ->  Class = graphviz_figure
+    ;   Class = xdot
     ).
 
 xdot(W, F:xdot) :<-
@@ -713,122 +1085,19 @@ scale_to_fit(W, F:xdot) :->
 
 %!  dot_to_json(+Source, +Engine, -JSON) is det.
 %
-%   Lay out Source using the graphviz program Engine.
-%
-%   @error existence_error(source_sink, path(Engine)) if Engine is not
-%   installed.
-%   @error graphviz(Engine, Status, Message) if Engine fails.  Message
-%   is what it wrote to its standard error.
+%   Lay out Source, a file or string object, using the graphviz program
+%   Engine.  See graphviz_json/4 for the errors.
 
 dot_to_json(Source, Engine, JSON) :-
-    run_dot(Source, Engine, JSON0, E, Status, Message0),
-    split_string(Message0, "", " \t\n", [Message]),
-    (   Status == exit(0),
-        var(E)
-    ->  (   Message == ""
-        ->  true
-        ;   print_message(warning, format('~w: ~s', [Engine, Message]))
-        ),
-        JSON = JSON0
-    ;   throw(error(graphviz(Engine, Status, Message), _))
-    ).
+    dot_input(Source, Input),
+    graphviz_json(Engine, json, Input, JSON).
 
-%   run_dot(+Source, +Engine, -JSON, -Error, -Status, -Message)
-%
-%   Run Engine on Source.  Error is unbound if we could read its JSON
-%   output and Message is what it wrote to its standard error.  Without
-%   threads we cannot feed dot and read its output and errors at the
-%   same time, so the input and the errors go through temporary files.
-
-run_dot(Source, Engine, JSON, E, Status, Message) :-
-    current_prolog_flag(threads, true),
-    !,
-    dot_input(Source, Args, StdIn, Feed),
-    process_create(path(Engine), ['-Tjson'|Args],
-                   [ stdin(StdIn),
-                     stdout(pipe(Out)),
-                     stderr(pipe(Err)),
-                     process(PID)
-                   ]),
-    (   Feed = feed(In, Data)
-    ->  send_to_dot(Data, In)
-    ;   true
-    ),
-    message_queue_create(Queue),
-    thread_create(read_stderr(Err, Queue), Reader, []),
-    call_cleanup(catch(json_read_dict(Out, JSON), E, true),
-                 close(Out)),
-    thread_join(Reader, _),
-    (   thread_get_message(Queue, stderr(Message), [timeout(0)])
-    ->  true
-    ;   Message = ""
-    ),
-    message_queue_destroy(Queue),
-    process_wait(PID, Status).
-run_dot(Source, Engine, JSON, E, Status, Message) :-
-    setup_call_cleanup(
-        ( dot_file(Source, Path, Tmp),
-          tmp_file_stream(text, ErrFile, ErrStream)
-        ),
-        ( call_cleanup(
-              process_create(path(Engine), ['-Tjson', Path],
-                             [ stdin(null),
-                               stdout(pipe(Out)),
-                               stderr(stream(ErrStream)),
-                               process(PID)
-                             ]),
-              close(ErrStream)),
-          call_cleanup(catch(json_read_dict(Out, JSON), E, true),
-                       close(Out)),
-          process_wait(PID, Status),
-          read_file_to_string(ErrFile, Message, [])
-        ),
-        ( delete_file(ErrFile),
-          (   Tmp == true
-          ->  delete_file(Path)
-          ;   true
-          )
-        )).
-
-%   read_stderr(+Err, +Queue)
-%
-%   Read what dot writes to its standard error while we read its
-%   output.  Reading it afterwards would hang if dot fills the pipe with
-%   warnings before it finishes its output.
-
-read_stderr(Err, Queue) :-
-    call_cleanup(catch(read_string(Err, _, Message), _, Message = ""),
-                 close(Err)),
-    thread_send_message(Queue, stderr(Message)).
-
-dot_input(Source, [Path], null, none) :-
+dot_input(Source, file(Path)) :-
     send(Source, instance_of, file),
     !,
     get(Source, name, Path).            % xpce file object → path atom
-dot_input(String, [], pipe(In), feed(In, Data)) :-
+dot_input(String, text(Data)) :-
     object(String, string(Data)).
-
-%   dot_file(+Source, -Path, -Tmp)
-%
-%   Path is a file holding Source.  Tmp is `true` if we created it.
-
-dot_file(Source, Path, false) :-
-    send(Source, instance_of, file),
-    !,
-    get(Source, name, Path).
-dot_file(String, Path, true) :-
-    object(String, string(Data)),
-    tmp_file_stream(utf8, Path, Out),
-    call_cleanup(format(Out, '~s', [Data]), close(Out)).
-
-send_to_dot(String, ToDOT) :-
-    set_stream(ToDOT, encoding(utf8)),
-    thread_create(send_to_dot_(String, ToDOT), _,
-                  [ detached(true) ]).
-
-send_to_dot_(String, ToDOT) :-
-    call_cleanup(format(ToDOT, '~s', [String]),
-                 close(ToDOT)), !.
 
 %!  problem_text(+Error, +Engine, -Text) is det.
 %
@@ -848,16 +1117,6 @@ problem_text(Error, _Engine, Text) :-
                    print_message_lines(current_output, '', Lines)),
     split_string(Message, "", " \n", [Text0]),
     format(string(Text), 'Cannot draw the graph:\n\n~s', [Text0]).
-
-:- multifile prolog:error_message//1.
-
-prolog:error_message(graphviz(Engine, Status, Message)) -->
-    [ 'graphviz program "~w" failed (~p)'-[Engine, Status] ],
-    (   { Message == "" }
-    ->  []
-    ;   [ nl, '~s'-[Message] ]
-    ).
-
 
 graph_bb(JSON, bb(Xmin, Ymin, Xmax, Ymax)) :-
     get_dict(bb, JSON, BBString),
