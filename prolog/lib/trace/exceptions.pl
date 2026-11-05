@@ -44,6 +44,11 @@
 :- use_module(library(pce_tick_box)).
 :- use_module(library(pce_util)).
 :- use_module(library(help_message)).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ exception_header_foreground = black,
+                   exception_header_background = khaki1
+                 ]).
 
 /** <module> Program exception handling
 
@@ -341,14 +346,22 @@ debug_mode(_F, OnOff:bool) :->
 :- pce_begin_class(prolog_exception_table, tabular,
                    "Show Prolog exceptions").
 
+class_variable(header_colour,     colour, exception_header_foreground,
+               "Header colour").
+class_variable(header_background, colour, exception_header_background,
+               "Header background").
+
 initialise(T) :->
     send_super(T, initialise),
     send(T, rules, all),
     send(T, cell_spacing, -1),
-    BG = (background := khaki1),
-    send(T, append, 'Exception',        bold, left,   BG),
-    send(T, append, 'Trace not caught', bold, center, BG),
-    send(T, append, 'Trace always',     bold, center, BG),
+    get(T, class_variable_value, header_colour, HC),
+    get(T, class_variable_value, header_background, HBG),
+    BG = (background := HBG),
+    FG = (colour := HC),
+    send(T, append, 'Exception',        bold, left,   BG, FG),
+    send(T, append, 'Trace not caught', bold, center, BG, FG),
+    send(T, append, 'Trace always',     bold, center, BG, FG),
     send(T, next_row),
     send(T, append_error, ex1, error(_,_), true, false), % one for proper layout
     send(T, compute),
