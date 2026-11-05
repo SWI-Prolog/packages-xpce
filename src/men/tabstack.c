@@ -135,6 +135,8 @@ relayout_tab_stack(TabStack ts)
 
   if ( notNil(ts->device) && hasSendMethodObject(ts->device, NAME_resize) )
     send(ts->device, NAME_resize, EAV);
+  send(ts, NAME_layoutLabels, EAV);	/* anything placed on the labels was */
+					/* placed where the tabs were before */
 }
 
 

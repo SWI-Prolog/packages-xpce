@@ -1047,6 +1047,27 @@ test(and_come_back_when_the_edit_ends) :-
     send(TF, end_label_edit),
     close_button(TF, _).
 
+%   A lone tab that drops its label gets it back when a second tab
+%   arrives.  If the row is then too narrow, the label is shortened and
+%   the tab is recomputed while it still sits where it did without a
+%   label.  The close button must follow the tab to where it is put in
+%   the end, not stay a label's height above the row.
+
+test(a_close_button_follows_a_label_that_comes_back,
+     [ true(BY =:= TY+CY) ]) :-
+    new(TW, tabbed_window('Test', size(400,300))),
+    send(TW, hide_single_label, @on),
+    Long = 'A label that is far too long to fit in the room it has',
+    send(TW, tab, new(TF, tab_frame(new(_P1, picture), Long))),
+    send(TF, closable, @on),
+    send(TW, open),
+    send(TW, resize),
+    send(TW, tab, tab_frame(new(_P2, picture), Long)),
+    close_button(TF, B),
+    get(B, area, area(_, BY, _, _)),
+    get(TF, area, area(_, TY, _, _)),
+    get(TF, close_button_area, area(_, CY, _, _)).
+
 :- end_tests(tab_frame_buttons).
 
 
