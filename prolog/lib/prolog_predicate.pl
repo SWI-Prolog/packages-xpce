@@ -36,9 +36,9 @@
 :- module(prolog_predicate, []).
 :- use_module(library(pce)).
 :- use_module(pce_arm).
-:- use_module(library(persistent_frame)).
-:- use_module(library(tabbed_window)).
+:- use_module(library(pane_frame)).
 :- use_module(library(tabular)).
+:- use_module(library(pce_theme), [theme_colours/1]).
 :- use_module(library(edit)).       % get prolog_edit:predicate_location/2
 
 :- autoload(library(edit), [edit/1]).
@@ -50,11 +50,16 @@
 :- autoload(library(swi_compatibility), [auto_call/1]).
 :- autoload(library(gui_tracer), [gspy/1]).
 :- autoload(library(pce_emacs), [start_emacs/0]).
+:- autoload(library(prolog_jiti), [jiti_index_columns/2]).
 
 :- if(exists_source(library(pldoc/man_index))).
 :- autoload(library(pldoc/man_index), [man_object_property/2]).
 
 :- endif.
+
+:- theme_colours([ predicate_info_header_foreground = black,
+                   predicate_info_header_background = khaki1
+                 ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Class prolog_predicate represents the identity of a Prolog predicate. It
@@ -284,9 +289,12 @@ info(P) :->
     (   get(P, head, Head),
         predicate_property(Head, imported_from(M2))
     ->  get(P, pi, @off, PI),
-        send(prolog_predicate_frame(prolog_predicate(M2:PI)), open)
-    ;   send(prolog_predicate_frame(P), open)
-    ).
+        Show = prolog_predicate(M2:PI)
+    ;   Show = P
+    ),
+    reusable_info_tool(Tool),
+    send(Tool, predicate, Show),
+    send(Tool, expose).
 
 spy(P) :->
     "Set a spy point on predicate"::
@@ -305,35 +313,65 @@ resolve_predicate(Head, Head).
 :- pce_end_class(prolog_predicate).
 
 
-:- pce_begin_class(prolog_predicate_frame, persistent_frame,
+                 /*******************************
+                 *          INFO TOOL           *
+                 *******************************/
+
+/* The information sheet of a predicate is a pane of the IDE -- see
+library(pane_frame) -- so it can be docked beside the profiler, an
+editor or a terminal.  There is one: asking for information on another
+predicate shows it in the sheet that is already open.
+
+The tool is a pane_stack that holds a tab per aspect of the predicate.
+For now there is one, the properties.  A lone tab shows no label.
+*/
+
+:- dynamic info_tool/1 as volatile.
+
+reusable_info_tool(Tool) :-
+    info_tool(Tool),
+    !.
+reusable_info_tool(Tool) :-
+    new(Tool, prolog_predicate_tool).
+
+:- pce_begin_class(prolog_predicate_tool, tool_pane,
                    "Provide information about a predicate").
 
-variable(predicate, prolog_predicate, get, "Current predicate").
+class_variable(pane_side, {above,below,left,right}, right,
+               "An information sheet goes beside what it is about").
 
-initialise(F, P:prolog_predicate) :->
-    "Create from a predicate"::
-    send_super(F, initialise, string('Info for %s', P?print_name)),
-    send(F, slot, predicate, P),
-    send(F, append, new(tabbed_window)),
-    send(F, add_general_info),
-    send(F, add_documentation),
-    send(F, add_callers).
+variable(predicate, prolog_predicate*, get, "Current predicate").
 
-add_general_info(F) :->
-    "Show general info on the predicate"::
-    get(F, predicate, P),
-    get(F, member, tabbed_window, TW),
-    send(TW, append, prolog_predicate_info_window(P)).
+initialise(T) :->
+    "Create an empty information sheet"::
+    send_super(T, initialise, predicate_info),
+    assertz(info_tool(T)),
+    send(T, append_window, new(_, prolog_predicate_info_window)).
 
-add_documentation(_F) :->
-    "Show documentation about the predicate"::
-    true.
+unlink(T) :->
+    retractall(info_tool(T)),
+    send_super(T, unlink).
 
-add_callers(_F) :->
-    "Add window holding callers to the predicate"::
-    true.
+predicate(T, P:prolog_predicate) :->
+    "Show information on P"::
+    send(T, slot, predicate, P),
+    get(T, window, prolog_predicate_info_window, W),
+    send(W, predicate, P),
+    (   get(T, pane_frame, Frame)
+    ->  ignore(send(Frame, update_tab_label))
+    ;   true
+    ).
 
-:- pce_end_class(prolog_predicate_frame).
+pane_label(T, Label:name) :<-
+    "What my tab is called"::
+    (   get(T, predicate, P),
+        P \== @nil
+    ->  get(P, print_name, Name),
+        format(atom(Label), 'Info: ~w', [Name])
+    ;   Label = 'Predicate info'
+    ).
+
+:- pce_end_class(prolog_predicate_tool).
 
 
 :- pce_begin_class(prolog_predicate_info_window, window,
@@ -341,19 +379,28 @@ add_callers(_F) :->
 :- use_class_template(arm).
 
 variable(tabular,   tabular,          get, "Displayed table").
-variable(predicate, prolog_predicate, get, "Displayed predicate").
+variable(predicate, prolog_predicate*, get, "Displayed predicate").
 
-initialise(W, P:prolog_predicate) :->
+class_variable(header_colour,     colour, predicate_info_header_foreground,
+               "Predicate header colour").
+class_variable(header_background, colour, predicate_info_header_background,
+               "Predicate header background").
+
+initialise(W, P:[prolog_predicate]) :->
     "Create info sheet for P"::
     send_super(W, initialise),
     send(W, name, properties),
     send(W, pen, 0),
     send(W, scrollbars, vertical),
+    send(W, restrict_scroll, @on),      % no scrolling past the table
     send(W, display, new(T, tabular)),
     send(T, rules, all),
     send(T, cell_spacing, -1),
     send(W, slot, tabular, T),
-    send(W, predicate, P).
+    (   P == @default
+    ->  true
+    ;   send(W, predicate, P)
+    ).
 
 resize(W) :->
     send_super(W, resize),
@@ -393,8 +440,10 @@ properties(W, QPI:prolog, Props:prolog) :->
     "Append property sheet or a specific definition"::
     get(W, tabular, T),
     format(atom(AQPI), '~q', [QPI]),
-    BG = (background := khaki1),
-    send(T, append, AQPI, halign := center, colspan := 2, BG),
+    get(W, class_variable_value, header_colour, HC),
+    get(W, class_variable_value, header_background, HBG),
+    send(T, append, AQPI, bold, halign := center, colspan := 2,
+         background := HBG, colour := HC),
     send(T, next_row),
     partition(atom, Props, Atomic, Valued),
     (   select(file(File), Valued, Valued1),
@@ -418,7 +467,11 @@ properties(W, QPI:prolog, Props:prolog) :->
 property(W, Prop:prolog) :->
     "Append a property"::
     get(W, tabular, T),
-    (   Prop =.. [Name,Value]
+    (   Prop = indexed(Indexes)
+    ->  send(T, append, 'Indexed:', bold, right, valign := top),
+        send(T, append, new(IT, tabular)),
+        index_table(IT, Indexes)
+    ;   Prop =.. [Name,Value]
     ->  send(T, append, string('%s:', Name?label_name), bold, right),
         format(atom(AValue), '~q', [Value]),
         send(T, append, AValue)
@@ -427,6 +480,37 @@ property(W, Prop:prolog) :->
     send(T, next_row).
 
 :- pce_end_class(prolog_predicate_info_window).
+
+%!  index_table(+Tabular, +Indexes) is det.
+%
+%   Fill Tabular with the indexes of a predicate, as jiti_list/1 shows
+%   them.  Virtual indexes, those that are not yet materialized, are
+%   shown dimmed.
+
+index_table(T, Indexes) :-
+    send(T, rules, all),
+    send(T, cell_spacing, -1),
+    forall(member(H, ['Index', 'Buckets', 'Speedup', 'Coll', 'Flags']),
+           send(T, append, H, bold, center)),
+    send(T, next_row),
+    forall(member(Index, Indexes),
+           index_row(T, Index)).
+
+index_row(T, Index) :-
+    jiti_index_columns(Index, Columns),
+    _{index:Arg, buckets:Buckets, speedup:Speedup0, collisions:Coll,
+      flags:Flags, realised:Realised} :< Columns,
+    (   Realised == true
+    ->  FG = @default
+    ;   FG = ui_inactive
+    ),
+    format(atom(Speedup), '~1f', [Speedup0]),
+    forall(member(Value-Align, [ Arg-left, Buckets-right, Speedup-right,
+                                 Coll-right, Flags-left ]),
+           ( format(atom(Text), '~w', [Value]),
+             send(T, append, Text, halign := Align, colour := FG)
+           )),
+    send(T, next_row).
 
 
 :- pce_begin_class(source_location_text, text,
