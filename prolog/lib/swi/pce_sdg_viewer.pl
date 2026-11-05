@@ -430,6 +430,124 @@ variant_label(Variant, Label) :-
 
 
                  /*******************************
+                 *          GRAPHICALS          *
+                 *******************************/
+
+%!  sdg_graphicals(+Figure, +Graph, -Names) is det.
+%
+%   Show Graph in Figure, a graphviz_figure, as XPCE graphicals that
+%   graphviz lays out.  They look as sdg_dot/3 describes and have the
+%   same names, given by Names.
+
+sdg_graphicals(X, graph(Items, Edges), Names) :-
+    item_names(Items, 1, _, Names, []),
+    send(X, clear, destroy),
+    forall(member(Item, Items),
+           sdg_item_graphical(Item, X, @nil, Names)),
+    forall(member(Edge, Edges),
+           sdg_edge_graphical(Edge, X, Names)),
+    send(X, lay_out, [rankdir='LR']).
+
+sdg_item_graphical(node(Id, Info), X, Cluster, Names) :-
+    memberchk(Name-Id, Names),
+    node_label(Id, Info, Label),
+    node_tooltip(Id, Info, Tooltip),
+    new(N, graphviz_node(Name)),
+    new(T, text(Label, center, normal)),
+    node_outline(Info, N, T),
+    finish_part(N, X, Cluster, Tooltip).
+sdg_item_graphical(cluster(Id, Info, Children), X, Cluster, Names) :-
+    memberchk(Name-Id, Names),
+    cluster_label(Id, Info, Label),
+    cluster_tooltip(Id, Info, Tooltip),
+    new(C, graphviz_cluster(Name, text(Label, center, normal))),
+    send(C, frame_radius, 6),
+    send(C, frame_colour, '#909090'),
+    finish_part(C, X, Cluster, Tooltip),
+    forall(member(Item, Children),
+           sdg_item_graphical(Item, X, C, Names)).
+
+finish_part(Part, X, Cluster, Tooltip) :-
+    send(Part, cluster, Cluster),
+    send(Part, help_message, tag, string('%s', Tooltip)),
+    send(X, display, Part).
+
+%   node_outline(+Info, +Node, +Text)
+%
+%   As node_attributes/2: a table is an ellipse that grows with its
+%   answers, a predicate a rounded box.
+
+node_outline(table(_, Answers, Flags, Leader), N, T) :-
+    Size is log10(1+Answers),
+    MW is round((0.75 + 0.5*Size)*72),
+    MH is round((0.4 + 0.2*Size)*72),
+    send(N, outline, ellipse, T, size(MW, MH)),
+    flag_outline(Flags, Leader, N).
+node_outline(pred(_, _, Flags), N, T) :-
+    send(N, outline, box, T),
+    send(N?outline, radius, 6),
+    flag_outline(Flags, false, N).
+
+%   flag_outline(+Flags, +Leader, +Node)
+%
+%   As flag_attributes/5.  The leader of a component has a second
+%   outline 4 points outside the first, as graphviz draws
+%   `peripheries=2`.
+
+flag_outline(Flags, Leader, N) :-
+    get(N, outline, O),
+    (   memberchk(delays, Flags)
+    ->  send(O, fill, '#fff2b3')
+    ;   true
+    ),
+    (   memberchk(pending, Flags)
+    ->  send(O, pen, 2)
+    ;   true
+    ),
+    (   memberchk(negative, Flags)
+    ->  Colour = '#c04040',
+        send(O, colour, Colour)
+    ;   Colour = @default
+    ),
+    (   Leader == true
+    ->  get(O, area, area(X, Y, W, H)),
+        W2 is W+8,
+        H2 is H+8,
+        new(P, ellipse(W2, H2)),
+        send(P, pen, O?pen),
+        (   Colour == @default
+        ->  true
+        ;   send(P, colour, Colour)
+        ),
+        PX is X-4,
+        PY is Y-4,
+        send(N, display, P, point(PX, PY)),
+        send(P, hide)
+    ;   true
+    ).
+
+sdg_edge_graphical(edge(From, To, Sign, Count), X, Names) :-
+    memberchk(F-From, Names),
+    memberchk(T-To, Names),
+    Width is min(6.0, 1.0 + log10(Count)),
+    (   Count == 1
+    ->  What = suspension
+    ;   What = suspensions
+    ),
+    new(E, graphviz_edge(F, T, @nil, [arrowsize=0.6, penwidth=Width])),
+    send(E, line_width, Width),
+    (   Sign == negative
+    ->  send(E, line_texture, dashed),
+        send(E, line_colour, '#c04040'),
+        Kind = ' (tnot)'
+    ;   Kind = ''
+    ),
+    format(string(Tooltip), '~D ~w~w', [Count, What, Kind]),
+    send(E, help_message, tag, string('%s', Tooltip)),
+    send(X, display, E).
+
+
+                 /*******************************
                  *             PANE             *
                  *******************************/
 
@@ -635,8 +753,7 @@ redraw(V) :->
     get(V, shown_level, Level),
     get(V, expanded, Expanded),
     sdg_graph(SDG, [level(Level), expanded(Expanded)], Graph),
-    sdg_dot(Graph, Dot, Names),
-    send(V?graph_window, show, Dot, Names).
+    send(V?graph_window, show, Graph).
 
 expand(V, PI:prolog, Expand:bool) :->
     "Show PI as its tables or as a predicate"::
@@ -735,6 +852,8 @@ variable(names, prolog, get, "Name-Id of the shown nodes").
 
 class_variable(natural_zoom, num, 1.5,
                "Zoom of a graph that fits at this scale").
+class_variable(renderer, {xdot,graphicals}, graphicals,
+               "Draw the graph as graphviz does or with own graphicals").
 
 initialise(W) :->
     send_super(W, initialise, @default, sdg, size(500,350)),
@@ -758,10 +877,15 @@ initialise(W) :->
                           condition := message(W, can_edit, @arg1))
               ]).
 
-show(W, Dot:string, Names:prolog) :->
-    "Show a new graph"::
+show(W, Graph:prolog) :->
+    "Show a new graph (see sdg_graph/3)"::
+    get(W, xdot, X),
+    (   send(X, instance_of, graphviz_figure)
+    ->  sdg_graphicals(X, Graph, Names)
+    ;   sdg_dot(Graph, Dot, Names),
+        send(X, load, Dot)              % explains itself if dot fails
+    ),
     send(W, slot, names, Names),
-    send(W?xdot, load, Dot),
     send(W, fit).
 
 node_id(W, Node:xdot_node, Id:prolog) :<-

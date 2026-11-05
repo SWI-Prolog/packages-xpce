@@ -63,6 +63,8 @@
 :- use_module(pce_prolog_xref).
 :- use_module(library(prolog_xref)).
 :- use_module(print_graphics).
+:- use_module(graphviz_layout).
+:- autoload(library(apply), [foldl/4, maplist/3]).
 :- use_module(tabular).
 :- use_module(pce_filter_item, []).
 :- use_module(library(lists)).
@@ -469,6 +471,13 @@ update_links(G) :->
          if(message(@arg1, instance_of, xref_file_graph_node),
             message(@arg1, create_export_links))).
 
+%   A full layout places the connected nodes using graphviz, which
+%   puts the files that export to others left of those that import
+%   from them.  Nodes added to a graph the user may have arranged
+%   (MoveOnly) are placed by the spring embedder, which leaves the
+%   others where they are.  So is the whole graph if graphviz cannot be
+%   used.
+
 layout(G, MoveOnly:[chain]) :->
     "Do graph layout"::
     get(G?graphicals, find_all,
@@ -479,12 +488,69 @@ layout(G, MoveOnly:[chain]) :->
     send(UnConnected, for_all,
          and(message(@arg1, position, Pos),
              message(Pos, offset, 0, 25))),
-    get(Nodes, head, First),
-    send(First, layout,
-         nominal := 100,
-         iterations := 1000,
-         network := Nodes,
-         move_only := MoveOnly).
+    (   send(Nodes, empty)
+    ->  true
+    ;   MoveOnly == @default,
+        chain_list(UnConnected, UnConnectedList),
+        chain_list(Nodes, NodeList),
+        graphviz_place(UnConnectedList, NodeList)
+    ->  true
+    ;   get(Nodes, head, First),
+        send(First, layout,
+             nominal := 100,
+             iterations := 1000,
+             network := Nodes,
+             move_only := MoveOnly)
+    ).
+
+%   graphviz_place(+UnConnected, +Nodes) is semidet.
+%
+%   Place Nodes right of the column of UnConnected nodes using graphviz.
+%   The tags of the connections get room as edge labels.  Fails, after
+%   printing why, if graphviz cannot be used.
+
+graphviz_place(UnConnected, Nodes) :-
+    (   UnConnected == []
+    ->  X0 = 10
+    ;   foldl(right_side, UnConnected, 0, Right),
+        X0 is Right + 40
+    ),
+    Y0 = 10,
+    maplist(gv_node, Nodes, GNodes),
+    findall(edge(From, To, Attrs),
+            ( member(From, Nodes),
+              get(From, connections, Chain),
+              chain_list(Chain, Connections),
+              member(C, Connections),
+              send(C, instance_of, xref_export_connection),
+              get(C, from, From),
+              get(C, to, To),
+              memberchk(To, Nodes),
+              gv_edge_attrs(C, Attrs)
+            ), Edges),
+    catch(graphviz_layout(graph([rankdir='LR', nodesep=0.25, ranksep=0.8],
+                                GNodes, Edges),
+                          layout(_, Places, _)),
+          E, (print_message(warning, E), fail)),
+    forall(member(node(N, point(X, Y)), Places),
+           ( CX is round(X0+X),
+             CY is round(Y0+Y),
+             send(N, center, point(CX, CY))
+           )).
+
+right_side(Gr, R0, R) :-
+    get(Gr, right_side, R1),
+    R is max(R0, R1).
+
+gv_node(N, node(N, size(W, H), [])) :-
+    get(N, size, size(W, H)).
+
+gv_edge_attrs(C, [label=size(W, H)]) :-
+    get(C, tag, Tag),
+    Tag \== @nil,
+    !,
+    get(Tag, size, size(W, H)).
+gv_edge_attrs(_, []).
 
 
 :- pce_group(dragdrop).

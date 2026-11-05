@@ -860,6 +860,122 @@ dot_edge(edge(From, To, Count), Names) :-
 
 
                  /*******************************
+                 *          GRAPHICALS          *
+                 *******************************/
+
+%!  idg_graphicals(+Figure, +Graph, -Names, +Options) is det.
+%
+%   Show Graph (see idg_graph/3) in Figure, a graphviz_figure, as XPCE
+%   graphicals that graphviz lays out.  The nodes, clusters and edges
+%   look as idg_dot/4 describes them and have the same names, given by
+%   Names.  Options are those of idg_dot/4.
+
+idg_graphicals(X, graph(Items, Edges), Names, Options) :-
+    option(focus(Focus), Options, none),
+    item_names(Items, 1, _, Names, []),
+    send(X, clear, destroy),
+    forall(member(Item, Items),
+           idg_item_graphical(Item, X, @nil, Names, Focus)),
+    forall(member(Edge, Edges),
+           idg_edge_graphical(Edge, X, Names)),
+    send(X, lay_out, [rankdir='LR']).
+
+idg_item_graphical(node(more(Dir, PI), Label, NPreds, NEdges, more),
+                   X, Cluster, Names, _) :-
+    !,
+    memberchk(Name-more(Dir, PI), Names),
+    more_tooltip(Dir, PI, NPreds, NEdges, Tooltip),
+    new(T, text(Label, center, normal)),
+    send(T, colour, '#606060'),
+    new(N, graphviz_node(Name)),
+    send(N, outline, box, T),
+    get(N, outline, Shape),
+    send(Shape, radius, 6),
+    send(Shape, texture, dashed),
+    send(Shape, colour, '#909090'),
+    finish_part(N, X, Cluster, Tooltip).
+idg_item_graphical(node(Id, Label, Count, Invalid, Kind), X, Cluster,
+                   Names, Focus) :-
+    memberchk(Name-Id, Names),
+    kind_shape(Kind, ShapeName),
+    counted_nodes(Count, Invalid, Counts),
+    node_tooltip(Id, Kind, Counts, Focus, Tooltip),
+    (   Kind == dynamic_table
+    ->  LabelFont = italic
+    ;   LabelFont = normal
+    ),
+    new(T, device),
+    send(T, display, new(L1, text(Label, center, LabelFont))),
+    send(T, display, new(L2, text(Counts, center, normal))),
+    get(L1, width, W1),
+    get(L2, width, W2),
+    get(L1, height, H1),
+    MW is max(W1, W2),
+    X1 is (MW-W1)//2,
+    X2 is (MW-W2)//2,
+    send(L1, set, X1, 0),
+    send(L2, set, X2, H1),
+    new(N, graphviz_node(Name)),
+    send(N, outline, ShapeName, T),
+    (   Invalid > 0
+    ->  send(N?outline, fill, '#f4b6b6')
+    ;   true
+    ),
+    finish_part(N, X, Cluster, Tooltip).
+idg_item_graphical(cluster(Id, Label, Count, Invalid, Children), X,
+                   Cluster, Names, Focus) :-
+    memberchk(Name-Id, Names),
+    counted_nodes(Count, Invalid, Counts),
+    cluster_tooltip(Id, Counts, Tooltip),
+    format(string(Text), '~w\n~w', [Label, Counts]),
+    new(C, graphviz_cluster(Name, text(Text, center, normal))),
+    send(C, frame_radius, 6),
+    (   Invalid > 0
+    ->  send(C, frame_colour, '#c04040')
+    ;   send(C, frame_colour, '#909090')
+    ),
+    finish_part(C, X, Cluster, Tooltip),
+    forall(member(Item, Children),
+           idg_item_graphical(Item, X, C, Names, Focus)).
+
+%!  show_idg(+Figure, +Graph, -Names, +Options) is det.
+%
+%   Show Graph in Figure, an xdot or a graphviz_figure.  Names and
+%   Options are as for idg_dot/4.
+
+show_idg(X, Graph, Names, Options) :-
+    (   send(X, instance_of, graphviz_figure)
+    ->  idg_graphicals(X, Graph, Names, Options)
+    ;   idg_dot(Graph, Dot, Names, Options),
+        send(X, load, Dot)              % explains itself if dot fails
+    ).
+
+finish_part(Part, X, Cluster, Tooltip) :-
+    send(Part, cluster, Cluster),
+    send(Part, help_message, tag, string('%s', Tooltip)),
+    send(X, display, Part).
+
+idg_edge_graphical(edge(From, To, Count), X, Names) :-
+    memberchk(F-From, Names),
+    memberchk(T-To, Names),
+    Width is min(6.0, 1.0 + log10(Count)),
+    (   Count == 1
+    ->  What = edge
+    ;   What = edges
+    ),
+    format(string(Tooltip), '~D ~w', [Count, What]),
+    new(E, graphviz_edge(F, T, @nil, [arrowsize=0.6, penwidth=Width])),
+    send(E, line_width, Width),
+    (   ( From = more(_, _) ; To = more(_, _) )
+    ->  send(E, line_texture, dashed),
+        send(E, line_colour, '#909090')
+    ;   true
+    ),
+    send(E, help_message, tag, string('%s', Tooltip)),
+    send(X, display, E).
+
+
+                 /*******************************
                  *             PANE             *
                  *******************************/
 
@@ -1373,6 +1489,8 @@ variable(show_all, prolog, get, "Dir-PI: show all relatives of PI").
 
 class_variable(natural_zoom, num, 1.5,
                "Zoom of a graph that fits at this scale").
+class_variable(renderer, {xdot,graphicals}, graphicals,
+               "Draw the graph as graphviz does or with own graphicals").
 
 initialise(W) :->
     send_super(W, initialise, @default, focus, size(400,300)),
@@ -1424,7 +1542,7 @@ show_predicate(W, PI:prolog) :->
     send(W, slot, generation, Gen),
     (   PI == none
     ->  busy(W, @off),
-        send(W, load_dot, "digraph idg {}", [], none)
+        send(W, render, graph([], []), none)
     ;   viewer(W, V),
         get(V, graph, Graph),
         get(V, limits, Limits),
@@ -1449,19 +1567,15 @@ show_predicate(W, PI:prolog) :->
 graph_pred(Nodes, PI) :-
     memberchk(node(pred(PI), _, _, _, _), Nodes).
 
-render(W, Graph:prolog, PI:prolog) :->
-    "Lay out and show Graph with PI as focus"::
-    idg_dot(Graph, Dot, Names, [focus(PI)]),
-    send(W, load_dot, Dot, Names, PI).
-
 %   The current predicate stands out by a star behind it, as in the
 %   call graph of the profiler.  If it shows its call patterns, it is a
 %   cluster and has no star.
 
-load_dot(W, Dot:string, Names:prolog, PI:prolog) :->
-    send(W, slot, names, Names),
+render(W, Graph:prolog, PI:prolog) :->
+    "Lay out and show Graph with PI as focus"::
     get(W, xdot, X),
-    send(X, load, Dot),
+    show_idg(X, Graph, Names, [focus(PI)]),
+    send(W, slot, names, Names),
     (   memberchk(Name-pred(PI), Names),
         \+ sub_atom(Name, 0, _, _, cluster_)
     ->  send(X, star, Name)
@@ -1690,6 +1804,9 @@ variable(generation, int := 0, get, "Number of the last refresh started").
 variable(predicate,  prolog,   get, "Current predicate or `none`").
 variable(auto,       prolog,   get, "Groups expanded for the current predicate").
 
+class_variable(renderer, {xdot,graphicals}, graphicals,
+               "Draw the graph as graphviz does or with own graphicals").
+
 initialise(W) :->
     send_super(W, initialise, @default, overview, size(400,300)),
     send(W, slot, expanded, []),
@@ -1731,18 +1848,16 @@ recompute(W) :->
     get(V, thread, Thread),
     get(W, expanded, Expanded),
     (   Thread == @nil
-    ->  send(W, show_graph, Gen, "digraph idg {}", [])
+    ->  send(W, show_graph, Gen, graph([], []))
     ;   busy(W, @on),
         thread_create(compute_overview(W, Gen, Thread, Expanded), _,
                       [detached(true)])
     ).
 
 compute_overview(W, Gen, Thread, Expanded) :-
-    catch(( idg_graph(Thread, Expanded, Graph),
-            idg_dot(Graph, Dot, Names)
-          ), E, true),
+    catch(idg_graph(Thread, Expanded, Graph), E, true),
     (   var(E)
-    ->  in_pce_thread(overview_send(W, show_graph(Gen, Dot, Names)))
+    ->  in_pce_thread(overview_send(W, show_graph(Gen, Graph)))
     ;   in_pce_thread(overview_send(W, failed(Gen, E)))
     ).
 
@@ -1753,13 +1868,13 @@ overview_send(W, Message) :-
     ;   true
     ).
 
-show_graph(W, Gen:int, Dot:string, Names:prolog) :->
+show_graph(W, Gen:int, Graph:prolog) :->
     "Show the overview computed by refresh Gen"::
     (   get(W, generation, Gen)
     ->  busy(W, @off),
-        send(W, slot, names, Names),
         get(W, xdot, X),
-        send(X, load, Dot),
+        show_idg(X, Graph, Names, []),
+        send(W, slot, names, Names),
         send(W, star_predicate),
         send(W, fit)
     ;   true

@@ -60,6 +60,7 @@
 :- use_module(library(plot/hierarchy_chart),
               [hierarchy_from_term/2, format_value/3]).
 :- autoload(library(edit), [edit/1]).
+:- autoload(library(option), [option/2, option/3]).
 :- autoload(library(pce_html_manual), [man_documented/1, man_html_object/1]).
 
 :- require([ reset_profiler/0,
@@ -1238,6 +1239,16 @@ class_variable(max_nodes,    '1..', 30,
 class_variable(max_edge_width, num, 5,
                "Width of an edge that takes all of the time").
 
+%!  .renderer
+%
+%   How the call graph is drawn.  `xdot` draws what graphviz draws,
+%   including the text.  `graphicals` makes the nodes and edge labels
+%   as XPCE graphicals and uses graphviz only to place them and route
+%   the edges.
+
+class_variable(renderer, {xdot,graphicals}, graphicals,
+               "Draw the graph as graphviz does or with own graphicals").
+
 initialise(W) :->
     send_super(W, initialise, @default, call_graph, size(300,200)),
     send(W, slot, expanded, []),
@@ -1314,13 +1325,17 @@ render(W, Data:prolog) :->
     numbered_ids(Preds, 0, IdList),
     send(W, slot, ids, Ids),
     graph_colours(W, Colours),
-    phrase(dot_graph(Tool, Data.predicate, Total, Colours, MaxWidth,
-                     Ids, Edges),
-           Codes),
-    string_codes(Dot, Codes),
-    debug(profile(graph), '~s', [Dot]),
     get(W, xdot, X),
-    send(X, load, Dot),                 % explains itself if dot fails
+    (   send(X, instance_of, graphviz_figure)
+    ->  graph_graphicals(X, Tool, Data.predicate, Total, Colours, MaxWidth,
+                         Ids, Edges)
+    ;   phrase(dot_graph(Tool, Data.predicate, Total, Colours, MaxWidth,
+                         Ids, Edges),
+               Codes),
+        string_codes(Dot, Codes),
+        debug(profile(graph), '~s', [Dot]),
+        send(X, load, Dot)              % explains itself if dot fails
+    ),
     send(W, star),
     send(W, fit).
 
@@ -2281,6 +2296,93 @@ dot_graph(Tool, Pred, Total, colours(FG), MaxWidth, Ids, Edges) -->
     dot_nodes(Ids, Tool, Pred, Total),
     dot_edges(Edges, Tool, Total, MaxWidth, Ids),
     "}\n".
+
+%!  graph_graphicals(+Figure, +Tool, +Pred, +Total, +Colours, +MaxWidth,
+%!                   +Ids, +Edges) is det.
+%
+%   The call graph as XPCE graphicals in Figure, a graphviz_figure.
+%   The nodes and edges are described by the same attributes as for
+%   dot_graph//7, with the same defaults, but they are drawn here.
+%   Graphviz only places them.
+
+graph_graphicals(X, Tool, Pred, Total, colours(FG), MaxWidth, Ids, Edges) :-
+    send(X, clear, destroy),
+    forall(member(Id-P, Ids),
+           ( node_attrs(Tool, P, Pred, Total, Attrs),
+             node_graphical(Id, Attrs, Node),
+             send(X, display, Node)
+           )),
+    forall(member(Edge, Edges),
+           ( Edge = edge(From, To, _, _),
+             memberchk(FromId-From, Ids),
+             memberchk(ToId-To, Ids),
+             edge_attrs(Tool, Edge, Total, MaxWidth, Attrs),
+             edge_graphical(FromId, ToId, Attrs, FG, GE),
+             send(X, display, GE)
+           )),
+    send(X, lay_out, [rankdir='TB', nodesep=0.25, ranksep=0.45]).
+
+%   A box around the label, with the margins graphviz gives a box: 8
+%   points to the sides and 4 above and below.
+
+node_graphical(Id, Attrs, Node) :-
+    new(Node, graphviz_node(Id)),
+    option(label(Label), Attrs),
+    option(fontcolor(FontColour), Attrs, black),
+    option(color(PenColour), Attrs, '#606060'),
+    option(penwidth(Pen), Attrs, 1),
+    option(style(Style), Attrs, filled),
+    (   option(fontname(Face), Attrs),
+        sub_atom(Face, _, _, _, 'Bold')
+    ->  Font = bold
+    ;   Font = normal
+    ),
+    new(T, text(Label, center, Font)),
+    send(T, colour, FontColour),
+    get(T, size, size(TW, TH)),
+    BW is TW+16,
+    BH is TH+8,
+    new(B, box(BW, BH)),
+    send(B, pen, Pen),
+    send(B, colour, PenColour),
+    (   sub_atom(Style, _, _, _, rounded)
+    ->  send(B, radius, 6)
+    ;   true
+    ),
+    (   sub_atom(Style, _, _, _, dashed)
+    ->  send(B, texture, dashed)
+    ;   true
+    ),
+    (   option(fillcolor(Fill), Attrs)
+    ->  send(B, fill, Fill)
+    ;   true
+    ),
+    send(Node, display, B),
+    send(Node, display, T),
+    send(T, center, B?center),
+    graphical_tooltip(Node, Attrs).
+
+edge_graphical(FromId, ToId, Attrs, FG, Edge) :-
+    option(label(Label), Attrs),
+    option(color(Colour), Attrs, FG),
+    option(penwidth(Pen), Attrs, 1),
+    new(T, text(Label, center, small)),
+    send(T, colour, FG),
+    new(Edge, graphviz_edge(FromId, ToId, T,
+                            [arrowsize=0.7, penwidth=Pen])),
+    send(Edge, line_width, Pen),
+    send(Edge, line_colour, Colour),
+    (   option(style(dashed), Attrs)
+    ->  send(Edge, line_texture, dashed)
+    ;   true
+    ),
+    graphical_tooltip(Edge, Attrs).
+
+graphical_tooltip(Gr, Attrs) :-
+    (   option(tooltip(Tip), Attrs)
+    ->  send(Gr, help_message, tag, string('%s', Tip))
+    ;   true
+    ).
 
 dot_nodes([], _, _, _) --> [].
 dot_nodes([Id-P|T], Tool, Pred, Total) -->
