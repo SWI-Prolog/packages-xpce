@@ -223,7 +223,7 @@ graphviz_library :-
 graphviz_library :-
     (   exists_source(library(graphviz)),
         catch(use_module(library(graphviz),
-                         [graphviz_layout_dot/4, graphviz_has_engine/1]),
+                         [graphviz_layout_dot/4, graphviz_engine/1]),
               E, (print_message(warning, E), fail))
     ->  Loaded = true
     ;   Loaded = false
@@ -245,7 +245,7 @@ library_engine(Engine) :-
     Known == true.
 library_engine(Engine) :-
     (   graphviz_library,
-        graphviz_has_engine(Engine)
+        graphviz_engine(Engine)
     ->  Known = true
     ;   Known = false
     ),
