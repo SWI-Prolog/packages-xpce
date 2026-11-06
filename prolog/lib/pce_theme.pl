@@ -1210,6 +1210,7 @@ check_theme(Theme) :-
 
 theme_library(library(prolog_colour)).
 theme_library(library(trace/trace)).            % graphical debugger
+theme_library(library(trace/exceptions)).       % exception editor
 theme_library(library(swi/pce_profile)) :-
     current_prolog_flag(threads, true).
 theme_library(library(swi/pce_debug_monitor)).
