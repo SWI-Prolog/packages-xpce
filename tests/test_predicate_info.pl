@@ -63,15 +63,20 @@ test_predicate_info :-
 %!  info_location_text(+PI, -Frame, -Text) is det.
 %
 %   Open the information sheet on PI and find the text that shows its
-%   source location.
+%   source location.  The sheet is a tool pane (see library(pane_frame)),
+%   so it is found by what it shows rather than by the label of a frame.
 
 info_location_text(PI, Frame, Text) :-
     new(PP, prolog_predicate(PI)),
     send(PP, info),
-    get(@display, frames, Frames),
-    get(Frames, find,
-        message(@arg1?label, prefix, 'Info for'), Frame),
+    info_frame(Frame),
     once(sub_graphical(Frame, source_location_text, Text)).
+
+info_frame(Frame) :-
+    get(@display, frames, Frames),
+    chain_list(Frames, List),
+    member(Frame, List),
+    once(sub_graphical(Frame, prolog_predicate_info_window, _)).
 
 sub_graphical(Obj, Class, Gr) :-
     send(Obj, instance_of, Class),
@@ -96,13 +101,7 @@ edited_buffer(Base) :-
 :- begin_tests(predicate_info, [cleanup(free_info_frames)]).
 
 free_info_frames :-
-    forall(( get(@display, frames, Frames),
-             chain_list(Frames, List),
-             member(F, List),
-             get(F, label, Label),
-             sub_atom(Label, 0, _, _, 'Info for')
-           ),
-           free(F)).
+    forall(info_frame(F), free(F)).
 
 test(edit_source_location, true(edited_buffer('lists.pl'))) :-
     %  Used to raise an existence error on @emacs if PceEmacs was

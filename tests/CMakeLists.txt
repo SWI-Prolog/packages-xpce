@@ -256,7 +256,8 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:terminal_rewrap
                      xpce:terminal_rows
                      xpce:redraw_reentrance
-                     xpce:profiler)
+                     xpce:profiler
+                     xpce:predicate_info)
 
 # Gamepad input is only delivered while one of our windows has the
 # keyboard focus.  Where the tests use a real display, as on Windows and
