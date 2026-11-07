@@ -170,7 +170,7 @@ event(P, Ev:event) :->
 show_hover(P, X:int) :->
     "Show the values of the graphs at pixel X"::
     (   get(P, pixel_range, x, tuple(Min, Max)),
-        between(Min, Max, X)
+        X >= Min, X =< Max
     ->  (   get(P, member, hover, H)
         ->  true
         ;   send(P, display, new(H, plot_hover))
@@ -300,7 +300,7 @@ value_boxes(H, Boxes:prolog, X:int, Right:int, Top:int, Bottom:int) :->
     "Display the boxes, from top to bottom without overlap"::
     get(H, font, Font),
     get(Font, height, FH),
-    BH is FH+2,
+    BH is ceiling(FH)+2,
     Gap = 6,
     findall(BW, ( member(_-box(_, Label), Boxes),
                   get(Font, width, Label, TW),
@@ -315,7 +315,7 @@ value_boxes(H, Boxes:prolog, X:int, Right:int, Top:int, Bottom:int) :->
     foldl(box_top(BH), Ys, Tops0, Top, End),
     (   Tops0 = [First|_]
     ->  Shift is max(0, min(End-1-Bottom, First-Top)),
-        maplist(plus(Shift), Tops, Tops0)
+        maplist(shift_down(Shift), Tops0, Tops)
     ;   Tops = []
     ),
     maplist(value_box(H, X, Side, Gap, BH, Font), Boxes, Tops).
@@ -326,8 +326,11 @@ value_boxes(H, Boxes:prolog, X:int, Right:int, Top:int, Bottom:int) :->
 %   MinTop, the bottom of the box above it.
 
 box_top(BH, Y, BY, MinY, NextY) :-
-    BY is max(MinY, Y - BH//2),
+    BY is max(MinY, round(Y - BH/2)),
     NextY is BY+BH+1.
+
+shift_down(Shift, Y0, Y) :-
+    Y is round(Y0-Shift).
 
 value_box(H, X, Side, Gap, BH, Font, Y-box(Colour, Label), BY) :-
     send(H, display, new(Dot, circle(5))),

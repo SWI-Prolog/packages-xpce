@@ -959,7 +959,7 @@ stack_labels(Specs, BH, Max, Placed) :-
     msort_by_y(Specs, Sorted),
     foldl(label_top(BH), Sorted, Tops0, 0, End),
     (   Tops0 = [First|_]
-    ->  Shift is max(0, min(End-Max, First)),
+    ->  Shift is max(0, round(min(End-Max, First))),
         maplist(plus(Shift), Tops, Tops0)
     ;   Tops = []
     ),
