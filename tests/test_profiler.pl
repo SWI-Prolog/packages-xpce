@@ -206,16 +206,6 @@ test(summary_exact,
     get(F, statistics_summary, Str),
     get(Str, value, Text).
 
-%   Sorted on the time of the children, the time is shown as such
-%   rather than as a number of ticks.
-
-test(sort_by_children,
-     Labels == ['p/1\t90.0%', 'q/1\t80.0%', 'r/1\t0.0%']) :-
-    profiler(F),
-    send(F, sort_by, ticks_siblings),
-    browser_labels(F, Labels),
-    free(F).
-
 %   The recursive calls are the sum over the cycles p/1 is part of.
 
 test(recursive_calls, Calls == 7) :-
@@ -617,11 +607,12 @@ profile_sends :-
         forall(between(1, 5, _), send(@pce, has_send_method, free)),
         system:profiler(_, false)).
 
-test(methods_sort_by_name, Keys == [Hvf, Ka, 'p/1']) :-
+%   Methods are shown by their print name.
+
+test(methods_by_print_name, Keys == ['p/1', Hvf, Ka]) :-
     method_profiler(F, M, K),
     get(M, print_name, Hvf0), get(Hvf0, value, Hvf),
     get(K, print_name, Ka0), get(Ka0, value, Ka),
-    send(F, sort_by, name, normal),
     get(F, window, prof_browser, B),
     get(B?members, map, @arg1?key, Chain),
     chain_list(Chain, Keys),
@@ -689,11 +680,61 @@ test(sort_by_memory,
     browser_labels(F, Labels),
     free(F).
 
+%   The profile menu splits sorting into a cumulative and a flat
+%   popup and ticks the current setting of each choice.
+
+test(profile_menu,
+     [ Cumulative-CSel == [ticks,alloc]-[],
+       Flat-FSel == [ticks_self,alloc_self,discarded_self,call,redo]-[alloc_self],
+       Measure == memory,
+       View == percentage
+     ]) :-
+    mem_profiler(F),
+    send(F, sort_by, alloc_self),
+    new(MD, tool_dialog(F)),
+    send(F, fill_menu_bar, MD),
+    get(MD, popup, profile, @on, P),
+    sub_menu(P, sort_cumulative, Cumulative, CSel),
+    sub_menu(P, sort_flat, Flat, FSel),
+    sub_menu(P, measure, _, Measure),
+    sub_menu(P, show_values_as, _, View),
+    free(MD),
+    free(F).
+
+%   Choosing an item of a sort popup sorts on its key.
+
+test(profile_menu_sorts, SortBy == call) :-
+    mem_profiler(F),
+    new(MD, tool_dialog(F)),
+    send(F, fill_menu_bar, MD),
+    get(MD, popup, profile, @on, P),
+    get(P, member, sort_flat, Item),
+    get(Item, popup, Sub),
+    get(Sub, member, call, Calls),
+    send(Sub, slot, selected_item, Calls),
+    send(Sub, execute),
+    get(F, window, prof_browser, B),
+    get(B, sort_by, SortBy),
+    free(MD),
+    free(F).
+
+sub_menu(Popup, Name, Values, Current) :-
+    get(Popup, member, Name, Item),
+    get(Item, popup, Sub),
+    send(Sub, update),
+    get(Sub?members, map, @arg1?value, Chain),
+    chain_list(Chain, Values),
+    get(Sub, selection, Sel),
+    (   send(Sel, instance_of, chain)
+    ->  chain_list(Sel, Current)
+    ;   Current = Sel
+    ).
+
 %   Switching back to time sorts on the corresponding time key.
 
-test(measure_time, SortBy == ticks_siblings) :-
+test(measure_time, SortBy == ticks_self) :-
     mem_profiler(F),
-    send(F, sort_by, alloc_siblings),
+    send(F, sort_by, alloc_self),
     send(F, measure, time),
     get(F, window, prof_browser, B),
     get(B, sort_by, SortBy),

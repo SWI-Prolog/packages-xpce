@@ -175,20 +175,46 @@ menu_bar_key(_F, Key:name) :<-
 fill_menu_bar(F, MD:tool_dialog) :->
     "Put my menu on the bar of the window I am in"::
     get(MD, popup, profile, @on, Popup),
-    send(Popup, append, new(Sort, popup(sort_by))),
-    forall(sort_by(Label, Field, Order),
-           send(Sort, append,
-                menu_item(Label, message(F, sort_by, Field, Order)))),
-    send(Popup, append, new(Measure, popup(measure))),
-    forall(measure(M, MLabel),
-           send(Measure, append,
-                menu_item(M, message(F, measure, M), MLabel))),
-    send(Popup, append, new(Time, popup(show_values_as))),
-    forall(time_view(TimeView, TLabel),
-           send(Time, append,
-                menu_item(TimeView, message(F, time_view, TimeView),
-                          TLabel))),
+    forall(sort_kind(Kind, Name, _),
+           ( findall(menu_item(Key, message(F, sort_by, Key), Label),
+                     sort_key(Kind, Key, Label, _),
+                     Items),
+             choice_popup(Popup, Name, Items, @default,
+                          message(F, update_sort_menu, @receiver), Sort),
+             send(Sort, multiple_selection, @on)
+           )),
+    findall(menu_item(M, @default, MLabel), measure(M, MLabel), MItems),
+    choice_popup(Popup, measure, MItems,
+                 message(F, measure, @arg1),
+                 message(@receiver, selection, F?measure), _),
+    findall(menu_item(TV, @default, TLabel), time_view(TV, TLabel), TItems),
+    choice_popup(Popup, show_values_as, TItems,
+                 message(F, time_view, @arg1),
+                 message(@receiver, selection, F?time_view), _),
     send(Popup, append, menu_item(help, message(F, help))).
+
+%   choice_popup(+Popup, +Name, +Items, +Message, +Update, -Sub)
+%
+%   Append a popup Sub named Name to Popup holding Items, of which one
+%   is the current setting and is ticked.  Update makes it so when the
+%   menu opens.  The current sort key is in one of the two sort popups,
+%   so these allow for none to be ticked using `multiple_selection`: a
+%   single selection menu always ticks an item.
+
+choice_popup(Popup, Name, Items, Message, Update, Sub) :-
+    send(Popup, append, new(Sub, popup(Name, Message))),
+    send_list(Sub, append, Items),
+    send(Sub, show_current, @on),
+    send(Sub, update_message, Update).
+
+update_sort_menu(F, Popup:popup) :->
+    "Tick the current sort key if it is in Popup"::
+    get(F, window, prof_browser, B),
+    get(B, sort_by, Key),
+    (   get(Popup, member, Key, Item)
+    ->  send(Popup, selection, chain(Item))
+    ;   send(Popup, selection, new(chain))
+    ).
 
 
 load_profile(F, ProfData0:[prolog]) :->
@@ -322,7 +348,7 @@ node_data(F, Pred:prolog, Node:prolog) :<-
     get(DI, data, Node).
 
 sort_by(F, SortBy:name, Order:[{normal,reverse}]) :->
-    "Define the key for sorting the flat profile"::
+    "Define the key for sorting the profile"::
     get(F, window, prof_browser, B),
     send(B, sort_by, SortBy, Order).
 
@@ -619,15 +645,13 @@ interesting_item(SortBy, Items, F, DI) :-
     ).
 interesting_item(_, [DI|_], _, DI).
 
-cumulative_key(ticks).
-cumulative_key(ticks_siblings).
-cumulative_key(alloc).
-cumulative_key(alloc_siblings).
+cumulative_key(Key) :-
+    sort_key(cumulative, Key, _, _).
 
 update_label(B) :->
     get(B, sort_by, Sort),
-    sort_by(Human, Sort, _How),
-    send(B, label, Human?label_name).
+    sort_label(Sort, Label),
+    send(B, label, Label).
 
 sort_by(B, SortBy:name, Order:[{normal,reverse}]) :->
     "Define key on which to sort"::
@@ -645,7 +669,7 @@ sort_by(B, SortBy:name, Order:[{normal,reverse}]) :->
 sort(B, Order:[{normal,reverse}]) :->
     get(B, sort_by, Sort),
     (   Order == @default
-    ->  sort_by(_, Sort, TheOrder)
+    ->  sort_key(_, Sort, _, TheOrder)
     ;   TheOrder = Order
     ),
     get(B, all_items, All),
@@ -2756,16 +2780,34 @@ value(alloc, Data, Bytes) :-
 value(Name, Data, Value) :-
     Value = Data.get(Name, 0).
 
-sort_by(cumulative_profile_by_time,            ticks,          reverse).
-sort_by(flat_profile_by_time_self,             ticks_self,     reverse).
-sort_by(cumulative_profile_by_time_children,   ticks_siblings, reverse).
-sort_by(cumulative_profile_by_memory,          alloc,          reverse).
-sort_by(flat_profile_by_memory_self,           alloc_self,     reverse).
-sort_by(cumulative_profile_by_memory_children, alloc_siblings, reverse).
-sort_by(flat_profile_by_memory_discarded,      discarded_self, reverse).
-sort_by(flat_profile_by_number_of_calls,       call,           reverse).
-sort_by(flat_profile_by_number_of_redos,       redo,           reverse).
-sort_by(flat_profile_by_name,                  name,           normal).
+%   sort_kind(?Kind, ?Name, ?Label)
+%   sort_key(?Kind, ?Key, ?Label, ?Order)
+%
+%   The keys the predicates can be sorted on, grouped by whether the
+%   profile is cumulative (including the callees) or flat.
+
+sort_kind(cumulative, sort_cumulative, 'Cumulative').
+sort_kind(flat,       sort_flat,       'Flat').
+
+sort_key(cumulative, ticks,          'Time',             reverse).
+sort_key(cumulative, alloc,          'Memory',           reverse).
+sort_key(flat,       ticks_self,     'Time',             reverse).
+sort_key(flat,       alloc_self,     'Memory',           reverse).
+sort_key(flat,       discarded_self, 'Discarded memory', reverse).
+sort_key(flat,       call,           'Number of calls',  reverse).
+sort_key(flat,       redo,           'Number of redos',  reverse).
+
+%   sort_label(+Key, -Label)
+%
+%   Label tells how the predicates are sorted, e.g., "Flat profile by
+%   number of calls".
+
+sort_label(Key, Label) :-
+    sort_key(Kind, Key, KeyLabel, _),
+    !,
+    sort_kind(Kind, _, KindLabel),
+    downcase_atom(KeyLabel, KL),
+    format(atom(Label), '~w profile by ~w', [KindLabel, KL]).
 
 measure(time,   'Time').
 measure(memory, 'Global stack memory').
@@ -2793,7 +2835,6 @@ measure_key(Key, Measure, MeasureKey) :-
 
 key_pair(ticks,          alloc).
 key_pair(ticks_self,     alloc_self).
-key_pair(ticks_siblings, alloc_siblings).
 key_pair(ticks_self,     discarded_self).
 
 %!  node_cost(+Measure, +Data, -Self, -Children) is det.
