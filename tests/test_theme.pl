@@ -37,6 +37,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_theme)).
+:- use_module(library(pce_colour_item), []).
 :- use_module(library(pce_report), []).   % class reporter
 :- use_module(library(plunit)).
 :- use_module(library(ansi_term), []).
@@ -147,7 +148,20 @@ colour_rgb(C, rgb(R,G,B)) :-
     get(C, green, G),
     get(C, blue, B).
 
-:- begin_tests(theme, [cleanup(apply_theme(light))]).
+:- dynamic original_system_theme/1.
+
+%   Remember whether the desktop is dark, so `restored_system` can
+%   verify the system colours are restored to what they were.
+
+remember_system_theme :-
+    retractall(original_system_theme(_)),
+    ( dark_system -> Dark = true ; Dark = false ),
+    assertz(original_system_theme(Dark)).
+
+:- begin_tests(theme,
+               [ setup(remember_system_theme),
+                 cleanup(apply_theme(light))
+               ]).
 
 test(light_default, [RGB == rgb(255,0,0), Class == theme_colour,
                      Locked == @on]) :-
@@ -235,17 +249,17 @@ test(system_colours_message, RGB == rgb(0,0,255)) :-
           apply_theme(light)
         )).
 
-test(dark_on_light, [Dark == rgb(1,1,1), Dialog == Sys]) :-
+test(dark_on_light, [ condition(\+ dark_system),
+                      Dark == rgb(1,1,1), Dialog == Sys
+                    ]) :-
     %  The test runs on a light desktop.  A dark theme replaces the
     %  roles it defines and keeps the system colour for the others.
-    \+ dark_system,
     apply_theme(test_dark),
     theme_rgb(ui_window_background, Dark),
     theme_rgb(ui_dialog_background, Dialog),
     theme_rgb(sys_dialog_background, Sys),
     apply_theme(light).
-test(light_on_light, RGB == Sys) :-
-    \+ dark_system,
+test(light_on_light, [condition(\+ dark_system), RGB == Sys]) :-
     apply_theme(light),
     theme_rgb(ui_window_background, RGB),
     theme_rgb(sys_window_background, Sys).
@@ -270,16 +284,21 @@ test(dark_on_dark, RGB == rgb(16,16,16)) :-
           apply_theme(light)
         )).
 test(select_theme, [Sel1 == test_dark, Cur1 == test_dark,
-                    Sel2 == system, Cur2 == light]) :-
+                    Sel2 == system, Cur2 == System]) :-
+    (   get(@display, system_theme, System)
+    ->  true
+    ;   System = light                  % unknown: see display_theme/1
+    ),
     select_theme(test_dark),
     current_theme_selection(Sel1),
     current_theme(Cur1),
     select_theme(system),
     current_theme_selection(Sel2),
     current_theme(Cur2).
-test(restored_system, Dark == false) :-
-    %  The tests above restored the light system colours
-    ( dark_system -> Dark = true ; Dark = false ).
+test(restored_system, Dark == Original) :-
+    %  The tests above restored the original system colours
+    ( dark_system -> Dark = true ; Dark = false ),
+    original_system_theme(Original).
 test(available_theme, nondet) :-
     available_theme(light),
     available_theme(dark).
