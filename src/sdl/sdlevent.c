@@ -1993,11 +1993,12 @@ ws_key_down(Name key, bool *down)
 static float
 field(Sheet fields, const char *name)
 { Any v = getValueSheet(fields, CtoName(name));
+  Num n;
 
-  if ( v && isInteger(v) )
-    return (float)valNum(v);
   if ( v == ON )
     return 1.0f;
+  if ( v && (n = convertToNum(v)) )
+    return (float)valNum(n);
 
   return 0.0f;
 }
