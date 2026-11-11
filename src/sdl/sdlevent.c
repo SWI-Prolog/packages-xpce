@@ -1996,6 +1996,8 @@ field(Sheet fields, const char *name)
 
   if ( v && isInteger(v) )
     return (float)valNum(v);
+  if ( v && instanceOfObject(v, ClassReal) )
+    return (float)valReal(v);
   if ( v == ON )
     return 1.0f;
 
