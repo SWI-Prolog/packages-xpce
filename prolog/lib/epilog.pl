@@ -1847,7 +1847,25 @@ tty_link(PT, Link) :-
     !,
     tty_open(Location).
 tty_link(_PT, URL) :-
+    browser_url(URL),
+    !,
     call(www_open_url(URL)).
+tty_link(PT, URL) :-
+    send(PT, report, warning, 'Not opening %s', URL).
+
+%!  browser_url(+URL) is semidet.
+%
+%   True when URL is a link we pass  to   the  browser.  The link may be
+%   part of the output of any program, e.g.,   a file someone else wrote
+%   being listed.  Some desktops  (notably   Windows)  have  handlers for
+%   schemes that run code, so we only open the common web schemes.
+
+browser_url(URL) :-
+    uri_components(URL, Components),
+    uri_data(scheme, Components, Scheme),
+    atom(Scheme),
+    downcase_atom(Scheme, LwrScheme),
+    memberchk(LwrScheme, [http, https, mailto]).
 
 %!  tty_open(+Location) is det.
 %
