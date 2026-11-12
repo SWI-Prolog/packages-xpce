@@ -11939,7 +11939,10 @@ rlc_putansi(RlcData b, int chr)
 	case 'B':
 	{ rlc_need_arg(b, 1, 1);
 	  int vcol = rlc_caret_vcol(b);	/* CUD moves within a column */
-	  CMD(rlc_caret_down(b, b->argv[0]));
+	  /* rlc_caret_down() adds a line for each row below the last:
+	     more than a screenful only costs time and memory */
+	  int n = Bounds(b->argv[0], 0, b->window_size);
+	  CMD(rlc_caret_down(b, n));
 	  rlc_caret_to_vcol(b, vcol);
 	  break;
 	}

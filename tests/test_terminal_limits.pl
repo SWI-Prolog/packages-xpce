@@ -82,4 +82,14 @@ test(huge_argument, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
     send(TI, insert, "abc\r\e[99999999999999999999@"),
     row(TI, 0, Text).
 
+test(caret_down, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                   timeout(20),
+                   Text == x
+                 ]) :-
+    % added a line for each of 2147483647 rows down
+    send(TI, insert, "\e[2147483647Bx"),
+    get(TI, rows, Rows),
+    LastRow is Rows - 1,
+    row(TI, LastRow, Text).
+
 :- end_tests(terminal_limits).
