@@ -1,96 +1,107 @@
 ################
 # Additional xpce tests (plunit-based, standalone modules)
 
-test_libs(colour               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(theme                OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(text_image           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(editor_placeholder   OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(editor_isearch       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(text_item            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(filter_item          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(fixed_graphicals     OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(graphics_state      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(toc                 OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(type_syntax         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(pending_exception   OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(goal_backtrace      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(font_alias           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(font                 OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(visual               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(preferences          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(class_variable       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(class_variable_editor OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(theme_editor         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(theme_file           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(doc_render           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(slice                OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_graphical   OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(man_search           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(bool_item            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(chain_list           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(initialise_free      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(cursor               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(cursor_item          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(help_message         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(menu                 OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(accelerators         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(password_item        OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(keyboard_focus       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(native_keys          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(button               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(dialog_group         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(focus_border         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(scroll_bar           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(list_browser         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(shadow               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(cairo_render         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(path_segments        OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(markup_text          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(pce_format           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(canvas               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(graphics_demos       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(frame_position       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(slider               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(text_cursor          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(text_style           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(style_item           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(pane_frame           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(pane_layouts         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(barchart             OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(hierarchy_chart      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(plot_axis            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(memory_viewer        OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(idg_viewer           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(xdot                 OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(sdg_viewer           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(bookmark_store       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(bookmarks            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(key_binding_browser  OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(class_template       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(class_doc            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(emacs_split          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(event_clone          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(subpixel_events      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(input_device         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(smooth_scroll        OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(sdl_input            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(gamepad              OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(sound                OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(pce_open             OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(file_item            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(event_viewer         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(animation            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(image_save           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(emacs_init           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(predicate_info       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(emacs_lsp            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(lsp_offset           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(emacs_lsp_editor     OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(syntax_table         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(emacs_c_mode         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(camera               OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(sdl_texture          OPTIONS ${XPCE_TEST_OPTIONS})
+# Every test needs the headless display and the Defaults isolation set up
+# in ../CMakeLists.txt.  xpce_test() registers a test and records it in
+# XPCE_EXTRA_TESTS, which gets that environment at the end of this file,
+# so that a new test cannot be added without it.
+
+set(XPCE_EXTRA_TESTS)
+macro(xpce_test name)
+  test_libs(${name} OPTIONS ${XPCE_TEST_OPTIONS})
+  list(APPEND XPCE_EXTRA_TESTS xpce:${name})
+endmacro()
+
+xpce_test(colour)
+xpce_test(theme)
+xpce_test(text_image)
+xpce_test(editor_placeholder)
+xpce_test(editor_isearch)
+xpce_test(text_item)
+xpce_test(filter_item)
+xpce_test(tab_frame)
+xpce_test(fixed_graphicals)
+xpce_test(graphics_state)
+xpce_test(toc)
+xpce_test(type_syntax)
+xpce_test(pending_exception)
+xpce_test(goal_backtrace)
+xpce_test(font_alias)
+xpce_test(font)
+xpce_test(visual)
+xpce_test(preferences)
+xpce_test(class_variable)
+xpce_test(class_variable_editor)
+xpce_test(theme_editor)
+xpce_test(theme_file)
+xpce_test(doc_render)
+xpce_test(slice)
+xpce_test(terminal_graphical)
+xpce_test(man_search)
+xpce_test(bool_item)
+xpce_test(chain_list)
+xpce_test(initialise_free)
+xpce_test(cursor)
+xpce_test(cursor_item)
+xpce_test(help_message)
+xpce_test(menu)
+xpce_test(accelerators)
+xpce_test(password_item)
+xpce_test(keyboard_focus)
+xpce_test(native_keys)
+xpce_test(button)
+xpce_test(dialog_group)
+xpce_test(focus_border)
+xpce_test(scroll_bar)
+xpce_test(list_browser)
+xpce_test(shadow)
+xpce_test(cairo_render)
+xpce_test(path_segments)
+xpce_test(markup_text)
+xpce_test(pce_format)
+xpce_test(canvas)
+xpce_test(graphics_demos)
+xpce_test(frame_position)
+xpce_test(slider)
+xpce_test(text_cursor)
+xpce_test(text_style)
+xpce_test(style_item)
+xpce_test(pane_frame)
+xpce_test(pane_layouts)
+xpce_test(barchart)
+xpce_test(hierarchy_chart)
+xpce_test(plot_axis)
+xpce_test(memory_viewer)
+xpce_test(idg_viewer)
+xpce_test(xdot)
+xpce_test(sdg_viewer)
+xpce_test(bookmark_store)
+xpce_test(bookmarks)
+xpce_test(key_binding_browser)
+xpce_test(class_template)
+xpce_test(class_doc)
+xpce_test(emacs_split)
+xpce_test(event_clone)
+xpce_test(subpixel_events)
+xpce_test(input_device)
+xpce_test(smooth_scroll)
+xpce_test(sdl_input)
+xpce_test(gamepad)
+xpce_test(sound)
+xpce_test(pce_open)
+xpce_test(file_item)
+xpce_test(event_viewer)
+xpce_test(animation)
+xpce_test(image_save)
+xpce_test(emacs_init)
+xpce_test(predicate_info)
+xpce_test(emacs_lsp)
+xpce_test(lsp_offset)
+xpce_test(emacs_lsp_editor)
+xpce_test(syntax_table)
+xpce_test(emacs_c_mode)
+xpce_test(camera)
+xpce_test(sdl_texture)
 
 # The video tests wait for playback in real time: some 40 seconds in
 # one process.  A process per unit, read from test_video.pl, lets ctest
@@ -118,146 +129,40 @@ if(INSTALL_TESTS)
   set_tests_properties(xpce:video PROPERTIES DISABLED TRUE)
 endif()
 
-test_libs(clipboard_media      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(display_info         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(tray_icon            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(prolog_mode          OPTIONS ${XPCE_TEST_OPTIONS})
+xpce_test(clipboard_media)
+xpce_test(display_info)
+xpce_test(tray_icon)
+xpce_test(prolog_mode)
 if(EPILOG)
-test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(mixed_panes          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(undefined            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(tool_panes           OPTIONS ${XPCE_TEST_OPTIONS})
+xpce_test(epilog_tabs)
+xpce_test(mixed_panes)
+xpce_test(undefined)
+xpce_test(tool_panes)
 endif()
-test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(display_function     OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(display_removed      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(pce_date             OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(regex                OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(refman_signatures    OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(emacs_grep           OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(object_reference     OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(popup_event          OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(scrollbar            OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_osc         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_client      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_bce         OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_margin      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_palette     OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_width       OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_rewrap      OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(terminal_rows        OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(redraw_reentrance    OPTIONS ${XPCE_TEST_OPTIONS})
-test_libs(profiler             OPTIONS ${XPCE_TEST_OPTIONS})
+xpce_test(no_display)
+xpce_test(display_function)
+xpce_test(display_removed)
+xpce_test(number_conversion)
+xpce_test(pce_date)
+xpce_test(regex)
+xpce_test(refman_signatures)
+xpce_test(emacs_grep)
+xpce_test(object_reference)
+xpce_test(popup_event)
+xpce_test(scrollbar)
+xpce_test(terminal_osc)
+xpce_test(terminal_client)
+xpce_test(terminal_bce)
+xpce_test(terminal_margin)
+xpce_test(terminal_palette)
+xpce_test(terminal_glyphs)
+xpce_test(terminal_width)
+xpce_test(terminal_rewrap)
+xpce_test(terminal_rows)
+xpce_test(redraw_reentrance)
+xpce_test(profiler)
 
-set(XPCE_EXTRA_TESTS xpce:colour
-                     xpce:theme
-                     xpce:text_image
-                     xpce:editor_placeholder
-                     xpce:editor_isearch
-                     xpce:text_item
-                     xpce:tab_frame
-                     xpce:fixed_graphicals
-                     xpce:font_alias
-                     xpce:font
-                     xpce:visual
-                     xpce:preferences
-                     xpce:class_variable
-                     xpce:class_variable_editor
-                     xpce:theme_editor
-                     xpce:theme_file
-                     xpce:doc_render
-                     xpce:slice
-                     xpce:terminal_graphical
-                     xpce:man_search
-                     xpce:bool_item
-                     xpce:chain_list
-                     xpce:initialise_free
-                     xpce:cursor
-                     xpce:cursor_item
-                     xpce:help_message
-                     xpce:menu
-                     xpce:accelerators
-                     xpce:password_item
-                     xpce:keyboard_focus
-                     xpce:native_keys
-                     xpce:button
-                     xpce:dialog_group
-                     xpce:focus_border
-                     xpce:scroll_bar
-                     xpce:list_browser
-                     xpce:shadow
-                     xpce:cairo_render
-                     xpce:path_segments
-                     xpce:markup_text
-                     xpce:canvas
-                     xpce:graphics_demos
-                     xpce:frame_position
-                     xpce:slider
-                     xpce:text_cursor
-                     xpce:text_style
-                     xpce:style_item
-                     xpce:pane_frame
-                     xpce:pane_layouts
-                     xpce:barchart
-                     xpce:hierarchy_chart
-                     xpce:plot_axis
-                     xpce:memory_viewer
-                     xpce:idg_viewer
-                     xpce:xdot
-                     xpce:sdg_viewer
-                     xpce:bookmark_store
-                     xpce:bookmarks
-                     xpce:key_binding_browser
-                     xpce:goal_backtrace
-                     xpce:class_template
-                     xpce:emacs_split
-                     xpce:event_clone
-                     xpce:subpixel_events
-                     xpce:input_device
-                     xpce:smooth_scroll
-                     xpce:sdl_input
-                     xpce:gamepad
-                     xpce:sound
-                     xpce:animation
-                     xpce:image_save
-                     xpce:emacs_init
-                     xpce:emacs_lsp
-                     xpce:lsp_offset
-                     xpce:emacs_lsp_editor
-                     xpce:syntax_table
-                     xpce:emacs_c_mode
-                     xpce:camera
-                     xpce:sdl_texture
-                     ${XPCE_VIDEO_TESTS}
-                     xpce:clipboard_media
-                     xpce:display_info
-                     xpce:tray_icon
-                     xpce:prolog_mode
-                     xpce:no_display
-                     xpce:display_function
-                     xpce:display_removed
-                     xpce:number_conversion
-                     xpce:pce_date
-                     xpce:regex
-                     xpce:refman_signatures
-                     xpce:emacs_grep
-                     xpce:object_reference
-                     xpce:popup_event
-                     xpce:scrollbar
-                     xpce:terminal_osc
-                     xpce:terminal_client
-                     xpce:terminal_bce
-                     xpce:terminal_margin
-                     xpce:terminal_palette
-                     xpce:terminal_glyphs
-                     xpce:terminal_width
-                     xpce:terminal_rewrap
-                     xpce:terminal_rows
-                     xpce:redraw_reentrance
-                     xpce:profiler
-                     xpce:predicate_info)
+list(APPEND XPCE_EXTRA_TESTS ${XPCE_VIDEO_TESTS})
 
 # Gamepad input is only delivered while one of our windows has the
 # keyboard focus.  Where the tests use a real display, as on Windows and
@@ -268,19 +173,12 @@ set_tests_properties(xpce:gamepad PROPERTIES RUN_SERIAL TRUE)
 # process_encoding checks the bytes on the wire using od and iconv
 
 if(NOT WIN32)
-  test_libs(process_exit OPTIONS ${XPCE_TEST_OPTIONS})
-  list(APPEND XPCE_EXTRA_TESTS xpce:process_exit)
+  xpce_test(process_exit)
   find_program(PROG_OD od)
   find_program(PROG_ICONV iconv)
   if(PROG_OD AND PROG_ICONV)
-    test_libs(process_encoding OPTIONS ${XPCE_TEST_OPTIONS})
-    list(APPEND XPCE_EXTRA_TESTS xpce:process_encoding)
+    xpce_test(process_encoding)
   endif()
-endif()
-
-if(EPILOG)
-  list(APPEND XPCE_EXTRA_TESTS xpce:epilog_tabs xpce:mixed_panes
-                               xpce:undefined xpce:tool_panes)
 endif()
 
 # The terminal suite drives a terminal and reads the screen back, so it
