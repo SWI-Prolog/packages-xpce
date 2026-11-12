@@ -55,6 +55,7 @@ void	ws_stop_audio_stream(AudioStream as);
 void	ws_volume_audio_stream(AudioStream as);
 double	ws_queued_audio_stream(AudioStream as);
 void	ws_free_audio_stream(AudioStream as);
+void	sdl_audio_halt(void);
 bool	sdl_audio_event(SDL_Event *event);
 void	sdl_start_media_tick(void);
 typedef bool (*media_source_tick)(void);

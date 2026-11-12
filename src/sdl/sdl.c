@@ -38,6 +38,7 @@
 #include "sdlinput.h"
 #include "sdlevent.h"
 #include "sdlframe.h"
+#include "sdlaudio.h"
 #include <cairo.h>
 #ifdef __APPLE__
 #include "sdlnscolour.h"
@@ -79,6 +80,7 @@ sdl_cleanup(int rval)
 { (void)rval;
 
   stop_fd_watcher_thread();
+  sdl_audio_halt();
   SDL_Quit();
 }
 

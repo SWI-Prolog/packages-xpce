@@ -64,7 +64,8 @@ setup_audio :-
 :- use_module(library(plunit)).
 :- use_module(library(lists)).
 :- use_module(library(aggregate)).
-:- use_module(library(process), [process_create/3, process_which/2]).
+:- use_module(library(process),
+              [process_create/3, process_which/2, process_wait/3]).
 
 setup_headless :-
     set_prolog_flag('SDL_VIDEODRIVER', dummy).
@@ -553,7 +554,43 @@ test(drain, [Playing == @on, Q =:= 0]) :-
     close(Out),
     free(AS).
 
+%   Halting while a producer thread waits for room in a playing stream
+%   must not crash: SDL_Quit() destroys the device stream it waits on.
+%   This crashed reliably under AddressSanitizer.
+
+test(halt_with_waiting_writer, [ condition(current_prolog_flag(threads, true)),
+                                 Status == exit(0)
+                               ]) :-
+    current_prolog_flag(executable, Exe),
+    module_property(test_sound, file(Me)),
+    process_create(Exe,
+                   [ '-q', '-f', none, '--no-packs', '-Dxpce_defaults=none',
+                     '-g', 'test_sound:halt_with_waiting_writer',
+                     '-t', 'halt(1)', Me
+                   ],
+                   [ environment(['SDL_VIDEODRIVER'=dummy]),
+                     process(PID)
+                   ]),
+    process_wait(PID, Status, [timeout(60)]).
+
 :- end_tests(audio_stream).
+
+%!  halt_with_waiting_writer
+%
+%   Run in a child process by the test above.  Start a producer thread
+%   that writes to a playing audio_stream until it is far enough ahead
+%   to wait, and halt.  A slow producer may never get ahead; halting
+%   while it writes must not crash either.
+
+halt_with_waiting_writer :-
+    nb_getval(test_sound_dir, Dir),
+    at_halt(catch(delete_directory_and_contents(Dir), _, true)),
+    pcm_stream(AS),
+    send(AS, play),
+    thread_create(catch(write_stream(AS, 60), _, true), _,
+                  [ detached(true) ]),
+    ignore(poll(( get(AS, queued, Q), Q > 1.5 ))),
+    halt(0).
 
 %!  stream_file(+AS, +File, +Parts) is det.
 %

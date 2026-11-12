@@ -1575,6 +1575,23 @@ ws_free_audio_stream(AudioStream as)
 }
 
 
+/* Called on halt before SDL_Quit(), which destroys the device streams.
+ * A producer thread may be waiting in wait_for_room() without the xpce
+ * lock.  Stopping the streams makes it leave without using the device
+ * stream.
+ */
+
+void
+sdl_audio_halt(void)
+{ pceMTLock();
+  for(astream *a = astreams; a; a = a->next)
+  { a->stopped = true;
+    close_device(a);
+  }
+  pceMTUnlock();
+}
+
+
 /* Milliseconds of audio the device buffers.  When the stream is
  * empty, the device still has to play this.
  */
