@@ -83,9 +83,11 @@ lsp_registry:lsp_server('vale-ls',
 %!  lsp_opened(+Buffer) is semidet.
 %
 %   Called if PceEmacs opens Buffer.  Loads the LSP client and connects
-%   Buffer to the LSP servers for its mode, if there are any.
+%   Buffer to the LSP servers for its mode, if there are any.  The
+%   client needs threads.
 
 lsp_opened(Buffer) :-
+    current_prolog_flag(threads, true),
     get(Buffer, mode, Mode),
     lsp_mode_server(Mode, _),
     !,
