@@ -481,6 +481,12 @@ show_slots(X) :-
 %   Holders are found through slots, chain cells, vector elements, and
 %   hash table values and keys.
 %
+%   Obj may also be a number, to find where a value is stored, e.g.,
+%   `pcerefer(20.1796875)`.  Its holders are the objects that store it
+%   in a slot, a chain, a vector or a hash table, directly or in a
+%   `real` or `number` object.  Values that are computed on request,
+%   such as most font metrics, are not stored and cannot be found.
+%
 %   The holders of a lost object are lost as well.  They can only be
 %   found if their class records its instances.  To hunt for leaks, run
 %   the following before reproducing the leak:
@@ -509,8 +515,7 @@ show_slots(X) :-
 %   the stack keeps them alive just as well.
 
 pcerefer(Obj) :-
-    get(Obj, '_references', Refs),
-    format('~p has ~d references~n', [Obj, Refs]),
+    print_references(Obj),
     recorded_tables(TableChain),
     pce_root_objects(Roots),          % collects the atoms first
     prolog_reference(Obj, ObjRef),    % before anything of ours pins it
@@ -532,21 +537,41 @@ pcerefer(Obj) :-
     send(Roots, free),
     send(Checked, free).
 
-holds(Target, holder(Target, _, _, _, _)).
+holds(Target, holder(Held, _, _, _, _)) :-
+    same_target(Target, Held).
+
+%   Holders of a number are reported holding xpce's version of it, which
+%   is an integer if it is integral.
+
+same_target(Target, Held) :-
+    number(Target),
+    !,
+    number(Held),
+    Target =:= Held.
+same_target(Target, Target).
+
+print_references(Obj) :-
+    object(Obj),
+    !,
+    get(Obj, '_references', Refs),
+    format('~p has ~d references~n', [Obj, Refs]).
+print_references(Value) :-
+    format('Searching the holders of the value ~p~n', [Value]).
 
 %!  pcerefer(+From, +Obj) is det.
 %
 %   Print the objects reachable from From that hold Obj.
 
 pcerefer(From, Obj) :-
-    get(Obj, '_references', Refs),
-    format('~p has ~d references~n', [Obj, Refs]),
+    print_references(Obj),
     new(Targets, hash_table(4, none)),
     send(Targets, append, Obj, @on),
     new(Result, hash_table(16, none)),
     send(From, '_find_holders', Targets, Result, @on),
     collect_holders(Result, [Targets], [], Holders),
-    forall(( member(holder(Obj, Holder, Kind, Where, _), Holders) ),
+    forall(( member(holder(Held, Holder, Kind, Where, _), Holders),
+             same_target(Obj, Held)
+           ),
            print_holder(1, Holder, Kind, Where, '')),
     send(Result, free),
     send(Targets, free).
@@ -638,7 +663,9 @@ result_entry(Result, Base, Offset, Value) :-
     get(Result, member, Key, Value).
 
 print_holders(Target, Holders, Checked, Path, Indent) :-
-    forall(member(holder(Target, Holder, Kind, Where, Plain), Holders),
+    forall(( member(holder(Held, Holder, Kind, Where, Plain), Holders),
+             same_target(Target, Held)
+           ),
            ( holder_state(Holder, Plain, Checked, Path, State),
              print_holder(Indent, Holder, Kind, Where, State),
              (   State == lost

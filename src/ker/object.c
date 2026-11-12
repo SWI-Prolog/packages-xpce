@@ -2738,13 +2738,33 @@ record_holder(find_holders_context *ctx, Any value)
 { appendHashTable(ctx->result, toInt(ctx->count++), value);
 }
 
+/* A target may be a value rather than an object.  An int or a num is
+ * found where it is stored as such, as well as in a `real` or `number`
+ * object that holds it.  These are reported as holding the value.
+ */
+
+static Any
+target_of(Any value)
+{ if ( isObject(value) )
+  { if ( instanceOfObject(value, ClassReal) )
+      return toNum(valReal(value));
+    if ( instanceOfObject(value, ClassNumber) )
+      return toInt(((Number)value)->value);
+  }
+
+  return value;
+}
+
 static void
 find_holder_reference(Any holder, Name kind, Any where, Any value,
 		      void *closure)
 { find_holders_context *ctx = closure;
+  Any target;
 
-  if ( isObject(value) &&
-       getMemberHashTable(ctx->targets, value) &&
+  if ( (isObject(value) || isNum(value)) &&
+       ( getMemberHashTable(ctx->targets, (target=value)) ||
+	 ( (target=target_of(value)) != value &&
+	   getMemberHashTable(ctx->targets, target) ) ) &&
        holder != ctx->targets && holder != ctx->result &&
        holder != (Any)ctx->done &&
        !instanceOfObject(holder, ClassVar) )
@@ -2755,7 +2775,7 @@ find_holder_reference(Any holder, Name kind, Any where, Any value,
     record_holder(ctx, holder);
     record_holder(ctx, kind);
     record_holder(ctx, kind == NAME_key || kind == NAME_name ? NIL : where);
-    record_holder(ctx, value);
+    record_holder(ctx, target);
     record_holder(ctx, plain ? ON : OFF);
   }
 }
