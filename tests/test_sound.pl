@@ -527,6 +527,9 @@ test(write_after_stop, [Stopped-Again == error-true]) :-
 %   ->stop ends a producer thread that writes to the stream: its writes
 %   raise an error.  We wait using sleep/1, as `display->dispatch` holds
 %   the xpce lock while it waits for events, which blocks the producer.
+%   On a loaded machine (asan) the producer may be slower than playback
+%   and never get ahead.  It then has 6 seconds of data to produce and
+%   is still running when we stop, so the wait is best effort.
 
 test(stop_ends_producer, [ condition(current_prolog_flag(threads, true)),
                             true(Status = exception(_))
@@ -534,7 +537,7 @@ test(stop_ends_producer, [ condition(current_prolog_flag(threads, true)),
     pcm_stream(AS),
     send(AS, play),
     thread_create(with_output_to(string(_), write_stream(AS, 6)), Id, []),
-    poll(( get(AS, queued, Q0), Q0 > 1.0 )),
+    ignore(poll(( get(AS, queued, Q0), Q0 > 1.0 ))),
     send(AS, stop),
     thread_join(Id, Status),
     free(AS).
