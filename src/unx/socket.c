@@ -79,6 +79,7 @@ extern int errno;
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
+#include <sys/stat.h>
 #include <signal.h>
 
 #define MAX_UN_ADDRESS_LEN (sizeof(struct sockaddr_un) - sizeof(short))
@@ -462,6 +463,14 @@ bindSocket(Socket s, BoolObj reuse)
     unsigned int len;
     TRY( unix_address_socket(s, &address, &len) );
     rval = bind(SocketHandle(s), (struct sockaddr *) &address, len);
+    /* Only the owner may connect.  Whoever connects to a server socket
+       talks to this process, e.g., the PceEmacs server, which acts on
+       what it is sent.  The mode should not depend on the umask and the
+       directory.  As nobody can connect before listen(), there is no
+       race.
+    */
+    if ( rval == 0 && chmod(address.sun_path, S_IRUSR|S_IWUSR) != 0 )
+      return errorPce(s, NAME_socket, NAME_bind, SockError());
   } else /*if ( s->domain == NAME_inet )*/
 #endif
   { struct sockaddr_in address;
