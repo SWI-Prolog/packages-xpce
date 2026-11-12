@@ -53,7 +53,13 @@
 %           * Atom
 %           Unix-domain socket.  Atom is used as filename
 %           * Integer
-%           Internet socket.  Integer is the port number
+%           Internet socket on the loopback interface, so that only
+%           local processes can connect.  Integer is the port number
+%           * Host:Port
+%           Internet socket bound to the interface of Host.  Use
+%           `'0.0.0.0':Port` to accept connections from anywhere.
+%           Note that anyone who can connect can run any goal: there
+%           is no authentication.
 %
 %   Output send to current_output is send to the client, as are error
 %   messages
@@ -62,13 +68,21 @@
 %           server that provides a Prolog toplevel.
 
 pce_server(Address) :-
-    strip_module(Address, Module, Addr),
+    strip_module(Address, Module, Addr0),
+    socket_address(Addr0, Addr),
     new(S, socket(Addr)),
     send(S, attribute, attribute(module, Module)),
     send(S, attribute, attribute(prompt, '(pce) ')),
     attach_messages(S),
     send(S, listen).
 
+
+socket_address(Port, tuple(localhost, Port)) :-
+    integer(Port),
+    !.
+socket_address(Host:Port, tuple(Host, Port)) :-
+    !.
+socket_address(File, File).
 
 attach_messages(S) :-
     send(S, input_message,

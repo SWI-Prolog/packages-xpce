@@ -35,15 +35,18 @@
 
 :- module(test_socket, [test_socket/0]).
 
-/** <module> Tests for xpce class socket
+/** <module> Tests for xpce class socket and library(pce_server)
 
 The sockets of xpce are servers that act on what they are sent, e.g.,
-the PceEmacs server.  These tests check who can reach them.
+the PceEmacs server and pce_server/1.  These tests check who can reach
+them.
 */
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- use_module(library(pce_server)).
 :- use_module(library(process)).
+:- use_module(library(socket)).
 :- use_module(library(readutil)).
 
 test_socket :-
@@ -65,4 +68,67 @@ test(unix_socket_mode,
     read_line_to_string(Out, Line),
     close(Out),
     sub_atom(Line, 0, 10, _, Mode).
+test(pce_server_localhost,
+     [ condition(current_prolog_flag(threads, true)),
+       setup(( free_port(Port), pce_server(Port) )),
+       cleanup(free_server(Port)),
+       Reply == "yes"
+     ]) :-
+    server_reply(localhost:Port, Reply).
+
+free_port(Port) :-
+    tcp_socket(S),
+    tcp_bind(S, localhost:Port),
+    tcp_close_socket(S).
+
+free_server(Port) :-
+    (   get(@open_sockets, find,
+            and(@arg1?status == listen,
+                @arg1?address?second == Port),
+            S)
+    ->  free(S)
+    ;   true
+    ).
+
+%   The server runs in the xpce thread, so we must talk to it from
+%   another thread when xpce is running in this one.
+
+server_reply(Address, Reply) :-
+    thread_self(Me),
+    thread_create(client(Me, Address), Id),
+    wait_reply(Id),
+    thread_join(Id, Status),
+    Status == true,
+    thread_get_message(Me, server_reply(Reply), [timeout(0)]).
+
+client(Me, Address) :-
+    setup_call_cleanup(
+        tcp_connect(Address, Stream, []),
+        ( format(Stream, 'true.~n', []),
+          flush_output(Stream),
+          read_reply(Stream, Reply)
+        ),
+        close(Stream)),
+    thread_send_message(Me, server_reply(Reply)).
+
+read_reply(Stream, Reply) :-
+    read_line_to_string(Stream, Line),
+    (   Line == end_of_file
+    ->  Reply = Line
+    ;   sub_string(Line, B, _, _, "yes")
+    ->  sub_string(Line, B, 3, _, Reply)
+    ;   read_reply(Stream, Reply)
+    ).
+
+wait_reply(Id) :-
+    between(1, 500, _),
+    (   catch(thread_property(Id, status(running)), _, fail)
+    ->  ignore(send(@display, dispatch)),   % our own event loop
+        sleep(0.01),
+        fail
+    ;   true
+    ),
+    !.
+wait_reply(_).
+
 :- end_tests(pce_socket).
