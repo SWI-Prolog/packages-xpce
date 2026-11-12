@@ -682,11 +682,12 @@ print_holders(Target, Holders, Checked, Path, Indent) :-
 %   object, as the toplevel keeps the goals and answers it read.  The
 %   rest sit on a stack and go away with the next atom garbage
 %   collection.  This is read before we name the object ourselves.
+%   A named object (@name) is no blob: Prolog refers to it by its name.
 
 prolog_reference(Obj, Registered) :-
-    (   \+ object(Obj)
-    ->  Registered = none
-    ;   '$atom_references'(Obj, Registered)
+    (   blob(Obj, pce)
+    ->  '$atom_references'(Obj, Registered)
+    ;   Registered = none
     ).
 
 print_prolog_reference(none, _) :- !.

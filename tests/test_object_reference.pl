@@ -50,6 +50,7 @@ Run with:
 
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
+:- use_module(library(pce_debug), [pcerefer/1]).
 
 test_object_reference :-
     run_tests([ reference_representation,
@@ -59,7 +60,8 @@ test_object_reference :-
                 reference_free,
                 reference_as_xref_source,
                 weak_reference,
-                free_during_method
+                free_during_method,
+                pcerefer
               ]).
 
 %!  reclaim is det.
@@ -536,3 +538,35 @@ test(default_table_is_referring) :-
     assertion(get(T, slot, refer, both)).
 
 :- end_tests(weak_reference).
+
+
+%  pcerefer/1 prints the holders of an object, or of a stored value.
+
+:- begin_tests(pcerefer).
+
+refer_output(Target, Output) :-
+    with_output_to(string(Output), pcerefer(Target)).
+
+test(named_object,
+     [ setup(( new(@tor_refer_point, point(1,2)),
+               new(@tor_refer_chain, chain(@tor_refer_point)) )),
+       cleanup(( free(@tor_refer_chain), free(@tor_refer_point) ))
+     ]) :-
+    refer_output(@tor_refer_point, Output),
+    assertion(sub_string(Output, _, _, _, "@tor_refer_chain")).
+
+test(stored_float,
+     [ setup(new(@tor_refer_floats, chain(20.1796875))),
+       cleanup(free(@tor_refer_floats))
+     ]) :-
+    refer_output(20.1796875, Output),
+    assertion(sub_string(Output, _, _, _, "@tor_refer_floats")).
+
+test(float_in_real,
+     [ setup(new(@tor_refer_reals, chain(real(20.1796875)))),
+       cleanup(free(@tor_refer_reals))
+     ]) :-
+    refer_output(20.1796875, Output),
+    assertion(sub_string(Output, _, _, _, "@tor_refer_reals")).
+
+:- end_tests(pcerefer).
