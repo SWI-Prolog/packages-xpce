@@ -3198,6 +3198,14 @@ put_object(term_t t, PceObject obj)
   switch( pcetype = pceToC(obj, &value) )
   { case PCE_REFERENCE:
       return putBlobRef(t, obj);
+    case PCE_HOSTDATA:
+      if ( pceInstanceOf(obj, ClassProlog) )
+	return PutTerm(t, getTermHandle(obj));	/* TBD: Use saved handle */
+      /* Other host_data subclasses (e.g. host method handles) are
+	 passed as object references, as in unifyObject() */
+      if ( pceToCReference(obj, &value) == PCE_REFERENCE )
+	return putBlobRef(t, obj);
+      /* fall through */
     case PCE_ASSOC:
     { PceITFSymbol symbol = value.itf_symbol;
 
@@ -3217,8 +3225,6 @@ put_object(term_t t, PceObject obj)
 
       break;
     }
-    case PCE_HOSTDATA:
-      return PutTerm(t, getTermHandle(obj));	/* TBD: Use saved handle */
     case PCE_INTEGER:
       return PL_put_int64(t, value.integer);
     case PCE_NAME:

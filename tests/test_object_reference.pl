@@ -253,6 +253,29 @@ test(prolog_named_answer_as_term,
     get(TA, named, size(W, H)),
     assertion(W-H == 5-6).
 
+%  The message of a method implemented in Prolog is a host_method.
+%  Passed to Prolog as an argument it is an object reference, not a
+%  Prolog term (it used to be decoded as a record and crash).
+
+test(host_method_as_argument,
+     [ setup(( new(TA, tor_answer),
+               new(Got, chain) )),
+       cleanup(free(TA))
+     ]) :-
+    get(class(tor_answer), get_method, fresh, Method),
+    send(Method, for_slot_reference,
+         if(@arg3 == message,
+            message(@prolog, host_method_argument, Got, @arg4)),
+         @off),
+    assertion(get(Got, size, 1)),
+    get(Got, head, ClassName),
+    assertion(ClassName == host_method).
+
+host_method_argument(Got, HostMethod) :-
+    assertion(is_object_reference(HostMethod)),
+    get(HostMethod, class_name, ClassName),
+    send(Got, append, ClassName).
+
 :- end_tests(reference_conversion).
 
 
