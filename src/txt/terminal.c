@@ -2791,6 +2791,12 @@ clearSelectionTerminalImage(TerminalImage ti)
  * comes with "\r\n" from Windows and "\n" elsewhere; sending "\r\n"
  * made clients that take both as a line end -- libedit's paste
  * handler, Claude Code -- insert an empty line after every line.
+ *
+ * Other control characters are dropped, as xterm does.  Pasted text is
+ * often copied from a web page or a file someone else wrote, and an
+ * ESC in it could end the bracketed paste ("\e[201~") after which the
+ * client runs the rest as keys: a newline then enters a command the
+ * user never saw.
  */
 
 static bool
@@ -2803,9 +2809,13 @@ rlc_send_pasted(RlcData b, const char *u, size_t ulen)
   if ( !text )
     return false;
   for(size_t i=0; i<ulen; i++)
-  { if ( u[i] == '\r' && i+1 < ulen && u[i+1] == '\n' )
+  { unsigned char c = (unsigned char)u[i];
+
+    if ( c == '\r' && i+1 < ulen && u[i+1] == '\n' )
       continue;				/* \r\n: the \n below sends \r */
-    text[tlen++] = (u[i] == '\n' ? '\r' : u[i]);
+    if ( (c < ' ' && c != '\t' && c != '\n' && c != '\r') || c == 0x7f )
+      continue;				/* ESC, ^C, ...: see above */
+    text[tlen++] = (c == '\n' ? '\r' : c);
   }
 
   rlc_input_to_screen(b);

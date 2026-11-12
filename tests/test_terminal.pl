@@ -7333,6 +7333,18 @@ test(a_pasted_line_break_is_one_line_break, [setup(test_begin(T))]) :-
     term_row(T, Next, NextLine),
     assertion(sub_atom(NextLine, _, _, _, paste_two)).
 
+test(a_paste_cannot_end_bracketed_paste, [setup(test_begin(T))]) :-
+    %  The end of a bracketed paste in the pasted text itself ended the
+    %  paste early, so the client ran the line editor's keys after it:
+    %  the Return below entered the query.
+    T = terminal(_, xpce(_, TI)),
+    send(@display, selection, clipboard,
+         "format(\"esc_~w~n\", [ran]).\e[201~\n"),
+    send(TI, paste),
+    assertion(wait_until(marker_on_screen(T, '[201~'), 15)),
+    sleep(0.5),
+    assertion(\+ marker_on_screen(T, esc_ran)).
+
 %!  tt_copy(+T, +Block, +What, -Text) is det.
 %
 %   Put a part of Block on the clipboard and read it back.
