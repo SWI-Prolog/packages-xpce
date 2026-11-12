@@ -85,14 +85,35 @@ test_video(Unit) :-
     run_tests([Unit]).
 
 %   Wine announces a Media Foundation H.264 encoder, but opening it
-%   raises "Not implemented".  All units need clips we write.
+%   raises "Not implemented".  In a restricted environment, such as a
+%   sandbox without access to the system's media services, the encoders
+%   are listed but cannot be opened either.  All units need clips we
+%   write, so we try to write one.
+
+:- dynamic video_support_cache/1.
 
 video_support :-
+    (   video_support_cache(Bool)
+    ->  true
+    ;   (   can_write_video
+        ->  Bool = true
+        ;   Bool = false
+        ),
+        asserta(video_support_cache(Bool))
+    ),
+    Bool == true.
+
+can_write_video :-
     get(@display, video_encoders, Chain),
     \+ send(Chain, empty),
     \+ ( current_prolog_flag(wine_version, _),
          get(@display, video_backend, media_foundation)
-       ).
+       ),
+    tmp_file(video, Base),
+    file_name_extension(Base, mp4, File),
+    call_cleanup(pce_catch_error(_, write_clip(File, size(32, 32),
+                                               [frames(1)])),
+                 catch(delete_file(File), _, true)).
 
 %!  clip(-File) is det.
 %
