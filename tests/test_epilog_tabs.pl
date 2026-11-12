@@ -792,6 +792,13 @@ test(a_tab_can_be_told_not_to_follow, Tabs == ['Prolog'-1]) :-
 %       command its tab says where it is; while it runs one, what it
 %       runs.
 
+with_posix_shell(Goal) :-
+    getenv('SHELL', OriginalShell),
+    setup_call_cleanup(
+        setenv('SHELL', '/bin/sh'),
+        call(Goal),
+        setenv('SHELL', OriginalShell)).
+
 shell_tab(Dir, F, W, PT) :-
     epilog([profile(shell), cwd(Dir), object(F)]),
     get(F, current_pane, W),
@@ -858,12 +865,14 @@ tab_label_says_dir(W, Dir) :-
 test(a_program_labels_its_tab_while_it_runs,
      [ condition(process_names)
      ]) :-
-    shell_tab(/, F, W, PT),
-    send(PT, send, 'sleep 30\n'),
-    tab_says(F, sleep),
-    tab_icon(W, @epilog_process_icon),
-    send(PT, send, '\x3\'),
-    tab_says(F, /).
+    with_posix_shell((
+        shell_tab(/, F, W, PT),
+        send(PT, send, 'sleep 30\n'),
+        tab_says(F, sleep),
+        tab_icon(W, @epilog_process_icon),
+        send(PT, send, '\x3\'),
+        tab_says(F, /)
+    )).
 
 test(the_title_of_a_program_goes_with_it,
      [ condition(process_groups)
@@ -878,24 +887,28 @@ test(a_title_the_shell_asks_for_is_not_shown,
      [ condition(process_groups),
        Tabs == [(/)-1]
      ]) :-
-    shell_tab(/, F, W, PT),
-    send(PT, send, 'printf "\\033]0;mine\\007"\n'),
-    wait_until(get(W, window_label, mine)),
-    tabs(F, Tabs).
+    with_posix_shell((
+        shell_tab(/, F, W, PT),
+        send(PT, send, 'printf "\\033]0;mine\\007"\n'),
+        wait_until(get(W, window_label, mine)),
+        tabs(F, Tabs)
+    )).
 
 test(a_terminal_tells_the_program_it_runs,
      [ condition(process_names),
        cleanup(send(PT, send, '\x3\')),
        Command == sleep
      ]) :-
-    epilog([profile(shell), object(F)]),
-    get(F, current_pane, W),
-    get(W, terminal, PT),
-    wait_until(get(PT, foreground_process, _)),
-    get(PT, foreground_process, Shell),
-    send(PT, send, 'sleep 30\n'),
-    wait_until(( get(PT, foreground_process, Group), Group \== Shell )),
-    get(PT, foreground_command, Command).
+    with_posix_shell((
+        epilog([profile(shell), object(F)]),
+        get(F, current_pane, W),
+        get(W, terminal, PT),
+        wait_until(get(PT, foreground_process, _)),
+        get(PT, foreground_process, Shell),
+        send(PT, send, 'sleep 30\n'),
+        wait_until(( get(PT, foreground_process, Group), Group \== Shell )),
+        get(PT, foreground_command, Command)
+    )).
 
 :- end_tests(epilog_label).
 
