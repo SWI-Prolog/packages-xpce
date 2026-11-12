@@ -11862,8 +11862,10 @@ rlc_putansi(RlcData b, int chr)
       { if ( !b->argstat )
 	{ b->argv[b->argc] = (chr - '0');
 	  b->argstat = 1;		/* positive */
-	} else
+	} else if ( b->argv[b->argc] <= (INT_MAX - 9)/10 )
 	{ b->argv[b->argc] = b->argv[b->argc] * 10 + (chr - '0');
+	} else				/* saturate rather than overflow */
+	{ b->argv[b->argc] = INT_MAX;
 	}
 
 	break;
@@ -12063,10 +12065,13 @@ rlc_putansi(RlcData b, int chr)
 	    break;
 	  }
 	case '@':		/* \e[<n>@: insert <n> spaces */
-	  rlc_need_arg(b, 1, 1);
-	  for(int i=0; i<b->argv[0]; i++)
+	{ rlc_need_arg(b, 1, 1);
+	  int n = Bounds(b->argv[0], 1, b->width); /* more is the line */
+
+	  for(int i=0; i<n; i++)
 	    rlc_insert(b, ' ');
 	  break;
+	}
 	case 'P':		/* CSI Ps P — Delete Character(s) (DCH) */
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_delete_chars(b, b->argv[0]));
