@@ -75,9 +75,12 @@ prolog:show_profile_hook(_Options) :-
     autoload_call(pce_show_profile).
 
 %   The textual report of profile/2 names a method as the profiler
-%   does, e.g., `frame <-keep_alive`.
+%   does, e.g., `frame <-keep_alive`.  Unless xpce is loaded, no node is
+%   a method, and calling object/1 would load it.  The flag `xpce` does
+%   not tell: it is also `true` if xpce is merely available.
 
 prolog:profile_node_label(Method, Label) :-
+    current_predicate(pce_principal:object/1),
     object(Method),
     get(Method, print_name, Name),
     get(Name, value, Label).
