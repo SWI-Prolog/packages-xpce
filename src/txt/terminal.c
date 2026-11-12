@@ -2786,20 +2786,37 @@ clearSelectionTerminalImage(TerminalImage ti)
  * when the client asked for them, so that its line editor inserts the
  * text rather than acting on the keys in it -- a TAB that completes, a
  * newline that enters the line.
+ *
+ * A line break is sent as the Return key, CR, as xterm does.  The text
+ * comes with "\r\n" from Windows and "\n" elsewhere; sending "\r\n"
+ * made clients that take both as a line end -- libedit's paste
+ * handler, Claude Code -- insert an empty line after every line.
  */
 
 static bool
 rlc_send_pasted(RlcData b, const char *u, size_t ulen)
 { const char *bsm_start = S_ESC"[200~";
   const char *bsm_end = S_ESC"[201~";
+  char *text = rlc_malloc(ulen ? ulen : 1);
+  size_t tlen = 0;
+
+  if ( !text )
+    return false;
+  for(size_t i=0; i<ulen; i++)
+  { if ( u[i] == '\r' && i+1 < ulen && u[i+1] == '\n' )
+      continue;				/* \r\n: the \n below sends \r */
+    text[tlen++] = (u[i] == '\n' ? '\r' : u[i]);
+  }
 
   rlc_input_to_screen(b);
   if ( b->bracketed_paste_mode )
     rlc_send(b, bsm_start, strlen(bsm_start));
-  if ( rlc_send(b, u, ulen) != ulen )
+  if ( rlc_send(b, text, tlen) != (ssize_t)tlen )
   { Cprintf("Failed to send %s\n", u);
+    rlc_free(text);
     return false;
   }
+  rlc_free(text);
   if ( b->bracketed_paste_mode )
     rlc_send(b, bsm_end, strlen(bsm_end));
 
@@ -3741,8 +3758,8 @@ getEndTerminalBlock(TerminalBlock tb)
 
 
 /* The text of the block.  Lines are separated by a single newline, as
- * <-contents does; ->copy hands the clipboard the \r\n form that
- * <-selected uses, by going through the selection.
+ * <-contents does; ->copy hands the clipboard the form that <-selected
+ * uses (see CLIPBOARD_NEWLINE), by going through the selection.
  */
 
 static uchar_t *
@@ -5588,11 +5605,17 @@ rlc_select_all(RlcData b)
  *
  * The separator is the caller's because the clipboard and the search
  * index space want different ones.  Text handed to another program
- * carries "\r\n"; the index space of <-find and friends is defined
- * with a single "\n", as a two-character separator would make the
- * distance between the start and the end of a match depend on how many
- * line breaks it spans.
+ * carries the platform's line end (CLIPBOARD_NEWLINE); the index space
+ * of <-find and friends is defined with a single "\n", as a
+ * two-character separator would make the distance between the start
+ * and the end of a match depend on how many line breaks it spans.
  */
+
+#ifdef __WINDOWS__
+#define CLIPBOARD_NEWLINE "\r\n"
+#else
+#define CLIPBOARD_NEWLINE "\n"
+#endif
 
 static uchar_t *
 rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec,
@@ -5676,7 +5699,8 @@ rlc_selection(RlcData b)
 { if ( rlc_has_selection(b) )
     return rlc_read_from_window(b,
 				b->sel_start_line, b->sel_start_char,
-				b->sel_end_line,   b->sel_end_char, "\r\n", 0);
+				b->sel_end_line,   b->sel_end_char,
+				CLIPBOARD_NEWLINE, 0);
   return NULL;
 }
 

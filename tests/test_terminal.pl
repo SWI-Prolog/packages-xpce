@@ -7315,6 +7315,24 @@ test(a_copy_of_a_command_is_what_was_typed, [setup(test_begin(T))]) :-
     assertion(sub_atom(Copied, 0, _, _, 'forall(between(1,2,QC),')),
     assertion(sub_atom(Copied, _, _, 0, 'format("cp-~w~n", [QC])).')).
 
+test(a_pasted_line_break_is_one_line_break, [setup(test_begin(T))]) :-
+    %  The clipboard holds "\n" (or "\r\n" on Windows) between lines.
+    %  Sent as is, libedit, which takes CR as a pasted newline, inserted
+    %  an empty line after every line.
+    T = terminal(_, xpce(_, TI)),
+    send(@display, selection, clipboard, "paste_one,\r\npaste_two"),
+    send(TI, paste),
+    assertion(wait_until(marker_on_screen(T, paste_two), 15)),
+    term_rows(T, Rows),
+    Last is Rows-1,
+    once(( between(0, Last, Row),
+           term_row(T, Row, Line),
+           sub_atom(Line, _, _, _, paste_one)
+         )),
+    Next is Row+1,
+    term_row(T, Next, NextLine),
+    assertion(sub_atom(NextLine, _, _, _, paste_two)).
+
 %!  tt_copy(+T, +Block, +What, -Text) is det.
 %
 %   Put a part of Block on the clipboard and read it back.

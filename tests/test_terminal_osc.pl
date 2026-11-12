@@ -1004,6 +1004,16 @@ test(select_and_copy, [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     normalize_space(atom(Flat), Sel),
     assertion(Flat == 'out1-1 out1-2 out1-3').
 
+test(copy_uses_the_platform_newline,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    send(TI, insert, 'one\r\ntwo'),
+    send(TI, select_all),
+    get(TI, selected, S), text(S, Sel),
+    (   current_prolog_flag(windows, true)
+    ->  assertion(Sel == 'one\r\ntwo')
+    ;   assertion(Sel == 'one\ntwo')
+    ).
+
 test(marks_survive_a_rewrap,
      [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     %  A resize breaks the lines up differently, so a block anchored to
