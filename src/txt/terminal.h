@@ -169,6 +169,10 @@ typedef struct rlc_data
   int		caret_y;		/* its line */
   int		window_start;		/* start line of the window */
   int		window_size;		/* #lines on the window */
+  bool		detached;		/* the user moved the view off the */
+  int		screen_start;		/* client's screen, which starts here */
+  int		view_start;		/* the view, while output is processed */
+  bool		in_output;		/* processing client output */
   int		scroll_top;		/* DECSTBM: first row of the */
   int		scroll_bottom;		/* scrolling region and its last */
   RlcTextLine	lines;			/* the actual lines */

@@ -840,6 +840,66 @@ test(switching_scroll_past_end_off_returns_to_the_end,
     send(TI, scroll_past_end, @off),
     assertion(screen_is(TI, AtEnd)).
 
+%       A view the user scrolled back stays where it is while output
+%       arrives, unless ->scroll_on_output is @on.  Output still goes
+%       to the screen of the client: cursor motion and erasing that
+%       arrive while the view is scrolled back must not touch the scroll
+%       back.
+
+scrolled_back(TI, View) :-
+    get(TI, rows, Rows),
+    session(TI, Rows),                  % four screens of output
+    send(TI, scroll_vertical, goto, file, 0),
+    screen(TI, View).
+
+test(output_leaves_a_scrolled_back_view_alone,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    scrolled_back(TI, View),
+    send(TI, insert, 'one\r\ntwo\r\nthree\r\n'),
+    assertion(screen_is(TI, View)).
+
+test(output_scrolls_a_scrolled_back_view_if_asked,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    send(TI, scroll_on_output, @on),
+    scrolled_back(TI, _),
+    send(TI, insert, 'one\r\ntwo\r\nthree'),
+    get(TI, rows, Rows),
+    Bottom is Rows-1,
+    assertion(row_text(TI, Bottom, three)).
+
+test(scrolling_back_to_the_end_follows_output_again,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    scrolled_back(TI, _),
+    send(TI, scroll_vertical, goto, file, 1000),
+    send(TI, insert, 'one\r\ntwo\r\nthree'),
+    get(TI, rows, Rows),
+    Bottom is Rows-1,
+    assertion(row_text(TI, Bottom, three)).
+
+test(cursor_motion_goes_to_the_screen,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    scrolled_back(TI, View),
+    send(TI, insert, '\e[Htop'),        % home, on the screen
+    assertion(screen_is(TI, View)),
+    send(TI, scroll_vertical, goto, file, 1000),
+    row_text(TI, 0, Top),
+    assertion(sub_atom(Top, 0, _, _, top)).
+
+test(erasing_the_display_keeps_the_scroll_back,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    scrolled_back(TI, View),
+    send(TI, insert, '\e[H\e[2J'),
+    assertion(screen_is(TI, View)).
+
+test(input_brings_the_view_to_the_screen,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    get(TI, rows, Rows),
+    session(TI, Rows),
+    screen(TI, AtEnd),
+    send(TI, scroll_vertical, goto, file, 0),
+    ignore(send(TI, send, x)),          % no client: says so and fails
+    assertion(screen_is(TI, AtEnd)).
+
 test(scrolling_to_the_end_stops_at_the_end_with_a_fold,
      [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     fill_window(TI, Blocks),

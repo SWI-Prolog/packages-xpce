@@ -444,6 +444,11 @@ static void	rlc_sweep_blocks(RlcData b);
 static TerminalBlock rlc_last_block(RlcData b);
 static void	rlc_restamp_folds(RlcData b);
 static void	rlc_keep_end_in_view(RlcData b, bool at_end);
+static void	rlc_set_view(RlcData b, int start);
+static void	rlc_attach_view(RlcData b);
+static void	rlc_input_to_screen(RlcData b);
+static void	rlc_begin_output(RlcData b);
+static bool	rlc_end_output(RlcData b);
 static int	rlc_last_window_start(RlcData b);
 static int	rlc_clamp_window_start(RlcData b, int here);
 static void	rlc_set_height(RlcData b, int h);
@@ -707,8 +712,8 @@ scrollVerticalTerminalImage(TerminalImage ti,
     if ( rlc_scroll_past_end(b) )	/* as rlc_scroll_bubble() */
       lines += b->window_size-1;
     start = lines*valInt(amount)/1000;
-    b->window_start = rlc_clamp_window_start(b,
-			  rlc_view_add(b, b->first, start));
+    rlc_set_view(b, rlc_clamp_window_start(b,
+		      rlc_view_add(b, b->first, start)));
     b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
     rlc_request_redraw(b);
   } else if ( unit == NAME_line )
@@ -1645,6 +1650,7 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
 
   if ( seq )
   { dropInputSelectionTerminalImage(ti);
+    rlc_input_to_screen(ti->data);
     rlc_send(ti->data, seq, seqlen ? seqlen : strlen(seq));
   } else
   { /* Typing over a selection replaces it, as it would in any editor.
@@ -2787,6 +2793,7 @@ rlc_send_pasted(RlcData b, const char *u, size_t ulen)
 { const char *bsm_start = S_ESC"[200~";
   const char *bsm_end = S_ESC"[201~";
 
+  rlc_input_to_screen(b);
   if ( b->bracketed_paste_mode )
     rlc_send(b, bsm_start, strlen(bsm_start));
   if ( rlc_send(b, u, ulen) != ulen )
@@ -2850,6 +2857,7 @@ interruptTerminalImage(TerminalImage ti)
   if ( rlc_client_owns_terminal(b) && (intr=rlc_interrupt_char(b)) >= 0 )
   { char chr = intr;
 
+    rlc_input_to_screen(b);
     return rlc_send(b, &chr, 1) == 1;
   }
 
@@ -3217,7 +3225,7 @@ scrollPastEndTerminalImage(TerminalImage ti, BoolObj val)
 
     assign(ti, scroll_past_end, val);
     if ( b && val == OFF )
-    { b->window_start = rlc_clamp_window_start(b, b->window_start);
+    { rlc_set_view(b, rlc_clamp_window_start(b, b->window_start));
       b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
       rlc_request_redraw(b);
     }
@@ -3448,6 +3456,7 @@ static status
 insertTerminalImage(TerminalImage ti, CharArray ca)
 { PceString s = &ca->data;
 
+  rlc_begin_output(ti->data);
   if ( s->s_iswide )
   { for(size_t i=0; i<s->s_size; i++)
       rlc_putansi(ti->data, s->s_textW[i]);
@@ -3465,6 +3474,7 @@ sendTerminalImage(TerminalImage ti, CharArray ca)
 { size_t ulen;
   const char *u8 = stringToUTF8(&ca->data, &ulen);
 
+  rlc_input_to_screen(ti->data);
   return rlc_send(ti->data, u8, ulen) == ulen;
 }
 
@@ -4058,6 +4068,10 @@ removeTerminalBlock(TerminalBlock tb)
 
   int ws = rlc_position_after_removal(b, from, to, n, b->window_start);
   b->window_start = ws == ANCHOR_NONE ? from : ws;
+  if ( b->detached )
+  { int ss = rlc_position_after_removal(b, from, to, n, b->screen_start);
+    b->screen_start = ss == ANCHOR_NONE ? from : ss;
+  }
 
   blocks = ti->blocks;
   for_cell(cl, blocks)
@@ -4370,6 +4384,8 @@ static vardecl var_terminal_image[] =
      NAME_memory, "How many lines are saved for scroll back"),
   SV(NAME_scrollPastEnd, "bool", IV_GET|IV_STORE, scrollPastEndTerminalImage,
      NAME_scroll, "Scrolling may take the last line up to the top"),
+  IV(NAME_scrollOnOutput, "bool", IV_BOTH,
+     NAME_scroll, "Output scrolls a view the user scrolled back"),
   IV(NAME_syntax, "syntax_table", IV_BOTH,
      NAME_language, "Description of the used syntax"),
   IV(NAME_focusFunction, "name*", IV_GET,
@@ -4617,6 +4633,8 @@ static classvardecl rc_terminal_image[] =
      "How many lines are saved for scroll back"),
   RC(NAME_scrollPastEnd, "bool", "@off",
      "Scrolling may take the last line up to the top of the window"),
+  RC(NAME_scrollOnOutput, "bool", "@off",
+     "Output scrolls a view the user scrolled back to the end"),
   RC(NAME_syntax, "[syntax_table]", "default",
      "Syntax definition"),
   RC(NAME_font, "mono_font", "tt",
@@ -4791,6 +4809,7 @@ typed_char(RlcData b, int chr)
   }
 
   DEBUG(NAME_term, Cprintf("Send %d to client\n", chr));
+  rlc_input_to_screen(b);
   char buf[6];
   char *e = utf8_put_char(buf, chr);
   size_t count = e-buf;
@@ -6582,8 +6601,8 @@ rlc_scroll_lines(RlcData b, int lines)
 { if ( lines == 0 )
     return;
 
-  b->window_start = rlc_clamp_window_start(b,
-			rlc_view_add(b, b->window_start, lines));
+  rlc_set_view(b, rlc_clamp_window_start(b,
+		    rlc_view_add(b, b->window_start, lines)));
 
   b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
   rlc_request_redraw(b);
@@ -7676,10 +7695,7 @@ rlc_request_redraw(RlcData b)
 
 static bool
 rlc_normalise(RlcData b)
-{ if ( rlc_isearching(b) )		/* the user is driving the view */
-    return false;
-
-  if ( rlc_view_count(b, b->window_start, b->caret_y) >= b->window_size )
+{ if ( rlc_view_count(b, b->window_start, b->caret_y) >= b->window_size )
   { b->window_start = rlc_view_add(b, b->caret_y, -(b->window_size-1));
     b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
     rlc_request_redraw(b);
@@ -8264,6 +8280,7 @@ rlc_resize(RlcData b, int w, int h)
 
   if ( b->width == w && b->window_size == h )
     return;				/* no real change */
+  rlc_attach_view(b);			/* the client redraws its screen */
 
   DEBUG(NAME_term,
 	Cprintf("Resizing %dx%d --> %dx%d\n",
@@ -8541,6 +8558,8 @@ rlc_open_line(RlcData b)
   { rlc_expire_blocks(b, b->first);	/* the marks on it say nothing now */
     rlc_free_line(b, b->first);
     b->first = NextLine(b, b->first);
+    if ( b->in_output && b->detached && b->view_start == i )
+      b->view_start = b->first;		/* the view loses its top line */
   }
 
   b->lines[i].text       = rlc_malloc(LINE_CELL_CAPACITY(b)*sizeof(text_char));
@@ -8835,9 +8854,13 @@ rlc_restamp_folds(RlcData b)
 
   b->folds = folds;
 
-  /* The window must start on a line it can show. */
+  /* The window must start on a line it can show, and so must the
+     screen the view was scrolled away from. */
   while ( rlc_folded(b, b->window_start) && b->window_start != b->first )
     b->window_start = PrevLine(b, b->window_start);
+  while ( b->detached &&
+	  rlc_folded(b, b->screen_start) && b->screen_start != b->first )
+    b->screen_start = PrevLine(b, b->screen_start);
 }
 
 
@@ -8962,6 +8985,7 @@ rlc_set_height(RlcData b, int h)
     h = b->window_size+1;
   if ( h == b->height )
     return;
+  rlc_attach_view(b);
 
   int keep = count < h ? count : h;
   int drop = count - keep;
@@ -9047,6 +9071,139 @@ static void
 rlc_keep_end_in_view(RlcData b, bool at_end)
 { if ( at_end )
     b->window_start = rlc_last_window_start(b);
+}
+
+
+		 /*******************************
+		 *     THE VIEW AND THE SCREEN	*
+		 *******************************/
+
+/* The window shows the screen of the client -- the rows it addresses
+ * with cursor motion -- unless the user scrolled the view away from it.
+ * Then b->detached is true and b->screen_start is where the screen
+ * starts.  Output always goes to the screen: while it is processed,
+ * b->window_start is the screen and b->view_start holds the view, which
+ * rlc_end_output() puts back.  Without this, a client that positions
+ * the cursor wrote into the scroll back the user was reading, and
+ * erasing the display dropped the lines below the view.
+ *
+ * ->scroll_on_output says whether output brings a view the user
+ * scrolled back to the screen.  Scrolling back to the bottom or sending
+ * input to the client does so anyway.
+ */
+
+/* Rows from the start of the buffer to `line', to compare positions */
+
+static int
+rlc_view_pos(RlcData b, int line)
+{ return rlc_view_count(b, b->first, line);
+}
+
+
+static void
+rlc_attach_view(RlcData b)
+{ if ( b->detached )
+  { b->detached = false;
+    b->window_start = b->screen_start;
+    b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+  }
+}
+
+
+/** The user moves the view to `start'.  Moving it onto the screen, or
+ * as far down as it goes, attaches it to the screen again.
+ */
+
+static void
+rlc_set_view(RlcData b, int start)
+{ if ( !b->detached )
+    b->screen_start = b->window_start;
+  b->window_start = start;
+  b->detached = true;
+
+  int view   = rlc_view_pos(b, start);
+  int screen = rlc_view_pos(b, b->screen_start);
+  if ( view == screen ||
+       (view < screen && start == rlc_max_window_start(b)) )
+    rlc_attach_view(b);
+}
+
+
+/** Input for the client brings a view the user scrolled back to the
+ * screen, where the client echoes it.  A view past the end of the
+ * screen (->scroll_past_end) already shows where the input goes.
+ */
+
+static void
+rlc_input_to_screen(RlcData b)
+{ if ( b->detached && !b->in_output &&
+       rlc_view_pos(b, b->window_start) < rlc_view_pos(b, b->screen_start) )
+  { rlc_attach_view(b);
+    rlc_request_redraw(b);
+    rlc_update_scrollbar(b);
+  }
+}
+
+
+static void
+rlc_begin_output(RlcData b)
+{ if ( b->in_output )
+    return;
+  b->in_output = true;
+
+  if ( rlc_isearching(b) && !b->detached )
+  { b->screen_start = b->window_start;	/* the user is driving the view */
+    b->detached = true;
+  }
+  if ( b->detached )
+  { TerminalImage ti = b->object;
+
+    if ( ti->scroll_on_output == ON && !rlc_isearching(b) )
+    { rlc_attach_view(b);
+    } else
+    { b->view_start = b->window_start;
+      b->window_start = b->screen_start;
+    }
+  }
+}
+
+
+/** Put back the view the user was looking at.  It goes if the output
+ * took it away: a full screen application started, or its lines
+ * dropped out of the scroll back.  A view past the end of the screen
+ * stays as long as it shows the caret.  Returns true if the window
+ * must be painted again.
+ */
+
+static bool
+rlc_end_output(RlcData b)
+{ if ( !b->in_output )
+    return false;
+  b->in_output = false;
+  if ( !b->detached )
+    return false;
+
+  int view = b->view_start;
+
+  b->screen_start = b->window_start;
+  if ( rlc_alt_screen(b) || !rlc_between(b, b->first, b->last, view) )
+  { b->detached = false;
+  } else
+  { int vpos = rlc_view_pos(b, view);
+    int spos = rlc_view_pos(b, b->screen_start);
+
+    if ( vpos < spos )
+    { b->window_start = rlc_clamp_window_start(b, view);
+      b->detached = (b->window_start != b->screen_start);
+    } else if ( vpos > spos &&
+	      rlc_view_count(b, view, b->caret_y) < b->window_size )
+      b->window_start = view;
+    else
+      b->detached = false;
+  }
+
+  b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+  return true;
 }
 
 
@@ -9386,7 +9543,7 @@ rlc_caret_down(RlcData b, int arg)
   { if ( b->saved.lines )
     { rlc_shift_up(b, row-(b->window_size-1));
       b->caret_y = rlc_add_lines(b, b->window_start, b->window_size-1);
-    } else if ( !rlc_isearching(b) )	/* the user is driving the view */
+    } else				/* the screen: see rlc_begin_output() */
     { b->window_start = rlc_view_add(b, b->caret_y, -(b->window_size-1));
       b->changed |= CHG_CHANGED|CHG_CLEAR;
     }
@@ -9730,6 +9887,7 @@ rlc_restore_cursor(RlcData b)
 static void
 rlc_restart_buffer(RlcData b)
 { b->window_start = b->first = b->last = 0;
+  b->detached = false;
 
   rlc_drop_blocks(b);
   for(int i=0; i<b->height; i++)
@@ -11979,8 +12137,12 @@ rlc_putansi(RlcData b, int chr)
 static void
 rlc_update(rlc_console c)
 { RlcData b = rlc_get_data(c);
+  bool scrolled = rlc_normalise(b);
 
-  if ( !rlc_normalise(b) )
+  if ( rlc_end_output(b) )
+  { rlc_request_redraw(b);		/* relative to the view */
+    rlc_update_scrollbar(b);
+  } else if ( !scrolled )
     rlc_request_redraw(b);
 }
 
@@ -12003,6 +12165,7 @@ processClientOutputTerminalImage(TerminalImage ti,
     const char *i = buf;
     const char *end = &buf[count];
     if ( debug ) Cprintf("Received (%d bytes): ", count);
+    rlc_begin_output(b);
     while( i < end )
     { char c = *i;
       int sz = UTF8_FBN(c);
