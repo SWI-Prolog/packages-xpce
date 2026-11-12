@@ -434,6 +434,21 @@ real(store-2) :-                        % a num that is not an int32
     Big == 3000000000.
 
                  /*******************************
+                 *             SIZE             *
+                 *******************************/
+
+size(set-1) :-                          % ->set with a default width
+    new(S, size(5, 6)),
+    send(S, set, @default, 9),
+    get(S, width, 5),
+    get(S, height, 9).
+size(set-2) :-                          % ->set with a default height
+    new(S, size(5, 6)),
+    send(S, set, 7, @default),
+    get(S, width, 7),
+    get(S, height, 6).
+
+                 /*******************************
                  *        OBJECT-AS-FILE        *
                  *******************************/
 
@@ -737,6 +752,7 @@ testset(bom) :-                         % Byte Order Mark hanling
     display_present.
 testset(plterm).                        % Prolog terms in XPCE
 testset(real).                          % floating point numbers
+testset(size).                          % size objects
 testset(textbuffer).
 testset(asfile).                        % test pce_open and friends
 testset(selection) :-                   % X11 selection

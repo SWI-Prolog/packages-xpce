@@ -102,7 +102,7 @@ getCopySize(Size s)
 status
 setSize(Size s, Int w, Int h)
 { if ( notDefault(w) ) assign(s, w, w);
-  if ( notDefault(w) ) assign(s, h, h);
+  if ( notDefault(h) ) assign(s, h, h);
 
   succeed;
 }
