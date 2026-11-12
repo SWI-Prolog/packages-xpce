@@ -894,7 +894,10 @@ test(a_terminal_tells_the_program_it_runs,
     wait_until(get(PT, foreground_process, _)),
     get(PT, foreground_process, Shell),
     send(PT, send, 'sleep 30\n'),
-    wait_until(( get(PT, foreground_process, Group), Group \== Shell )),
+    %  The shell puts the child in the foreground before it runs sleep:
+    %  until the exec its command is still the shell's.
+    wait_until(( get(PT, foreground_process, Group), Group \== Shell,
+                 get(PT, foreground_command, sleep) )),
     get(PT, foreground_command, Command).
 
 :- end_tests(epilog_label).
