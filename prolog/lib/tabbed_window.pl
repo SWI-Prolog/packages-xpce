@@ -113,7 +113,7 @@ update_label_room(W) :->
         get(TS, tabs, Tabs),
         get(Tabs, head, First)
     ->  get(First?label_size, height, LH),
-        Room is max(0, Width - LH - LH//2)
+        Room is max(0, Width - LH - truncate(LH/2))
     ;   Room = Width
     ),
     send(TS, label_room, Room).
@@ -929,7 +929,7 @@ insertion_at(TS, X:int, Before:'tab*') :<-
     (   member(T, List),
         get(T, label_offset, Offset),
         get(T?label_size, width, Width),
-        X < Offset+Width//2             % over the left half of this label
+        X < Offset+Width/2              % over the left half of this label
     ->  Before = T
     ;   Before = @nil
     ).

@@ -592,8 +592,8 @@ look_icon(Attrs, Image) :-
     send(T, colour, Fg),
     get(T?area, width, TW),
     get(T?area, height, TH),
-    X is (22-TW)//2,
-    Y is (16-TH)//2,
+    X is truncate((22-TW)/2),
+    Y is truncate((16-TH)/2),
     send(Image, draw_in, T, point(X, Y)),
     send(Image, draw_in, new(Border, box(22, 16))),
     send(Border, colour, grey50).

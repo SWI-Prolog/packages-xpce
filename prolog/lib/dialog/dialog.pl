@@ -159,7 +159,7 @@ att_to_pce(Term, tuple(Att, Cond)) :-
 reference_x(DI, X:'0..100') :->
     "X-coordinate of <->reference"::
     get(DI?area, width, W),
-    RX is (W*X)//100,
+    RX is truncate(W*X/100),
     (   get(DI, reference, Ref)
     ->  send(Ref, x, RX),
         send(DI, send_class, reference, Ref) % avoid addressing attribute
@@ -169,13 +169,13 @@ reference_x(DI, X:'0..100') :<-
     "X-coordinate of <->reference"::
     (   get(DI?reference, x, RX)
     ->  get(DI?area, width, W),
-        X is (100*RX) // W
+        X is truncate(100*RX/W)
     ;   X = 0
     ).
 reference_y(DI, Y:'0..100') :->
     "Y-coordinate of <->reference"::
     get(DI?area, height, H),
-    RY is (H*Y)//100,
+    RY is truncate(H*Y/100),
     (   get(DI, reference, Ref)
     ->  send(Ref, y, RY),
         send(DI, send_class, reference, Ref) % avoid addressing attribute
@@ -185,7 +185,7 @@ reference_y(DI, Y:'0..100') :<-
     "Y-coordinate of <->reference"::
     (   get(DI?reference, y, RY)
     ->  get(DI?area, height, H),
-        Y is (100*RY) // H
+        Y is truncate(100*RY/H)
     ;   Y = 0
     ).
 

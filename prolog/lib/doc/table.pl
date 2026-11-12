@@ -276,7 +276,7 @@ container_size_changed(T, W:[int], _H:[int]) :->
         ->  NewW is min(W, FW),
             send(Table, width, NewW)
         ;   get(T, attribute, relative_width, RW)
-        ->  NewW is (W*RW)//100,
+        ->  NewW is truncate(W*RW/100),
             send(Table, width, NewW)
         ;   (   NW > W
             ->  send(Table, width, W)

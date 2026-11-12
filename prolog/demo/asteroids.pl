@@ -479,7 +479,7 @@ stars(P) :->
     "Add random stars below everything"::
     get(P, size, size(W,H)),
     get(P, star_area, Area),
-    N is W*H//Area,
+    N is truncate(W*H/Area),
     forall(between(1, N, _),
            ( X is random(W), Y is random(H),
              random_member(Size, [1, 1, 2, 2, 3]),
@@ -1247,7 +1247,7 @@ tick(D) :->
     (   get(P, member, help, Help),
         get(Help, displayed, @on)
     ->  get(Help, height, H),
-        CY is Y - H//2
+        CY is Y - truncate(H/2)
     ;   CY = Y
     ),
     send(D, center, point(X, CY)).

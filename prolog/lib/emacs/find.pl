@@ -121,8 +121,8 @@ open(D) :->
     send(D, modal, transient),
     get(E, display_position, point(DX, DY)),
     get(E?area, size, size(EW, EH)),
-    CX is DX+EW//2,
-    CY is DY+EH//2,
+    CX is DX+truncate(EW/2),
+    CY is DY+truncate(EH/2),
     send(D, open_centered, point(CX, CY)).
 
 cancel(D) :->

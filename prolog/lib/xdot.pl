@@ -563,7 +563,7 @@ opaque_label(E, T:text, Colour:colour) :->
     get(T, area, area(_, _, W, H)),
     BW is W + 6,
     BH is H + 2,
-    R is min(6, BH//2),
+    R is min(6, truncate(BH/2)),
     new(B, box(BW, BH)),
     send(B, radius, R),
     send(B, pen, 0),

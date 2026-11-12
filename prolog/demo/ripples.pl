@@ -186,8 +186,8 @@ surface(W) :->
     "Fit the grid and the floor to the size of the window"::
     get(W, size, size(SW, SH)),
     get(W, cell, Cell),
-    Cols is (SW+Cell-1)//Cell + 1,	% cover the whole window
-    Rows is (SH+Cell-1)//Cell + 1,
+    Cols is truncate((SW+Cell-1)/Cell) + 1,	% cover the whole window
+    Rows is truncate((SH+Cell-1)/Cell) + 1,
     get(W, heights, H0),
     get(W, previous, P0),
     fit_grid(H0, Cols, Rows, H),
@@ -202,7 +202,7 @@ surface(W) :->
     extend_floor(Floor, FW, FH, SW, SH, Pebbles, NW, NH),
     send(W, slot, floor_size, size(NW, NH)),
     get(Floor, member, sign, Sign),
-    CX is SW//2, CY is SH//2,
+    CX is truncate(SW/2), CY is truncate(SH/2),
     send(Sign, center, point(CX, CY)),
     send(W, paint_floor),
     send(W, show_status).
@@ -627,8 +627,8 @@ new_point(FW, FH, W, H, X, Y) :-
 
 tiles(Floor, W, H) :-
     Size = 40,
-    NX is W//Size,
-    NY is H//Size,
+    NX is truncate(W/Size),
+    NY is truncate(H/Size),
     forall(between(0, NX, I),
            ( X is I*Size,
              grout(Floor, line(X, 0, X, H))

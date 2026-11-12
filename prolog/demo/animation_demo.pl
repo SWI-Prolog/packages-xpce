@@ -141,8 +141,8 @@ center(F) :->
     get(F, member, stage, S),
     get(S?visible, size, size(SW, SH)),
     get(BM, size, size(W, H)),
-    X is max(0, (SW-W)//2),
-    Y is max(0, (SH-H)//2),
+    X is max(0, truncate((SW-W)/2)),
+    Y is max(0, truncate((SH-H)/2)),
     send(BM, position, point(X, Y)).
 
 show_info(F, A:animation) :->

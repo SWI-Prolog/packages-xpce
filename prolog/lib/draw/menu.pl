@@ -108,7 +108,7 @@ colours_changed(M) :->
 new_size(M, Size:size) :->
     get(M, member, proto, Menu),
     get(Size, width, W),
-    Cols is max(1, W // 48),
+    Cols is max(1, truncate(W/48)),
     send(Menu, columns, Cols).
 
 
@@ -145,7 +145,7 @@ adjust(M) :->
         get(M, member, proto, Menu),
         get(Menu?members, size, S),
         get(Menu, border, B),
-        Rows is max(1, H//(32+2*B)),
+        Rows is max(1, truncate(H/(32+2*B))),
         Cols is (S+Rows-1)//Rows,
         (   get(Menu, columns, Cols)
         ->  true

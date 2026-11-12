@@ -1039,9 +1039,9 @@ separator(TF, A:area) :->
     get(Tile, class_variable_value, separator_pen, Pen),
     (   Pen > 0
     ->  (   W < H
-        ->  XM is X + W//2,
+        ->  XM is X + truncate(W/2),
             new(L, line(XM, Y, XM, Y+H))
-        ;   YM is Y + H//2,
+        ;   YM is Y + truncate(H/2),
             new(L, line(X, YM, X+W, YM))
         ),
         send(L, pen, Pen),
@@ -1441,10 +1441,10 @@ nearest_side([D-W|T], D0, W0, Where) :-
 %
 %   The half of a W x H window a drop on side Where would take.
 
-feedback_area(left,  W, H, 0,    0,    FW, H)  :- FW is W//2.
-feedback_area(right, W, H, X,    0,    FW, H)  :- X is W//2, FW is W-X.
-feedback_area(above, W, H, 0,    0,    W,  FH) :- FH is H//2.
-feedback_area(below, W, H, 0,    Y,    W,  FH) :- Y is H//2, FH is H-Y.
+feedback_area(left,  W, H, 0,    0,    FW, H)  :- FW is truncate(W/2).
+feedback_area(right, W, H, X,    0,    FW, H)  :- X is truncate(W/2), FW is W-X.
+feedback_area(above, W, H, 0,    0,    W,  FH) :- FH is truncate(H/2).
+feedback_area(below, W, H, 0,    Y,    W,  FH) :- Y is truncate(H/2), FH is H-Y.
 
 %!  memberchk_eq(+X, +List) is semidet.
 %
@@ -1781,8 +1781,8 @@ place(G, X:int, Y:int, W:int, H:int) :->
     send(B, set, 0, 0, W, H),
     get(G, member, label, T),
     get(T, size, size(TW, TH)),
-    TX is max(0, (W-TW)//2),
-    TY is max(0, (H-TH)//2),
+    TX is max(0, truncate((W-TW)/2)),
+    TY is max(0, truncate((H-TH)/2)),
     send(T, set, TX, TY),
     send(G, set, X, Y).
 

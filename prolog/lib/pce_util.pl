@@ -307,7 +307,7 @@ center_on(Item, On) :-
     get(On, reference, OnRef),
     get(OnRef, y, OnY),
     get(Item, height, H),
-    Ref is (H + 2*OnY - OnH)//2,
+    Ref is truncate((H + 2*OnY - OnH)/2),
     send(Item, reference, point(0, Ref)).
 
 

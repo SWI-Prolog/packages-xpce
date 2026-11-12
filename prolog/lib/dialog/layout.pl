@@ -95,7 +95,7 @@ same_row(Gr1, Gr2) :-
     get(Gr2, bottom_side, B2),
     Overlap is min(B1, B2) - max(T1, T2),
     Smallest is min(B1-T1, B2-T2),
-    Overlap >= Smallest // 2.
+    Overlap >= Smallest / 2.
 
                  /*******************************
                  *       GEOMETRIC SORTS        *
@@ -312,7 +312,7 @@ left_aligned(X, _W, Left, _Right, H) :-
 right_aligned(_X, W, _Left, Right, H) :-
     H is abs(Right - W).
 center_aligned(X, W, Left, Right, H) :-
-    H is abs((Left+Right)//2 - ((X + W)//2)).
+    H is abs(truncate((Left+Right)/2) - truncate((X + W)/2)).
 
 %       make_y_references/1
 %       Fix the (Y)-coordinate of the reference points

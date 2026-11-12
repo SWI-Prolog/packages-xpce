@@ -440,8 +440,8 @@ place_random(G, N:graphical) :->
     get(N?area, size, size(W, H)),
     get(G, visible, area(X, Y, PW, PH)),
     (   send(G?graphicals, empty)
-    ->  GX is X +(PW-W)//2,
-        GY is Y +(PH-H)//2
+    ->  GX is X + truncate((PW-W)/2),
+        GY is Y + truncate((PH-H)/2)
     ;   B is 10,                    % Border
         GX is X + B + random(PW-W-2*B),
         GY is Y + B + random(PH-H-2*B)

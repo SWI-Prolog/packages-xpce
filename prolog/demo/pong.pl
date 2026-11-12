@@ -384,7 +384,7 @@ resize(P) :->
 net(P) :->
     "Add the net below everything"::
     get(P, size, size(W,H)),
-    X is W//2 - 2,
+    X is truncate(W/2) - 2,
     send(P, append, new(Net, pong_net(X, H))),
     send(Net, hide).
 
@@ -933,7 +933,7 @@ tick(D) :->
     (   get(P, member, help, Help),
         get(Help, displayed, @on)
     ->  get(Help, height, H),
-        CY is Y - H//2
+        CY is Y - truncate(H/2)
     ;   CY = Y
     ),
     send(D, center, point(X, CY)).

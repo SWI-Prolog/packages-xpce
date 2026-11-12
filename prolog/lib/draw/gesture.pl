@@ -552,10 +552,10 @@ drag(G, Ev:event) :->
     send(Bezier, end, Ev?position),
     get(Bezier, start, point(SX, SY)),
     get(Bezier, end, point(EX, EY)),
-    MX is (SX+EX)//2,
-    MY is (SY+EY)//2,
-    CX is MX + (EY-SY)//2,
-    CY is MY - (EX-SX)//2,
+    MX is truncate((SX+EX)/2),
+    MY is truncate((SY+EY)/2),
+    CX is MX + truncate((EY-SY)/2),
+    CY is MY - truncate((EX-SX)/2),
     send(Bezier, control1, point(CX, CY)).
 
 terminate(G, Ev:event) :->

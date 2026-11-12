@@ -201,8 +201,8 @@ resize(P) :->
     "Keep the caption in the middle and the buttons in the corner"::
     send_super(P, resize),
     get(P, size, size(W, H)),
-    CX is W//2,
-    CY is H//2,
+    CX is truncate(W/2),
+    CY is truncate(H/2),
     send(P?caption, center, point(CX, CY)),
     send(P?bin, place, P),              % the bin in the very corner, the
     get(P?bin, size, size(BW, _)),      % grip beside it

@@ -553,13 +553,13 @@ mid_point(Points, point(X, Y), D-point(X, MY)) :-
     member(point(PX, PY1), Points),
     member(point(PX, PY2), Points),
     abs(PY1-PY2) > 10,
-    MY is (PY1+PY2+1)//2,
+    MY is truncate((PY1+PY2+1)/2),
     D is abs(MY-Y),
     satisfies(displacement, D).
 mid_point(Points, point(X, Y), D-point(MX, Y)) :-
     member(point(PX1, PY), Points),
     member(point(PX2, PY), Points),
     abs(PX1-PX2) > 10,
-    MX is (PX1+PX2+1)//2,
+    MX is truncate((PX1+PX2+1)/2),
     D is abs(MX-X),
     satisfies(displacement, D).

@@ -640,10 +640,10 @@ reference(S, Ref:point) :<-
     ->  get(Button, reference, BRef),
         get(BRef, y, BY),
         get(Button?area, height, BH),
-        Y is H//2 + BY - BH//2
+        Y is truncate(H/2) + BY - truncate(BH/2)
     ;   get(@pce, convert, normal, font, Font),
         get(Font, ascent, A),
-        Y is H//2 + round(A)//2       % font metrics are nums
+        Y is truncate(H/2) + round(A)//2  % font metrics are nums
     ),
     new(Ref, point(0, Y)).
 
