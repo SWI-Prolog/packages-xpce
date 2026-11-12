@@ -61,10 +61,29 @@ emacs_chrome_server :-
 :- http_handler(root(status), status, [method(get)]).
 
 edit(Request) :-
+    (   web_page_request(Request)
+    ->  throw(http_reply(forbidden(edit)))
+    ;   true
+    ),
     http_read_data(Request, Data, [to(string)]),
     edit_text(Data, NewData),
     format('Content-type: text/plain~n~n'),
     format('~s', [NewData]).
+
+%!  web_page_request(+Request) is semidet.
+%
+%   True when Request comes from a  web   page  rather than the browser
+%   extension.  The server only listens on   localhost, but any page the
+%   user visits can make the browser post   to it, opening editors with
+%   text of its choice.  A page's  request   carries  the origin of the
+%   page;  that  of  the  extension  is  a  `chrome-extension:`  or
+%   `moz-extension:` URL.  Browsers send an origin with every POST.
+
+web_page_request(Request) :-
+    memberchk(origin(Origin), Request),
+    \+ ( sub_atom(Origin, Before, _, _, '-extension:'),
+         Before > 0
+       ).
 
 status(_Request) :-
     format('Content-type: text/plain~n~n'),
