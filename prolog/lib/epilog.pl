@@ -77,7 +77,8 @@
 :- autoload(library(pce_drop_target),
             [drop_target_event/4, drop_target_show_rejected/3]).
 :- autoload(library(desktop), [desktop_open/1]).
-:- autoload(library(open_document), [open_document/1]).
+:- autoload(library(open_document),
+            [open_document/1, open_document_method/2]).
 :- autoload(library(process), [process_create/3, process_wait/2]).
 :- autoload(library(shell), [shell_command/1]).
 :- autoload(library(pce_theme), [adaptive_colour/3]).
@@ -1460,44 +1461,60 @@ event(T, Ev:event) :->
 link_feedback(T, Link:name*, Y:int*) :->
     "Tell the report bar where the link under the pointer leads"::
     (   Link == @nil
-    ->  Description = @nil
-    ;   link_description(T, Link, Description)
+    ->  Description = @nil,
+        Alert = @off
+    ;   link_description(T, Link, Description, Alert)
     ),
-    report_bar_link(T, Description, Y).
+    report_bar_link(T, Description, Y, Alert).
 
-%!  report_bar_link(+Terminal, +Description, +Y) is det.
+%!  report_bar_link(+Terminal, +Description, +Y, +Alert) is det.
 %
-%   Have the report bar over Terminal say where the link the pointer is
-%   on leads, like the status bar of a web browser.  The text of a link
-%   and where it leads need not have anything to do with each other.
+%   Have the report bar over Terminal say what clicking the link the
+%   pointer is on does, like the status bar of a web browser.  The text
+%   of a link and where it leads need not have anything to do with each
+%   other.
 
-report_bar_link(T, Description, Y) :-
+report_bar_link(T, Description, Y, Alert) :-
     get(T, device, W),
     get(W, member, epilog_report, Bar),
     !,
-    send(Bar, link, Description, Y).
-report_bar_link(_, _, _).
+    send(Bar, link, Description, Y, Alert).
+report_bar_link(_, _, _, _).
 
-%!  link_description(+Terminal, +Link, -Description) is det.
+%!  link_description(+Terminal, +Link, -Description, -Alert) is det.
 %
-%   What the report bar says about Link: the  file and line for a link
-%   to a file, the URL of a link we open in the browser, and a warning
-%   for anything else, which a click does not open unless a
-%   tty_link_hook/2 takes it.
+%   What the report bar says about Link: what a click does, which must
+%   agree with tty_link/2, and where.  A tty_link_hook/2 may take any
+%   link; we only assume it does for links we would not open.  Alert is @on if the click hands
+%   a file to the application the desktop associates with it and this
+%   application may run code from the file.  See
+%   open_document_method/2.
 
-link_description(PT, Link, Description) :-
-    link_file_location(PT, Link, _File, Location),
+link_description(PT, Link, Description, Alert) :-
+    link_file_location(PT, Link, File, Location),
     !,
-    location_text(Location, Description).
-link_description(_PT, Link, Link) :-
+    location_text(Location, Where),
+    (   Location = file(_)
+    ->  open_document_method(File, Method)
+    ;   Method = edit
+    ),
+    method_verb(Method, Verb, Alert),
+    format(string(Description), '~w ~w', [Verb, Where]).
+link_description(_PT, Link, Description, @off) :-
     browser_url(Link),
-    !.
-link_description(_PT, Link, Link) :-
+    !,
+    format(string(Description), 'Open ~w', [Link]).
+link_description(_PT, Link, Description, @off) :-
     predicate_property(tty_link_hook(_,_), number_of_clauses(N)),
     N > 0,
-    !.
-link_description(_PT, Link, Description) :-
-    format(string(Description), '~w (not opened)', [Link]).
+    !,
+    format(string(Description), 'Open ~w', [Link]).
+link_description(_PT, Link, Description, @off) :-
+    format(string(Description), 'Not opened: ~w', [Link]).
+
+method_verb(edit,        'Edit', @off).
+method_verb(view,        'Open', @off).
+method_verb(application, 'Open', @on).
 
 location_text(file(File), File) :- !.
 location_text(File:Line:Column, Text) :-
@@ -3013,6 +3030,12 @@ initialise(R) :->
     send(B, fill, Background),
     send(R, display, new(Text, text('', left)), point(6, 3)),
     send(Text, colour, Colour),
+    get(Text, height, IconSize),
+    send(R, display,
+         new(Alert, bitmap(image('ide/lsp/warning.svg', IconSize, IconSize))),
+         point(6, 3)),
+    send(Alert, name, alert),
+    send(Alert, displayed, @off),
     send(R, display, new(Menu, menu(search_options, marked,
                                     message(R, option, @arg1, @arg2)))),
     send(Menu, multiple_selection, @on),
@@ -3153,10 +3176,11 @@ show(R, _Type:name, Message:string, Transient:[bool]) :->
     "Show Message, and take it away again unless it is a prompt"::
     send(R, slot, link, @nil),
     send(R, slot, link_y, @nil),
+    send(R, alert, @off),
     send(R, show_message, Message, Transient).
 
-link(R, Description:name*, Y:int*) :->
-    "Say where the link under the pointer leads; @nil: off a link"::
+link(R, Description:name*, Y:int*, Alert:[bool]) :->
+    "Say what clicking the link under the pointer does; @nil: off a link"::
     (   (   get(R, class_variable_value, show_links, @off)
         ;   get(R, placement, none)
         ;   get(R, client, TI),
@@ -3173,7 +3197,20 @@ link(R, Description:name*, Y:int*) :->
     ->  true
     ;   send(R, slot, link, Description),
         send(R, slot, link_y, Y),
+        default(Alert, @off, TheAlert),
+        send(R, alert, TheAlert),
         send(R, show_message, Description, @off)
+    ).
+
+alert(R, Alert:bool) :->
+    "Show the alert icon in front of the message"::
+    get(R, member, alert, Icon),
+    get(R, member, text, Text),
+    send(Icon, displayed, Alert),
+    (   Alert == @on
+    ->  get(Icon, right_side, IconRight),
+        send(Text, x, IconRight+4)
+    ;   send(Text, x, 6)
     ).
 
 show_message(R, Message:char_array, Transient:[bool]) :->

@@ -34,7 +34,8 @@
 
 
 :- module(open_document,
-          [ open_document/1             % +File
+          [ open_document/1,            % +File
+            open_document_method/2      % +File, -Method
           ]).
 :- autoload(library(desktop), [desktop_open/1]).
 
@@ -51,16 +52,47 @@ by tools that show files, such as demo(disk_usage).
 %   desktop_open/1.  Other files are  edited   as  text using edit/1.
 
 open_document(File) :-
-    (   (   exists_directory(File)
-        ;   binary_file(File)
-        )
-    ->  desktop_open(File)
-    ;   call(edit(file(File)))
+    open_document_method(File, Method),
+    (   Method == edit
+    ->  call(edit(file(File)))
+    ;   desktop_open(File)
     ).
 
-%!  binary_file(+File) is semidet.
+%!  open_document_method(+File, -Method) is det.
 %
-%   True when we know File cannot be edited as text.  Note that
+%   How open_document/1 opens File.  Method is one of
+%
+%     - edit
+%       File is edited as text using edit/1.
+%     - view
+%       File is a folder, image, sound, video, PDF document or archive
+%       that desktop_open/1 shows using the application the desktop
+%       associates with it.
+%     - application
+%       As `view`, but the application may run code from File: a Java
+%       archive or class, a Word document with macros, an unknown
+%       binary or, on macOS, a folder with an extension such as an
+%       application bundle (`.app`).  Tools may warn the user before
+%       opening File this way.
+
+open_document_method(File, Method) :-
+    exists_directory(File),
+    !,
+    (   current_prolog_flag(apple, true),
+        file_name_extension(_, Ext, File),
+        Ext \== ''
+    ->  Method = application
+    ;   Method = view
+    ).
+open_document_method(File, Method) :-
+    binary_file(File, Method),
+    !.
+open_document_method(_, edit).
+
+%!  binary_file(+File, -Method) is semidet.
+%
+%   True when we know File cannot be edited as text and Method is
+%   `view` or `application` as in open_document_method/2.  Note that
 %   file_mime_type/2 returns `application/unknown` if it does not know
 %   the extension, so we must ask for known binary types rather than
 %   for known text types.
@@ -68,22 +100,22 @@ open_document(File) :-
 :- if(exists_source(library(http/mimetype))).
 :- autoload(library(http/mimetype), [file_mime_type/2]).
 
-binary_file(File) :-
+binary_file(File, Method) :-
     file_mime_type(File, Type),
-    binary_type(Type).
+    binary_type(Type, Method).
 :- else.
-binary_file(_) :-               % library(http) is not installed and we
+binary_file(_, _) :-            % library(http) is not installed and we
     fail.                       % cannot tell.  Assume text.
 :- endif.
 
-binary_type(image/_).
-binary_type(audio/_).
-binary_type(video/_).
-binary_type(application/pdf).
-binary_type(application/msword).
-binary_type(application/zip).
-binary_type(application/wasm).
-binary_type(application/'x-gzip').
-binary_type(application/'x-gtar').
-binary_type(application/'x-java-archive').
-binary_type(application/'octet-stream').
+binary_type(image/_,                         view).
+binary_type(audio/_,                         view).
+binary_type(video/_,                         view).
+binary_type(application/pdf,                 view).
+binary_type(application/zip,                 view).
+binary_type(application/'x-gzip',            view).
+binary_type(application/'x-gtar',            view).
+binary_type(application/msword,              application).
+binary_type(application/wasm,                application).
+binary_type(application/'x-java-archive',    application).
+binary_type(application/'octet-stream',      application).

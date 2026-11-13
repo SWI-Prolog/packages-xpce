@@ -737,6 +737,16 @@ term_report_text(T, Text) :-
     get(Bar, member, text, TextObj),
     get(TextObj?string, value, Text).
 
+%!  term_report_alert(+T) is semidet.
+%
+%   True when the report bar shows its alert icon.
+
+term_report_alert(terminal(_, xpce(_, TI))) :-
+    get(TI, device, Window),
+    get(Window, member, epilog_report, Bar),
+    get(Bar, member, alert, Icon),
+    get(Icon, displayed, @on).
+
 %!  term_report_show_links(+Bool) is det.
 %
 %   Set the class variable epilog_report.show_links.
@@ -6095,7 +6105,7 @@ test(report_bar_can_be_turned_off,
 test(hovering_a_link_shows_where_it_leads,
      [ condition(needs([mouse])),
        setup(test_begin(T)),
-       Shown-Hidden == 'https://example.com/target'-true
+       Shown-Hidden == 'Open https://example.com/target'-true
      ]) :-
     link_on_row(T, 2, 'https://example.com/target'),
     move(T, 2, 2),
@@ -6110,8 +6120,8 @@ test(link_bar_follows_output,
      [ condition(needs([mouse])),
        setup(test_begin(T)),
        cleanup(move(T, 40, 5)),
-       [First, Second, Gone] == ['https://example.com/first',
-                                 'https://example.com/second',
+       [First, Second, Gone] == ['Open https://example.com/first',
+                                 'Open https://example.com/second',
                                  gone]
      ]) :-
     link_on_row(T, 2, 'https://example.com/first'),
@@ -6148,13 +6158,42 @@ test(unopened_link_says_so,
      [ condition(needs([mouse])),
        setup(test_begin(T)),
        cleanup(move(T, 40, 5)),
-       Shown == "ms-msdt:/id x (not opened)"
+       Shown == "Not opened: ms-msdt:/id x"
      ]) :-
     \+ predicate_property(epilog:tty_link_hook(_,_), number_of_clauses(_)),
     link_on_row(T, 2, 'ms-msdt:/id x'),
     move(T, 2, 2),
     term_report_text(T, Text),
     atom_string(Text, Shown).
+
+%  The bar says what a click does.  A file link with a line is edited,
+%  a file without one may be handed to the application the desktop
+%  associates with it, which gets an alert icon if that application
+%  may run code from the file.
+
+test(hovering_file_link_says_what_a_click_does,
+     [ condition(needs([mouse])),
+       setup(test_begin(T)),
+       cleanup(move(T, 40, 5)),
+       Shown == [ 'Edit /tmp/x.pl:12'-false,
+                  'Edit /tmp/x.pl'-false,
+                  'Open /tmp/x.png'-false,
+                  'Open /tmp/x.jar'-true
+                ]
+     ]) :-
+    findall(Text-Alert,
+            ( member(URL, [ 'file:///tmp/x.pl#12',
+                            'file:///tmp/x.pl',
+                            'file:///tmp/x.png',
+                            'file:///tmp/x.jar'
+                          ]),
+              link_on_row(T, 2, URL),
+              move(T, 2, 2),
+              term_report_text(T, Text),
+              (   term_report_alert(T) -> Alert = true ; Alert = false ),
+              move(T, 40, 5)
+            ),
+            Shown).
 
 test(link_feedback_can_be_turned_off,
      [ condition(needs([mouse])),
