@@ -66,7 +66,8 @@ test_popup_event :-
                 popup_gesture,
                 popup_handler,
                 popup_toc,
-                popup_terminal
+                popup_terminal,
+                popup_open
               ]).
 
 		 /*******************************
@@ -316,3 +317,49 @@ opens_window_popup(W, Id, Spec) :-
     send(@'_popup_gesture', cancel, Ev).
 
 :- end_tests(popup_terminal).
+
+		 /*******************************
+		 *	     ->OPEN		*
+		 *******************************/
+
+%   The SDL dummy driver cannot open the window of a popup.
+
+popups_open :-
+    make_plain_picture(P, B),
+    new(Popup, popup(actions)),
+    send(Popup, append, menu_item(hello)),
+    call_cleanup(catch(( send(Popup, open, B, point(20,20)),
+                         send(Popup, close)
+                       ), _, fail),
+                 ( free(Popup), free(P) )).
+
+live_points(Live) :-
+    get(class(point), no_created, Created),
+    get(class(point), no_freed, Freed),
+    Live is Created - Freed.
+
+:- begin_tests(popup_open).
+
+%   Opening a popup creates temporary objects to place the menu in its
+%   window.  Opening it again and again must not leave them behind.
+
+test(open_frees_temporaries,
+     [ condition(popups_open),
+       setup(make_plain_picture(P, B)),
+       cleanup(free(P)),
+       Leaked == 0
+     ]) :-
+    new(Popup, popup(actions)),
+    send(Popup, append, menu_item(hello)),
+    send(Popup, open, B, point(20,20)),     % create the popup window
+    send(Popup, close),
+    live_points(Live0),
+    forall(between(1, 10, _),
+           ( send(Popup, open, B, point(20,20)),
+             send(Popup, close)
+           )),
+    live_points(Live),
+    Leaked is Live - Live0,
+    free(Popup).
+
+:- end_tests(popup_open).

@@ -199,9 +199,16 @@ openPopup(PopupObj p, Graphical gr, Point pos,
 
   sw = createPopupWindow(d);
   if ( m )				/* keep the room right and below */
-    send(sw, NAME_border, tempObject(ClassSize, toInt(m), toInt(m), EAV), EAV);
-  send(sw, NAME_display, p, tempObject(ClassPoint, toInt(m), toInt(m), EAV),
-       EAV);
+  { Size border = tempObject(ClassSize, toInt(m), toInt(m), EAV);
+
+    send(sw, NAME_border, border, EAV);
+    considerPreserveObject(border);
+  }
+  { Point at = tempObject(ClassPoint, toInt(m), toInt(m), EAV);
+
+    send(sw, NAME_display, p, at, EAV);
+    considerPreserveObject(at);
+  }
 
   offset = getFramePositionGraphical(gr);
   if ( !offset )
