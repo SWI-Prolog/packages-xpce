@@ -317,7 +317,7 @@ createWindow(PceWindow sw, PceWindow parent)
   ws_create_window(sw, parent);
   qadSendv(sw, NAME_resize, 0, NULL);
 
-  changed_window(sw, 0, 0, valInt(sw->area->w), valInt(sw->area->h), TRUE);
+  changed_window(sw, 0, 0, valInt(sw->area->w), valInt(sw->area->h), true);
   addChain(ChangedWindows, sw);		/* force initial update */
 
   succeed;
@@ -523,7 +523,7 @@ displayedWindow(PceWindow sw, BoolObj val)
   if ( val == ON )
   { changed_window(sw,
 		   0, 0,
-		   valInt(sw->area->w), valInt(sw->area->h), TRUE);
+		   valInt(sw->area->w), valInt(sw->area->h), true);
     addChain(ChangedWindows, sw);
   }
 
@@ -1314,7 +1314,7 @@ changed_window(PceWindow sw, int x, int y, int w, int h, int clear)
 
     a->area    = new;
     a->clear   = clear;
-    a->deleted = FALSE;
+    a->deleted = false;
     a->size    = na;
     a->next    = sw->changes_data;
     sw->changes_data = a;
@@ -1347,7 +1347,7 @@ combine_changes_window(PceWindow sw)
     { for(b = sw->changes_data; b; b = b->next)
       { if ( !b->deleted && b != a &&
 	     inside_iarea(&a->area, &b->area) ) /* B is in A */
-	  b->deleted = TRUE;
+	  b->deleted = true;
       }
     }
   }
@@ -1360,7 +1360,7 @@ redrawWindow(PceWindow sw, Area a)
 		 -valInt(sw->scroll_offset->x),
 		 -valInt(sw->scroll_offset->y),
 		 valInt(sw->area->w),
-		 valInt(sw->area->h), TRUE);
+		 valInt(sw->area->h), true);
 
   addChain(ChangedWindows, sw);
   succeed;
@@ -1449,7 +1449,7 @@ RedrawAreaWindow(PceWindow sw, IArea a, int clear)
     oy += valInt(sw->scroll_offset->y);
 
     d_offset(ox, oy);
-    if ( d_window(sw, a->x, a->y, a->w, a->h, clear, TRUE) )
+    if ( d_window(sw, a->x, a->y, a->w, a->h, clear, true) )
     { assign(oa, x, toInt(a->x));
       assign(oa, y, toInt(a->y));
       assign(oa, w, toInt(a->w));
@@ -1802,7 +1802,7 @@ scrollWindow(PceWindow sw, Int x, Int y, BoolObj ax, BoolObj ay)
 
 					/* should use block-move and only */
 					/* consider a small part changed */
-    changed_window(sw, x, y, w, h, TRUE);
+    changed_window(sw, x, y, w, h, true);
     addChain(ChangedWindows, sw);
   }
   }

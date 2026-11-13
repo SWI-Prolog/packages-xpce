@@ -375,7 +375,7 @@ d_ensure_display(void)
  * @param w The width of the region we will paint.
  * @param h The height of the region we will paint.
  * @param clear Flag indicating whether to clear the region
- * @param limit is unused and always TRUE.
+ * @param limit is unused and always true.
  * @return SUCCEED on success; otherwise, FAIL.
  */
 status
@@ -1498,7 +1498,7 @@ r_drop_shadow(Shadow s, Name shape,
 
 /**
  * Sets  the  fill-pattern for  the  interior  of elevated  areas  and
- * returns TRUE  if the  interior needs to  be filled.   Returns FALSE
+ * returns true  if the  interior needs to  be filled.   Returns false
  * otherwise.   The special  colours `reduced'  and `highlighted'  are
  * interpreted as relative colours to the background.
 */
@@ -3515,7 +3515,7 @@ markup_resolve(const char *s)
     return NULL;
 
   g_string_append(out, copied);
-  return g_string_free(out, FALSE);
+  return g_string_free(out, false);
 }
 
 

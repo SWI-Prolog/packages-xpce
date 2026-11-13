@@ -126,7 +126,7 @@ get_pointed_objects_device(Device dev, Int x, Int y, Chain ch)
     clearChain(ch);
 
   for_cell(cell, dev->graphicals)
-  { register Graphical gr = cell->value;
+  { Graphical gr = cell->value;
 
     if ( gr->displayed == ON &&
 	 inEventAreaGraphical(gr, x, y) )
@@ -393,13 +393,13 @@ eventDevice(Any obj, EventObj ev)
 
   if ( dev->active != OFF )
   { Graphical gr;
-    int done = FALSE;
+    int done = false;
 
     updatePointedDevice(dev, ev);
 
     for_chain(dev->pointed, gr,
 	      if ( !done && postEvent(ev, gr, DEFAULT) )
-		done = TRUE);
+		done = true);
     if ( done )
       succeed;
 
@@ -1310,7 +1310,7 @@ computeFormatDevice(Device dev)
     int cs = valInt(l->column_sep);
     int rs = valInt(l->row_sep);
     int rh = 0;
-    int first = TRUE;
+    int first = true;
     Cell cell;
 
     for_cell(cell, dev->graphicals)
@@ -1325,12 +1325,12 @@ computeFormatDevice(Device dev)
       { y += rh + rs;
         rh = 0;
         x = 0;
-        first = TRUE;
+        first = true;
       }
       move_graphical(gr, HV(x, y), HV(y, x));
       x += gw + cs;
       rh = max(rh, gh);
-      first = FALSE;
+      first = false;
     }
   }
 #undef HV
@@ -1520,7 +1520,7 @@ stretchColumns(Matrix m, Size gap, Size bb, Size border)
     twidth -= (m->cols-1) * valInt(gap->w);
 
     for(sp=s, x=0; x<m->cols; x++, sp++)
-    { int stretch = 0, noshrink=FALSE;
+    { int stretch = 0, noshrink=false;
 
       sp->ideal   = m->units[x][0].left + m->units[x][0].right;
       sp->minimum = 0;
@@ -1530,7 +1530,7 @@ stretchColumns(Matrix m, Size gap, Size bb, Size border)
       { if ( m->units[x][y].alignment == NAME_column )
 	{ stretch = max(stretch, m->units[x][y].hstretch);
 	  if ( m->units[x][y].hstretch == 0 )
-	    noshrink = TRUE;
+	    noshrink = true;
 	}
       }
 
@@ -1595,10 +1595,10 @@ stretchRows(Matrix m, int bbh)
 { int x, y;
   Stretch s = alloca(sizeof(stretch) * (m->rows+1));
   Stretch sp;
-  int any_stretch = FALSE;
+  int any_stretch = false;
 
   for(sp = s, y=0; y<m->rows; y++)
-  { int stretch = 0, noshrink=FALSE;
+  { int stretch = 0, noshrink=false;
 
     if ( m->units[0][y].height == 0 && m->units[0][y].depth == 0 )
       continue;
@@ -1611,7 +1611,7 @@ stretchRows(Matrix m, int bbh)
     { stretch = max(stretch, m->units[x][y].vstretch);
       if ( m->units[x][y].vstretch == 0 &&
 	   notNil(m->units[x][y].item) )
-	noshrink = TRUE;
+	noshrink = true;
     }
 
     sp->stretch = stretch;
@@ -1620,7 +1620,7 @@ stretchRows(Matrix m, int bbh)
     else
       sp->shrink = 0;
     if ( stretch > 0 )
-      any_stretch = TRUE;
+      any_stretch = true;
 
     sp++;
   }
@@ -1767,8 +1767,8 @@ retry:
     for(x=0; x<max_x; x++)		/* Align labels and values */
     { int lw = -1;
       int vw = -1;
-      int chl = FALSE;
-      int chv = FALSE;
+      int chl = false;
+      int chv = false;
 
 #define AUTO_ALIGN_LABEL 1
 #define AUTO_ALIGN_VALUE 2
@@ -2149,7 +2149,7 @@ reparentDevice(Device dev)
 
 static status
 roomDevice(Device dev, Area area)
-{ register Cell cell;
+{ Cell cell;
 
   ComputeGraphical(dev);
   for_cell(cell, dev->graphicals)
@@ -2165,7 +2165,7 @@ roomDevice(Device dev, Area area)
 
 static Chain
 getInsideDevice(Device dev, Area a)
-{ register Cell cell;
+{ Cell cell;
   Chain ch;
 
   ch = answerObject(ClassChain, EAV);

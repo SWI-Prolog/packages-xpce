@@ -377,7 +377,7 @@ pcePP(Any obj)
 #ifndef O_RUNTIME
   int old = PCEdebugging;
 
-  PCEdebugging = FALSE;
+  PCEdebugging = false;
 #endif
 
   __try
@@ -449,7 +449,7 @@ pcePP(Any obj)
 #endif
 
 #ifndef O_RUNTIME
-  PCEdebugging = FALSE;
+  PCEdebugging = false;
 #endif
   if ( setjmp(pp_env) == 0 )
   { s = do_pp(obj);

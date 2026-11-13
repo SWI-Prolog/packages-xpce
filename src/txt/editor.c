@@ -897,7 +897,7 @@ newFragmentCache(Editor e)
 { FragmentCache fc = alloc(sizeof(struct fragment_cache));
 
   fc->active = NULL;
-  fc->initial_state = FALSE;
+  fc->initial_state = false;
   resetFragmentCache(fc, e->text_buffer);
 
   return fc;
@@ -931,7 +931,7 @@ resetFragmentCache(FragmentCache fc, TextBuffer tb)
     fc->underline     = DEFAULT;
     fc->left_margin   = 0;
     fc->right_margin  = 0;
-    fc->initial_state = TRUE;
+    fc->initial_state = true;
   }
 
   fc->current         = (isNil(tb) ? NIL : tb->first_fragment);
@@ -1050,7 +1050,7 @@ indexFragmentCache(FragmentCache fc, Editor e, long int i)
 				 pp(f), attributes));
   }
 
-  fc->initial_state = FALSE;
+  fc->initial_state = false;
   fc->index = i;
 }
 
@@ -1086,7 +1086,7 @@ scan_editor(Any obj, long int index, int dir, int how, int category, int *eof)
   SyntaxTable s = tb->syntax;
   int size = tb->size;
 
-  *eof = FALSE;
+  *eof = false;
 
   if ( how == TEXT_SCAN_FOR )
   { if ( dir > 0 )
@@ -1119,7 +1119,7 @@ scan_editor(Any obj, long int index, int dir, int how, int category, int *eof)
   }
 
 out_eof:
-  *eof = TRUE;
+  *eof = true;
 out:
   if ( index < 0 )
     index = 0;
@@ -1192,7 +1192,7 @@ fetch_editor(Any obj, TextChar tc)
 
 	if ( len > 0 &&
 	     match_textbuffer(tb, index, &e->search_string->data,
-			      e->exact_case == ON, FALSE) )
+			      e->exact_case == ON, false) )
 	{ ic->hit_start = index;
 	  ic->hit_end = index+len;
 
@@ -1770,7 +1770,7 @@ insert_character(Editor e, Int chr, uchar_t *c)
 static status
 insert_editor(Editor e, Int times, Int chr, int fill)
 { uchar_t c = 0;
-  LocalString(s, TRUE, 1);		/* wide-character string! */
+  LocalString(s, true, 1);		/* wide-character string! */
 
   MustBeEditable(e);
   if ( HasSelection(e) &&
@@ -1800,13 +1800,13 @@ insert_editor(Editor e, Int times, Int chr, int fill)
 
 static status
 insertSelfEditor(Editor e, Int times, Int chr)
-{ return insert_editor(e, times, chr, TRUE);
+{ return insert_editor(e, times, chr, true);
 }
 
 
 static status
 insertQuotedEditor(Editor e, Int times, Int chr)
-{ return insert_editor(e, times, chr, FALSE);
+{ return insert_editor(e, times, chr, false);
 }
 
 
@@ -3525,7 +3525,7 @@ justifyRegionEditor(Editor e)
 static status
 insertSelfFillEditor(Editor e, Int times, Int chr)
 { TextBuffer tb = e->text_buffer;
-  LocalString(s, TRUE, 1);
+  LocalString(s, true, 1);
   uchar_t c = 0;
   Int le;
 
@@ -3626,7 +3626,7 @@ findCutBufferEditor(Editor e, Int arg)
   hit_start = find_textbuffer(e->text_buffer,
 			      valInt(start),
 			      &str->data,
-			      1, 'a', !ign, FALSE);
+			      1, 'a', !ign, false);
   if ( hit_start < 0 )
   { send(e, NAME_report, NAME_warning, CtoName("Failed search: %s"), str, EAV);
     fail;
@@ -3769,7 +3769,7 @@ changedHitsEditor(Editor e)
     int ec = (e->exact_case == ON);
 
     while(start<end)
-    { if ( match_textbuffer(tb, start, s, ec, FALSE) )
+    { if ( match_textbuffer(tb, start, s, ec, false) )
       { ChangedRegionEditor(e, toInt(start), toInt(start+len));
 	start += len;
       }
@@ -3930,13 +3930,13 @@ executeSearchEditor(Editor e, Int chr, Int from)
   hit_start = find_textbuffer(e->text_buffer,
 			      start,
 			      &e->search_string->data,
-			      times, 'a', !ign, FALSE);
+			      times, 'a', !ign, false);
   if ( hit_start < 0 )
   { if ( e->search_wrapped_warned == ON )
     { hit_start = find_textbuffer(e->text_buffer,
 				  fwd ? 0 : e->text_buffer->size,
 				  &e->search_string->data,
-				  times, 'a', !ign, FALSE);
+				  times, 'a', !ign, false);
       assign(e, search_wrapped_warned, OFF);
     }
   }
@@ -4230,7 +4230,7 @@ DabbrevExpandEditor(Editor e, EventId id)
   { DEBUG(NAME_editor, Cprintf("Starting search\n"));
     if ( mode == NAME_backwards || mode == NAME_forwards )
     { int dir = (e->dabbrev_mode == NAME_backwards ? -1 : 1);
-      ssize_t hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
+      ssize_t hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, false);
 
       if ( hit_pos < 0 )
       { mode = nextDabbrevMode(e);
@@ -4293,7 +4293,7 @@ DabbrevExpandEditor(Editor e, EventId id)
 			valInt(e->dabbrev_origin),
 			&hit->data,
 			get_case_pattern(tb->syntax, target),
-			str_prefix(&hit->data, target) ? TRUE : ec);
+			str_prefix(&hit->data, target) ? true : ec);
     succeed;
 
     next:;

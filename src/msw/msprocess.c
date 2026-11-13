@@ -131,7 +131,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 
     sa.nLength              = sizeof(sa);
     sa.lpSecurityDescriptor = NULL;
-    sa.bInheritHandle       = TRUE;
+    sa.bInheritHandle       = true;
 
     if ( !CreatePipe(&wrfd[0], &wrfd[1], &sa, 0) ) /* read, write */
       return errorPce(p, NAME_noPipe, APIError());
@@ -165,7 +165,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 		       cmdline,			/* cmdline */
 		       NULL,			/* Process security */
 		       NULL,			/* Thread security */
-		       TRUE,			/* Inherited handles */
+		       true,			/* Inherited handles */
 		       DETACHED_PROCESS|CREATE_NEW_PROCESS_GROUP,
 		       env,			/* environment char ** */
 		       cwd,			/* directory */

@@ -127,7 +127,7 @@ linkSubClass(Class super, Class sub)
   { assign(super, sub_classes, newObject(ClassChain, sub, EAV));
   } else
   { Cell cell;
-    int done = FALSE;
+    int done = false;
 
     for_cell(cell, super->sub_classes)
     { Class class = cell->value;
@@ -136,7 +136,7 @@ linkSubClass(Class super, Class sub)
       { if ( class != sub )
 	  deleteChain(super->sub_classes, class);
 	else
-	  done = TRUE;
+	  done = true;
       }
     }
 

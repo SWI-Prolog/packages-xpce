@@ -396,7 +396,7 @@ createObjectv(Name assoc, Class class, int argc, const Any argv[])
   }
 
 					/* Allocate the object */
-  rval = allocObject(class, TRUE);
+  rval = allocObject(class, true);
   addCodeReference(rval);		/* avoid drop-out */
   if ( notNil(assoc) )			/* Create name association */
     newAssoc(assoc, rval);
@@ -1529,7 +1529,7 @@ getClone2Object(Any obj)
   if ( class->cloneStyle == NAME_nil )
     answer(NIL);
 
-  clone = (Instance) allocObject(class, FALSE);
+  clone = (Instance) allocObject(class, false);
   if ( offFlag(obj, F_OBTAIN_CLASSVARS) )
     clearFlag(clone, F_OBTAIN_CLASSVARS);
   DEBUG(NAME_clone, Cprintf("%s cloned into %s\n", pp(me), pp(clone)));
@@ -2552,7 +2552,7 @@ CheckObject(Any obj, BoolObj recursive, HashTable checked, BoolObj silent)
   }
 
   if ( recursive == ON )
-  { checkNames(TRUE);
+  { checkNames(true);
     done = isDefault(checked)
 		? newObject(ClassHashTable, toInt(200), NAME_none, EAV)
 		: checked;

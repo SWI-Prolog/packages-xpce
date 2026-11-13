@@ -582,7 +582,7 @@ loadStringFile(IOSTREAM *fd, PceString s)
 { int size = loadWord(fd);
 
   if ( size >= 0 )
-  { str_inithdr(s, FALSE);
+  { str_inithdr(s, false);
     s->s_size = size;
 
     str_alloc(s);
@@ -593,7 +593,7 @@ loadStringFile(IOSTREAM *fd, PceString s)
     charW *d;
     IOENC oenc;
 
-    str_inithdr(s, TRUE);
+    str_inithdr(s, true);
     s->s_size = -size;
     str_alloc(s);
 
@@ -961,7 +961,7 @@ loadObject(IOSTREAM *fd)
 
 		name = loadNameObject(fd);
 		if ( def->class )
-		{ Instance obj = allocObject(def->class, FALSE);
+		{ Instance obj = allocObject(def->class, false);
 
 		  if ( isName(name) )
 		    newAssoc(name, obj);

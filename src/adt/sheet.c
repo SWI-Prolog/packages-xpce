@@ -71,8 +71,8 @@ isAttributeSheet(Sheet sh, Any name)
 
 
 Attribute
-getMemberSheet(Sheet sh, register Any name)
-{ register Cell cell;
+getMemberSheet(Sheet sh, Any name)
+{ Cell cell;
 
   for_cell(cell, sh->attributes)
   { Attribute att = cell->value;

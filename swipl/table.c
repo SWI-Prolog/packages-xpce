@@ -117,7 +117,7 @@ atomToName(atom_t a)
   s->next = atom_to_name.symbols[k];
   atom_to_name.symbols[k] = s;
   if ( ++atom_to_name.size > 2*atom_to_name.allocated )
-    rehashTable(&atom_to_name, TRUE);
+    rehashTable(&atom_to_name, true);
 
   return name;
 }
@@ -152,7 +152,7 @@ CachedNameToAtom(PceName name)
   s->next = name_to_atom.symbols[k];
   name_to_atom.symbols[k] = s;
   if ( ++name_to_atom.size > 2*name_to_atom.allocated )
-    rehashTable(&name_to_atom, FALSE);
+    rehashTable(&name_to_atom, false);
 
   return a;
 }

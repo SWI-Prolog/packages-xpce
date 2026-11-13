@@ -498,12 +498,12 @@ do_fill_line(TextImage ti, TextLine l, long index)
 	  case '\t':
 	    x = tab(ti, x);
 	    current_vcol++;		/* count tab as one column step */
-	    last_is_space = TRUE;
+	    last_is_space = true;
 	    break;
 	  case ' ':
 	    x += c_width((uchar_t)tc->value.c, tc->font);
 	    current_vcol++;
-	    last_is_space = TRUE;
+	    last_is_space = true;
 	    break;
 	  default:
 	  { int dw = uchar_display_width((uchar_t)tc->value.c);
@@ -511,7 +511,7 @@ do_fill_line(TextImage ti, TextLine l, long index)
 	    { x += c_width((uchar_t)tc->value.c, tc->font);
 	      if ( last_is_space )
 		last_break = i;
-	      last_is_space = FALSE;
+	      last_is_space = false;
 	    }
 	    current_vcol += dw;
 	    break;
@@ -525,14 +525,14 @@ do_fill_line(TextImage ti, TextLine l, long index)
 	current_vcol++;
 	if ( last_is_space )
 	  last_break = i;
-	last_is_space = FALSE;
+	last_is_space = false;
 	break;
       case CHAR_IMAGE:
 	x += valInt(tc->value.image->size->w) + tc->gap;
 	current_vcol++;
 	if ( last_is_space )
 	  last_break = i;
-	last_is_space = FALSE;
+	last_is_space = false;
 	break;
     }
 
@@ -1083,7 +1083,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 	tx = l->chars[t].x;
 	if ( atts & TXT_HIGHLIGHTED )
 	  SWAP_COLORS(c, bg);
-	r_3d_box(x, l->y, tx-x, l->h, 0, bg, TRUE);
+	r_3d_box(x, l->y, tx-x, l->h, 0, bg, true);
       } else
       { int x  = sx;
 	int tx = x + run_tw;

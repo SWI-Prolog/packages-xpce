@@ -295,8 +295,8 @@ getFindPrefixDict(Dict dict, StringObj str, Int from, BoolObj ign_case)
 		*           SORTING		*
 		********************************/
 
-static int	sort_ignore_case   = FALSE;
-static int	sort_ignore_blanks = FALSE;
+static int	sort_ignore_case   = false;
+static int	sort_ignore_blanks = false;
 
 static int
 compare_labels(PceString s1, PceString s2)
@@ -309,12 +309,12 @@ compare_labels(PceString s1, PceString s2)
     str_strip(t1);
     str_strip(t2);
 
-    if ( sort_ignore_case == TRUE )
+    if ( sort_ignore_case == true )
       return str_icase_cmp(t1, t2);
     else
       return str_cmp(t1, t2);
   } else
-  { if ( sort_ignore_case == TRUE )
+  { if ( sort_ignore_case == true )
       return str_icase_cmp(s1, s2);
     else
       return str_cmp(s1, s2);
@@ -351,7 +351,7 @@ compare_dict_items(const void *d1, const void *d2)
 
 static status
 insertDict(Dict dict, DictItem di)
-{ int codesort = FALSE;
+{ int codesort = false;
   Cell cell;
   DictItem di2;
   int cmp;
@@ -369,8 +369,8 @@ insertDict(Dict dict, DictItem di)
 
 					/* find out sorting rules */
   if ( isDefault(dict->sort_by) )
-  { sort_ignore_case   = FALSE;
-    sort_ignore_blanks = FALSE;
+  { sort_ignore_case   = false;
+    sort_ignore_blanks = false;
   } else
   { qsortCompareCode = dict->sort_by;
     codesort++;
@@ -416,7 +416,7 @@ sortDict(Dict dict, Any code_or_ign_case, BoolObj ign_blanks, BoolObj reverse)
   DictItem *items;
   Cell cell;
   Chain old;				/* reference count */
-  int codesort = FALSE;
+  int codesort = false;
   int oldrev = qsortReverse;
   Code sortcode;
 

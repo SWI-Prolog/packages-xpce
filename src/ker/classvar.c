@@ -249,7 +249,7 @@ getSubClassVariable(ClassVariable cv, Class class)
   } else
   { Any val;
 
-    if ( (val = getDefault(class, cv->name, FALSE)) )
+    if ( (val = getDefault(class, cv->name, false)) )
     { doneObject(val);			/* What to do with this? */
 
       answer(cloneClassVariable(cv, class));
@@ -265,7 +265,7 @@ getStringValueClassVariable(ClassVariable cv)
 { Any val;
   Class class = cv->context;
 
-  if ( (val = getDefault(class, cv->name, TRUE)) )
+  if ( (val = getDefault(class, cv->name, true)) )
     answer(val);
 
   fail;
@@ -438,18 +438,18 @@ hasClassVariableClass(Class class, Name name)
 
     if ( instanceOfObject(class->class_variable_table, ClassHashTable) &&
 	 getMemberHashTable(class->class_variable_table, name) )
-      return TRUE;
+      return true;
     if ( instanceOfObject(class->class_variables, ClassChain) )
     { for_cell(cell, class->class_variables)
       { ClassVariable cv = cell->value;
 
 	if ( cv->name == name )
-	  return TRUE;
+	  return true;
       }
     }
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -1047,12 +1047,12 @@ class_match(Class class, Name name)
 static StringObj
 getDefault(Class class, Name name, int accept_default)
 { Chain ch;
-  static int initialized = FALSE;
+  static int initialized = false;
 
   if ( !initialized )
   { Code code;
 
-    initialized = TRUE;
+    initialized = true;
 
     name_star = CtoName("*");
 

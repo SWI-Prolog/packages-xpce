@@ -1165,7 +1165,7 @@ ws_redraw_changed_frames(void)
       WsFrame wfr = fr->ws_ref;
       if ( wfr && wfr->hwnd )
       { DEBUG(NAME_sdl, Cprintf("Invalidate %p\n", wfr->hwnd));
-	InvalidateRect(wfr->hwnd, NULL, FALSE);
+	InvalidateRect(wfr->hwnd, NULL, false);
       }
 #else
       ws_draw_frame(fr);

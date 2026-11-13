@@ -41,7 +41,7 @@
 
 #define sameEncoding(s1, s2) \
 	if ( s1->iswide != s2->iswide ) \
-	  return FALSE;
+	  return false;
 
 
 		 /*******************************
@@ -79,7 +79,7 @@ str_pad(PceString s)			/* only 8-bit strings */
 void
 str_alloc(PceString s)
 { s->s_textA  = alloc(str_allocsize(s));
-  s->s_readonly = FALSE;
+  s->s_readonly = false;
   str_pad(s);
 }
 
@@ -98,7 +98,7 @@ str_ring_alloc(PceString s)
   { str_ring[str_ring_ptr] = pceRealloc(str_ring[str_ring_ptr], size);
   }
   s->s_textA = (charA*)str_ring[str_ring_ptr];
-  /* s_readonly stays FALSE: the ring buffer is *not* permanent
+  /* s_readonly stays false: the ring buffer is *not* permanent
    * storage.  initialiseCharArray's fast-path treats s_readonly as
    * "share the pointer, the source lives forever" — that is correct
    * for static C-string sources but fatal here, since
@@ -144,7 +144,7 @@ str_set_n_ascii(PceString str, size_t len, char *text)
 { if ( len > STR_MAX_SIZE )
     return errorPce(NIL, NAME_stringTooLong, toInt(len));
 
-  str_inithdr(str, FALSE);
+  str_inithdr(str, false);
   str->s_size = (int)len;
   str->s_textA = (charA *) text;
 
@@ -157,7 +157,7 @@ str_set_n_wchar(PceString str, size_t len, wchar_t *text)
 { if ( len > STR_MAX_SIZE )
     return errorPce(NIL, NAME_stringTooLong, toInt(len));
 
-  str_inithdr(str, TRUE);
+  str_inithdr(str, true);
 
   if ( sizeof(wchar_t) == sizeof(charW) )
   { /* charW and wchar_t are the same width (Linux always; Windows
@@ -190,7 +190,7 @@ status
 str_set_utf8(PceString str, const char *text)
 { const char *s = text;
   const char *e = &text[strlen(s)];
-  int iswide = FALSE;
+  int iswide = false;
   int len = 0;
 
   while(s<e)
@@ -198,7 +198,7 @@ str_set_utf8(PceString str, const char *text)
 
     s = utf8_get_char(s, &chr);
     if ( chr > 0xff )
-      iswide = TRUE;
+      iswide = true;
     len++;
   }
 
@@ -427,7 +427,7 @@ str_eq(PceString s1, PceString s2)
 { if ( s1->s_size == s2->s_size )
     return str_cmp(s1, s2) == 0;
 
-  return FALSE;
+  return false;
 }
 
 
@@ -436,7 +436,7 @@ str_icase_eq(PceString s1, PceString s2)
 { if ( s1->s_size == s2->s_size )
     return str_icase_cmp(s1, s2) == 0;
 
-  return FALSE;
+  return false;
 }
 
 
@@ -451,21 +451,21 @@ str_prefix_offset(PceString s1, unsigned int offset, PceString s2)
 
       while(n-- > 0)
 	if ( *d1++ != *d2++ )
-	  return FALSE;
+	  return false;
 
-      return TRUE;
+      return true;
     } else
     { int i;
 
       for(i=0; i<n; i++)
 	if ( str_fetch(s1, i+offset) != str_fetch(s2, i) )
-	  return FALSE;
+	  return false;
     }
 
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -486,19 +486,19 @@ str_icase_prefix(PceString s1, PceString s2)	/* s2 is prefix of s1 */
 
       for(; n-- > 0; d1++, d2++)
 	if ( tolower(*d1) != tolower(*d2) )
-	  return FALSE;
+	  return false;
     } else
     { int i = 0;
 
       for(; n-- > 0; i++)
 	if ( towlower(str_fetch(s1, i)) != towlower(str_fetch(s2, i)) )
-	  return FALSE;
+	  return false;
     }
 
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -514,19 +514,19 @@ str_suffix(PceString s1, PceString s2)	/* s2 is suffix of s1 */
 
       while(n-- > 0)
 	if ( *d1++ != *d2++ )
-	  return FALSE;
+	  return false;
 
-      return TRUE;
+      return true;
     } else
     { while(--n >= 0)
 	if ( str_fetch(s1, n+offset) != str_fetch(s2, n) )
-	  return FALSE;
+	  return false;
 
-      return TRUE;
+      return true;
     }
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -542,23 +542,23 @@ str_icase_suffix(PceString s1, PceString s2)	/* s2 is suffix of s1 */
 
       for( ; n-- > 0; d1++, d2++)
       { if ( tolower(*d1) != tolower(*d2) )
-	  return FALSE;
+	  return false;
       }
 
-      return TRUE;
+      return true;
     } else
     { int i = 0;
 
       for( ; n-- > 0; i++)
       { if ( towlower(str_fetch(s1, i)) != towlower(str_fetch(s2, i)) )
-	  return FALSE;
+	  return false;
       }
     }
 
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -579,7 +579,7 @@ str_sub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 	    if ( *d1++ != *d2++ )
 	      goto next8;
 
-	  return TRUE;
+	  return true;
 	next8:;
 	}
       } else
@@ -592,7 +592,7 @@ str_sub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 	    if ( *d1++ != *d2++ )
 	      goto next16;
 
-	  return TRUE;
+	  return true;
 	next16:;
 	}
       }
@@ -606,13 +606,13 @@ str_sub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 	  if ( str_fetch(s1, i1) != str_fetch(s2, i2) )
 	    goto nextmixed;
 
-	return TRUE;
+	return true;
       nextmixed:;
       }
     }
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -634,7 +634,7 @@ str_icasesub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 	      goto next8;
 	  }
 
-	  return TRUE;
+	  return true;
 	next8:;
 	}
       } else
@@ -648,7 +648,7 @@ str_icasesub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 	      goto next16;
 	  }
 
-	  return TRUE;
+	  return true;
 	next16:;
 	}
       }
@@ -662,13 +662,13 @@ str_icasesub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 	  if ( towlower(str_fetch(s1, i1)) != towlower(str_fetch(s2, i2)) )
 	    goto nextmixed;
 
-	return TRUE;
+	return true;
       nextmixed:;
       }
     }
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -780,7 +780,7 @@ str_from_char(PceString s, char c)
   text[0] = c;
   text[1] = '\0';
 
-  str_inithdr(s, FALSE);
+  str_inithdr(s, false);
   s->s_textA  = text;
   s->s_size     = 1;
 }
@@ -792,7 +792,7 @@ str_from_char16(PceString s, int c)
   text[0] = c;
   text[1] = '\0';
 
-  str_inithdr(s, TRUE);
+  str_inithdr(s, true);
   s->s_textW = text;
   s->s_size     = 1;
 }
@@ -959,7 +959,7 @@ ISO Latin-1 string or not.
 
 tmp_string *
 str_tmp_init(tmp_string *tmp)
-{ str_inithdr(&tmp->s, FALSE);
+{ str_inithdr(&tmp->s, false);
   tmp->s.s_textA = tmp->buffer;
   tmp->allocated = sizeof(tmp->buffer);
 
@@ -996,7 +996,7 @@ str_tmp_put(tmp_string *tmp, uchar_t c)
 	pceFree(s->s_textA);
       s->s_textW = new;
     }
-    s->s_iswide = TRUE;
+    s->s_iswide = true;
   }
   if ( s->s_size >= tmp->allocated )
   { if ( s->s_textA == tmp->buffer )

@@ -55,10 +55,7 @@ typedef struct io_stream IOSTREAM;
 #include <h/interface.h>
 #include "stub.h"
 
-#ifndef FALSE
-#define FALSE 0
-#define TRUE 1
-#endif
+#include <stdbool.h>
 
 #ifdef SYSLIB_H
 #include SYSLIB_H

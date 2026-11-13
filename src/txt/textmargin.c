@@ -134,7 +134,7 @@ RedrawAreaTextMargin(TextMargin m, Area a)
   obg = r_background(m->background);
   r_clear(x, y, w, h);
   if ( z && notNil(z) )
-  { r_3d_box(x, y, w, h, 0, z, FALSE);
+  { r_3d_box(x, y, w, h, 0, z, false);
   } else
   { r_thickness(valInt(m->pen));
     r_dash(m->texture);

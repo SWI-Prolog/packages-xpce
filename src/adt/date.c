@@ -760,8 +760,8 @@ static int monthsize[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 static time_t
 mktime(tm)
 struct tm *tm;
-{ register long sec;
-  register int n;
+{ long sec;
+  int n;
 
   sec  = tm->tm_sec;
   sec += tm->tm_min * MINUTE;

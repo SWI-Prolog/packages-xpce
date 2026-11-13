@@ -242,11 +242,11 @@ rearrangeWindowDecorator(WindowDecorator dw)
 static status
 computeWindowDecorator(WindowDecorator dw)
 { if ( notNil(dw->request_compute) )
-  { int changed = TRUE;
+  { int changed = true;
     int maxloop = 2;
 
     while(changed && maxloop-- > 0)
-    { changed = FALSE;
+    { changed = false;
 
       if ( notNil(dw->vertical_scrollbar) &&
 	   notNil(dw->vertical_scrollbar->request_compute) )

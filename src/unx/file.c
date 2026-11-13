@@ -1030,7 +1030,7 @@ getReadFile(FileObj f, Int n)
 
     s = answerObject(ClassString, EAV);
     str_unalloc(&s->data);
-    str_inithdr(&s->data, FALSE);
+    str_inithdr(&s->data, false);
     s->data.s_size = (int)size;
     str_alloc(&s->data);
 

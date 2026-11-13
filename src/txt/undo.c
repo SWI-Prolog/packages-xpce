@@ -186,7 +186,7 @@ createUndoBuffer(size_t size)
 
   ub->size    = AllocRound(size);
   ub->buffer  = alloc(ub->size);
-  ub->aborted = FALSE;
+  ub->aborted = false;
   ub->client  = NIL;
   resetUndoBuffer(ub);
 
@@ -384,9 +384,9 @@ checkpointUndoTextBuffer(TextBuffer tb)
 static void
 destroy_oldest_undo(UndoBuffer ub)
 { if ( ub->tail != NULL )
-    ub->tail->marked = FALSE;
+    ub->tail->marked = false;
 
-  while( ub->tail != NULL && ub->tail->marked == FALSE )
+  while( ub->tail != NULL && ub->tail->marked == false )
   { if ( ub->tail == ub->current )
       ub->current = NULL;
     if ( ub->tail == ub->checkpoint )
@@ -434,7 +434,7 @@ new_undo_cell(UndoBuffer ub, size_t size)
   if ( size > ub->size/2 )		/* Too big: destroy all */
   { errorPce(ub->client, NAME_undoOverflow);
 
-    ub->aborted = TRUE;
+    ub->aborted = true;
     resetUndoBuffer(ub);
     return NULL;
   }
@@ -458,14 +458,14 @@ new_undo_cell(UndoBuffer ub, size_t size)
   if ( ub->lastmark && Between(ub, ub->free, ub->lastmark) >= (int)ub->size/2 )
   { errorPce(ub->client, NAME_undoOverflow);
 
-    ub->aborted = TRUE;
+    ub->aborted = true;
     resetUndoBuffer(ub);
     return NULL;
   }
 
   new = ub->free;
   new->size = size;
-  new->marked = FALSE;
+  new->marked = false;
   new->next = NULL;
   new->previous = ub->head;
   if ( ub->head == NULL )		/* empty */
@@ -680,7 +680,7 @@ void
 register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
 { UndoBuffer ub;
   long i;
-  int need_wide = FALSE;
+  int need_wide = false;
   int cell_size;
 
   for(i=where; i<where+len; i++)
@@ -690,14 +690,14 @@ register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
       tb->lines--;
 
     if ( c > 0xff )
-      need_wide = TRUE;
+      need_wide = true;
   }
 
   if ( len > 0 && (ub = getUndoBufferTextBuffer(tb)) != NULL )
   { UndoDelete udc = (UndoDelete) ub->head;
 
     if ( udc != NULL && udc->type == UNDO_DELETE &&
-	 udc->marked == FALSE &&
+	 udc->marked == false &&
 	 tb->buffer.s_iswide == udc->iswide )
     { if ( where == udc->where )	/* forward delete */
       { cell_size = len+udc->len;
@@ -777,7 +777,7 @@ copy_undo_chg(TextBuffer tb, long from, long len, UndoChange uc, long offset)
 void
 register_change_textbuffer(TextBuffer tb, size_t where, size_t len)
 { UndoBuffer ub;
-  int need_wide = FALSE;
+  int need_wide = false;
   int cell_size;
   long i;
 
@@ -785,14 +785,14 @@ register_change_textbuffer(TextBuffer tb, size_t where, size_t len)
   { wint_t c = fetch_textbuffer(tb, i);
 
     if ( c > 0xff )
-      need_wide = TRUE;
+      need_wide = true;
   }
 
   if ( len > 0 && (ub = getUndoBufferTextBuffer(tb)) != NULL )
   { UndoChange uc = (UndoChange) ub->head;
 
     if ( uc != NULL && uc->type == UNDO_CHANGE &&
-	 uc->marked == FALSE &&
+	 uc->marked == false &&
 	 tb->buffer.s_iswide == uc->iswide )
     { if ( where == uc->where + uc->len )	/* forward change */
       {	cell_size = len+uc->len;

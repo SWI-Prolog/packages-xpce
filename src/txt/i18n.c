@@ -370,7 +370,7 @@ UTF8ToCharArray(const char *utf8, bool asname)
   }
 
   e = in + strlen((const char*)in);
-  for(in=(cuchar*)utf8, len=0, wide=FALSE; in < e; )
+  for(in=(cuchar*)utf8, len=0, wide=false; in < e; )
   { int chr;
 
     in = utf8_get_uchar(in, &chr);
@@ -468,10 +468,10 @@ MBToName(const char *mb)
 
     if ( len < 1024 )
     { ws = alloca((len+1)*sizeof(wchar_t));
-      mlcd = FALSE;
+      mlcd = false;
     } else
     { ws = pceMalloc((len+1)*sizeof(wchar_t));
-      mlcd = TRUE;
+      mlcd = true;
     }
 
     memset(&mbs, 0, sizeof(mbs));

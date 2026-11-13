@@ -571,7 +571,7 @@ getNearSidesArea(Area a, Area b, Int distance)
 { int d=valInt(distance);
   int a_top, a_center, a_bottom, a_left, a_middle, a_right;
   int b_top, b_center, b_bottom, b_left, b_middle, b_right;
-  register unsigned long mask;
+  unsigned long mask;
 
   InitAreaA;
   InitAreaB;
@@ -625,7 +625,7 @@ static Int
 sameSidesArea(Area a, Area b)
 { int a_top, a_center, a_bottom, a_left, a_middle, a_right;
   int b_top, b_center, b_bottom, b_left, b_middle, b_right;
-  register unsigned long mask;
+  unsigned long mask;
 
   InitAreaA;
   InitAreaB;
@@ -679,7 +679,7 @@ static Int
 getLessSidesArea(Area a, Area b)
 { int a_top, a_center, a_bottom, a_left, a_middle, a_right;
   int b_top, b_center, b_bottom, b_left, b_middle, b_right;
-  register unsigned long mask;
+  unsigned long mask;
 
   InitAreaA;
   InitAreaB;

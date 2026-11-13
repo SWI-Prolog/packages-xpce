@@ -187,7 +187,7 @@ openPopup(PopupObj p, Graphical gr, Point pos,
 	  BoolObj pos_is_pointer, BoolObj warp_pointer,
 	  BoolObj ensure_on_display)
 { PceWindow sw;
-  int moved = FALSE;			/* Cursor needs be moved */
+  int moved = false;			/* Cursor needs be moved */
   int cx, cy;				/* mouse X-Y */
   int px, py;				/* Popup X-Y */
   int pw, ph;				/* Popup W-H */
@@ -267,7 +267,7 @@ openPopup(PopupObj p, Graphical gr, Point pos,
     py = valInt(pos->y) - m;
     cx = px + dx;
     cy = py + dy;
-    moved = TRUE;
+    moved = true;
   }
 
   swfr = getFrameGraphical((Graphical) sw);

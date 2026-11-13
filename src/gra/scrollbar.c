@@ -143,7 +143,7 @@ ComputeScrollBar(ScrollBar sb)
   { struct bubble_info bi;
     int arrow = arrow_height_scrollbar(sb);
 
-    compute_bubble(sb, &bi, arrow, MIN_BUBBLE, FALSE);
+    compute_bubble(sb, &bi, arrow, MIN_BUBBLE, false);
     if ( valInt(sb->bubble_start) != bi.start ||
 	 valInt(sb->bubble_length) != bi.length )
     { DEBUG(NAME_scroll, Cprintf("%s: start %ld --> %d; length %ld --> %d\n",
@@ -330,7 +330,7 @@ sb_init_draw_data(ScrollBar s, Area a, SbDrawData d)
 
   d->vertical = (s->orientation == NAME_vertical);
   d->arrow = arrow_height_scrollbar(s);
-  compute_bubble(s, &d->bubble, d->arrow, MIN_BUBBLE, FALSE);
+  compute_bubble(s, &d->bubble, d->arrow, MIN_BUBBLE, false);
 }
 
 
@@ -406,7 +406,7 @@ draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, bool down)
     old = r_colour(c);
   pen = r_thickness(1.5);
   r_dash(NAME_none);
-  r_polygon(pts, 3, FALSE);
+  r_polygon(pts, 3, false);
   r_thickness(pen);
   if ( old )
     r_colour(old);
@@ -613,7 +613,7 @@ barEventScrollBar(ScrollBar s, EventObj ev)
       } else				/* not on the arrows */
       { struct bubble_info bi;
 
-	compute_bubble(s, &bi, ah, MIN_BUBBLE, FALSE);
+	compute_bubble(s, &bi, ah, MIN_BUBBLE, false);
 
 	if ( offset < bi.start )	/* page-up */
 	{ assign(s, unit,      NAME_page);
@@ -643,7 +643,7 @@ barEventScrollBar(ScrollBar s, EventObj ev)
       struct bubble_info bi;
       int prom;
 
-      compute_bubble(s, &bi, ah, MIN_BUBBLE, FALSE);
+      compute_bubble(s, &bi, ah, MIN_BUBBLE, false);
       if ( bi.bar_length <= bi.length )
 	prom = 0;			/* avoid division by 0 */
       else
@@ -713,7 +713,7 @@ promilage_event_scrollbar(ScrollBar s, EventObj ev)
   int offset = offset_event_scrollbar(s, ev);
   int rval;
 
-  compute_bubble(s, &bi, ah, MIN_BUBBLE, FALSE);
+  compute_bubble(s, &bi, ah, MIN_BUBBLE, false);
   if ( bi.bar_length <= bi.length )	/* centre the thumb at the pointer */
     rval = 0;
   else

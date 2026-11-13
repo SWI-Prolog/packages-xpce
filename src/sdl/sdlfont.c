@@ -424,7 +424,7 @@ add_font_coverage(PangoFontset *fs, PangoFont *font, gpointer ud)
     g_object_unref(cov);
   }
 
-  return FALSE;				/* keep iterating */
+  return false;				/* keep iterating */
 }
 
 /**

@@ -103,10 +103,10 @@ confirmTerminal(char *question, char *def)
     return *def == 'y';
   switch(line[0])
   { case 'n':
-    case 'N':	return FALSE;
+    case 'N':	return false;
     case 'y':
-    case 'Y':	return TRUE;
-    case '\0':	return *def == 'y' ? TRUE : FALSE;
+    case 'Y':	return true;
+    case '\0':	return *def == 'y' ? true : false;
     default:	Cprintf("Please answer 'yes' or 'no'\n");
 		return confirmTerminal(question, def);
   }

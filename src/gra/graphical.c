@@ -287,7 +287,7 @@ coordinate system.
 status
 offsetDeviceGraphical(Any obj, int *x, int *y)
 { Graphical gr = obj;
-  register Device dev = gr->device;
+  Device dev = gr->device;
 
   *x = 0;
   *y = 0;
@@ -427,8 +427,8 @@ getApplicationGraphical(Graphical gr)
 
 Device
 getCommonDeviceGraphical(Graphical gr1, Graphical gr2)
-{ register Device dev1 = gr1->device;
-  register Device dev2 = gr2->device;
+{ Device dev1 = gr1->device;
+  Device dev2 = gr2->device;
 
   if ( dev1 == dev2 )			/* very common case */
   { if ( notNil(dev1) )
@@ -576,7 +576,7 @@ changedAreaGraphical(Any obj, Int x, Int y, Int w, Int h)
 	  cx -= sox; cy -= soy;
 	}
 
-	changed_window(sw, ox, oy, ow, oh, TRUE);
+	changed_window(sw, ox, oy, ow, oh, true);
 	changed_window(sw, cx, cy, cw, ch, offFlag(gr, F_SOLID));
 
 	addChain(ChangedWindows, sw);
@@ -979,7 +979,7 @@ paintSelectedGraphical(Graphical gr)
 	selection_bubble(x, y, w, h, 2, 1);
       }
     } else if ( instanceOfObject(feedback, ClassElevation) )
-    { r_3d_box(x, y, w, h, 0, feedback, TRUE);
+    { r_3d_box(x, y, w, h, 0, feedback, true);
     }
   }
 
@@ -2150,9 +2150,9 @@ getHandlesGraphical(Graphical gr, Point pos, Name kind, Int distance)
 
     maxdx = (valInt(distance) * valInt(gr->area->w) + 99) / 100;
     maxdy = (valInt(distance) * valInt(gr->area->h) + 99) / 100;
-    use_range = TRUE;
+    use_range = true;
   } else
-    use_range = FALSE;
+    use_range = false;
 
   if ( notNil(gr->handles) )
   { for_cell(cell, gr->handles)
@@ -2562,7 +2562,7 @@ place_object(lg_object *o)
 { if ( o->update )
   { Any av[4];
 
-    o->update = FALSE;
+    o->update = false;
     av[0] = toInt(o->area.x);
     av[1] = toInt(o->area.y);
 
@@ -2668,15 +2668,15 @@ layoutGraphical(Graphical gr,
     op->area.y = valInt(gr->area->y);
     op->area.w = valInt(gr->area->w);
     op->area.h = valInt(gr->area->h);
-    op->moved  = TRUE;
-    op->update = FALSE;
+    op->moved  = true;
+    op->update = false;
     if ( notDefault(move_only) )
     { if ( memberChain(move_only, gr) )
-	op->fixed = FALSE;
+	op->fixed = false;
       else
-	op->fixed = TRUE;
+	op->fixed = true;
     } else
-      op->fixed  = FALSE;
+      op->fixed  = false;
   }
   if ( isDefault(work) )
     doneObject(network);
@@ -2696,7 +2696,7 @@ layoutGraphical(Graphical gr,
     r[i][i].fx = r[i][i].fy = 0;	/* clean diagonal */
   }
 
-  moved = TRUE;
+  moved = true;
 
   for (l=1; l<=C5 && moved; l++)
   { int recheck = (l%10 == 0);		/* recheck computed length */
@@ -2706,7 +2706,7 @@ layoutGraphical(Graphical gr,
       lg_relation *rp;
 
       for (j=0, rp=r[i]; j<i; j++, rp++)
-      { if (mi == FALSE && objects[j].moved == FALSE)
+      { if (mi == false && objects[j].moved == false)
 	  continue;
 
 	d = distance_area(&objects[i].area, &objects[j].area);
@@ -2745,10 +2745,10 @@ layoutGraphical(Graphical gr,
       }
     }
 
-    moved = FALSE;
+    moved = false;
     for (i=0, op=objects; i<n; i++, op++)
     { if ( op->fixed )
-      { op->moved = FALSE;
+      { op->moved = false;
 	continue;
       }
 
@@ -2760,10 +2760,10 @@ layoutGraphical(Graphical gr,
       dx = (((dx * C4) / n) + 512) >> 10;
       dy = (((dy * C4) / n) + 512) >> 10;
       if (dx == 0 && dy == 0)
-      { op->moved = FALSE;
+      { op->moved = false;
 	continue;
       }
-      op->update = op->moved = moved = TRUE;
+      op->update = op->moved = moved = true;
       op->area.x += dx;
       op->area.y += dy;
       if ( op->area.x+op->area.w > limit.x + limit.w ) /* bounce on Window */

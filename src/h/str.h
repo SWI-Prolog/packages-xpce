@@ -111,10 +111,7 @@ typedef struct _string
 
 #define str_datasize(s) (isstrA(s) ? (s)->s_size : (s)->s_size * sizeof(charW))
 
-#ifndef FALSE
-#define FALSE 0
-#define TRUE 1
-#endif
+#include <stdbool.h>
 
 
 		 /*******************************

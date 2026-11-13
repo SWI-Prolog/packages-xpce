@@ -73,7 +73,7 @@ DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
       break;
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -89,7 +89,7 @@ Name
 ws_appdata(const char *sub)
 { TCHAR buf[PATH_MAX];
 
-  if ( SHGetSpecialFolderPath(0, buf, CSIDL_APPDATA, TRUE) )
+  if ( SHGetSpecialFolderPath(0, buf, CSIDL_APPDATA, true) )
   { wchar_t *p;
 
     for(p=buf; *p; p++)
@@ -171,7 +171,7 @@ get_logical_drive_strings(int bufsize, char *buf)
  *   dwWriteMode  - Flags for write handle (e.g., FILE_FLAG_OVERLAPPED)
  *
  * Returns:
- *   TRUE on success, FALSE on failure (call GetLastError()).
+ *   true on success, false on failure (call GetLastError()).
  */
 
 static volatile long pipe_gensym = 0;
@@ -183,7 +183,7 @@ CreatePipeEx(PHANDLE hReadPipe,
 	     DWORD nSize,
 	     DWORD dwReadMode,
 	     DWORD dwWriteMode)
-{ BOOL result = FALSE;
+{ BOOL result = false;
   HANDLE hReadTmp = INVALID_HANDLE_VALUE, hWriteTmp = INVALID_HANDLE_VALUE;
   CHAR pipeName[MAX_PATH];
 
@@ -213,7 +213,7 @@ CreatePipeEx(PHANDLE hReadPipe,
 
   *hReadPipe = hReadTmp;
   *hWritePipe = hWriteTmp;
-  result = TRUE;
+  result = true;
   hReadTmp = hWriteTmp = INVALID_HANDLE_VALUE; // ownership transferred
 
 cleanup:

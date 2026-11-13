@@ -161,10 +161,10 @@ splitQuadratic(FPoint pts, int i, int *n)
     mkmid(pts[3], p1,     pts[4]);
     mkmid(pts[2], pts[1], pts[3]);
 
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -173,9 +173,9 @@ splitCubic(FPoint pts, int i, int *n)
 { pts += i;
 
   if ( distanceLineToPoint(pts[0].x, pts[0].y, pts[3].x, pts[3].y,
-			   pts[1].x, pts[1].y, TRUE) > 1 ||
+			   pts[1].x, pts[1].y, true) > 1 ||
        distanceLineToPoint(pts[0].x, pts[0].y, pts[3].x, pts[3].y,
-			   pts[2].x, pts[2].y, TRUE) > 1 )
+			   pts[2].x, pts[2].y, true) > 1 )
   { fpoint p1, p2, p12;
 
     p1 = pts[1];
@@ -191,10 +191,10 @@ splitCubic(FPoint pts, int i, int *n)
     mkmid(pts[4], pts[5], p12);
     mkmid(pts[3], pts[2], pts[4]);
 
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -676,7 +676,7 @@ inEventAreaBezier(Bezier b, Int xc, Int yc)
   for(i=0; i<npts-1; i++)
   { int d = distanceLineToPoint(rfloat(pts[i].x),   rfloat(pts[i].y),
 				rfloat(pts[i+1].x), rfloat(pts[i+1].y),
-				px, py, FALSE);
+				px, py, false);
     if ( d < evtol )
       succeed;
   }

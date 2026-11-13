@@ -603,13 +603,13 @@ forVector(Vector v, Code code, Int from, Int to, int some)
 
 static status
 forAllVector(Vector v, Code code, Int from, Int to)
-{ return forVector(v, code, from, to, FALSE);
+{ return forVector(v, code, from, to, false);
 }
 
 
 static status
 forSomeVector(Vector v, Code code, Int from, Int to)
-{ return forVector(v, code, from, to, TRUE);
+{ return forVector(v, code, from, to, true);
 }
 
 

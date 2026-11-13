@@ -182,7 +182,7 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
       send(sw, NAME_resize, EAV);
       changed_window(sw,
 		     -valInt(sw->scroll_offset->x),
-		     -valInt(sw->scroll_offset->y), w, h, TRUE);
+		     -valInt(sw->scroll_offset->y), w, h, true);
       addChain(ChangedWindows, sw);
     }
   }

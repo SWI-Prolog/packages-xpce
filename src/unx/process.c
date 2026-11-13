@@ -977,7 +977,7 @@ getPseudoTTY(Process p, char *line, int *master, int *slave)
 
 	if ( (*slave = getSlave(p, line)) >= 0 )
 	{ *master = fd;
-	  return TRUE;
+	  return true;
 	}
 
 	close(fd);			/* slave is blocked */
@@ -1004,7 +1004,7 @@ getPseudoTTY(Process p, char *line, int *master, int *slave)
 
 	if ( (*slave = getSlave(p, line)) >= 0 )
 	{ *master = fd;
-	  return TRUE;
+	  return true;
 	}
 
 	close(fd);
@@ -1046,15 +1046,15 @@ copyTty(Process p, char *pty, int fd)
 
 #ifdef COPY_TTY
   int ttyfd;
-  int init = TRUE;
+  int init = true;
 
   if ( (ttyfd = open("/dev/tty", 0)) < 0 )
   { errorPce(p, NAME_openTty, CtoName("/dev/tty"), OsError());
-    init = FALSE;
+    init = false;
   }
   if ( init && ioctl(ttyfd, TCGETS, &buf) )
   { errorPce(p, NAME_ioctlGet, CtoName("/dev/tty"), OsError());
-    init = FALSE;
+    init = false;
   }
 
   if ( !init )

@@ -67,7 +67,7 @@ isqrt(long a)
     return errorPce(NAME_sqrt, NAME_domainError, toInt(a));
 
 #ifdef BITSHIFT_SQRT
-  register long n, d, m1, m2;
+  long n, d, m1, m2;
 
   for (m2=5; ((a<<1) & (0xffff << (m2<<1))); m2++);
   m1 = m2 - 1;
@@ -524,7 +524,7 @@ writef(char *fm, ...)
 
 
 #define NOT_SET INT_MAX
-#define Put(c) if ( !(*out)(closure, c) ) return FALSE;
+#define Put(c) if ( !(*out)(closure, c) ) return false;
 #define PutString(s) do { const char *_s=(s); \
 			  while(*_s) \
 			  { Put(*_s); _s++; \
@@ -547,7 +547,7 @@ put_string(int (*out)(void*, uchar_t), void *closure, PceString s)
       Put(t[i]);
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -565,7 +565,7 @@ put_markup_char(int (*out)(void*, uchar_t), void *closure, uchar_t c)
     default:   Put(c);
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -573,10 +573,10 @@ static int
 put_markup_string(int (*out)(void*, uchar_t), void *closure, PceString s)
 { for(int i=0; i<s->s_size; i++)
   { if ( !put_markup_char(out, closure, str_fetch(s, i)) )
-      return FALSE;
+      return false;
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -611,7 +611,7 @@ c99_snprintf(char *buffer, size_t count, const char *fmt, ...)
 
 #define PutArg(c) \
 	if ( markup ) \
-	{ if ( !put_markup_char(out, closure, c) ) return FALSE; \
+	{ if ( !put_markup_char(out, closure, c) ) return false; \
 	} else Put(c)
 #define PutArgString(s) do { const char *_s=(s); \
 			     while(*_s) \
@@ -865,7 +865,7 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 	    case 'N':
 	    { if ( argc <= 0 )
 	      { str_set_ascii(&a, "(nil)");
-		a.s_readonly = TRUE;
+		a.s_readonly = true;
 	      } else if ( !toString(argv[0], &a) )
 	      { Any pn;
 
@@ -891,7 +891,7 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 
 	      if ( a.s_size >= abs(arg) )
 	      { if ( !(*put)(out, closure, &a) )
-		  return FALSE;
+		  return false;
 	      } else
 	      { int pad = abs(arg) - a.s_size;
 		int i;
@@ -900,10 +900,10 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 		{ for(i=0; i<pad; i++)
 		    Put(' ');
 		  if ( !(*put)(out, closure, &a) )
-		    return FALSE;
+		    return false;
 		} else
 		{ if ( !(*put)(out, closure, &a) )
-		    return FALSE;
+		    return false;
 		  for(i=0; i<pad; i++)
 		    Put(' ');
 		}
@@ -941,7 +941,7 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
       }
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -951,9 +951,9 @@ put_void_str(void *ctx, uchar_t c)
 
   s->s_size++;
   if ( c > 0xff )
-    s->s_iswide = TRUE;
+    s->s_iswide = true;
 
-  return TRUE;
+  return true;
 }
 
 
@@ -964,7 +964,7 @@ put_str(void *ctx, uchar_t c)
   str_store(s, s->s_size, c);
   s->s_size++;
 
-  return TRUE;
+  return true;
 }
 
 
@@ -973,7 +973,7 @@ str_writefv_(PceString s, CharArray format, int argc, const Any *argv,
 	     bool markup)
 { int len;
 
-  str_inithdr(s, FALSE);
+  str_inithdr(s, false);
   s->s_size = 0;
   swritefv(put_void_str, s, &format->data, argc, argv, markup);
   len = s->s_size;
@@ -1052,7 +1052,7 @@ scanstr(char *str, char *fmt, Any *r)
   char *s = fmt;
 
   while( *s )
-  { int supress = FALSE;
+  { int supress = false;
     int length;
 
     switch( *s )
@@ -1068,7 +1068,7 @@ scanstr(char *str, char *fmt, Any *r)
 	if ( isdigit(*s) && s[1] == '$' ) /* %digit$ */
 	  s += 2;
 	if ( *s == '*' )		/* %* */
-	{ supress = TRUE;
+	{ supress = true;
 	  s++;
 	}
 	while( *s && isdigit(*s) )	/* field width */

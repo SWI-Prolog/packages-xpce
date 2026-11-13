@@ -77,7 +77,7 @@ static InputDevice	 last_pointer     = NULL; /* device of last non-key event */
 static unsigned long	 last_time	  = 0L;
 static unsigned int	 multi_click_time = 400;
 static int		 multi_click_diff = 4;
-static int		 loc_still_posted = TRUE;
+static int		 loc_still_posted = true;
 static int64_t		 host_last_time   = 0;
 static int		 loc_still_time	  = 400;
 
@@ -272,12 +272,12 @@ initialiseEvent(EventObj e, Name id, Any window,
   if ( loc_still_posted )
   { if ( isAEvent(e, NAME_locMove) )
     { DEBUG(NAME_locStill, Cprintf("Re-enabled loc-still on %s\n", pp(e->id)));
-      loc_still_posted = FALSE;
+      loc_still_posted = false;
     }
   } else if ( isAEvent(e, NAME_area) ||
 	      isAEvent(e, NAME_deactivateKeyboardFocus) )
   { DEBUG(NAME_locStill, Cprintf("Disabled loc-still on %s\n", pp(e->id)));
-    loc_still_posted = TRUE;
+    loc_still_posted = true;
   }
 
   succeed;
@@ -339,7 +339,7 @@ considerLocStillEvent()
 		    rewindAnswerStack(mark, NIL);
 		  })
     }
-    loc_still_posted = TRUE;
+    loc_still_posted = true;
     pceMTUnlock();
   }
 }
@@ -751,7 +751,7 @@ in_fixed_layer(Graphical gr)
     }
   }
 
-  return FALSE;
+  return false;
 }
 
 

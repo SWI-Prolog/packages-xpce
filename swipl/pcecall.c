@@ -80,7 +80,7 @@ in_pce_thread(term_t goal)
 
   if ( !init_prolog_goal(g, goal, false) )
   { free(g);
-    return FALSE;
+    return false;
   }
 
   SDL_Event event = {0};
@@ -163,12 +163,12 @@ init_prolog_goal(prolog_goal *g, term_t goal, bool acknowledge)
   g->acknowledge = acknowledge;
   g->state       = G_WAITING;
   if ( !PL_strip_module(goal, &g->module, plain) )
-    return FALSE;
+    return false;
   if ( !(PL_is_compound(plain) || PL_is_atom(plain)) )
     return PL_type_error("callable", goal);
   g->goal = PL_record(plain);
 
-  return TRUE;
+  return true;
 }
 
 
@@ -254,7 +254,7 @@ set_pce_thread(term_t options)
   PL_STRINGS_MARK();
   if ( !PL_scan_options(options, 0, "set_pce_thread_options", set_pce_thread_options,
                         &app_name) )
-    return FALSE;
+    return false;
 
   rc = setPceThread(app_name);
   PL_STRINGS_RELEASE();
@@ -272,9 +272,9 @@ pl_pce_dispatch(void)
   pceDispatch(NULL, 250);
 
   if ( PL_handle_signals() == -1 || PL_exception(0) )
-    return FALSE;
+    return false;
 
-  return TRUE;
+  return true;
 }
 
 

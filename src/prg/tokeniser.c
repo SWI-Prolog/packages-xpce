@@ -421,7 +421,7 @@ getTokenTokeniser(Tokeniser t)
   } else if ( tisdigit(s, c) || c == '-' ) /* int, real */
   { char buf[LINESIZE];
     char *q = buf;
-    int is_int = TRUE;
+    int is_int = true;
 
     if ( c == '-' )
     { int c2 = PEEKC(t);
@@ -444,7 +444,7 @@ getTokenTokeniser(Tokeniser t)
       if ( tisdigit(s, c2) )
       { *q++ = c;
         c = GETC(t);
-        is_int = FALSE;
+        is_int = false;
 	do
 	{ *q++ = c;
 	  c = GETC(t);
@@ -460,7 +460,7 @@ getTokenTokeniser(Tokeniser t)
       if ( tisdigit(s, c2) )
       { *q++ = c;
         c = GETC(t);
-        is_int = FALSE;
+        is_int = false;
 	do
 	{ *q++ = c;
 	  c = GETC(t);

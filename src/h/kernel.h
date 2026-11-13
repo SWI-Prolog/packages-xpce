@@ -646,7 +646,7 @@ toInt(intptr_t i)
 #define isClassDefault(o)	((Constant)(o) == CLASSDEFAULT)
 #define notClassDefault(o)	((Constant)(o) != CLASSDEFAULT)
 
-#define TrueOrFalse(b)	(isOn(b) ? TRUE : FALSE)
+#define TrueOrFalse(b)	(isOn(b) ? true : false)
 
 #define nonObject(obj)	(MaskOf(obj) || !(obj))
 #define isObject(obj)	(!nonObject(obj))
@@ -662,10 +662,7 @@ toInt(intptr_t i)
 #define validPceDatum(x) (isInteger(x) || isProperObject(x))
 
 
-#ifndef TRUE
-#define TRUE		1	/* boolean truth value */
-#define FALSE		0	/* boolean false value */
-#endif
+#include <stdbool.h>
 
 #define FAIL		0	/* message failed */
 #define SUCCEED		1	/* message completed successful */
@@ -1803,7 +1800,7 @@ GLOBAL int	PCEdebugBoot;		/* Debug booting phase? */
 GLOBAL Chain	PCEdebugSubjects;	/* Names of things we are debugging */
 GLOBAL char    *symbolFile;		/* current symbol file */
 #else
-#define PCEdebugging FALSE
+#define PCEdebugging false
 #endif /*O_RUNTIME*/
 GLOBAL int	PCEargc;		/* main() argument count */
 GLOBAL char   **PCEargv;		/* main() argument vector */

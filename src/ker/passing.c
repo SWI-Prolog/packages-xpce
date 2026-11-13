@@ -88,7 +88,7 @@ getRedrawing(void)
 
 bool
 pceMTinit(void)
-{ XPCE_mt = TRUE;
+{ XPCE_mt = true;
 #ifdef USE_WIN32_CRITICAL_SECTION
   InitializeCriticalSection(&mutex.lock);
 #endif
@@ -615,7 +615,7 @@ pcePushNamedArgument(PceGoal g, PceName name, Any arg)
 
   pceSetErrorGoal(g, PCE_ERR_NO_NAMED_ARGUMENT, name);
 
-  return FALSE;
+  return false;
 }
 
 
@@ -1085,9 +1085,9 @@ pceReportErrorGoal(PceGoal g)
 
   if ( CurrentGoal != g )		/* if there is no implementation */
   { pushGoal(g);
-    pushed = TRUE;
+    pushed = true;
   } else
-    pushed = FALSE;
+    pushed = false;
 
   switch(g->errcode)
   { case PCE_ERR_OK:

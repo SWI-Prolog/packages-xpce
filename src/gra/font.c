@@ -170,7 +170,7 @@ getConvertFont(Class class, Name name)
 FontObj
 getCopyFont(FontObj f)
 { Class class = ClassFont;		/* also for a theme font */
-  FontObj copy = allocObject(class, FALSE);
+  FontObj copy = allocObject(class, false);
 
   ws_create_font(f);
   assign(copy, family,      f->family);

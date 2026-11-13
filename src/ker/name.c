@@ -225,7 +225,7 @@ initNamesPass1(void)
   allocRange(builtin_names, sizeof(builtin_names));
 
   for( name=(Name)builtin_names; name->data.s_text != NULL; name++)
-  { str_inithdr(&name->data, FALSE);
+  { str_inithdr(&name->data, false);
     name->data.s_size = (int)strlen((char *)name->data.s_text);
   }
 }
@@ -249,7 +249,7 @@ initNamesPass2(void)
 
   builtins = n;
 
-  DEBUG_BOOT(checkNames(TRUE));
+  DEBUG_BOOT(checkNames(true));
 }
 
 
@@ -530,7 +530,7 @@ StringToName(PceString s)
 	goto canonical;
     }
 
-    str_inithdr(&s2, FALSE);
+    str_inithdr(&s2, false);
     s2.s_size = s->s_size;
     if ( !(s2.s_textA = alloca(s->s_size)) )
     { s2.s_textA = pceMalloc(s->s_size);

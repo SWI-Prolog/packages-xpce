@@ -108,7 +108,7 @@ sdl_signal_watch(FDWatch *watch)
 #ifdef __WINDOWS__
   if ( watch->code == FD_ASYNC_WRITE )
   { if ( GetOverlappedResult(watch->hPipe, &watch->overlapped,
-			     NULL, FALSE) )
+			     NULL, false) )
     { EnterCriticalSection(&watch->lock);
       free(watch->buffer);
       watch->buffer      = watch->queue;
@@ -401,7 +401,7 @@ poll_thread_fn(void *unused)
 #ifdef __WINDOWS__
     DWORD rc = WaitForMultipleObjects(nfds,
 				      handles,
-				      FALSE,
+				      false,
 				      INFINITE);
     if ( rc >= WAIT_OBJECT_0 && rc < WAIT_OBJECT_0+nfds )
     { int i = rc-WAIT_OBJECT_0;
@@ -451,7 +451,7 @@ bool
 start_fd_watcher_thread(void)
 {
 #if __WINDOWS__
-  if ( !(control_event = CreateEvent(NULL, TRUE, FALSE, 0)) )
+  if ( !(control_event = CreateEvent(NULL, true, false, 0)) )
     return false;
   handles[0] = control_event;
 #else
@@ -542,7 +542,7 @@ add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata)
   for(int i=0; i<MAX_FDS; i++, watch++)
   { if ( claim_watch(watch) )
     { watch->hPipe = hPipe;
-      watch->fd = CreateEvent(NULL, TRUE, FALSE, NULL);
+      watch->fd = CreateEvent(NULL, true, false, NULL);
       watch->buffer = malloc(PIPE_READ_CHUNK);
       watch->buffer_size = PIPE_READ_CHUNK;
       watch->last_error = ERROR_SUCCESS;
@@ -559,7 +559,7 @@ read_watch(FDWatch *watch, char *buffer, size_t size)
   if ( watch->last_error != ERROR_SUCCESS )
   { return -1;
   } else if ( GetOverlappedResult(watch->hPipe, &watch->overlapped,
-				  &bytes, FALSE) )
+				  &bytes, false) )
   { assert(bytes <= size);
     memcpy(buffer, watch->buffer, bytes);
     if ( bytes == 0 )
@@ -580,7 +580,7 @@ add_out_pipe_to_watch(HANDLE hPipe)
   for(int i=0; i<MAX_FDS; i++, watch++)
   { if ( claim_watch(watch) )
     { watch->hPipe = hPipe;
-      watch->fd = CreateEvent(NULL, TRUE, FALSE, NULL);
+      watch->fd = CreateEvent(NULL, true, false, NULL);
       InitializeCriticalSection(&watch->lock);
       watch->last_error = ERROR_SUCCESS;
       DEBUG(NAME_stream, Cprintf("Async write watch on %d; event = %p\n",

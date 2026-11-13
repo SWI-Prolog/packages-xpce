@@ -1039,7 +1039,7 @@ resetPce(Pce pce)
 
 static status
 diePce(Pce pce, Int rval)
-{ static int dying = FALSE;
+{ static int dying = false;
   int rv = isDefault(rval) ? 0 : valInt(rval);
 
   if ( !dying++ )			/* avoid loops */
@@ -1170,7 +1170,7 @@ getVersionPce(Pce pce, Name how)
 
 static BoolObj
 getMultiThreadingPce(Pce pce)
-{ answer(XPCE_mt == TRUE ? ON : OFF);
+{ answer(XPCE_mt == true ? ON : OFF);
 }
 
 
@@ -1470,8 +1470,8 @@ pceInitialise(int handles, const char *home, const char *appdata,
   if ( XPCE_initialised )
     succeed;
 
-  XPCE_initialised = TRUE;
-  inBoot = TRUE;
+  XPCE_initialised = true;
+  inBoot = true;
 
   PCEargc = argc;
   PCEargv = argv;
@@ -1479,12 +1479,12 @@ pceInitialise(int handles, const char *home, const char *appdata,
   MaxGoalDepth = NO_MAX_GOAL_DEPTH;
 
 #ifndef O_RUNTIME
-  PCEdebugging = FALSE;
+  PCEdebugging = false;
   if ( getenv("PCEDEBUGBOOT") != NULL )
-  { PCEdebugBoot = TRUE;
+  { PCEdebugBoot = true;
     DEBUG_BOOT(Cprintf("Debugging boot cycle\n"));
   } else
-    PCEdebugBoot = FALSE;
+    PCEdebugBoot = false;
 #endif
 
   PCE = NIL;
@@ -1735,7 +1735,7 @@ pceInitialise(int handles, const char *home, const char *appdata,
     setAppDataPce(PCE, appdata);
 
   rewindAnswerStack(mark, NIL);
-  inBoot = FALSE;
+  inBoot = false;
 
   ws_initialise(argc, argv);
   if ( !hostAction(HOST_ATEXIT, run_pce_exit_hooks) )

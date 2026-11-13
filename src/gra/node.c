@@ -813,7 +813,7 @@ collapsedNode(Node n, BoolObj val)
 
       if ( !update && n->tree->direction == NAME_list &&
 	   n == n->tree->displayRoot && isNil(n->collapsed) )
-	update = TRUE;
+	update = true;
 
       assign(n, collapsed, val);
 

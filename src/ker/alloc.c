@@ -150,7 +150,7 @@ allocate(size_t size)
 
 #if ALLOC_DEBUG
     z->size   = size;
-    z->in_use = TRUE;
+    z->in_use = true;
     z->magic  = ALLOC_MAGIC_WORD;
 #endif
     return (Zone) &z->start;
@@ -162,7 +162,7 @@ allocate(size_t size)
 #if ALLOC_DEBUG
     z = (Zone) spaceptr;
     z->size   = &spaceptr[spacefree] - (char *) &z->start;
-    z->in_use = TRUE;
+    z->in_use = true;
     z->magic  = ALLOC_MAGIC_WORD;
     unalloc(z->size, &z->start);
     assert((z->size % ROUNDALLOC) == 0);
@@ -188,7 +188,7 @@ allocate(size_t size)
 #if ALLOC_DEBUG
   z = (Zone) p;
   z->size   = size;
-  z->in_use = TRUE;
+  z->in_use = true;
   z->magic  = ALLOC_MAGIC_WORD;
   memset(&z->start, ALLOC_MAGIC_USED, size);
 
@@ -227,11 +227,11 @@ alloc(size_t n)
     {
 #if ALLOC_DEBUG
       assert((intptr_t) z >= allocBase && (intptr_t) z <= allocTop);
-      assert(z->in_use == FALSE);
+      assert(z->in_use == false);
       assert(z->magic  == ALLOC_MAGIC_WORD);
       assert((intptr_t)z->next % sizeof(void*) == 0);
 
-      z->in_use = TRUE;
+      z->in_use = true;
 #endif
 
       freeChains[m] = (Zone) z->next;
@@ -296,9 +296,9 @@ unalloc(size_t n, Any p)
 #endif
     z = (Zone) ((char *)z - offset(struct zone, start));
     assert(z->magic  == ALLOC_MAGIC_WORD);
-    assert(z->in_use == TRUE);
+    assert(z->in_use == true);
     assert(z->size   == n);
-    z->in_use = FALSE;
+    z->in_use = false;
 #endif
 
     wastedbytes += n;

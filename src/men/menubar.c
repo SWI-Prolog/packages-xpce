@@ -78,7 +78,7 @@ RedrawAreaButtonMenuBar(Button b, Area a, bool kbd)
     if ( b->look == NAME_xpce &&
 	 (e = getClassVariableValueObject(b, NAME_previewElevation)) &&
 	 notNil(e) )
-    { r_3d_box(x, y, w, h, 0, e, TRUE);
+    { r_3d_box(x, y, w, h, 0, e, true);
     } else /* if ( b->look == NAME_win ) */
     { Any fg = getClassVariableValueObject(b, NAME_selectedForeground);
       Any bg = getClassVariableValueObject(b, NAME_selectedBackground);

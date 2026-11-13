@@ -561,7 +561,7 @@ pceToC(Any obj, PceCValue *rval)
 
 int
 pceIsString(Any val)
-{ return instanceOfObject(val, ClassString) ? TRUE : FALSE;
+{ return instanceOfObject(val, ClassString) ? true : false;
 }
 
 
@@ -1120,7 +1120,7 @@ int
 pceSetProfileHooks(pce_profile_hooks *hooks)
 { PceProfile = *hooks;			/* structure copy */
 
-  return TRUE;
+  return true;
 }
 
 

@@ -202,7 +202,7 @@ loadTextBuffer(TextBuffer tb, IOSTREAM *fd, ClassDef def)
 
       pceFree(tb->tb_bufferA);
       tb->tb_bufferW = w;
-      tb->buffer.s_iswide = TRUE;
+      tb->buffer.s_iswide = true;
       tb->tb_bufferW[i++] = chr;
 
       for(; i<end; i++)
@@ -400,7 +400,7 @@ CAppendTextBuffer(TextBuffer tb, const char *text)
 			  tb->size,
 			  1,
 			  &s,
-			  FALSE);
+			  false);
 
   return changedTextBuffer(tb);
 
@@ -416,7 +416,7 @@ appendTextBuffer(TextBuffer tb, CharArray ca, Int times)
 			  tb->size,
 			  valInt(times),
 			  &ca->data,
-			  FALSE);	/* don't shift fragments! */
+			  false);	/* don't shift fragments! */
 
   return changedTextBuffer(tb);
 }
@@ -427,7 +427,7 @@ formatTextBuffer(TextBuffer tb, CharArray fmt, int argc, Any *argv)
 { string s;
 
   TRY(str_writefv(&s, fmt, argc, argv));
-  insert_textbuffer_shift(tb, tb->size, 1, &s, FALSE);
+  insert_textbuffer_shift(tb, tb->size, 1, &s, false);
 					/* don't shift fragments! */
   str_unalloc(&s);
 
@@ -600,7 +600,7 @@ forAllFragmentsTextBuffer(TextBuffer tb, Code msg)
 { int size = 0;
   Fragment f;
   Fragment *argv;
-  int alloced = FALSE;
+  int alloced = false;
   int i;
   int rc = SUCCEED;
 
@@ -609,7 +609,7 @@ forAllFragmentsTextBuffer(TextBuffer tb, Code msg)
 
   if ( size > 1024 || !(argv = alloca(size*sizeof(Fragment))) )
   { argv = pceMalloc(size*sizeof(Fragment));
-    alloced = TRUE;
+    alloced = true;
   }
 
 
@@ -670,8 +670,8 @@ getFindTextBuffer(TextBuffer tb, Int from, StringObj str,
     times = ONE;
   az = (isDefault(start) ? (valInt(times) >= 0 ? 'z' : 'a')
 			 : start == NAME_start ? 'a' : 'z');
-  ec = (exactcase == ON || isDefault(exactcase) ? TRUE : FALSE);
-  wm = (wordmode == OFF || isDefault(wordmode)  ? FALSE : TRUE);
+  ec = (exactcase == ON || isDefault(exactcase) ? true : false);
+  wm = (wordmode == OFF || isDefault(wordmode)  ? false : true);
 
   result = find_textbuffer(tb,
 			   valInt(from),
@@ -1638,14 +1638,14 @@ getCountLinesTextBuffer(TextBuffer tb, Int from, Int to)
 ssize_t
 find_textbuffer(TextBuffer tb, intptr_t here, PceString str,
 		intptr_t times, char az, int ec, int wm)
-{ int hit = FALSE;
+{ int hit = false;
   int where = here;
 
   if ( times < 0 )
   { for( ; here >= 0 && times < 0; times++ )
     { for( ; here >= 0; here-- )
       { if ( match_textbuffer(tb, here, str, ec, wm) )
-	{ hit = TRUE;
+	{ hit = true;
 	  where = here;
 	  break;
 	}
@@ -1657,7 +1657,7 @@ find_textbuffer(TextBuffer tb, intptr_t here, PceString str,
     for( ; here < size && times > 0; times-- )
     { for( ; here < size; here++ )
       { if ( match_textbuffer(tb, here, str, ec, wm) )
-        { hit = TRUE;
+        { hit = true;
           where = here;
           break;
 	}
@@ -1677,12 +1677,12 @@ match_textbuffer(TextBuffer tb, intptr_t here, PceString s, int ec, int wm)
 
   if ( wm && (tisalnum(tb->syntax, fetch(here-1)) ||
 	      tisalnum(tb->syntax, fetch(here+l))) )
-    return FALSE;
+    return false;
 
   if ( ec )
   { for( i=0; i < l; i++ )
     { if ( fetch(here++) != (int)str_fetch(s, i) )
-	return FALSE;
+	return false;
     }
   } else
   { for( i=0; i < l; i++ )
@@ -1690,11 +1690,11 @@ match_textbuffer(TextBuffer tb, intptr_t here, PceString s, int ec, int wm)
       uchar_t c2 = str_fetch(s, i);
 
       if ( tolower(c1) != tolower(c2) )
-	return FALSE;
+	return false;
     }
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -2316,7 +2316,7 @@ capitalise_textbuffer(TextBuffer tb, intptr_t from, intptr_t len)
 static Any
 streamError(IOSTREAM *fd)
 { if ( fd->message )
-    return cToPceStringA(NIL, fd->message, strlen(fd->message), FALSE);
+    return cToPceStringA(NIL, fd->message, strlen(fd->message), false);
 
   return getOsErrorPce(PCE);
 }
@@ -2417,7 +2417,7 @@ promoteTextBuffer(TextBuffer tb)
 
     pceFree(tb->tb_bufferA);
     tb->tb_bufferW = w;
-    tb->buffer.s_iswide = TRUE;
+    tb->buffer.s_iswide = true;
   }
 
   succeed;
@@ -2453,7 +2453,7 @@ demoteTextBuffer(TextBuffer tb)
 
       pceFree(tb->tb_bufferW);
       tb->tb_bufferA = s;
-      tb->buffer.s_iswide = FALSE;
+      tb->buffer.s_iswide = false;
     } else
     { fail;
     }
@@ -2635,7 +2635,7 @@ insert_textbuffer_shift(TextBuffer tb, intptr_t where, intptr_t times,
 
 status
 insert_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, PceString s)
-{ return insert_textbuffer_shift(tb, where, times, s, TRUE);
+{ return insert_textbuffer_shift(tb, where, times, s, true);
 }
 
 

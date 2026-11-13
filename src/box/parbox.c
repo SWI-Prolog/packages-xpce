@@ -640,10 +640,10 @@ test_get_find_parbox(ParBox pb, HBox hb, long index, void *closure)
   if ( forwardReceiverCode(cl->test, pb, hb, toInt(index), EAV) )
   { cl->parbox = pb;
     cl->index  = index;
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -719,7 +719,7 @@ getNaturalWidthParBox(ParBox pb, Int maxwidth)
       { if ( (pc->flags & PC_ALIGNED_GR) && !(pc->flags & PC_PLACED) )
 	{ GrBox grb = (GrBox)pc->box;
 
-	  PlaceAlignedGr(grb, &l, &shape, TRUE);
+	  PlaceAlignedGr(grb, &l, &shape, true);
 	}
       }
     }
@@ -971,7 +971,7 @@ fill_line(ParBox pb, int here, parline *line, parshape *shape,
   int last_break_index = here;
   parcell *last_break = NULL;
   parcell *pc = line->hbox, *epc = pc+line->size;
-  int blank = TRUE;			/* only emitted blank space */
+  int blank = true;			/* only emitted blank space */
 
   clean_margins(shape, line->y);
   current_margins(shape, line->y, &line->x, &line->w);
@@ -989,17 +989,17 @@ fill_line(ParBox pb, int here, parline *line, parshape *shape,
     if ( cx+bw > ex && last_break )
     { pc   = last_break;
       here = last_break_index;
-      line->end_of_par = FALSE;
+      line->end_of_par = false;
       break;
     }
 
     if ( notNil(hb->rubber) && notNil(hb->rubber->linebreak) )
     { if ( cx+bw > ex )
-      { line->end_of_par = FALSE;
+      { line->end_of_par = false;
 	break;
       }
       if ( hb->rubber->linebreak == NAME_force )
-      { line->end_of_par = TRUE;
+      { line->end_of_par = true;
 	break;
       }
 
@@ -1042,7 +1042,7 @@ fill_line(ParBox pb, int here, parline *line, parshape *shape,
 	{ int lx;
 
 	  pc->flags |= PC_PLACED;
-	  PlaceAlignedGr(grb, line, shape, FALSE);
+	  PlaceAlignedGr(grb, line, shape, false);
 	  current_margins(shape, line->y, &lx, &line->w);
 	  cx += lx - line->x;
 	  ex = cx + line->w;
@@ -1057,7 +1057,7 @@ fill_line(ParBox pb, int here, parline *line, parshape *shape,
     if ( !(pc->flags & PC_ALIGNED_GR) )
     { if ( !(hb->width == ZERO ||
 	     (hb->ascent == ZERO && hb->descent == ZERO)) )
-	blank = FALSE;
+	blank = false;
       cx += pc->w;
     }
   }
@@ -1065,7 +1065,7 @@ fill_line(ParBox pb, int here, parline *line, parshape *shape,
   if ( here <= hi )
     here++;
   else
-    line->end_of_par = TRUE;
+    line->end_of_par = true;
 
   line->size = pc-line->hbox;
   compute_line(line);
@@ -1192,7 +1192,7 @@ PlaceGrBox(ParBox pb, GrBox grb, parline *l, Int x, Int y, Int w)
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Place left/right aligned graphical.  If `below' is TRUE, place it below the
+Place left/right aligned graphical.  If `below' is true, place it below the
 current line.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -1246,7 +1246,7 @@ computeParBox(ParBox pb)
       l.y = y;
       l.w = w;
       l.size = MAXHBOXES;
-      here = fill_line(pb, here, &l, &shape, TRUE);
+      here = fill_line(pb, here, &l, &shape, true);
       lineno++;
 
       DEBUG(NAME_parbox,
@@ -1261,7 +1261,7 @@ computeParBox(ParBox pb)
 	int maxloop = 3;
 
 	while(--maxloop >= 0)
-	{ int modified = FALSE;
+	{ int modified = false;
 	  int gr = 0;
 
 	  justify_line(&l, pb->alignment);
@@ -1275,7 +1275,7 @@ computeParBox(ParBox pb)
 			       toInt(pc->x),
 			       toInt(y + l.ascent - valInt(grb->ascent)),
 			       toInt(pc->w)) )
-		modified = TRUE;
+		modified = true;
 	      if ( ++gr == l.graphicals )
 		break;			/* we had them all */
 	    }
@@ -1299,7 +1299,7 @@ computeParBox(ParBox pb)
 	{ if ( (pc->flags & PC_ALIGNED_GR) && !(pc->flags & PC_PLACED) )
 	  { GrBox grb = (GrBox)pc->box;
 
-	    PlaceAlignedGr(grb, &l, &shape, TRUE);
+	    PlaceAlignedGr(grb, &l, &shape, true);
 	  }
 	}
       }
@@ -1381,11 +1381,11 @@ geometryParBox(ParBox pb, Int x, Int y, Int w, Int h)
   if ( isDefault(y) ) y = a->y;
   if ( isDefault(w) )
   { w = a->w;
-    chw = FALSE;
+    chw = false;
   } else
   { if ( pb->auto_crop == ON )
     { assign(pb, auto_crop, OFF);
-      chw = TRUE;
+      chw = true;
     } else
       chw = (w != a->w);
   }

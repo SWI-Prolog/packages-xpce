@@ -53,7 +53,7 @@ static Int	getCellIndexChain(Chain ch, Cell c);
  */
 
 static Cell
-newCell(Chain ch, register Any value)
+newCell(Chain ch, Any value)
 { Cell cell;
 
   cell = alloc(sizeof(struct cell));
@@ -74,8 +74,8 @@ freeCell(Chain ch, Cell cell)
 
 
 static Cell
-previousCell(Chain ch, register Cell next)
-{ register Cell cell;
+previousCell(Chain ch, Cell next)
+{ Cell cell;
 
   for_cell(cell, ch)
     if (cell->next == next)
@@ -240,7 +240,7 @@ getSizeChain(Chain ch)
 
 
 status
-prependChain(register Chain ch, Any obj)
+prependChain(Chain ch, Any obj)
 { Cell cell;
 
   cell = newCell(ch, obj);
@@ -259,7 +259,7 @@ prependChain(register Chain ch, Any obj)
 
 
 status
-appendChain(register Chain ch, Any obj)
+appendChain(Chain ch, Any obj)
 { Cell cell;
 
   cell = newCell(ch, obj);
@@ -279,7 +279,7 @@ appendChain(register Chain ch, Any obj)
 
 
 status
-addChain(register Chain ch, Any obj)
+addChain(Chain ch, Any obj)
 { if ( !memberChain(ch, obj) )
     return prependChain(ch, obj);
 
@@ -423,8 +423,8 @@ deleteTailChain(Chain ch)
 
 
 status
-deleteChain(Chain ch, register Any obj)
-{ register Cell cell, p;
+deleteChain(Chain ch, Any obj)
+{ Cell cell, p;
   int i;
 
   EXISTS(ch->head);
@@ -528,7 +528,7 @@ deleteAllChain(Chain ch, Any obj)
 
 status
 memberChain(Chain ch, Any obj)
-{ register Cell cell;
+{ Cell cell;
 
   for_cell(cell, ch)
   { if ( cell->value == obj )
@@ -559,8 +559,8 @@ currentChain(Chain ch, Any obj)
 
 static status
 currentNoChain(Chain ch, Int index)
-{ register Cell cell;
-  register int i = valInt(index);
+{ Cell cell;
+  int i = valInt(index);
 
   if (i == 0)
   { ch->current = NIL;
@@ -780,8 +780,8 @@ findChain(Chain ch, Code code)
 
 status
 mergeChain(Chain ch, Chain ch2)
-{ register Cell cell;
-  register Cell tail = ch->tail;
+{ Cell cell;
+  Cell tail = ch->tail;
 
   for_cell(cell, ch2)
   { appendChain(ch, cell->value);
@@ -795,7 +795,7 @@ mergeChain(Chain ch, Chain ch2)
 
 static status
 unionChain(Chain ch, Chain ch2)
-{ register Cell cell;
+{ Cell cell;
 
   for_cell(cell, ch2)
   { if ( !memberChain(ch, cell->value) )
@@ -807,7 +807,7 @@ unionChain(Chain ch, Chain ch2)
 
 static status
 intersectionChain(Chain ch, Chain ch2)
-{ register Cell cell;
+{ Cell cell;
 
   for_cell(cell, ch)
   { if ( !memberChain(ch2, cell->value) )
@@ -904,7 +904,7 @@ getCopyChain(Chain ch)
 
 static Chain
 getMergeChain(Chain ch, Chain ch2)
-{ register Cell cell;
+{ Cell cell;
   Chain r;
 
   r = answerObject(ClassChain, EAV);
@@ -920,7 +920,7 @@ getMergeChain(Chain ch, Chain ch2)
 
 static Chain
 getUnionChain(Chain ch, Chain ch2)
-{ register Cell cell;
+{ Cell cell;
   Chain r;
 
   r = answerObject(classOfObject(ch), EAV);
@@ -1128,7 +1128,7 @@ getCompleteNameChain(Chain ch, CharArray prefix, Function map,
 
 Chain
 getIntersectionChain(Chain ch, Chain ch2)
-{ register Cell cell;
+{ Cell cell;
   Chain r;
 
   r = answerObject(classOfObject(ch), EAV);
@@ -1354,8 +1354,8 @@ afterChain(Chain ch, Any obj1, Any obj2)
 
 Any
 getNth1Chain(Chain ch, Int index)
-{ register Cell cell;
-  register int n = valInt(index);
+{ Cell cell;
+  int n = valInt(index);
 
   for_cell(cell, ch)
   { if (--n == 0)
@@ -1368,8 +1368,8 @@ getNth1Chain(Chain ch, Int index)
 
 static status
 nth1Chain(Chain ch, Int index, Any value)
-{ register Cell cell;
-  register int n = valInt(index);
+{ Cell cell;
+  int n = valInt(index);
 
   for_cell(cell, ch)
   { if (--n == 0)
@@ -1382,8 +1382,8 @@ nth1Chain(Chain ch, Int index, Any value)
 
 Any
 getNth0Chain(Chain ch, Int index)
-{ register Cell cell;
-  register int n = valInt(index);
+{ Cell cell;
+  int n = valInt(index);
 
   for_cell(cell, ch)
   { if (n-- == 0)
@@ -1396,8 +1396,8 @@ getNth0Chain(Chain ch, Int index)
 
 static status
 nth0Chain(Chain ch, Int index, Any value)
-{ register Cell cell;
-  register int n = valInt(index);
+{ Cell cell;
+  int n = valInt(index);
 
   for_cell(cell, ch)
   { if (n-- == 0)
@@ -1450,8 +1450,8 @@ cellValueChain(Chain ch, Int c, Any obj)
 
 Cell
 getNth0CellChain(Chain ch, Int index)
-{ register Cell cell;
-  register int n = valInt(index);
+{ Cell cell;
+  int n = valInt(index);
 
   for_cell(cell, ch)
   { if ( n-- == 0 )

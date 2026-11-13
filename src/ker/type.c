@@ -1236,13 +1236,13 @@ suffix_string(StrPart s, const char *suff)
       { s->end = es;
 	s->end[1] = EOS;
 
-	return TRUE;
+	return true;
       } else
-	return FALSE;
+	return false;
     }
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -1257,10 +1257,10 @@ prefix_string(StrPart s, const char *prefix)
   if ( !*pref )
   { s->start = q;
     strip_string(s);
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -1729,7 +1729,7 @@ pceCheckNameType()
 
 int
 pceCheckNameType(PceType t, const char *s)
-{ int rval = FALSE;
+{ int rval = false;
   again:
 
   switch( t->validate_function )
@@ -1823,7 +1823,7 @@ pceCheckFloatType(PceType t, double f)
   }
 
   if ( validateType(t, toNum(f), NIL) )
-    return TRUE;
+    return true;
 
   setReal(tmp, f);
 

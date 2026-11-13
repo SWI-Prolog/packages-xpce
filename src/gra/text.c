@@ -253,7 +253,7 @@ RedrawAreaText(TextObj t, Area a)
 static void
 str_format(PceString out, const PceString in, const int width, const FontObj font)
 { int x = 0;
-  int last_is_layout = TRUE;
+  int last_is_layout = true;
 
   if ( isstrA(in) )			/* 8-bit string */
   { charA  *s = in->s_textA;
@@ -1008,7 +1008,7 @@ showCaretText(TextObj t, Any val)
 
 static status
 selectionText(TextObj t, Int from, Int to)
-{ int changed = FALSE;
+{ int changed = false;
 
   if ( from == to )
     from = NIL;
@@ -1342,7 +1342,7 @@ nextLineText(TextObj t, Int arg, Int column)
   cy += UArg(t) * fh + fh/2;
   cx  = (isDefault(column) ? cx + fw/2 : valInt(column));
 
-  return moveCaretText(t, get_pointed_text(t, cx, cy, TRUE));
+  return moveCaretText(t, get_pointed_text(t, cx, cy, true));
 }
 
 
@@ -1741,7 +1741,7 @@ lengthText(TextObj t, Int l)
 
 status
 marginText(TextObj t, Int width, Name wrap)
-{ int changed = FALSE;
+{ int changed = false;
 
   if ( isNil(width) )
   { width = toInt(100);			/* initial default */

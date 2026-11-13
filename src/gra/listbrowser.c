@@ -739,7 +739,7 @@ scan_list_browser(Any obj, long int from, int dir,
   assert(dir > 0 && how == TEXT_SCAN_FOR && category == EL);
 
   *eof = (isNil(lb->dict) ||
-	  ((item + 1 >= valInt(lb->dict->members->size)) ? TRUE : FALSE));
+	  ((item + 1 >= valInt(lb->dict->members->size)) ? true : false));
 
   return (item + 1) * BROWSER_LINE_WIDTH - 1;
 }
@@ -900,7 +900,7 @@ static StringObj
 getExtendPrefixDict(Dict dict, CharArray pref, BoolObj ign_case)
 { LocalString(common, pref->data.s_iswide, LINESIZE);
   Cell cell;
-  int hit = FALSE;
+  int hit = false;
 
   common->s_size = 0;
 
@@ -1841,11 +1841,11 @@ multipleSelectionListBrowser(ListBrowser lb, BoolObj val)
       { assign(lb, selection, NIL);
       } else
       { Cell cell;
-	int start = TRUE;
+	int start = true;
 
 	for_cell(cell, (Chain)lb->selection)
 	{ if ( start )
-	    start = FALSE;
+	    start = false;
 	  else
 	    deselectListBrowser(lb, cell->value);
 	}

@@ -13147,7 +13147,7 @@ getPrologStreamTerminalImage(Any obj,
     if ( !b->ptycon.hTaskError )
     { if ( !DuplicateHandle(GetCurrentProcess(), b->ptycon.hTaskOut,
 			    GetCurrentProcess(), &b->ptycon.hTaskError,
-			    0, TRUE, DUPLICATE_SAME_ACCESS) )
+			    0, true, DUPLICATE_SAME_ACCESS) )
       { Cprintf("Failed to dup out to error\n");
 	return false;
       }
@@ -13359,7 +13359,7 @@ launchTerminalImage(TerminalImage ti, CharArray cmdline)
   BOOL ok = CreateProcessW(
     NULL,
     charArrayToWC(cmdline, NULL),
-    NULL, NULL, TRUE,
+    NULL, NULL, true,
     EXTENDED_STARTUPINFO_PRESENT,
     NULL, NULL,
     &siEx.StartupInfo,

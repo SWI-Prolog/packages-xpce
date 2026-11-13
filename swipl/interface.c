@@ -95,10 +95,7 @@
 	PceObject *name = (PceObject *) alloca(size * sizeof(term_t))
 #endif
 
-#ifndef TRUE
-#define TRUE 1
-#define FALSE 0
-#endif
+#include <stdbool.h>
 
 #ifndef EOS
 #define EOS '\0'
@@ -466,10 +463,10 @@ GetChars(term_t t, char **s, unsigned int *len)
        SP_get_list_chars(t, s) ||
        SP_get_number_chars(t, s) )
   { *len = strlen(*s);
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -495,7 +492,7 @@ StripModuleTag(term_t t, atom_t *module, term_t p)
       break;
   }
 
-  return TRUE;
+  return true;
 }
 
 #endif /*~SWI*/
@@ -775,7 +772,7 @@ ThrowException(int id, ...)
   term_t ctx;
 
   if ( !(fid = PL_open_foreign_frame()) )
-    return FALSE;
+    return false;
 
   et  = PL_new_term_ref();	/* the error term */
   err = PL_new_term_ref();	/* the 1-st argument */
@@ -934,12 +931,12 @@ ThrowException(int id, ...)
   if ( !PL_cons_functor(et, FUNCTOR_error2, err, ctx) )
     goto error;
 
-  return PL_raise_exception(et),FALSE;
+  return PL_raise_exception(et),false;
 
 error:
   va_end(args);
   PL_close_foreign_frame(fid);
-  return FALSE;
+  return false;
 }
 
 
@@ -1116,7 +1113,7 @@ static int
 putBlobRef(term_t t, PceObject obj)
 { PL_put_blob(t, obj, pceSizeOfObject(obj), &pce_blob);
 
-  return TRUE;
+  return true;
 }
 
 
@@ -1133,10 +1130,10 @@ is_pce_blob(term_t t, PceObject *obj)
 
   if ( PL_get_blob(t, &data, &len, &type) && type == &pce_blob )
   { *obj = data;
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -1151,7 +1148,7 @@ get_object_from_blob(term_t t, PceObject *obj)
 
   if ( is_pce_blob(t, &o) && o && pceExistsObject(o) )
   { *obj = o;
-    return TRUE;
+    return true;
   }
 
   /* A blob that no longer denotes an object means something kept a
@@ -1189,7 +1186,7 @@ get_object_from_refterm(term_t t, PceObject *obj)
   { if ( (o = pceObjectFromName(atomToName(name))) )
     { *obj = o;
 
-      return TRUE;
+      return true;
     }
 
     return ThrowException(EX_BAD_ATOM_OBJECT_REF, name);
@@ -1210,10 +1207,10 @@ unifyReferenceArg(term_t t, PceObject obj)
   term_t t2;
 
   if ( pceToCReference(obj, &value) != PCE_ASSOC )
-    return FALSE;
+    return false;
 
   if ( !(t2=PL_new_term_ref()) )
-    return FALSE;
+    return false;
   PL_put_atom(t2, CachedNameToAtom(value.itf_symbol->name));
 
   return PL_unify(t, t2);
@@ -1261,7 +1258,7 @@ do_new(term_t ref, term_t t)
 { PceObject rval;
 
   if ( IsVar(ref) )
-  { if ( (rval = termToObject(t, NULL, NULLATOM, TRUE)) )
+  { if ( (rval = termToObject(t, NULL, NULLATOM, true)) )
     { if ( unifyReference(ref, rval) )
 	return rval;
     }
@@ -1276,7 +1273,7 @@ do_new(term_t ref, term_t t)
     if ( !GetAtom(a, &assoc) )		/* new(@foo, ...) */
       goto error;			/* new(@X, ...): @ needs a name */
 
-    if ( (rval = termToObject(t, NULL, assoc, TRUE)) )
+    if ( (rval = termToObject(t, NULL, assoc, true)) )
     { if ( unifyReferenceArg(a, rval) )
 	return rval;
     }
@@ -1434,7 +1431,7 @@ get_object_arg(term_t t, PceObject* obj)
 	  QGetArg(2, t, a);
 	  av[0] = atomToName(an);
 	  if ( !get_object_arg(a, &av[1]) )
-	    return FALSE;
+	    return false;
 
 	  *obj = pceNew(NIL, ClassBinding, 2, av);
 
@@ -1489,7 +1486,7 @@ get_typed_object(PceGoal g, term_t t, PceType type, PceObject* rval)
       return true;
     }
 
-    if ( !(obj = termToObject(t, type, NULLATOM, FALSE)) )
+    if ( !(obj = termToObject(t, type, NULLATOM, false)) )
       return pceSetErrorGoal(g, PCE_ERR_ARGTYPE, makeTermHandle(t));
   }
 
@@ -1504,7 +1501,7 @@ get_typed_object(PceGoal g, term_t t, PceType type, PceObject* rval)
 
 static __inline PceObject
 termToReceiver(term_t t)
-{ return termToObject(t, NULL, NULLATOM, FALSE);
+{ return termToObject(t, NULL, NULLATOM, false);
 }
 
 
@@ -1545,10 +1542,10 @@ get_answer_object(PceGoal g, term_t t, PceType type, PceObject *rval)
   if ( !obj )
   { if ( pceIncludesHostDataType(type, ClassProlog) )
     { *rval = makeRecordedTermHandle(t);
-      return TRUE;
+      return true;
     }
 
-    if ( !(obj = termToObject(t, type, NULLATOM, FALSE)) )
+    if ( !(obj = termToObject(t, type, NULLATOM, false)) )
       return pceSetErrorGoal(g, PCE_ERR_RETTYPE, makeRecordedTermHandle(t));
   }
 
@@ -1590,7 +1587,7 @@ getPrintNameProlog(PceObject hd)
   s->encoding = ENC_WCHAR;
   PL_write_term(s, getTermHandle(hd), 1200, 0);
   Sflush(s);
-  rval = cToPceStringW(NIL, (wchar_t *)buffer, size/sizeof(wchar_t), FALSE);
+  rval = cToPceStringW(NIL, (wchar_t *)buffer, size/sizeof(wchar_t), false);
   Sclose(s);
 
   if ( buffer )
@@ -1782,7 +1779,7 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
       { term_t a = PL_new_term_ref();
 
 	QGetArg(1, t, a);
-	return termToObject(a, NULL, NULLATOM, TRUE);
+	return termToObject(a, NULL, NULLATOM, true);
       }
       if ( arity == 2 )			/* new(B, box) */
       { term_t r = PL_new_term_ref();
@@ -1805,17 +1802,17 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
 
       QGetArg(1, t, a);
       if ( PL_get_nchars(a, &len, &s, CVT_ALL) )
-	return cToPceStringA(pceassoc, s, len, FALSE);
+	return cToPceStringA(pceassoc, s, len, false);
       else if ( PL_get_wchars(a, &len, &sW, CVT_ALL) )
-	return cToPceStringW(pceassoc, sW, len, FALSE);
+	return cToPceStringW(pceassoc, sW, len, false);
 					/* string(@ref), string(string(x)): */
       if ( get_object_arg(a, &obj) &&	/* a copy of a char_array's text */
 	   (ca = pceGet(char_array_type(), NULL, cToPceName("check"),
 			1, &obj)) )
       { if ( (s = pceCharArrayToCA(ca, &len)) )
-	  return cToPceStringA(pceassoc, s, len, FALSE);
+	  return cToPceStringA(pceassoc, s, len, false);
 	if ( (sW = pceCharArrayToCW(ca, &len)) )
-	  return cToPceStringW(pceassoc, sW, len, FALSE);
+	  return cToPceStringW(pceassoc, sW, len, false);
       }
 
       ThrowException(EX_TYPE, ATOM_string, t);
@@ -1892,9 +1889,9 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
     size_t len;
 
     if ( PL_get_string(t, &s, &len) )	/* string object (if supported) */
-      return cToPceStringA(atomToAssoc(assoc), s, len, FALSE);
+      return cToPceStringA(atomToAssoc(assoc), s, len, false);
     if ( PL_get_wchars(t, &len, &w, CVT_STRING) )
-      return cToPceStringW(atomToAssoc(assoc), w, len, FALSE);
+      return cToPceStringW(atomToAssoc(assoc), w, len, false);
   }
 #endif
 
@@ -1944,7 +1941,7 @@ unifyObject(term_t t, PceObject obj, int top)
 	return PL_unify_wchars(t, PL_ATOM, len, textW);
       else
       { assert(0);
-	return FALSE;
+	return false;
       }
     }
     case PCE_HOSTDATA:
@@ -1988,9 +1985,9 @@ unifyObject(term_t t, PceObject obj, int top)
     { PL_put_atom_nchars(a, len, textA);
     } else if ( (textW = pceCharArrayToCW(obj, &len)) )
     { if ( !PL_unify_wchars(a, PL_ATOM, len, textW) )
-	return FALSE;
+	return false;
     } else
-    { return FALSE;
+    { return false;
     }
 
     return PL_unify_term(t,
@@ -2007,47 +2004,47 @@ unifyObject(term_t t, PceObject obj, int top)
 
     if ( !(got = pceGet(obj, NULL, NAME_functor, 0, NULL)) ||
 	 !(pname = nameToAtom(got)) )
-      return FALSE;
+      return false;
     if ( !(got = pceGet(obj, NULL, NAME_Arity, 0, NULL)) ||
 	 pceToC(got, &value) != PCE_INTEGER )
-      return FALSE;
+      return false;
     parity = value.integer;
 
     if ( GetNameArity(t, &name, &arity) )
     { if ( name != pname || arity != parity )
-	return FALSE;
+	return false;
       for(n=1; n<=arity; n++)
       { PceObject pcen = cToPceInteger(n);
 
 	if ( (got = pceGet(obj, NULL, NAME_Arg, 1, &pcen)) )
 	{ QGetArg(n, t, at);
 
-	  if ( !unifyObject(at, got, FALSE) )
-	    return FALSE;
+	  if ( !unifyObject(at, got, false) )
+	    return false;
 	} else
-	  return FALSE;
+	  return false;
       }
 
-      return TRUE;
+      return true;
     } else if ( IsVar(t) )
     { term_t t2 = PL_new_term_ref();
 
       if ( !PutFunctor(t2, pname, parity) )
-	return FALSE;
+	return false;
       for(n=1; n<=parity; n++)
       { PceObject pcen = cToPceInteger(n);
 
 	if ( (got = pceGet(obj, NULL, NAME_Arg, 1, &pcen)) )
 	{ QGetArg(n, t2, at);
 
-	  if ( !unifyObject(at, got, FALSE) )
-	    return FALSE;
+	  if ( !unifyObject(at, got, false) )
+	    return false;
 	} else
-	  return FALSE;
+	  return false;
       }
       return PL_unify(t, t2);
     } else
-      return FALSE;
+      return false;
   }
 }
 
@@ -2089,7 +2086,7 @@ pl_new(term_t assoc, term_t descr)
 
   if ( !StripModuleTag(descr, &DefaultModule, d) )
   { UNLOCK();
-    return FALSE;
+    return false;
   }
   markAnswerStack(mark);
   obj = do_new(assoc, d);
@@ -2103,7 +2100,7 @@ pl_new(term_t assoc, term_t descr)
   pceFreeGoal(&goal);
   UNLOCK();
 
-  return obj ? TRUE : FALSE;
+  return obj ? true : false;
 }
 
 
@@ -2117,16 +2114,16 @@ get_pce_class(term_t t, PceClass *cl)
 
       if ( class )
       { *cl = class;
-	return TRUE;
+	return true;
       }
     }
 
-    return FALSE;
+    return false;
     assert(0);				/* Raise exception */
   }
 
   *cl = NULL;
-  return TRUE;
+  return true;
 }
 
 
@@ -2172,7 +2169,7 @@ put_prolog_argument(PceGoal g, term_t t, PceType type, term_t f)
   { case PL_ATOM:
       if ( pceCheckNameType(type, AtomCharp(val.a)) )
       { PL_put_atom(t, val.a);
-	return TRUE;
+	return true;
       }
       break;
     case PL_INTEGER:
@@ -2189,29 +2186,29 @@ put_prolog_argument(PceGoal g, term_t t, PceType type, term_t f)
 
 	if ( !get_object_from_refterm(f, &obj) )
 	{ g->errcode = PCE_ERR_OK;	/* TBD: Should be something else  */
-	  return FALSE;
+	  return false;
 	}
 
 	if ( (obj2 = pceCheckType(g, type, obj)) )
 	{ if ( obj2 == obj )
 	  { if ( !PutTerm(t, f) )
-	      return FALSE;
+	      return false;
 	  } else
 	  { put_object(t, obj2);
 	  }
 
-	  return TRUE;
+	  return true;
 	}
       }
   }
 
 					/* anything else */
-  if ( (obj = termToObject(f, type, NULLATOM, FALSE)) )
+  if ( (obj = termToObject(f, type, NULLATOM, false)) )
   { PceObject obj2;
 
     if ( (obj2 = pceCheckType(g, type, obj)) )
     { put_object(t, obj2);
-      return TRUE;
+      return true;
     }
 
     return pceSetErrorGoal(g, PCE_ERR_ARGTYPE, obj);
@@ -2412,7 +2409,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 
 					/* get(R, S, size(W,H)) */
 		if ( !PL_unify(ret, av+3) )
-		  rval = unifyObject(ret, obj, FALSE);
+		  rval = unifyObject(ret, obj, false);
 	      } else
 		rval = PL_unify(ret, av+3);
 	    }
@@ -2457,7 +2454,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 	  rval = pceExecuteGoal(&goal);
 
 	  if ( ret && rval )
-	    rval = unifyObject(ret, goal.rval, FALSE);
+	    rval = unifyObject(ret, goal.rval, false);
 
 	  goto out;
 	error:
@@ -2537,7 +2534,7 @@ pl_object1(term_t ref)
       return pceExistsAssoc(atomToName(refname));  /* get_object_from_refterm() */
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -2561,13 +2558,13 @@ pl_pce_free(term_t ref)
 
   if ( is_pce_blob(ref, &obj) )
   { if ( !obj )
-      return TRUE;			/* already released */
+      return true;			/* already released */
     if ( !PL_get_atom(ref, &blob) )
-      return FALSE;
+      return false;
   }
 
   LOCK();
-  if ( (obj = termToObject(ref, NULL, NULLATOM, FALSE)) )
+  if ( (obj = termToObject(ref, NULL, NULLATOM, false)) )
   { rval = pceSend(obj, NULL, cToPceName("free"), 0, NULL);
     if ( blob )
     { PL_free_blob(blob);
@@ -2575,7 +2572,7 @@ pl_pce_free(term_t ref)
     }
   } else
   { PL_clear_exception();		/* no such object: nothing to free */
-    rval = TRUE;
+    rval = true;
   }
   UNLOCK();
 
@@ -2590,10 +2587,10 @@ pl_pce_object_blob(term_t ref, term_t blob)
 
   LOCK();
   pceDrainHostReferences();
-  if ( (obj = termToObject(ref, NULL, NULLATOM, FALSE)) )
+  if ( (obj = termToObject(ref, NULL, NULLATOM, false)) )
     rval = unifyBlobRef(blob, obj);
   else
-    rval = FALSE;
+    rval = false;
   UNLOCK();
 
   return rval;
@@ -2614,7 +2611,7 @@ get_chain_snapshot(term_t t)
 { PceObject obj;
 
   pceDrainHostReferences();
-  if ( !(obj = termToObject(t, NULL, NULLATOM, FALSE)) )
+  if ( !(obj = termToObject(t, NULL, NULLATOM, false)) )
     return NULL;
 
   return pceSnapshotChain(obj);
@@ -2828,7 +2825,7 @@ pl_pce_sdl_mesh_set(term_t mesh, term_t vertices, term_t indices)
 
   LOCK();
   pceDrainHostReferences();
-  if ( (obj = termToObject(mesh, NULL, NULLATOM, FALSE)) )
+  if ( (obj = termToObject(mesh, NULL, NULLATOM, false)) )
     status = pceSdlMeshSet(obj, vb.data, (int)nv, ib.data, (int)ni);
   else
     status = PCE_MESH_NOT_A_MESH;
@@ -2937,10 +2934,10 @@ pl_object2(term_t ref, term_t description)
   int rval;
 
   LOCK();
-  if ( (obj = termToObject(ref, NULL, NULLATOM, FALSE)) )
-    rval = unifyObject(description, obj, TRUE);
+  if ( (obj = termToObject(ref, NULL, NULLATOM, false)) )
+    rval = unifyObject(description, obj, true);
   else
-    rval = FALSE;
+    rval = false;
   UNLOCK();
 
   return rval;
@@ -2959,9 +2956,9 @@ prolog_exception(r)
 int r;
 { switch(r)
   { case SP_SUCCESS:
-      return TRUE;
+      return true;
     case SP_FAILURE:
-      return FALSE;
+      return false;
     case SP_ERROR:
     default:
     { SP_term_ref t = SP_new_term_ref();
@@ -3054,7 +3051,7 @@ do_PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
     pceMTRelock(locks);
   } else
   { if ( argc > 0 )
-      rval = FALSE;			/* TBD */
+      rval = false;			/* TBD */
     rval = PL_call(goal, m);
   }
 #else /*~SWI*/
@@ -3078,7 +3075,7 @@ do_PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
 
     split_selector(sel, &name, &module);
     UndefinedPredicate(name, argc, module);
-    rval = FALSE;
+    rval = false;
   }
 #endif /*SWI*/
 
@@ -3120,7 +3117,7 @@ do_PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
   int rval;
 
   for(i=0; i<argc; i++)
-  { if ( !unifyObject(terms+i, argv[i], FALSE) )
+  { if ( !unifyObject(terms+i, argv[i], false) )
     { obj = PCE_FAIL;
       goto out;
     }
@@ -3132,7 +3129,7 @@ do_PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
   PL_cut_query(qid);
   pceMTRelock(locks);
   if ( rval )
-    obj = termToObject(terms+argc, NULL, NULLATOM, FALSE);
+    obj = termToObject(terms+argc, NULL, NULLATOM, false);
   else
     obj = PCE_FAIL;
 }
@@ -3145,7 +3142,7 @@ do_PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
     for(i=0; i<argc; i++)
     { terms[i] = SP_new_term_ref();
       SP_put_variable(terms[i]);
-      if ( !unifyObject(terms[i], argv[i], FALSE) )
+      if ( !unifyObject(terms[i], argv[i], false) )
       { obj = PCE_FAIL;
 	goto out;
       }
@@ -3233,7 +3230,7 @@ put_object(term_t t, PceObject obj)
 	avalue = nameToAtom(symbol->name);
       }
       PL_put_atom(t, avalue);
-      return TRUE;
+      return true;
 
       break;
     case PCE_REAL:
@@ -3242,7 +3239,7 @@ put_object(term_t t, PceObject obj)
       break;
     default:
       assert(0);
-      return FALSE;
+      return false;
   }
 }
 
@@ -3259,7 +3256,7 @@ pl_pce_method_implementation(term_t id, term_t msg)
   { return PL_warning("pce_method_implementation/2: type error");
   }
 
-  return unifyObject(msg, cToPceHostData(pcd), FALSE);
+  return unifyObject(msg, cToPceHostData(pcd), false);
 }
 
 
@@ -3957,7 +3954,7 @@ unify_prof_node(term_t t, void *impl)
 { bool rc;
 
   LOCK();
-  rc = unifyObject(t, impl, FALSE);
+  rc = unifyObject(t, impl, false);
   UNLOCK();
 
   return rc;
@@ -3981,7 +3978,7 @@ get_prof_node(term_t ref, void **impl)
   { bool rc;
 
     LOCK();
-    *impl = termToObject(ref, NULL, NULLATOM, FALSE);
+    *impl = termToObject(ref, NULL, NULLATOM, false);
     rc = true;
     UNLOCK();
 
@@ -4035,7 +4032,7 @@ PrologTranslate(PceObject hd, PceObject type)
     return hd;			/* e.g. host method handles: no translation */
 
   if ( (t = getTermHandle(hd)) )
-    return termToObject(t, type, NULLATOM, FALSE);
+    return termToObject(t, type, NULLATOM, false);
 
   assert(0);
   return NULL;
@@ -4216,7 +4213,7 @@ pl_pce_init(term_t Home, term_t AppDir, term_t UserDefaults)
   int argc;
   const char *home, *appdata, *userdefaults;
   atom_t ahome, aappdata, audefaults;
-  static int initialised = FALSE;
+  static int initialised = false;
 
   if ( GetAtom(Home, &ahome) )
     home = AtomCharp(ahome);
@@ -4239,11 +4236,11 @@ pl_pce_init(term_t Home, term_t AppDir, term_t UserDefaults)
   if ( !initialised )
   { PceObject plname;
 
-    initialised = TRUE;
+    initialised = true;
 
     if ( hasThreadsProlog() )
     { if ( pceMTinit() )
-      { PL_thread_at_exit(detach_thread, NULL, TRUE);
+      { PL_thread_at_exit(detach_thread, NULL, true);
       } else
       { Sdprintf("Warning: this version of XPCE is not compiled to support\n"
 		 "Warning: multiple threads.\n");
@@ -4255,7 +4252,7 @@ pl_pce_init(term_t Home, term_t AppDir, term_t UserDefaults)
     pceRegisterCallbacks(&callbackfunction);
     initNameAtomTable();
     if ( !pceInitialise(0, home, appdata, argc, argv) )
-      return FALSE;
+      return false;
 
     initPceConstants();			/* get code used PCE constants */
     initPrologConstants();		/* Public prolog constants */
@@ -4265,7 +4262,7 @@ pl_pce_init(term_t Home, term_t AppDir, term_t UserDefaults)
     if ( userdefaults )
     { PceObject ud = ( userdefaults[0]
 		       ? cToPceStringA(NIL, userdefaults,
-				       strlen(userdefaults), FALSE)
+				       strlen(userdefaults), false)
 		       : NIL );
 
       pceSend(cToPceAssoc("pce"), NULL,
@@ -4278,5 +4275,5 @@ pl_pce_init(term_t Home, term_t AppDir, term_t UserDefaults)
     PROLOG_INSTALL_RESET_FUNCTION(do_reset);
   }
 
-  return TRUE;
+  return true;
 }

@@ -170,7 +170,7 @@ collectSubsVisual(VisualObj v, Chain ch, int root)
     if ( subs )
     { Cell cell;
       for_cell(cell, subs)
-	collectSubsVisual(cell->value, ch, FALSE);
+	collectSubsVisual(cell->value, ch, false);
     }
   }
 }
@@ -182,7 +182,7 @@ destroyVisual(VisualObj v)
   { Chain subs = newObject(ClassChain, EAV);
     VisualObj sub;
 
-    collectSubsVisual(v, subs, TRUE);
+    collectSubsVisual(v, subs, true);
     for_chain(subs, sub,
 	      { DEBUG(NAME_destroy, Cprintf("%s ->free\n", pp(sub)));
 		sendv(sub, NAME_free, 0, NULL);

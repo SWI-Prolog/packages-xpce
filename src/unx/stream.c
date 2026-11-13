@@ -356,7 +356,7 @@ write_buffer(const charW *buf, int size)
 
 static void
 str_set_input_stream(PceString str, Stream s, size_t len)
-{ str_inithdr(str, TRUE);
+{ str_inithdr(str, true);
   str->s_size = (int)len;
   str->s_textW = s->input_buffer;
 }
@@ -406,7 +406,7 @@ static void
 dispatch_input_stream(Stream s)
 { while( !onFlag(s, F_FREED|F_FREEING) && s->input_buffer && s->input_p > 0 )
   { if ( isNil(s->record_separator) )
-    { dispatch_stream(s, s->input_p, TRUE);
+    { dispatch_stream(s, s->input_p, true);
 
       return;
     }
@@ -415,7 +415,7 @@ dispatch_input_stream(Stream s)
     { int bsize = valInt(s->record_separator);
 
       if ( bsize <= s->input_p )
-      {	dispatch_stream(s, bsize, FALSE);
+      {	dispatch_stream(s, bsize, false);
 	continue;
       }
 
@@ -430,7 +430,7 @@ dispatch_input_stream(Stream s)
       if ( search_string_regex(re, &str) )
       { int size = valInt(getRegisterEndRegex(s->record_separator, ZERO));
 
-	dispatch_stream(s, size, FALSE);
+	dispatch_stream(s, size, false);
 	continue;
       }
     }

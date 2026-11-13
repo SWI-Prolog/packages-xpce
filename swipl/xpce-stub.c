@@ -154,7 +154,7 @@ read_console(void *h, char *buf, size_t len)
   th = CreateThread(NULL, 10240, getInput, &ctx, 0, &tid);
 
   for(;;)
-  { DWORD rc = MsgWaitForMultipleObjects(1, &th, FALSE,
+  { DWORD rc = MsgWaitForMultipleObjects(1, &th, false,
 					 INFINITE, QS_ALLINPUT);
     if ( rc == WAIT_OBJECT_0 )
     { CloseHandle(th);
@@ -211,15 +211,15 @@ attach_console(void)
 	    recall_buffer.data = NULL;
 	  }
 
-	  return TRUE;
+	  return true;
 	}
       }
       done = -1;
-      return FALSE;
+      return false;
     case 1:
-      return TRUE;			/* already done so */
+      return true;			/* already done so */
     default:
-      return FALSE;			/* tried but failed */
+      return false;			/* tried but failed */
   }
 }
 
@@ -265,13 +265,13 @@ ask_attach(int read)
     case IDYES:
     case IDOK:
     case IDRETRY:
-      return TRUE;
+      return true;
     case IDNO:
       use_console = C_READ;
-      return FALSE;
+      return false;
     case IDIGNORE:
     default:
-      return FALSE;
+      return false;
   }
 }
 
@@ -283,7 +283,7 @@ do_read(void *handle, char *buffer, size_t size)
       return read_console(handle, buffer, size);
     case C_NONE:
     case C_READ:
-      if ( ask_attach(TRUE) )
+      if ( ask_attach(true) )
       { if ( attach_console() )
 	  return read_console(handle, buffer, size);
       }
@@ -304,7 +304,7 @@ do_write(void *handle, char *buffer, size_t size)
       return write_console(handle, buffer, size);
     case C_NONE:
       if ( handle == Serror->handle )
-      { if ( ask_attach(FALSE) )
+      { if ( ask_attach(false) )
 	{ if ( attach_console() )
 	    return write_console(handle, buffer, size);
 	}
@@ -365,7 +365,7 @@ long_name(char *file)
   int changed = 0;
 
   while(*i)
-  { int dirty = FALSE;
+  { int dirty = false;
 
     while(*i && *i != '\\')
     { if ( *i == '~' )

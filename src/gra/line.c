@@ -268,7 +268,7 @@ paintSelectedLine(Line ln)		/* assumes device is initialised! */
 
 static status
 geometryLine(Line ln, Int x, Int y, Int w, Int h)
-{ int needcompute = FALSE;
+{ int needcompute = false;
   Int dx = ZERO, dy = ZERO;
 
   if ( notDefault(w) )
@@ -500,7 +500,7 @@ inEventAreaLine(Line ln, Int x, Int y)
 
   d = distanceLineToPoint(valInt(ln->start_x), valInt(ln->start_y),
 			  valInt(ln->end_x), valInt(ln->end_y),
-			  valInt(x), valInt(y), FALSE);
+			  valInt(x), valInt(y), false);
   if ( d < evtol )
     succeed;
 

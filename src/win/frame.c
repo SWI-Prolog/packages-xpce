@@ -1706,15 +1706,15 @@ frame_keyboard_event(FrameObj fr, EventObj ev, status *rc)
   if ( gw && !isFreedObj(gw) && instanceOfObject(gw, ClassWindow) &&
        notNil(gw->focus) && getFrameWindow(gw, OFF) == fr )
   { *rc = postNamedEvent(ev, (Graphical)gw, DEFAULT, NAME_postEvent);
-    return TRUE;
+    return true;
   }
 
   if ( menuBarKeyFrame(fr, ev) )
   { *rc = SUCCEED;
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 

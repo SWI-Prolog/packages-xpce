@@ -503,7 +503,7 @@ getAppendCharArrayv(CharArray ca, int argc, CharArray *argv)
   for( i=0; i<argc; i++ )
   { l += argv[i]->data.s_size;
     if ( argv[i]->data.s_iswide )
-      iswide = TRUE;
+      iswide = true;
   }
 
   { LocalString(buf, iswide, l);
@@ -623,7 +623,7 @@ getBase64EncodeCharArray(CharArray in)
 { PceString s = &in->data;
   int size = s->s_size;
   int triples = (size+2)/3;
-  LocalString(buf, FALSE, triples*4);
+  LocalString(buf, false, triples*4);
   int i, o=0;
   unsigned long v;
 
@@ -659,7 +659,7 @@ static CharArray
 getBase64DecodeCharArray(CharArray in)
 { PceString s = &in->data;
   int size = s->s_size;
-  LocalString(buf, FALSE, (size/4)*3);
+  LocalString(buf, false, (size/4)*3);
   int i, o = 0;
   unsigned long v = 0L;
 

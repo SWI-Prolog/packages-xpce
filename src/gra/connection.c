@@ -134,7 +134,7 @@ getConnectionPointsConnection(Connection c, Graphical from, Graphical to,
 { int cxfrom, cyfrom;
   Device dev = c->device;
   Handle hf = FAIL, ht = FAIL;
-  int hf_ok = FALSE, ht_ok = FALSE;
+  int hf_ok = false, ht_ok = false;
 
   if ( notNil(c->from_handle) )
     hf = getHandleGraphical(from, c->from_handle);
@@ -144,13 +144,13 @@ getConnectionPointsConnection(Connection c, Graphical from, Graphical to,
   if ( c->fixed_from == ON && hf != FAIL )
   { *x1 = valInt(getXHandle(hf, from, dev));
     *y1 = valInt(getYHandle(hf, from, dev));
-    hf_ok = TRUE;
+    hf_ok = true;
   }
 
   if ( c->fixed_to == ON && ht != FAIL )
   { *x2 = valInt(getXHandle(ht, to, dev));
     *y2 = valInt(getYHandle(ht, to, dev));
-    ht_ok = TRUE;
+    ht_ok = true;
   }
 
   if ( hf_ok && ht_ok )			/* both fixed and available */
@@ -533,7 +533,7 @@ makeClassConnection(Class class)
 static int
 distanceLineToPoint_int(int x1, int y1, int x2, int y2, int px, int py)
 { static int atable[ENTRIES+1];
-  static int done = FALSE;
+  static int done = false;
   int a, d;
   int dx = x2-x1;
   int dy = y2-y1;
@@ -549,7 +549,7 @@ distanceLineToPoint_int(int x1, int y1, int x2, int y2, int px, int py)
     for(i=0; i <= ENTRIES; i++)
       atable[i] = rfloat((float) ENTRIES * sqrt(1.0 + (i/EPS)*(i/EPS)));
 
-    done = TRUE;
+    done = true;
   }
 
   a = (ENTRIES*(dy)) / dx;

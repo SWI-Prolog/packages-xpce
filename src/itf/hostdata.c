@@ -44,7 +44,7 @@ HostData
 CtoHostData(Class class, void *h, int flags)
 { HostData hd;
 #ifdef QUICK_AND_DIRTY
-  hd = allocObject(class, TRUE);
+  hd = allocObject(class, true);
 
   hd->handle = h;
   setFlag(hd, F_ISHOSTDATA|F_NOTANY);

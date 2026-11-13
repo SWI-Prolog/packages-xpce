@@ -655,7 +655,7 @@ draw_check_stroke(double x, double y, double d)
 		    { x+d*0.77, y+d*0.31 } };
 
   r_thickness(max(1.5, d/8.0));
-  r_polygon(pts, 3, FALSE);
+  r_polygon(pts, 3, false);
 }
 
 
@@ -1108,7 +1108,7 @@ RedrawAreaMenu(Menu m, Area a)
     rows_and_cols(m, &rows, &cols);
 
     if ( z && notNil(z) && !instanceOfObject(m, ClassPopup) )
-      r_3d_box(cx, cy, w-(cx-x), h-(cy-y), 0, z, TRUE);
+      r_3d_box(cx, cy, w-(cx-x), h-(cy-y), 0, z, true);
     cx += valInt(m->margin);
     bx = cx;
 
@@ -1301,7 +1301,7 @@ static MenuItem
 neighbour_item(Menu m, MenuItem from, Name dir)
 { Cell cell;
   MenuItem prev = NULL;
-  int found = FALSE;
+  int found = false;
 
   for_cell(cell, m->members)
   { MenuItem mi = cell->value;
@@ -1314,7 +1314,7 @@ neighbour_item(Menu m, MenuItem from, Name dir)
     if ( mi == from )
     { if ( dir == NAME_backwards )
 	return prev;
-      found = TRUE;
+      found = true;
       continue;
     }
     if ( mi->active == ON )
@@ -1653,7 +1653,7 @@ executeMenuItem(Menu m, MenuItem mi, EventObj ev)
 static status
 soloMenuItem(Menu m, MenuItem mi, EventObj ev, int undo_click)
 { Chain saved = getAttributeObject(m, NAME_soloSelection);
-  int only = TRUE;
+  int only = true;
   Cell cell;
 
   if ( undo_click )
@@ -1663,7 +1663,7 @@ soloMenuItem(Menu m, MenuItem mi, EventObj ev, int undo_click)
   { MenuItem mi2 = cell->value;
 
     if ( (mi2 == mi) != (mi2->selected == ON) )
-    { only = FALSE;
+    { only = false;
       break;
     }
   }
@@ -1711,9 +1711,9 @@ executeMenu(Menu m, EventObj ev)
 
   if ( m->multiple_selection == ON && instanceOfObject(ev, ClassEvent) )
   { if ( valInt(ev->buttons) & BUTTON_meta )
-      return soloMenuItem(m, mi, ev, FALSE);
+      return soloMenuItem(m, mi, ev, false);
     if ( (valInt(ev->buttons) & CLICK_TYPE_mask) == CLICK_TYPE_double )
-      return soloMenuItem(m, mi, ev, TRUE);
+      return soloMenuItem(m, mi, ev, true);
   }
 
   return executeMenuItem(m, mi, ev);
@@ -1865,9 +1865,9 @@ selectionMenu(Menu m, Any selection)
 
   if ( !(is_set = alloca((size+1)*sizeof(char))) )
   { is_set = pceMalloc((size+1)*sizeof(char));
-    do_free = TRUE;
+    do_free = true;
   } else
-    do_free = FALSE;
+    do_free = false;
 
   is_set[0] = 0;
   n = 1;
@@ -2126,7 +2126,7 @@ getMemberMenu(Menu m, Any obj)
 status
 updateMenu(Menu m, Any context)
 { Cell cell;
-  int changed = FALSE;
+  int changed = false;
 
   for_cell(cell, m->members)
   { MenuItem mi = cell->value;
@@ -2135,7 +2135,7 @@ updateMenu(Menu m, Any context)
     { BoolObj a = (forwardReceiverCode(mi->condition, mi, context, EAV) ? ON : OFF);
 
       if ( a != mi->active )
-      { changed = TRUE;
+      { changed = true;
 	qadSendv(mi, NAME_active, 1, (Any*) &a);
       }
     }

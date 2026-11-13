@@ -388,7 +388,7 @@ static status
 nonDelegatingLeftRightTile(TileObj t, TileObj t2, Name where)
 { TileObj super;
   Any manager;
-  int split = FALSE;
+  int split = false;
 
   t = getRootTile(t);
   if ( !(manager=managerTile(t2)) )
@@ -425,7 +425,7 @@ nonDelegatingLeftRightTile(TileObj t, TileObj t2, Name where)
     assign(t2, super, super);
     assign(t,  super, super);
     inheritTile(super, t2);
-    split = TRUE;
+    split = true;
   }
 
   relatedTile(t, t2, manager);
@@ -500,7 +500,7 @@ static status
 nonDelegatingAboveBelowTile(TileObj t, TileObj t2, Name where)
 { TileObj super;
   Any manager;
-  int split = FALSE;
+  int split = false;
 
   t = getRootTile(t);
   if ( !(manager=managerTile(t2)) )
@@ -537,7 +537,7 @@ nonDelegatingAboveBelowTile(TileObj t, TileObj t2, Name where)
     assign(t2, super, super);
     assign(t,  super, super);
     inheritTile(super, t2);
-    split = TRUE;
+    split = true;
   }
 
   relatedTile(t, t2, manager);
@@ -710,7 +710,7 @@ getRootTile(TileObj t)
 
 status
 distribute_stretches(stretch *s, int n, int w)
-{ int ok = FALSE;
+{ int ok = false;
   int i;
   int maxloop = n;
 
@@ -790,9 +790,9 @@ distribute_stretches(stretch *s, int n, int w)
 					/* No one wants, so all have to */
       if ( stretchables == 0 )
       { stretchables = is_pos;
-	stretchall = FALSE;
+	stretchall = false;
       } else
-      { stretchall = TRUE;
+      { stretchall = true;
       }
 					/* distribute outside --> inside */
       per_stretchable = (grow - growed + stretchables - 1) / stretchables;
@@ -819,20 +819,20 @@ distribute_stretches(stretch *s, int n, int w)
       }
     }
 
-    ok = TRUE;
+    ok = true;
     for(sp=s, i = 0; i < n; i++, sp++)	/* Accept min and max */
     { if ( sp->size < sp->minimum )
       { sp->ideal = sp->minimum;
         sp->shrink = 0;
 	DEBUG(NAME_tile, Cprintf("%d is too small; setting to %d\n",
 				 i, sp->minimum));
-	ok = FALSE;
+	ok = false;
       } else if ( sp->size > sp->maximum )
       { sp->ideal = sp->maximum;
 	sp->stretch = 0;
 	DEBUG(NAME_tile, Cprintf("%d is too large; setting to %d\n",
 				 i, sp->maximum));
-	ok = FALSE;
+	ok = false;
       }
     }
   }
@@ -1000,7 +1000,7 @@ freezeBeforeTile(TileObj t, int hand)
 { Cell tail;
 
   if ( hand )
-    return TRUE;
+    return true;
 
   tail = t->super->members->tail;
   return notNil(tail) && tail->value != t;
@@ -1036,7 +1036,7 @@ set_tile(TileObj t, Int x, Int y, Int w, Int h, int hand)
     if ( t->enforced == ON && notNil(t->super) &&
 	 freezeBeforeTile(t, hand) )
     { Cell cell;
-      int before = TRUE;
+      int before = true;
       int hs = 0, hg = 0;
 
       for_cell(cell, t->super->members)
@@ -1052,21 +1052,21 @@ set_tile(TileObj t, Int x, Int y, Int w, Int h, int hand)
 	  assign(t2, horStretch, ZERO);		/* ICanResizeTile() */
 	  assign(t2, horShrink,  ZERO);	/* hold on to the size they have */
 	  if ( t2 == t )
-	    before = FALSE;
+	    before = false;
 	} else
 	{ hs += valInt(t2->horShrink);
 	  hg += valInt(t2->horStretch);
 	}
       }
       if ( hs == 0 || hg == 0 )
-      { before = TRUE;
+      { before = true;
 
 	for_cell(cell, t->super->members)
 	{ TileObj t2 = cell->value;
 
 	  if ( before )
 	  { if ( t2 == t )
-	      before = FALSE;
+	      before = false;
 	  } else
 	  { if ( hs == 0 )
 	      assign(t2, horShrink, ONE);
@@ -1083,7 +1083,7 @@ set_tile(TileObj t, Int x, Int y, Int w, Int h, int hand)
     if ( t->enforced == ON && notNil(t->super) &&
 	 freezeBeforeTile(t, hand) )
     { Cell cell;
-      int before = TRUE;
+      int before = true;
       int vs = 0, vg = 0;
 
       for_cell(cell, t->super->members)
@@ -1097,21 +1097,21 @@ set_tile(TileObj t, Int x, Int y, Int w, Int h, int hand)
 	  assign(t2, verStretch, ZERO);
 	  assign(t2, verShrink,  ZERO);
 	  if ( t2 == t )
-	    before = FALSE;
+	    before = false;
 	} else
 	{ vs += valInt(t2->verShrink);
 	  vg += valInt(t2->verStretch);
 	}
       }
       if ( vs == 0 || vg == 0 )
-      { before = TRUE;
+      { before = true;
 
 	for_cell(cell, t->super->members)
 	{ TileObj t2 = cell->value;
 
 	  if ( before )
 	  { if ( t2 == t )
-	      before = FALSE;
+	      before = false;
 	  } else
 	  { if ( vs == 0 )
 	      assign(t2, verShrink, ONE);
@@ -1139,7 +1139,7 @@ set_tile(TileObj t, Int x, Int y, Int w, Int h, int hand)
 
 status
 setTile(TileObj t, Int x, Int y, Int w, Int h)
-{ return set_tile(t, x, y, w, h, FALSE);
+{ return set_tile(t, x, y, w, h, false);
 }
 
 
@@ -1423,13 +1423,13 @@ yTile(TileObj t, Int y)
 
 static status
 widthTile(TileObj t, Int w)
-{ return set_tile(t, DEFAULT, DEFAULT, w, DEFAULT, TRUE);
+{ return set_tile(t, DEFAULT, DEFAULT, w, DEFAULT, true);
 }
 
 
 static status
 heightTile(TileObj t, Int h)
-{ return set_tile(t, DEFAULT, DEFAULT, DEFAULT, h, TRUE);
+{ return set_tile(t, DEFAULT, DEFAULT, DEFAULT, h, true);
 }
 
 
@@ -1516,14 +1516,14 @@ canResizeTile(TileObj t)
   if ( notNil(t->super) &&
        ICanResizeTile(t, t->super->orientation) )
   { Cell cell;
-    int before = TRUE;
+    int before = true;
 
     for_cell(cell, t->super->members)
     { TileObj t2 = cell->value;
 
       if ( before )
       { if ( t == t2 )
-	  before = FALSE;
+	  before = false;
       } else if ( ICanResizeTile(t2, t->super->orientation) )
 	return true;
     }

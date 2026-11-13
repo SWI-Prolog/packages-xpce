@@ -59,7 +59,7 @@ create_string_from_str(PceString s, int tmp)
 	goto canonical;
     }
 
-    str_inithdr(&s2, FALSE);
+    str_inithdr(&s2, false);
     s2.s_size = s->s_size;
     if ( !(s2.s_textA = alloca(s->s_size)) )
     { s2.s_textA = pceMalloc(s->s_size);
@@ -88,13 +88,13 @@ canonical:
 
 StringObj
 StringToString(PceString s)
-{ return create_string_from_str(s, FALSE);
+{ return create_string_from_str(s, false);
 }
 
 
 StringObj
 StringToTempString(PceString s)
-{ return create_string_from_str(s, TRUE);
+{ return create_string_from_str(s, true);
 }
 
 
@@ -113,7 +113,7 @@ staticCtoString(const char *s)
 { CharArray c = CtoScratchCharArray(s);
   StringObj str;
 
-  c->data.s_readonly = TRUE;
+  c->data.s_readonly = true;
   str = answerObject(ClassString, name_procent_s, c, EAV);
   doneScratchCharArray(c);
 
@@ -152,7 +152,7 @@ promoteString(StringObj s)
     const charA *e = &f[s->data.s_size];
     charW *t;
 
-    str_inithdr(&ws, TRUE);
+    str_inithdr(&ws, true);
     ws.s_size = s->data.s_size;
     str_alloc(&ws);
 
@@ -187,7 +187,7 @@ writefv_string(StringObj str, PceString s, CharArray fmt,
 status
 initialiseStringv(StringObj str, CharArray fmt, int argc, Any *argv)
 { if ( isDefault(fmt) )
-  { str_inithdr(&str->data, FALSE);
+  { str_inithdr(&str->data, false);
     str->data.s_size = 0;
     str_alloc(&str->data);
   } else if ( (Name) fmt == name_procent_s &&

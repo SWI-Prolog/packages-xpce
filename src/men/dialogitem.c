@@ -169,10 +169,10 @@ dia_label_size(Any obj, int *w, int *h, int *isimage)
     *w = valInt(i->size->w);
     *h = valInt(i->size->h);
     if ( isimage )
-      *isimage = TRUE;
+      *isimage = true;
   } else
   { if ( isimage )
-      *isimage = FALSE;
+      *isimage = false;
 
     if ( instanceOfObject(di->label, ClassCharArray) )
     { dia_text_label_size(di->label, di->label_font, w, h);
@@ -430,7 +430,7 @@ r_chevron(double x, double y, double w, double pen)
   double old = r_thickness(pen);
 
   r_dash(NAME_none);
-  r_polygon(pts, 3, FALSE);
+  r_polygon(pts, 3, false);
   r_thickness(old);
 }
 
@@ -866,11 +866,11 @@ assignAcceleratorsSoft(Chain objects, Name prefix, Name label_method,
   Abin a = bins;
   unsigned char used[ACC_CHARSETSIZE];
   unsigned char none[ACC_CHARSETSIZE];
-  int do_free = FALSE;
+  int do_free = false;
 
   if ( size && !bins )
   { bins = pceMalloc(sizeof(abin) * size);
-    do_free = TRUE;
+    do_free = true;
   }
 
   if ( !taken )

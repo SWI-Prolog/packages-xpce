@@ -89,7 +89,7 @@ entry_chevron(double x, double y, double w, double h, double cw, bool down)
   double pen = r_thickness(1.5);
 
   r_dash(NAME_none);
-  r_polygon(down ? dpts : upts, 3, FALSE);
+  r_polygon(down ? dpts : upts, 3, false);
   r_thickness(pen);
 }
 

@@ -386,7 +386,7 @@ vb_open_reader(const vb_source *src, bool audio, vb_info *info,
   hr = MFCreateAttributes(&attrs, 2);
   if ( SUCCEEDED(hr) )			/* convert to NV12 */
     hr = IMFAttributes_SetUINT32(attrs,
-		&MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, TRUE);
+		&MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true);
   if ( SUCCEEDED(hr) )
     hr = MFCreateSourceReaderFromURL(url, attrs, &r->reader);
   RELEASE(attrs);
@@ -404,8 +404,8 @@ vb_open_reader(const vb_source *src, bool audio, vb_info *info,
 				      &r->astream);
 
   IMFSourceReader_SetStreamSelection(r->reader,
-				     (DWORD)MF_SOURCE_READER_ALL_STREAMS, FALSE);
-  IMFSourceReader_SetStreamSelection(r->reader, r->vstream, TRUE);
+				     (DWORD)MF_SOURCE_READER_ALL_STREAMS, false);
+  IMFSourceReader_SetStreamSelection(r->reader, r->vstream, true);
   if ( !set_output_type(r->reader, r->vstream, &MFMediaType_Video,
 			&MFVideoFormat_NV12, errmsg) ||
        !video_format(r, errmsg) )
@@ -442,7 +442,7 @@ vb_open_reader(const vb_source *src, bool audio, vb_info *info,
   if ( r->has_audio )
   { IMFMediaType *type = NULL;
 
-    IMFSourceReader_SetStreamSelection(r->reader, r->astream, TRUE);
+    IMFSourceReader_SetStreamSelection(r->reader, r->astream, true);
     if ( set_output_type(r->reader, r->astream, &MFMediaType_Audio,
 			 &MFAudioFormat_Float, errmsg) &&
 	 SUCCEEDED(IMFSourceReader_GetCurrentMediaType(r->reader, r->astream,
@@ -457,7 +457,7 @@ vb_open_reader(const vb_source *src, bool audio, vb_info *info,
       IMFMediaType_Release(type);
     }
     if ( info->audio_rate <= 0 || info->audio_channels <= 0 )
-    { IMFSourceReader_SetStreamSelection(r->reader, r->astream, FALSE);
+    { IMFSourceReader_SetStreamSelection(r->reader, r->astream, false);
       r->has_audio = false;		/* play without sound */
       info->audio_rate = info->audio_channels = 0;
       info->audio_codec = NULL;
@@ -815,7 +815,7 @@ vb_open_writer(const char *file, vb_wspec *spec,
   hr = MFCreateAttributes(&attrs, 1);
   if ( SUCCEEDED(hr) )
     hr = IMFAttributes_SetUINT32(attrs, &MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS,
-				 TRUE);
+				 true);
   if ( SUCCEEDED(hr) )
     hr = MFCreateSinkWriterFromURL(url, NULL, attrs, &w->writer);
   RELEASE(attrs);

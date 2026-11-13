@@ -249,7 +249,7 @@ table_column_range(Table tab, int *xmin, int *xmax)
 { Vector rows = tab->rows;
   int low=0, high=0;
   int y, ymin, ymax;
-  int first = TRUE;
+  int first = true;
 
   table_row_range(tab, &ymin, &ymax);
 
@@ -263,7 +263,7 @@ table_column_range(Table tab, int *xmin, int *xmax)
       if ( first )
       { low   = l;
 	high  = h;
-	first = FALSE;
+	first = false;
       } else
       { low   = min(low, l);
 	high  = max(high, h);
@@ -1255,7 +1255,7 @@ stretchColsSpannedCell(TableCell cell)
 
     cell_stretchability(cell, NAME_column, &s);
 
-    stretch_table_slices(tab, tab->columns, x, span, &s, colspacing, FALSE);
+    stretch_table_slices(tab, tab->columns, x, span, &s, colspacing, false);
   }
 }
 
@@ -1271,7 +1271,7 @@ stretchRowsSpannedCell(TableCell cell)
 
     cell_stretchability(cell, NAME_row, &s);
 
-    stretch_table_slices(tab, tab->rows, y, span, &s, rowspacing, FALSE);
+    stretch_table_slices(tab, tab->rows, y, span, &s, rowspacing, false);
   }
 }
 
@@ -1361,7 +1361,7 @@ computeColsTable(Table tab)
 			 xmax-xmin+1,	/* last column */
 			 &s,		/* width to distribute */
 			 colspacing,	/* distance between columns */
-			 TRUE);		/* force alignment */
+			 true);		/* force alignment */
   }
 
   if ( (spanned = getSpannedCellsTable(tab, NAME_colSpan)) &&
@@ -1814,25 +1814,25 @@ assignTable(Table tab, Name slot, Any value, int compute)
 
 static status
 borderTable(Table tab, Int border)
-{ return assignTable(tab, NAME_border, border, TRUE);
+{ return assignTable(tab, NAME_border, border, true);
 }
 
 
 static status
 frameTable(Table tab, Name frame)
-{ return assignTable(tab, NAME_frame, frame, TRUE);
+{ return assignTable(tab, NAME_frame, frame, true);
 }
 
 
 static status
 rulesTable(Table tab, Name rules)
-{ return assignTable(tab, NAME_rules, rules, FALSE);
+{ return assignTable(tab, NAME_rules, rules, false);
 }
 
 
 static status
 widthTable(Table tab, Int width)
-{ return assignTable(tab, NAME_width, width, TRUE);
+{ return assignTable(tab, NAME_width, width, true);
 }
 
 
@@ -1841,7 +1841,7 @@ cellPaddingTable(Table tab, Any padding)
 { if ( isInteger(padding) )
     padding = answerObject(ClassSize, padding, padding, EAV);
 
-  return assignTable(tab, NAME_cellPadding, padding, TRUE);
+  return assignTable(tab, NAME_cellPadding, padding, true);
 }
 
 
@@ -1850,7 +1850,7 @@ cellSpacingTable(Table tab, Any spacing)
 { if ( isInteger(spacing) )
     spacing = answerObject(ClassSize, spacing, spacing, EAV);
 
-  return assignTable(tab, NAME_cellSpacing, spacing, TRUE);
+  return assignTable(tab, NAME_cellSpacing, spacing, true);
 }
 
 
