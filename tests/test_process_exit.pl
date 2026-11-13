@@ -128,18 +128,35 @@ start_line_process(Command) :-
 events(Events) :-
     findall(E, event(E), Events).
 
+%   await_event(+E)
+%
+%   Dispatch events until E is recorded or no event was recorded for
+%   3 seconds.  A slow machine may need much longer for all output.
+
 await_event(E) :-
     get_time(T0),
-    Deadline is T0+3,
+    nb_setval(await_progress, 0-T0),
     repeat,
       (   event(E)
       ->  !
-      ;   get_time(Now),
-          Now > Deadline
+      ;   stalled(3)
       ->  !
       ;   ignore(send(@display, dispatch)),
           fail
       ).
+
+stalled(Max) :-
+    (   predicate_property(event(_), number_of_clauses(N))
+    ->  true
+    ;   N = 0
+    ),
+    get_time(Now),
+    nb_getval(await_progress, N0-T0),
+    (   N == N0
+    ->  Now - T0 > Max
+    ;   nb_setval(await_progress, N-Now),
+        fail
+    ).
 
 dispatch_for(Time) :-
     get_time(T0),
