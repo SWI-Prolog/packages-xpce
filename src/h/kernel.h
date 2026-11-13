@@ -56,7 +56,9 @@
 #ifdef __APPLE__			/* defines INT_MAX, so we must */
 #include <time.h>			/* do that before we do it here */
 #endif
-#include <h/stream.h>			/* IOSTREAM interface */
+#define SWIPL_WINDOWS_NATIVE_ACCESS 1	/* Windows: include <windows.h> */
+#include <SWI-Stream.h>			/* IOSTREAM interface */
+#undef V_ERROR				/* <windows.h>; we use it in arith.h */
 #include <limits.h>
 
 #ifndef INT_MAX
