@@ -232,7 +232,6 @@ hasClassVariableVariable(Variable v, Class class)
 }
 
 
-
 static void
 updateInstanceProtoClass(Class class)
 { int slots = valInt(class->slots);
@@ -739,12 +738,6 @@ getVirtualObject(Any obj)
 
 
 Any
-getVirtualObject1(Any obj, Any a1)
-{ fail;
-}
-
-
-Any
 getVirtualObject2(Any obj, Any a1, Any a2)
 { fail;
 }
@@ -953,7 +946,7 @@ deleteConstraintObject(Any obj, Constraint c)
 }
 
 
-status
+static status
 sendMethodObject(Any obj, SendMethod m)
 { Chain ch = getAllSendMethodsObject(obj, ON);
 
@@ -1163,8 +1156,7 @@ isSendInitialise(PceGoal g, Any obj)
 }
 
 
-
-Any
+static Any
 getCreateContextObject(Any obj, Code cond)
 { if ( onFlag(obj, F_CREATING) )
   { PceGoal g = CurrentGoal;
@@ -1221,7 +1213,6 @@ mergeMethods(Chain rval, Chain mts, HashTable done, Code cond)
   for_cell(cell, mts)
     mergeMethod(rval, cell->value, done, cond);
 }
-
 
 
 static void
@@ -1979,7 +1970,7 @@ getHyperObject(Any obj, Name hname, Name selector, int argc, Any *argv)
 }
 
 
-Any
+static Any
 getFindHyperObject(Any obj, Name hname, Code cond)
 { Chain ch;
 

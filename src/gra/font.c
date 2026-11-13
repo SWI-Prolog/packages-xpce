@@ -194,26 +194,6 @@ getRescaleFont(FontObj f, Num scale)
 		      f->family, f->style, toNum(pts), f->weight, EAV);
 }
 
-status
-replaceFont(FontObj f)
-{ FontObj nofont;
-  void *wsref;
-
-  if ( !(nofont = getClassVariableValueClass(ClassFont, NAME_noFont)) )
-    errorPce(f, NAME_noDefaultFont);
-
-  if ( !(wsref = ws_get_font(nofont)) )
-    fail;
-
-  errorPce(f, NAME_replacedFont, nofont);
-  f->ws_ref = ws_clone_ws_font(wsref);
-
-  assign(f, fixed_width, nofont->fixed_width);
-  assign(f, ex,          nofont->ex);
-
-  succeed;
-}
-
 
 static status
 unlinkFont(FontObj f)

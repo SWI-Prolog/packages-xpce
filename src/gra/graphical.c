@@ -279,32 +279,6 @@ initialiseDeviceGraphical(Any obj, int *x, int *y, int *w, int *h)
 }
 
 
-status
-initialiseRedrawAreaGraphical(Any obj, Area a,
-			      int *x, int *y, int *w, int *h,
-			      IArea redraw)
-{ iarea a2;
-  Graphical gr = obj;
-
-  initialiseDeviceGraphical(obj, x, y, w, h);
-
-  redraw->x = *x + valInt(a->x) - valInt(gr->area->x); /* normalised! */
-  redraw->y = *y + valInt(a->y) - valInt(gr->area->y);
-  redraw->w = valInt(a->w);
-  redraw->h = valInt(a->h);
-
-  a2.x = *x, a2.y = *y, a2.w = *w, a2.h = *h;
-  NormaliseArea(a2.x, a2.y, a2.w, a2.h);
-
-  intersection_iarea(redraw, &a2);
-
-  succeed;
-}
-
-
-
-
-
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Computes the offset caused by intermediate devices to the windows
 coordinate system.
@@ -1607,7 +1581,7 @@ getFramePositionGraphical(Graphical gr)
 }
 
 
-Point
+static Point
 getDisplayPositionGraphical(Graphical gr)
 { Int x, y;
   int ox, oy, wx, wy;
@@ -1807,7 +1781,6 @@ assignDialogItem(Graphical gr, Name slot, Any value)
 }
 
 
-
 status
 aboveGraphical(Graphical gr1, Graphical gr2)
 { Graphical gr;
@@ -2004,7 +1977,7 @@ penGraphical(Graphical gr, Num pen)
 }
 
 
-status
+static status
 opacityGraphical(Graphical gr, Num o)
 { double v = valNum(o);
   if ( v < 0.0 ) v = 0.0;
@@ -3547,7 +3520,7 @@ svgBufferGraphical(Graphical gr, struct d_buffer *buf)
   fail;
 }
 
-status
+static status
 pdfGraphical(Graphical gr, FileObj dest, Int scale)
 { return saveGraphical(gr, dest, scale, d_pdf);
 }

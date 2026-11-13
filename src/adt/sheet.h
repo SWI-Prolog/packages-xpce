@@ -38,7 +38,6 @@
 /* Functions defined in adt/sheet.c */
 
 COMMON(Sheet)	getCopySheet(Sheet sh);
-COMMON(status)	isAttributeSheet(Sheet sh, Any name);
 COMMON(Attribute) getMemberSheet(Sheet sh, register Any name);
 COMMON(status)	deleteSheet(Sheet sh, Any name);
 COMMON(Any)	getValueSheet(Sheet sh, Any name);

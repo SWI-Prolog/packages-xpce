@@ -595,11 +595,6 @@ pceCharArrayToCW(Any val, size_t *len)
 }
 
 
-int
-pceObject(Any obj)
-{ return isObject(obj) ? PCE_SUCCEED : PCE_FAIL;
-}
-
 		 /*******************************
 		 *	      METHOD		*
 		 *******************************/

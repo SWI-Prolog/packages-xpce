@@ -147,8 +147,6 @@ typedef struct _parline
   parcell	hbox[MAXHBOXES];	/* array of cells */
 } parline;
 
-COMMON(void)	drawTBox(TBox tb, int x, int y, int w,
-			 parline const *line);
 COMMON(void)	drawTBoxSel(TBox tb, int x, int y, int w,
 			    parline const *line,
 			    int sel_from, int sel_to, Style sel_style);

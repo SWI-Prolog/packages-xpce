@@ -264,7 +264,7 @@ add_char_stream(Stream s, int c)
  * input_pending and prepended to the next block.
  */
 
-void
+static void
 add_data_stream(Stream s, char *data, int len)
 { IOENC enc = stream_encoding(s);
   unsigned char *bytes = (unsigned char *)data;

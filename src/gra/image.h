@@ -46,10 +46,8 @@ COMMON(status)	drawInGraphical(Graphical gr, Point pos, int iw, int ih,
 COMMON(status)	initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind);
 COMMON(Image)	getConvertImage(Class class, Any obj);
 COMMON(status)	XopenImage(Image image, DisplayObj d);
-COMMON(status)	XcloseImage(Image image, DisplayObj d);
 COMMON(status)	loadImage(Image image, SourceSink file, CharArray path);
 COMMON(status)	hasAlphaImage(Image image);
-COMMON(status)	fillImage(Image image, Any pattern, Area area);
 COMMON(status)	makeClassImage(Class class);
 
 #endif /*XPCE_GRA_IMAGE_H_INCLUDED*/

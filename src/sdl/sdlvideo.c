@@ -44,6 +44,8 @@
 #include "sdlvideo.h"
 #ifdef HAVE_VIDEO
 #include "video_backend.h"
+
+static bool	sdl_video_tick(void);
 #endif
 
 /* Playing and writing encoded video.  The backend (video_backend.h)
@@ -1026,7 +1028,7 @@ tick_video(ws_video *v)
 }
 
 
-bool
+static bool
 sdl_video_tick(void)
 { bool active = false;
 

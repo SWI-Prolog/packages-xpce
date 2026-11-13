@@ -45,6 +45,8 @@
 #include <men/popup.h>
 #include <win/window.h>
 
+static status currentMenuBar(MenuBar mb, PopupObj p);
+
 static status
 initialiseMenuBar(MenuBar mb, Name name)
 { assign(mb, pen,     CLASSDEFAULT);	/* not a resource for graphical! */
@@ -822,7 +824,7 @@ allOffMenuBar(MenuBar mb, PopupObj p)
 }
 
 
-status
+static status
 currentMenuBar(MenuBar mb, PopupObj p)
 { if ( mb->current != p )
   { changedMenuBarButton(mb, mb->current);

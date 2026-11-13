@@ -647,7 +647,7 @@ test_get_find_parbox(ParBox pb, HBox hb, long index, void *closure)
 }
 
 
-Tuple					/* parbox, index */
+static Tuple					/* parbox, index */
 getFindParBox(ParBox pb, Code test)
 { testcl cl;
 

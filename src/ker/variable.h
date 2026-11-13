@@ -42,7 +42,6 @@ COMMON(status)	cloneStyleVariable(Variable var, Name style);
 COMMON(status)	saveStyleVariable(Variable var, Name style);
 COMMON(status)	sendAccessVariable(Variable var);
 COMMON(status)	getAccessVariable(Variable var);
-COMMON(status)	initialValueVariable(Variable var, Any value);
 COMMON(status)	sendVariable(Variable var, Any rec, Any val);
 COMMON(Any)	getGetVariable(Variable var, Any rec);
 COMMON(Name)	getGroupVariable(Variable v);

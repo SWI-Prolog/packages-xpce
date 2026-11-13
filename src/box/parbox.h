@@ -39,7 +39,6 @@
 
 /* Functions defined in box/parbox.c */
 
-COMMON(Tuple)	getFindParBox(ParBox pb, Code test);
 COMMON(status)	makeClassParBox(Class class);
 
 #endif /*XPCE_BOX_PARBOX_H_INCLUDED*/

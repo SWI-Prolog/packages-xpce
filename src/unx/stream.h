@@ -42,7 +42,6 @@ COMMON(status)	closeStream(Stream s);
 COMMON(status)	closeInputStream(Stream s);
 COMMON(status)	closeOutputStream(Stream s);
 COMMON(status)	inputStream(Stream s, Int fd);
-COMMON(void)	add_data_stream(Stream s, char *data, int len);
 COMMON(status)	handleInputStream(Stream s);
 COMMON(status)	makeClassStream(Class class);
 

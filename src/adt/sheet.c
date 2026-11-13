@@ -55,7 +55,7 @@ getCopySheet(Sheet sh)
 }
 
 
-status
+static status
 isAttributeSheet(Sheet sh, Any name)
 { Cell cell;
 

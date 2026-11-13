@@ -57,6 +57,7 @@ typedef struct open_camera
   double	writer_at;		/* time in the video at writer_t0 */
 } open_camera;
 
+static bool	sdl_camera_tick(void);
 static open_camera *cameras = NULL;
 
 static bool
@@ -322,7 +323,7 @@ deliver_frame(open_camera *oc, SDL_Surface *frame, Uint64 ts)
 }
 
 
-bool
+static bool
 sdl_camera_tick(void)
 { for(open_camera *oc = cameras; oc; )
   { open_camera *next = oc->next;	/* message may close it */

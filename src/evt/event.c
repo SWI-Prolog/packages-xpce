@@ -396,11 +396,6 @@ getConvertEvent(Class class, Any def)
 		*        TIME MANAGEMENT	*
 		********************************/
 
-unsigned long				/* time-stamp of last event */
-LastEventTime(void)
-{ return last_time;
-}
-
 
 void
 setLastEventTime(unsigned long time)
@@ -627,21 +622,6 @@ getClickDisplacementEvent(EventObj e)
 }
 
 
-status
-windowEvent(EventObj ev, PceWindow sw)
-{ if ( ev->window != sw )
-  { int x, y;
-
-    offset_windows(sw, ev->window, &x, &y);
-    assign(ev, x, toNum(valNum(ev->x) - x));
-    assign(ev, y, toNum(valNum(ev->y) - y));
-    assign(ev, window, sw);
-  }
-
-  succeed;
-}
-
-
 		/********************************
 		*            POSITIONS		*
 		********************************/
@@ -750,7 +730,6 @@ get_xy_event_device(EventObj ev, Device dev, bool sub, double *rx, double *ry)
   *rx -= ox + event_coord(dev->offset->x, sub);
   *ry -= oy + event_coord(dev->offset->y, sub);
 }
-
 
 
 /* A graphical of a window's fixed layer is placed, painted and

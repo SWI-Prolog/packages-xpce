@@ -347,7 +347,7 @@ r_fillrestore(fill_state *state)
  * @param d Pointer to the DisplayObj.
  * @return The previous DisplayObj.
  */
-DisplayObj
+static DisplayObj
 d_display(DisplayObj d)
 { DisplayObj old = context.display;
   context.display = d;
@@ -918,18 +918,6 @@ r_thickness(double pen)
 }
 
 /**
- * Apply a transformation to a value, typically for coordinate adjustments.
- *
- * @param val The value to be transformed.
- * @return The transformed value.
- */
-int
-r_transformed(int val)
-{
-    return 0;
-}
-
-/**
  * Set the dash pattern for lines.
  *
  * @param name The name of the dash pattern to apply.
@@ -1171,45 +1159,7 @@ r_swap_background_and_foreground(void)
   context.colour = tmp;
 }
 
-/**
- * Set or retrieve the subwindow drawing mode.
- *
- * @param val The boolean value to set or retrieve the mode.
- * @return The current subwindow mode.
- */
-BoolObj
-r_subwindow_mode(BoolObj val)
-{
-    return val;
-}
-
-/**
- * Set or retrieve the invert drawing mode.
- *
- * @param val The boolean value to set or retrieve the mode.
- */
-void
-r_invert_mode(BoolObj val)
-{
-}
-
-/**
- * Translate coordinates by a specified offset.
- *
- * @param x The x-offset.
- * @param y The y-offset.
- * @param ox Pointer to store the original x-coordinate.
- * @param oy Pointer to store the original y-coordinate.
- */
-void
-r_translate(int x, int y, int *ox, int *oy)
-{ Translate(x, y);
-
-  *ox = x;
-  *oy = y;
-}
-
-void
+static void
 my_cairo_rounded_rectangle(cairo_t *cr, double x, double y, double w, double h,
 			   double r, bool sub)
 { double x0 = x,     y0 = y;
@@ -1590,7 +1540,7 @@ r_elevation_fillpattern(Elevation e, bool up)
  * @param e The elevation level.
  * @return The shadow corresponding to the elevation.
  */
-Any
+static Any
 r_elevation_shadow(Elevation e)
 { if ( isDefault(e->shadow) )
   { Any bg = context.background;
@@ -1814,181 +1764,6 @@ r_3d_box(double x, double y, double w, double h,
 }
 
 /**
- * Draw a 3D-styled line between two points.
- *
- * @param x1 The x-coordinate of the starting point.
- * @param y1 The y-coordinate of the starting point.
- * @param x2 The x-coordinate of the ending point.
- * @param y2 The y-coordinate of the ending point.
- * @param e The elevation level for 3D effect.
- * @param up Boolean indicating if the line appears raised.
- */
-void
-r_3d_line(int x1, int y1, int x2, int y2, Elevation e, bool up)
-{ double z = valNum(e->height);
-  Colour up_color, down_color;
-
-  Translate(x1, y1);
-  Translate(x2, y2);
-
-  if ( up )
-  { up_color   = r_elevation_relief(e);
-    down_color = r_elevation_shadow(e);
-  } else
-  { down_color = r_elevation_shadow(e);
-    up_color   = r_elevation_relief(e);
-  }
-
-  if ( abs(y1-y2) < abs(x1-x2) )
-  { cairo_set_line_width(CR, z);
-    pce_cairo_set_source_color(CR, down_color);
-    cairo_move_to(CR, x1, (double)y1-(double)z/2);
-    cairo_line_to(CR, x2, (double)y2-(double)z/2);
-    cairo_stroke(CR);
-    pce_cairo_set_source_color(CR, up_color);
-    cairo_move_to(CR, x1, (double)y1+(double)z/2);
-    cairo_line_to(CR, x2, (double)y2+(double)z/2);
-    cairo_stroke(CR);
-  } else
-  { Cprintf("stub: r_3d_line() (not horizontal)\n");
-  }
-}
-
-/**
- * Draw a 3D-styled triangle.
- *
- * @param x1 The x-coordinate of the first vertex.
- * @param y1 The y-coordinate of the first vertex.
- * @param x2 The x-coordinate of the second vertex.
- * @param y2 The y-coordinate of the second vertex.
- * @param x3 The x-coordinate of the third vertex.
- * @param y3 The y-coordinate of the third vertex.
- * @param e The elevation level for 3D effect.
- * @param up Boolean indicating if the triangle appears raised.
- * @param map Bitmap of up/down edges
- */
-/* Find the intersection point of two lines, each given as point + direction. */
-static inline void
-line_intersect(double px, double py, double pdx, double pdy,
-	       double qx, double qy, double qdx, double qdy,
-	       double *rx, double *ry)
-{ double denom = pdx*qdy - pdy*qdx;
-
-  if ( fabs(denom) > 1e-10 )
-  { double t = ((qx-px)*qdy - (qy-py)*qdx) / denom;
-    *rx = px + t*pdx;
-    *ry = py + t*pdy;
-  } else			/* parallel — fall back to midpoint */
-  { *rx = (px+qx)/2.0;
-    *ry = (py+qy)/2.0;
-  }
-}
-
-void
-r_3d_triangle(double x1, double y1, double x2, double y2, double x3, double y3,
-	      Elevation e, bool up, unsigned int map)
-{ double shadow = valNum(e->height);
-
-  DEBUG(NAME_draw,
-	Cprintf("r_3d_triangle(%1f,%1f, %1f,%1f, %1f,%1f %s, %d)\n",
-		x1,y1, x2,y2, x3,y3, pp(e), up));
-
-  if ( shadow < 0.0 )
-  { shadow = -shadow;
-    up = !up;
-  }
-
-  double ix1 = x1, iy1 = y1;
-  double ix2 = x2, iy2 = y2;
-  double ix3 = x3, iy3 = y3;
-
-  if ( shadow > 0.1 )
-  { Colour up_color, down_color;
-
-    if ( up )
-    { up_color   = r_elevation_relief(e);
-      down_color = r_elevation_shadow(e);
-    } else
-    { up_color   = r_elevation_shadow(e);
-      down_color = r_elevation_relief(e);
-    }
-
-    /* Compute the inner (inset) triangle such that every edge is exactly
-     * shadow pixels wide (perpendicular distance).  For each edge compute
-     * its inward unit normal, offset the edge line by shadow along that
-     * normal, then intersect adjacent offset lines to get inner vertices.
-     */
-    // Edge directions
-    double d1x = x2-x1, d1y = y2-y1, l1 = sqrt(d1x*d1x + d1y*d1y);
-    double d2x = x3-x2, d2y = y3-y2, l2 = sqrt(d2x*d2x + d2y*d2y);
-    double d3x = x1-x3, d3y = y1-y3, l3 = sqrt(d3x*d3x + d3y*d3y);
-    // Inward unit normals (rotate edge 90°, then flip if pointing outward)
-    double cx = (x1+x2+x3)/3.0, cy = (y1+y2+y3)/3.0;
-    double n1x = -d1y/l1, n1y =  d1x/l1;
-    if ( (cx-(x1+x2)/2)*n1x + (cy-(y1+y2)/2)*n1y < 0 ) { n1x=-n1x; n1y=-n1y; }
-    double n2x = -d2y/l2, n2y =  d2x/l2;
-    if ( (cx-(x2+x3)/2)*n2x + (cy-(y2+y3)/2)*n2y < 0 ) { n2x=-n2x; n2y=-n2y; }
-    double n3x = -d3y/l3, n3y =  d3x/l3;
-    if ( (cx-(x3+x1)/2)*n3x + (cy-(y3+y1)/2)*n3y < 0 ) { n3x=-n3x; n3y=-n3y; }
-    // Inner vertices: intersect pairs of adjacent offset edge lines
-    line_intersect(x3+shadow*n3x, y3+shadow*n3y, d3x, d3y,
-		   x1+shadow*n1x, y1+shadow*n1y, d1x, d1y, &ix1, &iy1);
-    line_intersect(x1+shadow*n1x, y1+shadow*n1y, d1x, d1y,
-		   x2+shadow*n2x, y2+shadow*n2y, d2x, d2y, &ix2, &iy2);
-    line_intersect(x2+shadow*n2x, y2+shadow*n2y, d2x, d2y,
-		   x3+shadow*n3x, y3+shadow*n3y, d3x, d3y, &ix3, &iy3);
-
-    /* Draw each edge as a filled quadrilateral with the correct colour.
-     * Adjacent quads share the edge outer_Vn → inner_Vn so they connect
-     * without gaps regardless of which colour each edge has.
-     * map bit 0: edge (x1,y1)→(x2,y2); bit 1: (x2,y2)→(x3,y3);
-     * bit 2: (x3,y3)→(x1,y1).  Set bit = up_color, clear bit = down_color.
-     */
-    pce_cairo_set_source_color(CR, (map & 0x1) ? up_color : down_color);
-    cairo_move_to(CR, X(x1), Y(y1));
-    cairo_line_to(CR, X(x2), Y(y2));
-    cairo_line_to(CR, X(ix2), Y(iy2));
-    cairo_line_to(CR, X(ix1), Y(iy1));
-    cairo_close_path(CR);
-    cairo_fill(CR);
-
-    pce_cairo_set_source_color(CR, (map & 0x2) ? up_color : down_color);
-    cairo_move_to(CR, X(x2), Y(y2));
-    cairo_line_to(CR, X(x3), Y(y3));
-    cairo_line_to(CR, X(ix3), Y(iy3));
-    cairo_line_to(CR, X(ix2), Y(iy2));
-    cairo_close_path(CR);
-    cairo_fill(CR);
-
-    pce_cairo_set_source_color(CR, (map & 0x4) ? up_color : down_color);
-    cairo_move_to(CR, X(x3), Y(y3));
-    cairo_line_to(CR, X(x1), Y(y1));
-    cairo_line_to(CR, X(ix1), Y(iy1));
-    cairo_line_to(CR, X(ix3), Y(iy3));
-    cairo_close_path(CR);
-    cairo_fill(CR);
-  }
-
-  if ( r_elevation_fillpattern(e, up) )
-    r_fill_triangle(ix1, iy1, ix2, iy2, ix3, iy3);
-}
-
-/**
- * Draw a 3D-styled diamond shape.
- *
- * @param x The x-coordinate of the top-left corner.
- * @param y The y-coordinate of the top-left corner.
- * @param w The width of the diamond.
- * @param h The height of the diamond.
- * @param e The elevation level for 3D effect.
- * @param up Boolean indicating if the diamond appears raised.
- */
-void
-r_3d_diamond(int x, int y, int w, int h, Elevation e, int up)
-{
-}
-
-/**
  * Draw an arc within a specified rectangle in the clockwise direction.
  *
  * @param x The x-coordinate of the top-left corner of the bounding rectangle.
@@ -2054,21 +1829,6 @@ r_arc(double x, double y, double w, double h,
 void
 r_ellipse(int x, int y, int w, int h, Any fill)
 { r_arc(x, y, w, h, 0, 360, NAME_none, fill);
-}
-
-/**
- * Draw a 3D-styled ellipse.
- *
- * @param x The x-coordinate of the top-left corner of the bounding rectangle.
- * @param y The y-coordinate of the top-left corner of the bounding rectangle.
- * @param w The width of the bounding rectangle.
- * @param h The height of the bounding rectangle.
- * @param z The elevation level for 3D effect.
- * @param up Boolean indicating if the ellipse appears raised.
- */
-void
-r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up)
-{
 }
 
 /**
@@ -3051,18 +2811,6 @@ r_fill_polygon(FPoint pts, int n)
 }
 
 /**
- * Draw a caret (text cursor) at the specified position.
- *
- * @param cx The x-coordinate of the caret.
- * @param cy The y-coordinate of the caret.
- * @param font The font used for the caret.
- */
-void
-r_caret(int cx, int cy, FontObj font)
-{
-}
-
-/**
  * Fill a triangle defined by three points.
  *
  * @param x1 The x-coordinate of the first vertex.
@@ -3081,22 +2829,6 @@ r_fill_triangle(double x1, double y1, double x2, double y2, double x3, double y3
     };
 
   r_fill_polygon(pts, 3);
-}
-
-/**
- * Draw a triangle defined by three points with an optional fill.
- *
- * @param x1 The x-coordinate of the first vertex.
- * @param y1 The y-coordinate of the first vertex.
- * @param x2 The x-coordinate of the second vertex.
- * @param y2 The y-coordinate of the second vertex.
- * @param x3 The x-coordinate of the third vertex.
- * @param y3 The y-coordinate of the third vertex.
- * @param fill The fill pattern or color.
- */
-void
-r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill)
-{
 }
 
 /**
@@ -3226,7 +2958,7 @@ s_ascent(FontObj font)
  * @param font The font object.
  * @return The descent value.
  */
-double
+static double
 s_descent(FontObj font)
 { (void)ws_get_font(font);
   return isNum(font->descent) ? valNum(font->descent) : 0.0;
@@ -4247,7 +3979,7 @@ str_text(FontObj font, PceString s, int x, int y)
   }
 }
 
-void
+static void
 str_stext(FontObj font, PceString s, int f, int len,
 	  int x, int y, Style style)
 { if ( len > 0 )
@@ -4274,7 +4006,6 @@ str_stext(FontObj font, PceString s, int f, int len,
       r_colour(ofg);
   }
 }
-
 
 
 		/********************************

@@ -1626,7 +1626,7 @@ getLineNumberTextBuffer(TextBuffer tb, Int i)
 }
 
 
-Int
+static Int
 getCountLinesTextBuffer(TextBuffer tb, Int from, Int to)
 { intptr_t f = (isDefault(from) ? 0        : valInt(from));
   intptr_t t = (isDefault(to)   ? tb->size : valInt(to));
@@ -2909,7 +2909,7 @@ getLspChangesTextBuffer(TextBuffer tb, BoolObj clear)
   fail;
 }
 
-Int
+static Int
 getLspColumnTextBuffer(TextBuffer tb, Int where)
 { size_t here = valInt(where);
 
@@ -2929,7 +2929,7 @@ getLspColumnTextBuffer(TextBuffer tb, Int where)
  * remembered, as the scan stops there if `line` is beyond the last line.
  */
 
-Int
+static Int
 getLspOffsetTextBuffer(TextBuffer tb, Int line, Int character)
 { size_t pos = isDefault(character) ? 0 : valInt(character);
   intptr_t ln = max(0,valInt(line));

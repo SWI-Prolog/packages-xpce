@@ -36,6 +36,8 @@
 #include <box/grbox.h>
 #include <gra/graphical.h>
 
+static status computeAscentDescentGrBox(GrBox grb);
+
 static status
 initialiseGrBox(GrBox grb, Graphical gr,
 		Any align,		/* left, right or @nil */
@@ -89,7 +91,7 @@ computeGrBox(GrBox grb)
 }
 
 
-status
+static status
 computeAscentDescentGrBox(GrBox grb)
 { Graphical gr = grb->graphical;
   int h, ascent, descent;

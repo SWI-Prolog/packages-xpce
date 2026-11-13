@@ -101,7 +101,7 @@ str_ring_alloc(PceString s)
   /* s_readonly stays FALSE: the ring buffer is *not* permanent
    * storage.  initialiseCharArray's fast-path treats s_readonly as
    * "share the pointer, the source lives forever" — that is correct
-   * for static C-string sources (str_set_static) but fatal here, since
+   * for static C-string sources but fatal here, since
    * the next 16 ring allocations recycle the slot.  Callers must not
    * call str_unalloc on a ring-derived string; in current xpce no
    * caller does. */
@@ -217,26 +217,6 @@ str_set_utf8(PceString str, const char *text)
 }
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-str_set_static(): initialise a string from a static C-string
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-status
-str_set_static(PceString str, const char *text)
-{ size_t len = strlen(text);
-
-  if ( len > STR_MAX_SIZE )
-    return errorPce(NIL, NAME_stringTooLong, toInt(len));
-
-  str_inithdr(str, FALSE);
-  str->s_readonly = TRUE;
-  str->s_size = (int)len;
-  str->s_textA = (charA *) text;
-
-  succeed;
-}
-
-
 status
 str_iswide(PceString s)
 { if ( s->s_iswide )
@@ -251,7 +231,6 @@ str_iswide(PceString s)
 
   fail;
 }
-
 
 
 		 /*******************************

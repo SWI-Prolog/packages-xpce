@@ -165,7 +165,7 @@ popupShadow(PopupObj p, Any fr)
 
 /* Room around the popup in its window for the drop shadow */
 
-int
+static int
 popupShadowMargin(PopupObj p, Any fr)
 { Shadow s = popupShadow(p, fr);
 

@@ -40,7 +40,6 @@
 COMMON(status)	initialiseGesture(Gesture g, Name button, Modifier modifier);
 COMMON(status)	eventGesture(Any obj, EventObj ev);
 COMMON(status)	cancelGesture(Gesture g, EventObj ev);
-COMMON(status)	restrictAreaEvent(EventObj ev, Graphical gr);
 COMMON(status)	makeClassGesture(Class class);
 
 #endif /*XPCE_EVT_GESTURE_H_INCLUDED*/

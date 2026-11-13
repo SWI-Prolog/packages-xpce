@@ -94,16 +94,6 @@ entry_chevron(double x, double y, double w, double h, double cw, bool down)
 }
 
 /**
- * Return the horizontal margin for entry fields.
- *
- * @return Margin in pixels.
- */
-int
-ws_entry_field_margin(void)
-{ return 1;
-}
-
-/**
  * ws_entry_field() is used by classes that need to create an editable
  * field  of specified  dimensions. If  the  field happens  to be  not
  * editable now, this is indicated by `editable'.
@@ -164,38 +154,6 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int bw, int flags)
 
   r_colour(old);
   succeed;
-}
-
-/**
- * Draw a checkbox widget.
- *
- * @param x The x-coordinate.
- * @param y The y-coordinate.
- * @param w The width.
- * @param h The height.
- * @param b Border size or state.
- * @param flags Rendering flags.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_draw_checkbox(int x, int y, int w, int h, int b, int flags)
-{ fail;
-}
-
-/**
- * Compute the size of a checkbox widget.
- *
- * @param flags Flags that affect size calculation.
- * @param w Pointer to output width.
- * @param h Pointer to output height.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_checkbox_size(int flags, int *w, int *h)
-{ *w = 0;
-  *h = 0;
-
-  fail;
 }
 
 /* SDL_ShowMessageBox() blocks the calling thread until the user closes

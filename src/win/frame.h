@@ -52,8 +52,6 @@ COMMON(status)	AppendFrame(FrameObj fr, PceWindow sw);
 COMMON(status)	DeleteFrame(FrameObj fr, PceWindow sw);
 COMMON(PceWindow) getKeyboardFocusFrame(FrameObj fr);
 COMMON(bool)	focusFollowsMouseFrame(FrameObj fr);
-COMMON(status)	redrawFrame(FrameObj fr, Area a);
-COMMON(FrameObj) blockedByModalFrame(FrameObj fr);
 COMMON(FrameObj) getNextFocusFrame(FrameObj fr);
 COMMON(status)	eventFrame(FrameObj fr, EventObj ev);
 COMMON(status)	menuBarKeyFrame(FrameObj fr, EventObj ev);

@@ -39,6 +39,5 @@
 /* Functions defined in men/menubar.c */
 
 COMMON(status)	makeClassMenuBar(Class class);
-COMMON(status)	currentMenuBar(MenuBar mb, PopupObj p);
 
 #endif /*XPCE_MEN_MENUBAR_H_INCLUDED*/

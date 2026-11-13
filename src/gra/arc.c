@@ -68,7 +68,7 @@ initialiseArc(ArcObj a, Int radius, Int start_angle, Int size_angle)
 }
 
 
-void
+static void
 points_arc(ArcObj a, double *sx, double *sy, double *ex, double *ey)
 { double cx = valInt(a->position->x);
   double cy = valInt(a->position->y);

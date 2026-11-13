@@ -36,6 +36,8 @@
 #include <txt/str.h>
 #include <txt/string.h>
 
+static status	checkErrorSourceSink(SourceSink ss, IOSTREAM *fd);
+
 status
 initialiseSourceSink(SourceSink ss)
 { PceCValue val;
@@ -243,7 +245,7 @@ getContentsSourceSink(SourceSink ss, Int from, Int len)
 		 *	       UTIL		*
 		 *******************************/
 
-status
+static status
 checkErrorSourceSink(SourceSink ss, IOSTREAM *fd)
 { if ( Sferror(fd) )
     return errorPce(ss, NAME_ioError, getOsErrorPce(PCE));

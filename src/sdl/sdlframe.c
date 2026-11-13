@@ -441,7 +441,7 @@ constrain_to_display(DisplayObj d, int *w, int *h)
  * @param fr Pointer to the FrameObj to create.
  * @return SUCCEED on successful creation; otherwise, FAIL.
  */
-status
+static status
 ws_create_frame(FrameObj fr)
 { ASSERT_SDL_MAIN();
   SDL_Window *win = NULL;

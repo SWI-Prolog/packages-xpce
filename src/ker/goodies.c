@@ -315,50 +315,9 @@ strcpyskip(char *t, char *f)
 
 
 status
-substr(register char *str, register char *sb)
-{ register char *r, *q;
-
-  for (; *str; str++)
-  { for (r=str, q=sb; *r == *q && *r != '\0'; r++, q++)
-      ;
-
-    if (*q == '\0')
-      succeed;
-  }
-
-  fail;
-}
-
-
-status
 prefixstr(char *s1, char *s2)			/* S2 is a prefix of s1 */
 { while( *s1 == *s2 && *s2 )
     s1++, s2++;
-
-  return *s2 == EOS;
-}
-
-
-status
-substr_ignore_case(register char *str, register char *sb)
-{ register char *r, *q;
-
-  for (; *str; str++)
-  { for (r=str, q=sb; tolower(*r) == tolower(*q) && *r != '\0'; r++, q++)
-      ;
-
-    if (*q == EOS)
-      succeed;
-  }
-
-  fail;
-}
-
-
-status
-prefixstr_ignore_case(char *s1, char *s2) /* S2 is a prefix of s1 */
-{ while( tolower(*s1) == tolower(*s2) && *s2 )
-   s1++, s2++;
 
   return *s2 == EOS;
 }
@@ -370,28 +329,6 @@ streq_ignore_case(char *s1, char *s2)
    s1++, s2++;
 
   return *s1 == EOS && *s2 == EOS;
-}
-
-
-char *
-upcasestr(char *s)
-{ register char *q = s;
-
-  for( ; *q; q++ )
-    *q = toupper(*q);
-
-  return s;
-}
-
-
-char *
-downcasestr(char *s)
-{ register char *q = s;
-
-  for( ; *q; q++ )
-    *q = tolower(*q);
-
-  return s;
 }
 
 

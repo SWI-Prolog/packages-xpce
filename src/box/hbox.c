@@ -35,7 +35,7 @@
 #include "boxes.h"
 #include <box/hbox.h>
 
-status
+static status
 initialiseHBox(HBox hb, Int width, Int ascent, Int descent, Rubber rubber)
 { if ( isDefault(rubber) )		/* resource? */
     rubber = NIL;

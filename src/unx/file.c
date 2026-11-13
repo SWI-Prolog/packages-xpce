@@ -61,6 +61,7 @@
 #define PATH_MAX 1024
 #endif
 
+static status reportErrorFile(FileObj f);
 static status	kindFile(FileObj f, Name encoding);
 static Sheet	FileFilters;
 
@@ -1074,7 +1075,7 @@ getCharacterFile(FileObj f)
 		*       SAVE/LOAD SUPPORT	*
 		********************************/
 
-status
+static status
 reportErrorFile(FileObj f)
 { errorPce(f, NAME_ioError, getOsErrorPce(PCE));
   fail;
@@ -1104,7 +1105,7 @@ storeCharFile(FileObj f, int c)
 }
 
 
-void
+static void
 putstdw(uint32_t w, IOSTREAM *fd)
 {
 #ifndef WORDS_BIGENDIAN

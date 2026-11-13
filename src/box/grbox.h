@@ -40,7 +40,6 @@
 /* Functions defined in box/grbox.c */
 
 COMMON(status)	computeGrBox(GrBox grb);
-COMMON(status)	computeAscentDescentGrBox(GrBox grb);
 COMMON(status)	makeClassGrBox(Class class);
 
 #endif /*XPCE_BOX_GRBOX_H_INCLUDED*/

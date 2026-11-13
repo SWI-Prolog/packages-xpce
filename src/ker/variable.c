@@ -38,6 +38,7 @@
 #include <txt/i18n.h>
 #include <txt/textbuffer.h>
 
+static status initialValueVariable(Variable var, Any value);
 static status	initialiseVariable(Variable var, Name name, Type type,
 				   Name access, StringObj doc, Name group,
 				   Any initial);
@@ -274,7 +275,7 @@ is_shareable(Any value)
 }
 
 
-status
+static status
 initialValueVariable(Variable var, Any value)
 { if ( is_shareable(value) )
   { Any val = checkType(value, var->type, NIL);

@@ -42,7 +42,6 @@ Chain	ws_camera_sizes(Camera c);
 void	ws_close_camera(Camera c);
 status	ws_test_camera_frame(Camera c, int w, int h, Colour colour,
 			     Name format);
-bool	sdl_camera_tick(void);
 bool	sdl_camera_event(SDL_Event *event);
 
 #endif /*SDLCAMERA_H*/

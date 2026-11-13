@@ -102,7 +102,7 @@ loadLine(Line ln, IOSTREAM *fd, ClassDef def)
 }
 
 
-status
+static status
 adjustFirstArrowLine(Line ln)
 { if ( notNil(ln->first_arrow) )
   { Any av[4];
@@ -123,7 +123,7 @@ adjustFirstArrowLine(Line ln)
 }
 
 
-status
+static status
 adjustSecondArrowLine(Line ln)
 { if ( notNil(ln->second_arrow) )
   { Any av[4];

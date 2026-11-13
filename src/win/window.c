@@ -56,6 +56,8 @@
 #include <stdbool.h>
 #include <math.h>
 
+static void unlink_changes_data_window(PceWindow sw);
+static status RedrawAreaWindow(PceWindow sw, IArea a, int clear);
 static status	uncreateWindow(PceWindow sw);
 static status   tileWindow(PceWindow sw, TileObj t);
 static status   updateScrollbarValuesWindow(PceWindow sw);
@@ -409,18 +411,6 @@ windowLabelWindow(PceWindow sw, CharArray label)
 }
 
 
-PceWindow				/* used in MSW binding */
-userWindow(PceWindow sw)
-{ if ( instanceOfObject(sw, ClassWindowDecorator) )
-  { WindowDecorator dw = (WindowDecorator)sw;
-
-    answer(dw->window);
-  }
-
-  answer(sw);
-}
-
-
 		/********************************
 		*        GRAPHICAL ROLE		*
 		********************************/
@@ -469,8 +459,6 @@ updatePositionSubWindowsDevice(Device dev)
       updatePositionSubWindowsDevice(cell->value);
   }
 }
-
-
 
 
 /* The <-parent that createWindow() records for a window created inside
@@ -543,7 +531,7 @@ displayedWindow(PceWindow sw, BoolObj val)
 }
 
 
-status
+static status
 scaleWindow(PceWindow sw, Int scale)
 { if ( sw->scale != scale )
   { assign(sw, scale, scale);
@@ -1029,7 +1017,7 @@ typedWindow(PceWindow sw, EventId id, BoolObj delegate)
 		*             FOCUS		*
 		********************************/
 
-status
+static status
 inputFocusWindow(PceWindow sw, BoolObj val)
 { DEBUG(NAME_keyboard, Cprintf("inputFocusWindow(%s, %s)\n", pp(sw), pp(val)));
 
@@ -1249,7 +1237,6 @@ intersect_iarea(IArea a, IArea b)	/* shrink a with b; fail of empty */
 }
 
 
-
 #ifdef O_CHDEBUG
 #define CHDEBUG(s, g) DEBUG(s, g)
 #else
@@ -1335,7 +1322,7 @@ changed_window(PceWindow sw, int x, int y, int w, int h, int clear)
 }
 
 
-void
+static void
 unlink_changes_data_window(PceWindow sw)
 { UpdateArea a, b;
 
@@ -1349,7 +1336,6 @@ unlink_changes_data_window(PceWindow sw)
 
   deleteChain(ChangedWindows, sw);
 }
-
 
 
 static void
@@ -1440,7 +1426,7 @@ pceRedrawWindow(PceWindow sw)
 }
 
 
-status
+static status
 RedrawAreaWindow(PceWindow sw, IArea a, int clear)
 { static Area oa = NULL;		/* Object Area */
 
@@ -1730,7 +1716,6 @@ svgWindow(PceWindow sw, FileObj dest, Int scale)
 }
 
 
-
 		/********************************
 		*           SCROLLING		*
 		********************************/
@@ -2008,7 +1993,7 @@ updateScrollbarValuesWindow(PceWindow sw)
   succeed;
 }
 
-status
+static status
 changedUnionWindow(PceWindow sw, Int ox, Int oy, Int ow, Int oh)
 { return UpdateScrollbarValuesWindow(sw);
 }
@@ -2053,7 +2038,6 @@ bubbleScrollBarWindow(PceWindow sw, ScrollBar sb)
 
   return bubbleScrollBar(sb, toInt(length), toInt(start), toInt(view));
 }
-
 
 
 		/********************************
@@ -2701,7 +2685,7 @@ getImageWindow(PceWindow sw)
 		*            FLUSHING		*
 		********************************/
 
-status
+static status
 flushWindow(PceWindow sw)
 { DisplayObj d = getDisplayGraphical((Graphical) sw);
 

@@ -38,7 +38,6 @@
 
 /* Functions defined in ker/name.c */
 
-COMMON(void)	trapGdb(void);
 COMMON(void)	initNamesPass1(void);
 COMMON(void)	initNamesPass2(void);
 COMMON(void)	checkNames(int prt);

@@ -44,7 +44,6 @@ COMMON(status)	setPoint(Point pt, Int x, Int y);
 COMMON(status)	offsetPoint(Point pt, Int x, Int y);
 COMMON(int)	get_distance_point(Point p, int x, int y);
 COMMON(Int)	getDistancePoint(Point p, Point q);
-COMMON(Point)	getMidPoint(Point p, Point q);
 COMMON(status)	plusPoint(Point p, Point q);
 COMMON(status)	minusPoint(Point p, Point q);
 COMMON(status)	makeClassPoint(Class class);

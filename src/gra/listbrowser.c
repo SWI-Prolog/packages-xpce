@@ -1140,7 +1140,7 @@ getDictItemListBrowser(ListBrowser lb, EventObj ev)
 }
 
 
-Any
+static Any
 selectBrowserGesture()
 { static Any g = NULL;
 

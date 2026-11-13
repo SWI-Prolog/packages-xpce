@@ -1720,7 +1720,6 @@ __pce_export char *	Cgetline(char *line, int size);
 					/* interface prototypes */
 __pce_export Any	cToPceName(const char *text);
 COMMON(status)	makeClassRC(Class class);
-COMMON(status)	initialiseHost(Host h, Name which);
 COMMON(status)	makeClassHost(Class class);
 COMMON(status)	makeClassHostData(Class class);
 COMMON(status)	makeClassHostMethod(Class class);
@@ -1730,8 +1729,6 @@ COMMON(int)	hostGetc(void);
 COMMON(void)	pceWriteErrorGoal(void);
 COMMON(int)	initPublicInterface(void);
 
-COMMON(status)	initialiseSourceSink(SourceSink ss);
-COMMON(status)	checkErrorSourceSink(SourceSink ss, IOSTREAM *fd);
 COMMON(status)	initialiseSourceSink(SourceSink ss);
 COMMON(IOSTREAM *)	Sopen_object(Any obj, const char *mode);
 COMMON(status)	setStreamEncodingSourceSink(SourceSink ss, IOSTREAM *fd);

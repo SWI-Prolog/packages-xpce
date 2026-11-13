@@ -39,7 +39,6 @@
 
 COMMON(status)	equalSize(Size s, Size s2);
 COMMON(status)	copySize(Size s, Size s2);
-COMMON(Size)	getCopySize(Size s);
 COMMON(status)	setSize(Size s, Int w, Int h);
 COMMON(status)	makeClassSize(Class class);
 

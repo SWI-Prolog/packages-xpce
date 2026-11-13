@@ -47,7 +47,6 @@ COMMON(status)	str_set_n_ascii(PceString str, size_t len, char *text);
 COMMON(status)	str_set_n_wchar(PceString str, size_t len, wchar_t *text);
 COMMON(status)	str_set_ascii(PceString str, char *text);
 COMMON(status)	str_set_utf8(PceString str, const char *text);
-COMMON(status)	str_set_static(PceString str, const char *text);
 COMMON(status)	str_iswide(PceString s);
 COMMON(void)	str_ncpy(PceString dest, int at, PceString src, int from, int len);
 COMMON(void)	str_cpy(PceString dest, PceString src);

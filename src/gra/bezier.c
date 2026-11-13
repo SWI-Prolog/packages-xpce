@@ -74,7 +74,7 @@ initialiseBezier(Bezier b, Point start, Point end,
 		 *	      ARROWS		*
 		 *******************************/
 
-status
+static status
 adjustFirstArrowBezier(Bezier b)
 { if ( notNil(b->first_arrow) )
   { Any av[4];
@@ -95,7 +95,7 @@ adjustFirstArrowBezier(Bezier b)
 }
 
 
-status
+static status
 adjustSecondArrowBezier(Bezier b)
 { if ( notNil(b->second_arrow) )
   { Any av[4];

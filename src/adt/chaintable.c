@@ -47,7 +47,7 @@ appendChainTable(ChainTable ct, Any name, Any value)
 }
 
 
-status
+static status
 addChainTable(ChainTable ct, Any name, Any value)
 { Chain ch;
 

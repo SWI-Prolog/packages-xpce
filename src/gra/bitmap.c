@@ -41,6 +41,7 @@
 #include <gra/image.h>
 #include <unx/file.h>
 
+static status updateSolidBitmap(BitmapObj bm);
 static status	imageBitmap(BitmapObj bm, Image image);
 static status	animationBitmap(BitmapObj bm, Animation a);
 static status	stopBitmap(BitmapObj bm);
@@ -289,7 +290,7 @@ imageBitmap(BitmapObj bm, Image image)
 }
 
 
-status
+static status
 updateSolidBitmap(BitmapObj bm)
 { if ( ws_has_alpha_image(bm->image) )
     clearFlag(bm, F_SOLID);

@@ -38,11 +38,9 @@
 
 /* Functions defined in gra/text.c */
 
-COMMON(void)	str_format(PceString out, const PceString in, const int width, const FontObj font);
 COMMON(void)	str_one_line(PceString to, PceString from);
 COMMON(status)	repaintText(TextObj t, int x, int y, int w, int h);
 COMMON(Int)	get_pointed_text(TextObj t, int x, int y, int round);
-COMMON(status)	transparentText(TextObj t, BoolObj val);
 COMMON(status)	fontText(TextObj t, FontObj font);
 COMMON(status)	borderText(TextObj t, Int border);
 COMMON(status)	stringText(TextObj t, CharArray s);

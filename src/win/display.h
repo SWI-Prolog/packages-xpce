@@ -39,9 +39,6 @@
 
 COMMON(status)	dispatchDisplay(DisplayObj d);
 COMMON(status)	bellDisplay(DisplayObj d, Int vol);
-COMMON(Size)	getSizeDisplay(DisplayObj d);
-COMMON(Int)	getWidthDisplay(DisplayObj d);
-COMMON(Int)	getHeightDisplay(DisplayObj d);
 COMMON(status)	confirmDisplay(DisplayObj d, Any client, CharArray title,
 			       CharArray fmt, int argc, Any *argv);
 COMMON(status)	informDisplay(DisplayObj d, Any client, CharArray title,

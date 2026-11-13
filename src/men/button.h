@@ -41,10 +41,8 @@
 COMMON(int)	accelerator_code(Name a);
 COMMON(status)	acceleratorCuesFrame(FrameObj fr, bool held);
 COMMON(int)	accelerator_key(Name a);
-COMMON(status)	RedrawAreaButton(Button b, Area a);
 COMMON(Point)	getReferenceButton(Button b);
 COMMON(status)	makeButtonGesture(void);
-COMMON(status)	isApplyButton(Button b);
 COMMON(status)	makeClassButton(Class class);
 
 #endif /*XPCE_MEN_BUTTON_H_INCLUDED*/

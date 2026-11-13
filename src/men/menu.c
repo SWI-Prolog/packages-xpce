@@ -48,6 +48,8 @@
 #include <men/textitem.h>
 #include <txt/str.h>
 
+static status selectionMenu(Menu m, Any selection);
+static status forwardMenu(Menu m, Code msg, EventObj ev);
 static FontObj	getFontMenuItemMenu(Menu m, MenuItem mi);
 static MenuItem	getItemSelectionMenu(Menu m);
 static MenuItem	getNextMenu(Menu m, Name direction);
@@ -1177,29 +1179,6 @@ getFontMenuItemMenu(Menu m, MenuItem mi)
 }
 
 
-Int
-getCenterYMenuItemMenu(Menu m, Any obj)
-{ MenuItem mi;
-  int x, y, w, h;
-
-  if ( isDefault(obj) )
-  { if ( (mi = getItemSelectionMenu(m)) == FAIL )
-    { if ( emptyChain(m->members) != SUCCEED )
-	mi = getHeadChain(m->members);
-      else
-	return ZERO;
-    }
-  } else
-    if ( (mi = findMenuItemMenu(m, obj)) == FAIL )
-      return ZERO;
-
-  computeMenu(m);
-  area_menu_item(m, mi, &x, &y, &w, &h);
-
-  answer(toInt(y+h/2 + valInt(m->area->y)));
-}
-
-
 static Int
 getLabelWidthMenu(Menu m)
 { ComputeGraphical(m);
@@ -1520,7 +1499,7 @@ WantsKeyboardFocusMenu(Menu m)
   return has_focus_ring(m) && getFocusItemMenu(m) != NULL;
 }
 
-status
+static status
 forwardMenu(Menu m, Code msg, EventObj ev)
 { MenuItem mi;
 
@@ -1543,7 +1522,6 @@ forwardMenu(Menu m, Code msg, EventObj ev)
 
   succeed;
 }
-
 
 
 static status
@@ -1630,7 +1608,6 @@ openComboBoxMenu(Menu m)
 
   succeed;
 }
-
 
 
 static status
@@ -1877,7 +1854,7 @@ clearSelectionMenu(Menu m)
 #define IS_SET 1
 #define NEEDS_SET 2
 
-status
+static status
 selectionMenu(Menu m, Any selection)
 { Cell cell;
   char *is_set;
@@ -2122,7 +2099,6 @@ membersMenu(Menu m, Chain members)
 
   succeed;
 }
-
 
 
 static status
@@ -2384,8 +2360,6 @@ layoutMenu(Menu m, Name or)
 }
 
 
-
-
 static status
 columnsMenu(Menu m, Int n)
 { return assignGraphical(m, NAME_columns, n);
@@ -2512,7 +2486,6 @@ sortMenu(Menu m, Code msg)
 
   return requestComputeGraphical(m, NAME_assignAccelerators);
 }
-
 
 
 		/********************************

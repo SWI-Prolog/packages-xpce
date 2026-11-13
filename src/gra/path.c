@@ -134,13 +134,13 @@ adjustArrowPath(Path p, Graphical arrow, bool first)
 }
 
 
-status
+static status
 adjustFirstArrowPath(Path p)
 { return adjustArrowPath(p, p->first_arrow, true);
 }
 
 
-status
+static status
 adjustSecondArrowPath(Path p)
 { return adjustArrowPath(p, p->second_arrow, false);
 }

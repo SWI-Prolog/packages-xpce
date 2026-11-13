@@ -46,6 +46,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+static status XcloseImage(Image image, DisplayObj d);
 static status drawInImage(Image image, Graphical gr, Point pos);
 
 		/********************************
@@ -288,7 +289,7 @@ XopenImage(Image image, DisplayObj d)
 }
 
 
-status
+static status
 XcloseImage(Image image, DisplayObj d)
 { ws_close_image(image);
 
@@ -559,7 +560,7 @@ drawInImage(Image image, Graphical gr, Point pos)
 		*            FILLING		*
 		********************************/
 
-status
+static status
 fillImage(Image image, Any pattern, Area area)
 { int x, y, w, h;
 

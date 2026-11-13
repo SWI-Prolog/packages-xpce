@@ -39,7 +39,7 @@
 
 static status computeTBox(TBox tb);
 
-status
+static status
 initialiseTBox(TBox tb, CharArray text, Style style)
 { obtainClassVariablesObject(tb);
 
@@ -97,12 +97,6 @@ getSpaceTBox(TBox tb)
 		 /*******************************
 		 *	      REDRAW		*
 		 *******************************/
-
-void
-drawTBox(TBox tb, int x, int y, int w, parline const *line)
-{ drawTBoxSel(tb, x, y, w, line, 0, 0, NIL);
-}
-
 
 static void
 print_substring(PceString s, int offset, int len, int x, int y, FontObj f)

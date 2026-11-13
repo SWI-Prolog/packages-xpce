@@ -41,7 +41,6 @@ COMMON(void)	setReal(Real r, double f);
 COMMON(double)	valReal(Real r);
 COMMON(Real)	CtoReal(double f);
 COMMON(Real)	getConvertReal(Class class, Any obj);
-COMMON(status)	valueReal(Real r, Real v);
 COMMON(status)	makeClassReal(Class class);
 
 #endif /*XPCE_ADT_REAL_H_INCLUDED*/

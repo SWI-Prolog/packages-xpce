@@ -50,12 +50,9 @@
 
 status	sdl_send(Any receiver, Name selector, int sync, ...);
 status	wait_host(int sync, ...);
-bool	sdl_initialised(void);
 void	not_on_sdl_main_thread(void);
 
 void ws_initialise(int argc, char **argv);
-int ws_version(void);
-const char *ws_driver(void);
 Int ws_default_scrollbar_width(void);
 Name ws_user(void);
 status ws_open_url(PceString url);

@@ -41,7 +41,6 @@
 COMMON(status)	initialiseFunction(Function f);
 COMMON(Any)	getForwardFunctionv(Function f, int argc, const Any argv []);
 COMMON(Any)	getForwardReceiverFunctionv(Function f, Any receiver, int argc, const Any argv []);
-COMMON(Any)	getForwardFunction(Function f, ...);
 COMMON(Any)	getForwardReceiverFunction(Function f, Any receiver, ...);
 COMMON(Any)	getSendMethodFunction(Function f, Name selector);
 COMMON(Any)	getGetMethodFunction(Function f, Name selector);

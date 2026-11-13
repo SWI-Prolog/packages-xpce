@@ -137,6 +137,7 @@ extern int   unlockpt(int fildes);
 #endif
 #endif
 
+static status closeInputProcess(Process p);
 static status	killProcess(Process p, Any sig);
 
 #define OsError() getOsErrorPce(PCE)
@@ -401,7 +402,7 @@ doneProcess(Process p)
 }
 
 
-status
+static status
 closeInputProcess(Process p)
 { closeInputStream((Stream) p);
   closeOutputStream((Stream) p);

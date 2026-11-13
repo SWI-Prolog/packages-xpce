@@ -111,7 +111,7 @@ using the XPCE 5 message  passing  code   and  only  keep  @receiver for
 messages in dialog items.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-status
+static status
 userForwardReceiverCodev(Code c, Any receiver, int argc, const Any argv[])
 { Class rclass = classOfObject(receiver);
   status rval;

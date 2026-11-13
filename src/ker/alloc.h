@@ -45,6 +45,5 @@ COMMON(void)	allocRange(void *low, size_t size);
 COMMON(status)	listWastedCorePce(Pce pce, BoolObj ppcells);
 COMMON(void)	checkFreeChains(void);
 COMMON(char *)	save_string(const char *s);
-COMMON(void)	free_string(char *s);
 
 #endif /*XPCE_KER_ALLOC_H_INCLUDED*/

@@ -56,7 +56,6 @@ COMMON(status)	modifiedDialogItem(Any di, BoolObj modified);
 COMMON(status)	assignAccelerators(Chain objects, Name prefix, Name label_method);
 COMMON(Any)	normaliseAccelerator(Any acc);
 COMMON(void)	reassignAcceleratorsOf(Graphical gr);
-COMMON(bool)	fixedAccelerator(Any obj);
 COMMON(Any)	currentAccelerator(Any obj);
 COMMON(void)	autoAccelerator(Any obj, Any acc);
 COMMON(void)	markAccelerator(Any acc, unsigned char *taken);
@@ -64,8 +63,6 @@ COMMON(bool)	strongAccelerator(Any obj);
 COMMON(status)	assignAcceleratorsSoft(Chain objects, Name prefix,
 				       Name label_method, unsigned char *taken,
 				       const unsigned char *soft);
-COMMON(status)	assignAcceleratorsTaken(Chain objects, Name prefix,
-				Name label_method, unsigned char *taken);
 COMMON(status)	makeClassDialogItem(Class class);
 
 #endif /*XPCE_MEN_DIALOGITEM_H_INCLUDED*/

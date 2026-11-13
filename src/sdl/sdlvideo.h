@@ -64,7 +64,6 @@ double	ws_video_position(Video vid);
 Image	ws_video_frame_image(Video vid, double at);
 bool	ws_video_info(Video vid, video_info *info);
 void	ws_volume_video(Video vid);
-bool	sdl_video_tick(void);
 status	ws_open_video_writer(VideoWriter vw);
 status	ws_append_video_writer(VideoWriter vw, SDL_Surface *src, double pts);
 status	ws_close_video_writer(VideoWriter vw);

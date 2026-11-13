@@ -308,7 +308,7 @@ acceleratorDialogItem(DialogItem di, Name acc)
  * ->accelerator.
  */
 
-bool
+static bool
 fixedAccelerator(Any obj)
 { if ( instanceOfObject(obj, ClassDialogItem) )
     return ((DialogItem)obj)->accelerator_fixed == ON;
@@ -844,7 +844,7 @@ strongAccelerator(Any obj)
 }
 
 
-status
+static status
 assignAcceleratorsTaken(Chain objects, Name prefix, Name label_method,
 			unsigned char *taken)
 { return assignAcceleratorsSoft(objects, prefix, label_method, taken, NULL);

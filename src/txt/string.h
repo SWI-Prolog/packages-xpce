@@ -37,7 +37,6 @@
 
 /* Functions defined in txt/string.c */
 
-COMMON(StringObj) create_string_from_str(PceString s, int tmp);
 COMMON(StringObj) StringToString(PceString s);
 COMMON(StringObj) StringToTempString(PceString s);
 COMMON(StringObj) CtoString(const char *s);

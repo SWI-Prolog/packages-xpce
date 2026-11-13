@@ -47,7 +47,6 @@ COMMON(Chain)	getPointedObjectsDevice(Device dev, Any pos, Chain ch);
 COMMON(status)	inspectDevice(Device dev, EventObj ev);
 COMMON(status)	eventDevice(Any obj, EventObj ev);
 COMMON(Button)	getDefaultButtonDevice(Device d);
-COMMON(status)	advanceDevice(Device dev, Graphical gr, BoolObj propagate, Name direction);
 COMMON(status)	requestComputeDevice(Device dev, Any val);
 COMMON(status)	computeGraphicalsDevice(Device dev);
 COMMON(status)	computeLayoutDevice(Device dev);

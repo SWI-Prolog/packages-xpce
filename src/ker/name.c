@@ -62,12 +62,6 @@ struct name builtin_names[] =
 };
 
 
-void
-trapGdb(void)
-{
-}
-
-
 static int
 nextBucketSize(int n)
 { n *= 2;
@@ -87,7 +81,6 @@ nextBucketSize(int n)
       return n;
   }
 }
-
 
 
 		/********************************
@@ -136,7 +129,6 @@ getBucketValueName(Name name, Int bucket)
 
   fail;
 }
-
 
 
 static void
@@ -259,7 +251,6 @@ initNamesPass2(void)
 
   DEBUG_BOOT(checkNames(TRUE));
 }
-
 
 
 		/********************************

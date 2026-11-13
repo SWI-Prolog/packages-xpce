@@ -78,9 +78,3 @@ g_restore(void)
   statelist = gs->savedstate;
   unalloc(sizeof(struct graphics_state), gs);
 }
-
-
-int
-g_level(void)
-{ return statelist ? statelist->level : 0;
-}

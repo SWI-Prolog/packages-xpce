@@ -38,7 +38,7 @@
 #include <win/displaymgr.h>
 
 
-status
+static status
 initialiseHost(Host h, Name which)
 { assign(h, system, which);
   assign(h, callBack, ON);

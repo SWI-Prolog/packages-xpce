@@ -37,15 +37,12 @@
 
 /* Functions defined in gra/coords.c */
 
-COMMON(bool)	deviceLocalToWindowCoord(Device dev, double lx, double ly,
-					 double *wx, double *wy);
 COMMON(bool)	windowToDeviceLocalCoord(Device dev, double wx, double wy,
 					 double *lx, double *ly);
 COMMON(bool)	graphicalToWindowCoord(Graphical gr, double lx, double ly,
 				       double *wx, double *wy);
 COMMON(bool)	windowToGraphicalCoord(Graphical gr, double wx, double wy,
 				       double *lx, double *ly);
-COMMON(bool)	graphicalToWindowArea(Graphical gr, Area in, double bbox[4]);
 COMMON(bool)	graphicalToDeviceCoord(Graphical gr, Device *target_io,
 				       double lx, double ly,
 				       double *ox, double *oy);

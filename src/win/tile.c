@@ -42,6 +42,8 @@
  * A wider resizable gap is easier to see and to grab.
  */
 
+static bool canResizeTile(TileObj t);
+
 static int
 gap_after_tile(TileObj t, TileObj t2)
 { if ( canResizeTile(t2) )		/* do not cache: the layout is */
@@ -1506,7 +1508,7 @@ ICanResizeTile(TileObj t, Name dir)
  * siblings and what they can do.  Not cached: see getCanResizeTile().
  */
 
-bool
+static bool
 canResizeTile(TileObj t)
 { if ( notDefault(t->canResize) )
     return t->canResize == ON;

@@ -38,11 +38,6 @@
 /* Functions defined in gra/transform.c */
 
 COMMON(bool)	transformIsIdentity(Transform t);
-COMMON(void)	transformPoint(Transform t, double x, double y,
-			       double *ox, double *oy);
-COMMON(bool)	inverseTransformPoint(Transform t, double x, double y,
-				      double *ox, double *oy);
-COMMON(void)	transformAreaAABB(Transform t, Area in, double bbox[4]);
 COMMON(void)	transformAreaToIntAABB(Transform t, Area in, Area out);
 COMMON(double)	transformSnapInt(double v);
 COMMON(status)	translateTransform(Transform t, Num dx, Num dy);

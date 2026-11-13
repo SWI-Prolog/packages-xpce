@@ -148,7 +148,7 @@ getDistancePoint(Point p, Point q)
 }
 
 
-Point
+static Point
 getMidPoint(Point p, Point q)
 { answer(answerObject(ClassPoint,
 		      toInt((valInt(p->x)+valInt(q->x)+1)/2),

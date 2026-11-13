@@ -38,7 +38,6 @@
 
 /* Functions defined in gra/bitmap.c */
 
-COMMON(status)	updateSolidBitmap(BitmapObj bm);
 COMMON(status)	makeClassBitmap(Class class);
 
 #endif /*XPCE_GRA_BITMAP_H_INCLUDED*/

@@ -41,6 +41,5 @@ COMMON(status)	defaultPopupImages(PopupObj p);
 COMMON(bool)	previewHasSubmenuPopup(PopupObj p);
 COMMON(status)	makeClassPopup(Class class);
 COMMON(Shadow)	popupShadow(PopupObj p, Any fr);
-COMMON(int)	popupShadowMargin(PopupObj p, Any fr);
 
 #endif /*XPCE_MEN_POPUP_H_INCLUDED*/

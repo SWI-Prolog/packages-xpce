@@ -37,7 +37,6 @@
 
 /* Functions defined in ker/classvar.c */
 
-COMMON(Any)	getDefaultValueClassVariable(ClassVariable cv);
 COMMON(Any)	getClassVariableDefaultValueClass(Class cl, Name name);
 COMMON(Any)	getValueClassVariable(ClassVariable cv);
 COMMON(ClassVariable) getClassVariableClass(Class class, Name name);

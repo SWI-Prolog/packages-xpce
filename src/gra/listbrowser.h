@@ -43,7 +43,6 @@ COMMON(Size)	getSizeListBrowser(ListBrowser lb);
 COMMON(status)	executeSearchListBrowser(ListBrowser lb);
 COMMON(status)	typedListBrowser(ListBrowser lb, EventId id);
 COMMON(DictItem) getDictItemListBrowser(ListBrowser lb, EventObj ev);
-COMMON(Any)	selectBrowserGesture(void);
 COMMON(status)	forwardListBrowser(ListBrowser lb, Name action);
 COMMON(status)	selectedListBrowser(ListBrowser lb, DictItem di);
 COMMON(status)	selectionListBrowser(ListBrowser lb, Any obj);

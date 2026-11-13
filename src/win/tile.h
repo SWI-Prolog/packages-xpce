@@ -49,7 +49,6 @@ COMMON(void)	sum_stretches(stretch *sp, int len, stretch *r);
 COMMON(void)	join_stretches(stretch *stretches, int len, stretch *r);
 COMMON(status)	setTile(TileObj t, Int x, Int y, Int w, Int h);
 COMMON(status)	enforceTile(TileObj t, BoolObj val);
-COMMON(bool)	canResizeTile(TileObj t);
 COMMON(BoolObj)	getCanResizeTile(TileObj t);
 COMMON(status)	rebalanceTile(TileObj t);
 COMMON(TileObj)	getSubTileToResizeTile(TileObj t, Point pos);

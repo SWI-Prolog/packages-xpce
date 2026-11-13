@@ -38,8 +38,6 @@
 
 /* Functions defined in gra/path.c */
 
-COMMON(status)	adjustFirstArrowPath(Path p);
-COMMON(status)	adjustSecondArrowPath(Path p);
 COMMON(status)	makeClassPath(Class class);
 
 #endif /*XPCE_GRA_PATH_H_INCLUDED*/

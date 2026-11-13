@@ -87,25 +87,6 @@ getForwardReceiverFunctionv(Function f, Any receiver,
 }
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-			  ARGLIST FUNCTION INVOKATION
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-Any
-getForwardFunction(Function f, ...)
-{ va_list args;
-  Any argv[VA_PCE_MAX_ARGS];
-  int argc;
-
-  va_start(args, f);
-  for(argc=0; (argv[argc] = va_arg(args, Any)) != NULL; argc++)
-    assert(argc <= VA_PCE_MAX_ARGS);
-  va_end(args);
-
-  return getForwardFunctionv(f, argc, argv);
-}
-
-
 Any
 getForwardReceiverFunction(Function f, Any receiver, ...)
 { va_list args;

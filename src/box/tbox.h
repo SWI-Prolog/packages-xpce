@@ -40,7 +40,6 @@
 
 /* Functions defined in box/tbox.c */
 
-COMMON(status)	initialiseTBox(TBox tb, CharArray text, Style style);
 COMMON(HBox)	getSpaceHBoxFont(FontObj f);
 COMMON(FontObj)	getFontTBox(TBox tb);
 COMMON(status)	makeClassTBox(Class class);

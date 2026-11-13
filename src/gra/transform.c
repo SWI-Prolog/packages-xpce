@@ -61,6 +61,8 @@
 #define TTX(t) valNum((t)->tx)
 #define TTY(t) valNum((t)->ty)
 
+static void transformAreaAABB(Transform t, Area in, double bbox[4]);
+
 static void
 set_transform(Transform t,
 	      double xx, double xy, double yx, double yy,
@@ -377,31 +379,14 @@ transformIsIdentity(Transform t)
 }
 
 
-void
+static void
 transformPoint(Transform t, double x, double y, double *ox, double *oy)
 { *ox = TXX(t)*x + TXY(t)*y + TTX(t);
   *oy = TYX(t)*x + TYY(t)*y + TTY(t);
 }
 
 
-bool
-inverseTransformPoint(Transform t, double x, double y,
-		      double *ox, double *oy)
-{ double det = determinantTransform(t);
-
-  if ( fabs(det) < 1e-300 )
-    return false;
-
-  double rx = x - TTX(t);
-  double ry = y - TTY(t);
-  *ox = ( TYY(t)*rx - TXY(t)*ry) / det;
-  *oy = (-TYX(t)*rx + TXX(t)*ry) / det;
-
-  return true;
-}
-
-
-void
+static void
 transformAreaAABB(Transform t, Area in, double bbox[4])
 { double x0 = (double)valInt(in->x);
   double y0 = (double)valInt(in->y);

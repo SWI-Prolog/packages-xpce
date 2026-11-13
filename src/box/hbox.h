@@ -39,7 +39,6 @@
 
 /* Functions defined in box/hbox.c */
 
-COMMON(status)	initialiseHBox(HBox hb, Int width, Int ascent, Int descent, Rubber rubber);
 COMMON(status)	makeClassHBox(Class class);
 
 #endif /*XPCE_BOX_HBOX_H_INCLUDED*/

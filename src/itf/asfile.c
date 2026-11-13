@@ -438,7 +438,7 @@ pceRead(int handle, char *buf, size_t size)
 }
 
 
-int
+static int
 pceControl_nolock(int handle, int cmd, void *closure)
 { PceFileHandle h;
 

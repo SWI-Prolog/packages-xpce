@@ -250,7 +250,7 @@ RedrawAreaText(TextObj t, Area a)
 }
 
 
-void
+static void
 str_format(PceString out, const PceString in, const int width, const FontObj font)
 { int x = 0;
   int last_is_layout = TRUE;
@@ -840,7 +840,7 @@ underlineText(TextObj t, Any underline)
 }
 
 
-status
+static status
 transparentText(TextObj t, BoolObj val)
 { Any bg = (val == ON ? NIL : DEFAULT);
 

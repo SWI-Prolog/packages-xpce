@@ -551,7 +551,7 @@ getWantsKeyboardFocusGraphical(Graphical gr)
  * it goes to the first or last item instead.
  */
 
-status
+static status
 advanceDevice(Device dev, Graphical gr, BoolObj propagate, Name direction)
 { Cell cell;
   Graphical target = NULL;

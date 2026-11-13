@@ -36,11 +36,8 @@
 #define RAYMENU_H
 
 Colour ws_3d_grey(void);
-int ws_entry_field_margin(void);
 status ws_entry_field(Graphical gr, int x, int y, int w, int h, int bw,
 		      int flags);
-status ws_draw_checkbox(int x, int y, int w, int h, int b, int flags);
-status ws_checkbox_size(int flags, int *w, int *h);
 int ws_message_box(Any client, CharArray title, CharArray msg, int flags);
 
 #endif /* RAYMENU_H */

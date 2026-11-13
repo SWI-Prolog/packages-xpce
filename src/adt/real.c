@@ -91,6 +91,8 @@ CtoReal(double f)
 }
 
 
+static status valueReal(Real r, Real v);
+
 static status
 initialiseReal(Real r, Any arg)
 { double v;
@@ -303,7 +305,7 @@ getCatchAllReal(Real r, Name selector, int argc, Any *argv)
 }
 
 
-status
+static status
 valueReal(Real r, Real v)
 {
 #if REAL_IN_ONE

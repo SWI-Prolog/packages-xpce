@@ -334,7 +334,7 @@ on_popup_marker(Button b, EventObj ev)
 }
 
 
-status
+static status
 RedrawAreaButton(Button b, Area a)
 { int x, y, w, h;
   bool defb;
@@ -604,7 +604,7 @@ defaultButtonButton(Button b, BoolObj val)
 }
 
 
-status
+static status
 isApplyButton(Button b)
 { if ( b->name == NAME_apply )
     succeed;

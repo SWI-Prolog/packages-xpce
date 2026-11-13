@@ -76,7 +76,6 @@ void r_pop_group_with_alpha(double alpha);
 void r_pop_group_blend(double alpha, Name blend);
 void r_filloffset(Point offset, int x0, int y0, fill_state *state);
 void r_fillrestore(fill_state *state);
-DisplayObj d_display(DisplayObj d);
 void d_ensure_display(void);
 status d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit);
 status d_image(Image i, int x, int y, int w, int h);
@@ -100,7 +99,6 @@ void intersection_iarea(IArea a, IArea b);
 void r_clear(int x, int y, int w, int h);
 void r_complement(int x, int y, int w, int h);
 double r_thickness(double pen);
-int r_transformed(int val);
 void r_dash(Any texture);
 
 /* Pango markup, see r_markup() */
@@ -148,9 +146,6 @@ Any r_colour(Any c);
 Any r_background(Any c);
 Any r_current_colour(void);
 void r_swap_background_and_foreground(void);
-BoolObj r_subwindow_mode(BoolObj val);
-void r_invert_mode(BoolObj val);
-void r_translate(int x, int y, int *ox, int *oy);
 void r_box(int x, int y, int w, int h, int r, Any fill);
 void r_rounded_frame(double x, double y, double w, double h, double r,
 		     Any outside);
@@ -160,20 +155,12 @@ void r_clear_outside(double ox, double oy, double ow, double oh,
 		     double x, double y, double w, double h, double r);
 void r_drop_shadow(Shadow s, Name shape,
 		   double x, double y, double w, double h, double r);
-Any r_elevation_shadow(Elevation e);
 void r_3d_segments(int n, ISegment s, Elevation e, int light);
 void r_3d_box(double x, double y, double w, double h,
 	      double radius, Elevation e, bool up);
-void r_3d_line(int x1, int y1, int x2, int y2, Elevation e, bool up);
-void r_3d_triangle(double x1, double y1,
-		   double x2, double y2,
-		   double x3, double y3,
-		   Elevation e, bool up, unsigned int map);
-void r_3d_diamond(int x, int y, int w, int h, Elevation e, int up);
 void r_arc(double x, double y, double w, double h,
 	   double s, double sz, Name close, Any fill);
 void r_ellipse(int x, int y, int w, int h, Any fill);
-void r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up);
 void r_line(double x1, double y1, double x2, double y2);
 void r_underline(FontObj font, double x, double base, double w,
 		 Any underline, Name texture);
@@ -197,16 +184,13 @@ bool r_path_end(Chain points, double radius, bool closed, bool first,
 void r_image(Image image, int sx, int sy, int x, int y, int w, int h);
 void r_fill(double x, double y, double w, double h, Any pattern);
 void r_fill_polygon(FPoint pts, int n);
-void r_caret(int cx, int cy, FontObj font);
 void r_fill_triangle(double x1, double y1, double x2, double y2, double x3, double y3);
-void r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill);
 bool r_pixel(int x, int y, Any val);
 void d_modify(void);
 COLORRGBA r_get_pixel(int x, int y);
 bool s_has_char(FontObj f, unsigned int c);
 int s_default_char(FontObj font);
 double s_ascent(FontObj f);
-double s_descent(FontObj f);
 double s_height(FontObj f);
 double c_width(uchar_t c, FontObj font);
 double str_width(PceString s, int from, int to, FontObj f);
@@ -236,8 +220,6 @@ void str_string_decorated(PceString s, FontObj font,
 void str_selected_string(PceString s, FontObj font,
 			 int f, int t, Style style, int x, int y, int w, int h,
 			 Name hadjust, Name vadjust);
-void str_stext(FontObj font, PceString s, int f, int len,
-	       int x, int y, Style style);
 void ps_string(PceString s, FontObj font, int x, int y, int w, Name format, int flags);
 void str_label(PceString s, int acc, FontObj font, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags);
 

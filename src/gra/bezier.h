@@ -37,8 +37,6 @@
 
 /* Functions defined in gra/bezier.c */
 
-COMMON(status)	adjustFirstArrowBezier(Bezier b);
-COMMON(status)	adjustSecondArrowBezier(Bezier b);
 COMMON(status)	makeClassBezier(Class class);
 
 #endif /*XPCE_GRA_BEZIER_H_INCLUDED*/

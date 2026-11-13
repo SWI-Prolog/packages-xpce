@@ -341,7 +341,6 @@ pceInitAlloc(void)
 }
 
 
-
 void
 allocRange(void *low, size_t size)
 { size_t l = (size_t)low;
@@ -414,10 +413,4 @@ save_string(const char *s)
   strcpy(t, s);
 
   return t;
-}
-
-
-void
-free_string(char *s)
-{ unalloc(strlen(s)+1, s);
 }

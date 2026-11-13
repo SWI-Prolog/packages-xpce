@@ -43,6 +43,8 @@
  * applies it in r_dash() (sdldraw.c).
  */
 
+static status dashStrokeStyle(StrokeStyle s, Any dash);
+
 static status
 initialiseStrokeStyle(StrokeStyle s, Name cap, Name join,
 		      Any dash, Any paint)
@@ -63,7 +65,7 @@ initialiseStrokeStyle(StrokeStyle s, Name cap, Name join,
 /* A dash vector must hold non-negative numbers that are not all zero.
  */
 
-status
+static status
 dashStrokeStyle(StrokeStyle s, Any dash)
 { if ( instanceOfObject(dash, ClassVector) )
   { Vector v = dash;

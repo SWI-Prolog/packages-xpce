@@ -38,7 +38,6 @@
 /* Functions defined in msg/code.c */
 
 COMMON(status)	initialiseCode(Code c);
-COMMON(status)	userForwardReceiverCodev(Code c, Any receiver, int argc, const Any argv []);
 COMMON(status)	forwardReceiverCodev(Code c, Any receiver, int argc, const Any argv []);
 COMMON(status)	forwardCode(Code c, ...);
 COMMON(status)	forwardReceiverCode(Code c, Any rec, ...);

@@ -203,21 +203,6 @@ compose_graphical_to_window(Graphical gr, aff *out)
 		 *	  PUBLIC API		*
 		 *******************************/
 
-/* Map a point in `dev`'s children-coord system to the window-coord
- * system.  Returns false if dev has no window ancestor.
- */
-bool
-deviceLocalToWindowCoord(Device dev, double lx, double ly,
-			 double *wx, double *wy)
-{ aff W;
-
-  if ( !compose_device_to_window(dev, &W) )
-    return false;
-  aff_apply(&W, lx, ly, wx, wy);
-  return true;
-}
-
-
 /* Inverse: map a point in window-coord into `dev`'s children-coord
  * system.  Fails if dev has no window ancestor or the composed
  * transform is singular.
@@ -398,37 +383,6 @@ deviceLocalAreaToWindowAABB(Device dev,
   *wy = iy;
   *ww = ix1 - ix;
   *wh = iy1 - iy;
-  return true;
-}
-
-
-/* Map an Area in `gr`-local coords to the window-coord AABB.  Writes
- * floats; caller decides how to round.
- */
-bool
-graphicalToWindowArea(Graphical gr, Area in, double bbox[4])
-{ aff W;
-
-  if ( !compose_graphical_to_window(gr, &W) )
-    return false;
-
-  double x0 = (double)valInt(in->x);
-  double y0 = (double)valInt(in->y);
-  double x1 = x0 + (double)valInt(in->w);
-  double y1 = y0 + (double)valInt(in->h);
-  double cx[4] = { x0, x1, x1, x0 };
-  double cy[4] = { y0, y0, y1, y1 };
-
-  bbox[0] = bbox[1] =  DBL_MAX;
-  bbox[2] = bbox[3] = -DBL_MAX;
-  for(int i=0; i<4; i++)
-  { double nx, ny;
-    aff_apply(&W, cx[i], cy[i], &nx, &ny);
-    if ( nx < bbox[0] ) bbox[0] = nx;
-    if ( ny < bbox[1] ) bbox[1] = ny;
-    if ( nx > bbox[2] ) bbox[2] = nx;
-    if ( ny > bbox[3] ) bbox[3] = ny;
-  }
   return true;
 }
 

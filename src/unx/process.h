@@ -39,7 +39,6 @@
 
 COMMON(void)	killAllProcesses(int status);
 COMMON(status)	pidProcess(Process p, Int pid);
-COMMON(status)	closeInputProcess(Process p);
 COMMON(status)	makeClassProcess(Class class);
 COMMON(void)	reapChildProcesses(int fd);
 

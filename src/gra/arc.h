@@ -38,8 +38,6 @@
 
 /* Functions defined in gra/arc.c */
 
-COMMON(void)	points_arc(ArcObj a, double *sx, double *sy,
-			   double *ex, double *ey);
 COMMON(status)	makeClassArc(Class class);
 
 #endif /*XPCE_GRA_ARC_H_INCLUDED*/

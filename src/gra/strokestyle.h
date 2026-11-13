@@ -37,7 +37,6 @@
 
 /* Functions defined in gra/strokestyle.c */
 
-COMMON(status)	dashStrokeStyle(StrokeStyle s, Any dash);
 COMMON(int)	capExtentGraphical(Graphical gr);
 COMMON(status)	makeClassStrokeStyle(Class class);
 

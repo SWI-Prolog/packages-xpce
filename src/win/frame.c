@@ -1424,7 +1424,7 @@ inputFocusFrame(FrameObj fr, BoolObj val)
 }
 
 
-status
+static status
 redrawFrame(FrameObj fr, Area a)
 { succeed;
 }
@@ -1464,7 +1464,7 @@ updateTileAdjustersFrame(FrameObj fr, TileObj t)
 		 *	       MODAL		*
 		 *******************************/
 
-FrameObj
+static FrameObj
 blockedByModalFrame(FrameObj fr)
 { if ( !fr )
     fail;

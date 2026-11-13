@@ -1358,13 +1358,6 @@ the optimal redisplay behaviour.
       changedAreaGraphical((gr), _x, _y, _w, _h);	\
   }
 
-		/********************************
-		*            DRAWING		*
-		********************************/
-
-#define DRAW_3D_DOWN	0x1		/* r_3d_rectangular_polygon() flags */
-#define DRAW_3D_CLOSED	0x2
-#define DRAW_3D_FILLED	0x4
 
 typedef struct
 { double x, y;

@@ -40,6 +40,7 @@
 #include <txt/string.h>
 #include <txt/textbuffer.h>
 
+static status initClass(Class class);
 static status	recordInstancesClass(Class class, BoolObj keep, BoolObj recursive);
 static status	fill_slots_class(Class class, Class super);
 static Variable	getLocaliseInstanceVariableClass(Class class, Name name);
@@ -561,7 +562,7 @@ installClass(Class class)
   succeed;
 }
 
-status
+static status
 initClass(Class class)
 { class->boot = 0;
 
@@ -733,7 +734,7 @@ getLocaliseInstanceVariableClass(Class class, Name name)
   answer(var);
 }
 
-status
+static status
 instanceVariableClass(Class class, Variable var)
 { Variable old;
   Int offset;
@@ -855,7 +856,7 @@ fixSubClassSendMethodsClass(Class class, Method m)
 }
 
 
-status
+static status
 sendMethodClass(Class class, SendMethod m)
 { Cell cell;
 
@@ -911,7 +912,7 @@ fixSubClassGetMethodsClass(Class class, Method m)
   }
 }
 
-status
+static status
 getMethodClass(Class class, GetMethod m)
 { Cell cell;
 

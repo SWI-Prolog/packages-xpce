@@ -69,7 +69,6 @@ status ws_enable_text_input(Graphical gr, BoolObj enable);
 /* Functions shared with core */
 status ws_created_frame(FrameObj fr);
 void ws_uncreate_frame(FrameObj fr);
-status ws_create_frame(FrameObj fr);
 void ws_raise_frame(FrameObj fr);
 bool ws_frame_has_input_focus(FrameObj fr);
 status ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h);

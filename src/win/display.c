@@ -218,19 +218,19 @@ bellDisplay(DisplayObj d, Int vol)
 }
 
 
-Size
+static Size
 getSizeDisplay(DisplayObj d)
 { answer(getSizeArea(d->area));
 }
 
 
-Int
+static Int
 getWidthDisplay(DisplayObj d)
 { answer(d->area->w);
 }
 
 
-Int
+static Int
 getHeightDisplay(DisplayObj d)
 { answer(d->area->h);
 }

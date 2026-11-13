@@ -38,7 +38,6 @@
 /* Functions defined in adt/chaintable.c */
 
 COMMON(status)	appendChainTable(ChainTable ct, Any name, Any value);
-COMMON(status)	addChainTable(ChainTable ct, Any name, Any value);
 COMMON(status)	makeClassChainTable(Class class);
 
 #endif /*XPCE_ADT_CHAINTABLE_H_INCLUDED*/

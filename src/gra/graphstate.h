@@ -37,6 +37,5 @@
 
 void	g_save(void);
 void	g_restore(void);
-int	g_level(void);
 
 #endif/*GRAPHSTATE_H_INCLUDED*/

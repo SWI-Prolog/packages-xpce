@@ -69,6 +69,8 @@ ws_initialise(int argc, char **argv)
 #endif
 }
 
+static int ws_version(void);
+static const char *ws_driver(void);
 static int sdl_main_thread = 0;
 
 /* Exit hook, run after the others.  Our threads and SDL's (timers,
@@ -165,10 +167,6 @@ setPceThread(const char *app_name)
   return true;
 }
 
-bool
-sdl_initialised(void)
-{ return !!sdl_main_thread;
-}
 
 void
 not_on_sdl_main_thread(void)
@@ -182,7 +180,7 @@ not_on_sdl_main_thread(void)
  *
  * @return 10000*Major+100*Minor+Patch, compatible with pce<-version
  */
-int
+static int
 ws_version(void)
 { int v = SDL_GetVersion();
 
@@ -191,7 +189,7 @@ ws_version(void)
 	   SDL_VERSIONNUM_MICRO(v) );
 }
 
-const char *
+static const char *
 ws_driver(void)
 { ASSERT_SDL_MAIN();
   return SDL_GetCurrentVideoDriver();
@@ -283,7 +281,7 @@ sdl_in_main_async_sendv(void *udata)
   }
 }
 
-status
+static status
 sdl_sendv(Any receiver, Name selector, bool sync, Class class,
 	  int argc, const Any argv[])
 { if ( SDL_IsMainThread() )

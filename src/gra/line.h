@@ -38,8 +38,6 @@
 /* Functions defined in gra/line.c */
 
 COMMON(status)	initialiseLine(Line ln, Int xa, Int ya, Int xb, Int yb, Name arrows);
-COMMON(status)	adjustFirstArrowLine(Line ln);
-COMMON(status)	adjustSecondArrowLine(Line ln);
 COMMON(status)	computeLine(Line ln);
 COMMON(status)	copyLine(Line l1, Line l2);
 COMMON(status)	paintSelectedLine(Line ln);

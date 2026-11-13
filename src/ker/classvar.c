@@ -279,7 +279,7 @@ getStringValueClassVariable(ClassVariable cv)
  * makeBuiltinFonts().
  */
 
-Any
+static Any
 getDefaultValueClassVariable(ClassVariable cv)
 { Any rval;
 

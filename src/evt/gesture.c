@@ -181,7 +181,7 @@ of graphical, relatively low cost (there should  not be too many gesture
 instances in an application) and easy to modify.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-status
+static status
 restrictAreaEvent(EventObj ev, Graphical gr)
 { Int X, Y;
   int ex, ey, aw, ah;

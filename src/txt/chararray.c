@@ -174,7 +174,7 @@ subCharArray(CharArray n1, CharArray n2, BoolObj ign_case)
 }
 
 
-status
+static status
 isWideCharArray(Any s)
 { CharArray ca = s;
 
@@ -301,7 +301,7 @@ getMnemonicCharArray(CharArray n)
 }
 
 
-CharArray
+static CharArray
 getLabelNameCharArray(CharArray n)
 { PceString s = &n->data;
   int size = s->s_size;
@@ -333,7 +333,7 @@ getLabelNameCharArray(CharArray n)
 }
 
 
-CharArray
+static CharArray
 getDowncaseCharArray(CharArray n)
 { PceString s = &n->data;
   int size = s->s_size;

@@ -42,7 +42,7 @@
 static status	appendString(StringObj, CharArray);
 static status	setString(StringObj str, PceString s);
 
-StringObj
+static StringObj
 create_string_from_str(PceString s, int tmp)
 { string s2;
   CharArray c;
