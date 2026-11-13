@@ -340,7 +340,7 @@ validDragScrollGesture(Gesture g)
 }
 
 
-static int
+static status
 scrollGesture(Gesture g)
 { Name msg;
   Int amount;

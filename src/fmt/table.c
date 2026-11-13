@@ -976,7 +976,7 @@ getCellsInRegionTable(Table tab, Area reg)
 }
 
 
-static int
+static status
 userResizeSliceTable(Table tab, TableSlice slice, Int size)
 { if ( instanceOfObject(slice, ClassTableColumn) )
   { int xmin, xmax;

@@ -124,11 +124,13 @@ updateLineConnection(Connection c, Int x1, Int y1, Int x2, Int y2)
 }
 
 
-#define NO_POINTS	0
-#define SAME_POINTS	1
-#define POINTS_CHANGED	2
+typedef enum
+{ NO_POINTS,				/* cannot connect */
+  SAME_POINTS,				/* as before */
+  POINTS_CHANGED			/* moved; points in x1, ... */
+} conn_points;
 
-static status
+static conn_points
 getConnectionPointsConnection(Connection c, Graphical from, Graphical to,
 			      int *x1, int *y1, int *x2, int *y2)
 { int cxfrom, cyfrom;
@@ -184,9 +186,10 @@ getConnectionPointsConnection(Connection c, Graphical from, Graphical to,
   DEBUG(NAME_absolutePosition,
 	Cprintf("getConnectionPointsConnection(): dev=%s\n", pp(dev)));
 
-  TRY(bestConnectionPoint(dev, c->link->to, cxfrom, cyfrom, to, &ht, x2, y2));
-  TRY(bestConnectionPoint(dev, c->link->from, *x2, *y2, from, &hf, x1, y1));
-  TRY(bestConnectionPoint(dev, c->link->to, *x1, *y1, to, &ht, x2, y2));
+  if ( !bestConnectionPoint(dev, c->link->to, cxfrom, cyfrom, to, &ht, x2, y2) ||
+       !bestConnectionPoint(dev, c->link->from, *x2, *y2, from, &hf, x1, y1) ||
+       !bestConnectionPoint(dev, c->link->to, *x1, *y1, to, &ht, x2, y2) )
+    return NO_POINTS;
 
   assign(c, from_handle, hf->name);
   assign(c, to_handle,   ht->name);

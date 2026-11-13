@@ -1342,7 +1342,7 @@ computeParBox(ParBox pb)
 Interpret ->width from the offset
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static status
 requestGeometryParBox(ParBox pb, Int x, Int y, Int w, Int h)
 { Int av[4];
   int lm = valInt(pb->area->x) - valInt(pb->offset->x);
