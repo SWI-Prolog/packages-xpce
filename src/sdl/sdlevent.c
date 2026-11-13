@@ -672,6 +672,7 @@ post_area_event(Any window, Name id, float x, float y, Any buttons,
 		{ addCodeReference(ev);
 		  postNamedEvent(ev, window, DEFAULT, NAME_postEvent);
 		  delCodeReference(ev);
+		  freeableObj(ev);	/* see dispatch_event() */
 		}
 		rewindAnswerStack(mark, NIL);
 	      });
@@ -1747,10 +1748,18 @@ dispatch_event(EventObj ev)
     return false;
   }
 
+  /* Posting the event may take it off the answer stack: a window keeps
+   * it in <-current_event while it handles it, and assigning it to a
+   * slot makes it an ordinary object.  When the window lets go of it,
+   * our code reference keeps it alive, and dropping a code reference
+   * frees nothing.  So we must free it ourselves, unless something else
+   * holds on to it.
+   */
   ServiceMode(is_service_window(target),
 	      { addCodeReference(ev);
 		rc = postNamedEvent(ev, target, DEFAULT, NAME_postEvent);
 		delCodeReference(ev);
+		freeableObj(ev);
 	      });
 
   return rc;

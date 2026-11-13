@@ -64,7 +64,8 @@ test_sdl_input :-
                 sdl_touch,
                 sdl_pinch,
                 sdl_keyboard,
-                pan_zoom
+                pan_zoom,
+                sdl_event_lifetime
               ]).
 
 :- dynamic
@@ -579,3 +580,37 @@ test(wheel_still_zooms, T == 0.85-3) :-
     transform(Fig, T).
 
 :- end_tests(pan_zoom).
+
+
+%   Events must be freed after they are handled.  A window keeps the
+%   event it handles in <-current_event, which takes the event off the
+%   answer stack, so it is up to the dispatcher to free it.  An event
+%   that reaches Prolog is freed when the atom garbage collector
+%   reclaims its blob; one that is handled in C only, as here, leaked.
+
+:- begin_tests(sdl_event_lifetime).
+
+test(motion_events_are_freed,
+     [ setup(( new(W, window('', size(200, 200))),
+               get(W, frame, F),
+               send(F, open)
+             )),
+       cleanup(send(F, destroy)),
+       Leaked == 0
+     ]) :-
+    sdl(F, mouse_motion, [x=50, y=50]),   % area_enter + loc_move
+    live_events(Live0),
+    forall(between(1, 20, I),
+           ( X is 50+I,
+             sdl(F, mouse_motion, [x=X, y=50])
+           )),
+    live_events(Live),
+    Leaked is Live-Live0.
+
+live_events(Live) :-
+    get(@pce, convert, event, class, Class),
+    get(Class, no_created, Created),
+    get(Class, no_freed, Freed),
+    Live is Created-Freed.
+
+:- end_tests(sdl_event_lifetime).
