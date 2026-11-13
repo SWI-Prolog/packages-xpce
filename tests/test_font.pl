@@ -81,10 +81,9 @@ test(emoji_default_finds_via_fallback, [condition(emoji_by_fallback)]) :-
     emoji(C),
     send(F, member, C).
 
-test(emoji_not_in_main_font, [fail]) :-
+test(not_in_main_font, [fail]) :-
     new(F, font(sans, normal, 12)),
-    emoji(C),
-    send(F, member, C, @off).
+    send(F, member, 0x10FFFD, @off).    % private use: no regular font
 
 test(emoji_family_explicit, [condition(emoji_by_fallback)]) :-
     new(F, font(sans, normal, 12)),
