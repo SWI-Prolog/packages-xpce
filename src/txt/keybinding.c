@@ -53,7 +53,9 @@ initialiseKeyBinding(KeyBinding kb, Name name, int argc, KeyBinding *argv)
   resetKeyBinding(kb, NIL);
   obtainClassVariablesObject(kb);	/* actually, argument is a conflict! */
 
-  if ( notDefault(name) )
+  if ( isDefault(name) )		/* [name]*: @nil is anonymous */
+    name = NIL;
+  if ( notNil(name) )
   { assign(kb, name, name);
     appendHashTable(BindingTable, name, kb);
     protectObject(kb);
@@ -62,7 +64,7 @@ initialiseKeyBinding(KeyBinding kb, Name name, int argc, KeyBinding *argv)
   for( ; argc > 0; argc--, argv++ )
     appendChain(kb->defaults, argv[0]);
 
-  if ( notDefault(name) && argc == 0 )
+  if ( notNil(name) && argc == 0 )
     initPredefinedKeyBinding(kb);
 
   succeed;

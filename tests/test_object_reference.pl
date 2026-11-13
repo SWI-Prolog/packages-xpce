@@ -62,6 +62,7 @@ test_object_reference :-
                 weak_reference,
                 free_during_method,
                 var_binding,
+                anonymous_key_binding,
                 pcerefer
               ]).
 
@@ -597,6 +598,29 @@ test(outer_assignment_holds_one_reference,
     get(Value, code_references, After).
 
 :- end_tests(var_binding).
+
+:- begin_tests(anonymous_key_binding).
+
+%   A key_binding without a name (@nil) is an ordinary object.  It must
+%   not be registered in @key_bindings, nor be protected: a
+%   terminal_image creates one for each terminal, and Epilog replaces it
+%   right away.
+
+test(not_registered,
+     [ setup(new(KB, key_binding(@nil, terminal))),
+       cleanup(free(KB)),
+       fail
+     ]) :-
+    get(@key_bindings, member, @nil, _).
+
+test(can_be_freed,
+     [ setup(new(KB, key_binding(@nil, terminal))),
+       Exists == false
+     ]) :-
+    send(KB, free),
+    (   object(KB) -> Exists = true ; Exists = false ).
+
+:- end_tests(anonymous_key_binding).
 
 :- begin_tests(pcerefer).
 
