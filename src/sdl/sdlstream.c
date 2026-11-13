@@ -86,6 +86,12 @@ sdl_stream_event(SDL_Event *event)
 { if ( event->type == MY_EVENT_FD_READY )
   { FDWatch *watch = event->user.data1;
 
+    /* The slot may have been removed and reused while this event was
+       queued.  Taking it over would steal the new owner's pending state,
+       so its own event is dropped and its input is never processed.
+       Only compare: data2 may point to a freed object. */
+    if ( event->user.data2 != watch->userdata )
+      return true;
     if ( !cmp_and_set_watch(watch, WATCH_PENDING, WATCH_PROCESSING) )
       return true;		/* watch was removed */
 
