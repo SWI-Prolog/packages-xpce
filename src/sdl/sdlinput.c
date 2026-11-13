@@ -179,6 +179,11 @@ releaseWatch(FDWatch *watch)
   watch->inbuf = NULL;
   watch->inbuf_size = watch->inbuf_start = watch->inbuf_len = 0;
   watch->inbuf_eof = false;
+  if ( watch->close_fd && watch->fd >= 0 )
+  { close(watch->fd);		/* see remove_fd_watch_and_close() */
+    watch->fd = -1;
+  }
+  watch->close_fd = false;
 #endif
   watch->state = WATCH_FREE;
 }
@@ -435,7 +440,14 @@ poll_thread_fn(void *unused)
     { /* EOF on a pipe is reported as POLLHUP without POLLIN */
       if ( (poll_fds[i].revents & (POLLIN|POLLHUP|POLLERR)) )
       { FDWatch *watch = &fd_meta[meta_id[i]];
+	watch_state st = watch->state;
 
+	/* Removed while we were polling: its owner may have closed the
+	   fd, and the number may already belong to another stream, whose
+	   data we would read and then drop with this watch. */
+	if ( !(st == WATCH_ACTIVE || st == WATCH_PENDING ||
+	       st == WATCH_PROCESSING) )
+	  continue;
 	if ( watch_buffers(watch) )
 	  watch_fill(watch);		/* drain now, not on the main thread */
 	sdl_signal_watch(watch);	/* no-op if an event is outstanding */
@@ -690,6 +702,19 @@ remove_fd_watch(FDWatch *watch)
     } else if ( cmp_and_set_watch(watch, WATCH_PROCESSING, WATCH_REMOVE) )
     { (void)0;			/* delete in processed_fd_watch */
     }
+  }
+}
+
+/* Remove the watch and let the watcher thread close the fd when it
+   releases the watch.  Closing it ourselves allows the fd number to be
+   reused while the watcher may still poll and read it.
+*/
+
+void
+remove_fd_watch_and_close(FDWatch *watch)
+{ if ( watch )
+  { watch->close_fd = true;
+    remove_fd_watch(watch);
   }
 }
 

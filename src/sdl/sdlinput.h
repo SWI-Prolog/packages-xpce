@@ -95,6 +95,7 @@ typedef struct
 #endif
   fd_ready_codes code;		/* SDL3 event.user.code */
   Any		userdata;	/* SDL3 event.user.data2 */
+  bool		close_fd;	/* releaseWatch() closes fd */
 } FDWatch;
 
 bool cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new);
@@ -104,6 +105,7 @@ void	 stop_fd_watcher_thread(void);
 FDWatch *add_fd_to_watch(waitable_t fd, int32_t code, void *userdata);
 FDWatch *add_socket_to_watch(socket_t fd, int32_t code, void *userdata);
 void	 remove_fd_watch(FDWatch *watch);
+void	 remove_fd_watch_and_close(FDWatch *watch);
 void	 processed_fd_watch(FDWatch *watch);
 
 /* Collect data the watcher thread already read.  Answers 0 at end of

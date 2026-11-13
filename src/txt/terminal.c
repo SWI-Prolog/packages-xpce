@@ -12506,9 +12506,10 @@ rlc_reclaim_pty(RlcData b)
 static void
 rlc_close_connection(RlcData b)
 { if ( b->pty.open )
-  { if ( b->pty.watch )
-    { remove_fd_watch(b->pty.watch);
+  { if ( b->pty.watch )		/* the watcher closes master_fd */
+    { remove_fd_watch_and_close(b->pty.watch);
       b->pty.watch = NULL;
+      b->pty.master_fd = -1;
     }
     if ( b->pty.master_fd >= 0 )
     { close(b->pty.master_fd);
