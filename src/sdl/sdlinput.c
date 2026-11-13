@@ -323,7 +323,6 @@ static int
 poll_thread_fn(void *unused)
 { while ( !SDL_GetAtomicInt(&watcher_stop) )
   { int nfds = 1;		/* 0 is for our control pipe */
-    bool removed = false;
     FDWatch *watch = fd_meta;
 
     for(int i=0; i<=watch_max; i++, watch++)
@@ -385,23 +384,11 @@ poll_thread_fn(void *unused)
         nfds++;
       } else if ( watch->state == WATCH_REMOVE )
       { releaseWatch(watch);
-	removed = true;
       }
     }
-    if ( removed )
-    { for(int i=MAX_FDS-1; i>=0; i--)
-      { if ( fd_meta[i].state != WATCH_FREE )
-	{ int expected = watch_max;
-	  if ( i < watch_max )
-#ifdef _MSC_VER
-	    InterlockedCompareExchange(&watch_max, i, expected);
-#else
-	    atomic_compare_exchange_strong(&watch_max, &expected, i);
-#endif
-	  break;
-	}
-      }
-    }
+    /* watch_max is never lowered: lowering it raced with another thread
+       reusing a slot, which then was never polled.  There are only
+       MAX_FDS slots. */
 
 #ifdef __WINDOWS__
     DWORD rc = WaitForMultipleObjects(nfds,
@@ -525,8 +512,16 @@ start_watch(FDWatch *watch, int32_t code, void *userdata)
   watch->code     = code;
   watch->userdata = userdata;
   watch->state    = WATCH_ACTIVE;
-  if ( i > watch_max )
-    watch_max = i;
+  for(int max = watch_max; i > max; max = watch_max)
+  {
+#ifdef _MSC_VER
+    if ( InterlockedCompareExchange(&watch_max, i, max) == max )
+      break;
+#else
+    if ( atomic_compare_exchange_strong(&watch_max, &max, i) )
+      break;
+#endif
+  }
   signal_watcher('+');
   return watch;
 }
