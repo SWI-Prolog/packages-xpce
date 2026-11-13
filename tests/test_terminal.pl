@@ -6154,13 +6154,15 @@ test(link_bar_stays_off_the_link,
     term_report_side(T, Side2),
     Sides = [Side1, Side2].
 
+%  A tty_link_hook/5 says which links it takes, so a link that neither
+%  the hook nor Epilog opens still says so.
+
 test(unopened_link_says_so,
      [ condition(needs([mouse])),
        setup(test_begin(T)),
        cleanup(move(T, 40, 5)),
        Shown == "Not opened: ms-msdt:/id x"
      ]) :-
-    \+ predicate_property(epilog:tty_link_hook(_,_), number_of_clauses(_)),
     link_on_row(T, 2, 'ms-msdt:/id x'),
     move(T, 2, 2),
     term_report_text(T, Text),
@@ -6195,6 +6197,25 @@ test(hovering_file_link_says_what_a_click_does,
             ),
             Shown).
 
+%  The hook says what a click does, and only a click runs its goal.
+
+test(hooked_link_says_what_the_hook_does,
+     [ condition(needs([mouse])),
+       setup(( test_begin(T),
+               retractall(test_terminal:hook_link_clicked(_))
+             )),
+       cleanup(move(T, 40, 5)),
+       Shown-Before-After == "Run the test hook"-[]-['test-hook:x']
+     ]) :-
+    link_on_row(T, 2, 'test-hook:x'),
+    move(T, 2, 2),
+    term_report_text(T, Text),
+    atom_string(Text, Shown),
+    findall(L, test_terminal:hook_link_clicked(L), Before),
+    follow_link_buttons(Buttons),
+    click(T, 2, 2, Buttons),
+    findall(L, test_terminal:hook_link_clicked(L), After).
+
 test(link_feedback_can_be_turned_off,
      [ condition(needs([mouse])),
        setup(test_begin(T)),
@@ -6219,6 +6240,31 @@ link_on_row(T, Row, URL) :-
     out(T, '\e[H').
 
 :- end_tests(terminal_report).
+
+%!  follow_link_buttons(-Buttons) is det.
+%
+%   The modifier that makes a click follow a link: Command on macOS and
+%   Control elsewhere (BUTTON_follow_link in src/txt/terminal.c).
+
+follow_link_buttons(Buttons) :-
+    (   current_prolog_flag(apple, true)
+    ->  button_gui(Buttons)
+    ;   button_control(Buttons)
+    ).
+
+%!  hook_link_clicked(?Link) is nondet.
+%
+%   Recorded by the tty_link_hook/5 below when a ``test-hook:`` link is
+%   clicked.  Defined outside the unit, as a dynamic predicate asserted
+%   in a test lands in the unit's module.
+
+:- dynamic hook_link_clicked/1.
+:- multifile epilog:tty_link_hook/5.
+
+epilog:tty_link_hook(_Terminal, Link, "Run the test hook",
+                     test_terminal:assertz(hook_link_clicked(Link)),
+                     _Options) :-
+    sub_atom(Link, 0, _, _, 'test-hook:').
 
 
 

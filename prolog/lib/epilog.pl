@@ -77,8 +77,7 @@
 :- autoload(library(pce_drop_target),
             [drop_target_event/4, drop_target_show_rejected/3]).
 :- autoload(library(desktop), [desktop_open/1]).
-:- autoload(library(open_document),
-            [open_document/1, open_document_method/2]).
+:- autoload(library(open_document), [open_document_method/2]).
 :- autoload(library(process), [process_create/3, process_wait/2]).
 :- autoload(library(shell), [shell_command/1]).
 :- autoload(library(pce_theme), [adaptive_colour/3]).
@@ -91,7 +90,7 @@
     win_insert_menu_item(+, +, +, 0).
 
 :- multifile
-    tty_link_hook/2,                                % +PT, +URL
+    tty_link_hook/5,                     % +PT, +URL, -Label, -Goal, +Options
     auto_link/2,                                    % -Pattern, -Target
     profile/2.                                      % +Profile, -Options
 
@@ -1483,36 +1482,27 @@ report_bar_link(_, _, _, _).
 
 %!  link_description(+Terminal, +Link, -Description, -Alert) is det.
 %
-%   What the report bar says about Link: what a click does, which must
-%   agree with tty_link/2, and where.  A tty_link_hook/2 may take any
-%   link; we only assume it does for links we would not open.  Alert is @on if the click hands
-%   a file to the application the desktop associates with it and this
-%   application may run code from the file.  See
-%   open_document_method/2.
+%   What the report bar says about Link: what a click does and where.
+%   Alert is @on if the click hands a file to the application the
+%   desktop associates with it and this application may run code from
+%   the file.  See open_document_method/2.
 
 link_description(PT, Link, Description, Alert) :-
-    link_file_location(PT, Link, File, Location),
-    !,
+    tty_link_action(PT, Link, Action),
+    action_description(Action, Description, Alert).
+
+action_description(hook(Label, _Goal), Label, @off).
+action_description(edit(Location), Description, @off) :-
     location_text(Location, Where),
-    (   Location = file(_)
-    ->  open_document_method(File, Method)
-    ;   Method = edit
-    ),
+    format(string(Description), 'Edit ~w', [Where]).
+action_description(open(File, Method), Description, Alert) :-
     method_verb(Method, Verb, Alert),
-    format(string(Description), '~w ~w', [Verb, Where]).
-link_description(_PT, Link, Description, @off) :-
-    browser_url(Link),
-    !,
-    format(string(Description), 'Open ~w', [Link]).
-link_description(_PT, Link, Description, @off) :-
-    predicate_property(tty_link_hook(_,_), number_of_clauses(N)),
-    N > 0,
-    !,
-    format(string(Description), 'Open ~w', [Link]).
-link_description(_PT, Link, Description, @off) :-
+    format(string(Description), '~w ~w', [Verb, File]).
+action_description(browse(URL), Description, @off) :-
+    format(string(Description), 'Open ~w', [URL]).
+action_description(none(Link), Description, @off) :-
     format(string(Description), 'Not opened: ~w', [Link]).
 
-method_verb(edit,        'Edit', @off).
 method_verb(view,        'Open', @off).
 method_verb(application, 'Open', @on).
 
@@ -1900,29 +1890,76 @@ editline:el_wcwidth(Code, Columns) :-
     get(PT, cwidth, Code, Columns).
 
 
-%!  tty_link_hook(+Terminal, +Link) is semidet.
+%!  tty_link_hook(+Terminal, +Link, -Label, -Goal, +Options) is semidet.
 %
-%   Multifile hook to open an  OSC8   embedded  hyperlink.  The link was
-%   clicked in Terminal, an  instance   of  the class `prolog_terminal`.
-%   Link is an atom representing the clicked link.
+%   Multifile hook to handle an OSC8 embedded hyperlink in Terminal, an
+%   instance of the class `prolog_terminal`.  Link is an atom.  If the
+%   hook takes Link, it binds Label to a text that says what a click
+%   does, such as "Help on format/2", and Goal to what a click runs,
+%   as call(Goal) in module `epilog`, so it is normally qualified.
+%
+%   Options is a list for future extensions; currently it is always
+%   `[]`.  Options may ask the hook for more, e.g., icon(-Icon) for an
+%   icon to show with Label, so hooks should leave options they do not
+%   know unbound rather than fail.
+%
+%   The hook is called whenever the pointer gets on a link, so it must
+%   not have side effects.  Goal is only called if the link is clicked.
+
+%!  tty_link_action(+Terminal, +Link, -Action) is det.
+%
+%   What clicking Link does, which both the report bar and tty_link/2
+%   use, so that the bar tells the truth.  Action is one of
+%
+%     - hook(Label, Goal)
+%       Call Goal, as tty_link_hook/5 says.
+%     - edit(Location)
+%       Edit Location using edit/1.
+%     - open(File, Method)
+%       Open File using desktop_open/1, where Method is `view` or
+%       `application` as in open_document_method/2.
+%     - browse(URL)
+%       Open URL in the web browser.
+%     - none(Link)
+%       We do not open Link.
+
+tty_link_action(PT, Link, hook(Label, Goal)) :-
+    tty_link_hook(PT, Link, Label, Goal, []),
+    !.
+tty_link_action(PT, Link, Action) :-
+    link_file_location(PT, Link, File, Location),
+    !,
+    (   Location = file(_)
+    ->  open_document_method(File, Method),
+        (   Method == edit
+        ->  Action = edit(Location)
+        ;   Action = open(File, Method)
+        )
+    ;   Action = edit(Location)
+    ).
+tty_link_action(_PT, URL, browse(URL)) :-
+    browser_url(URL),
+    !.
+tty_link_action(_PT, Link, none(Link)).
 
 %!  tty_link(+Terminal, +Link) is det.
 %
-%   Handle clicking a terminal hyperlink click.
+%   Handle clicking a terminal hyperlink.
 
 tty_link(PT, Link) :-
-    tty_link_hook(PT, Link),
-    !.
-tty_link(PT, Link) :-
-    link_file_location(PT, Link, _File, Location),
-    !,
-    tty_open(Location).
-tty_link(_PT, URL) :-
-    browser_url(URL),
-    !,
+    tty_link_action(PT, Link, Action),
+    run_tty_link_action(Action, PT).
+
+run_tty_link_action(hook(_Label, Goal), _PT) :-
+    ignore(Goal).
+run_tty_link_action(edit(Location), _PT) :-
+    call(edit(Location)).
+run_tty_link_action(open(File, _Method), _PT) :-
+    desktop_open(File).
+run_tty_link_action(browse(URL), _PT) :-
     call(www_open_url(URL)).
-tty_link(PT, URL) :-
-    send(PT, report, warning, 'Not opening %s', URL).
+run_tty_link_action(none(Link), PT) :-
+    send(PT, report, warning, 'Not opening %s', Link).
 
 %!  browser_url(+URL) is semidet.
 %
@@ -1937,18 +1974,6 @@ browser_url(URL) :-
     atom(Scheme),
     downcase_atom(Scheme, LwrScheme),
     memberchk(LwrScheme, [http, https, mailto]).
-
-%!  tty_open(+Location) is det.
-%
-%   Open a file link.  A location that   carries a line number is opened
-%   using edit/1, a plain file using open_document/1.
-
-tty_open(file(File)) :-
-    !,
-    open_document(File).
-tty_open(Location) :-
-    call(edit(Location)).
-
 
 %!  link_file_location(+Terminal, +Link, -File, -Location) is semidet.
 %
