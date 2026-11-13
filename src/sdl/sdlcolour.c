@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/colour.h>
 #include "sdlcolour.h"
 #ifdef __WINDOWS__
 #include <msw/mscolour.h>

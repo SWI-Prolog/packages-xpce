@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/arith.h>
+#include <ari/expression.h>
 #include <math.h>
 
 static int	get_var_in_binary_expression(Any e, Var var, int n);

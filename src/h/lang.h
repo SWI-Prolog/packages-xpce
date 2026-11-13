@@ -32,6 +32,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef LANG_H_INCLUDED
+#define LANG_H_INCLUDED
+
 typedef struct tokeniser *		Tokeniser;
 typedef struct parser *			Parser;
 typedef struct operator *		Operator;
@@ -49,5 +52,4 @@ NewClass(operator)
   Int		right_priority;		/* Allowed priority rigth */
 End;
 
-#include <prg/proto.h>
-
+#endif /*LANG_H_INCLUDED*/

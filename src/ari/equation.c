@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/arith.h>
+#include <ari/equation.h>
+#include <ari/expression.h>
 
 static status
 initialiseBinaryCondition(BinaryCondition c, Any l, Any r)

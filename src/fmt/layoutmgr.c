@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <fmt/layoutmgr.h>
+#include <gra/graphical.h>
 
 
 status

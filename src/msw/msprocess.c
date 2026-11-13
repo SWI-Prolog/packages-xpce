@@ -36,6 +36,9 @@
 #include "mswin.h"
 #include <h/unix.h>
 #include <h/interface.h>
+#include <txt/chararray.h>
+#include <unx/process.h>
+#include <unx/stream.h>
 
 #ifndef MAXCMDLINE
 #define MAXCMDLINE 10240

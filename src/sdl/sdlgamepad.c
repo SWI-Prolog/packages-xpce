@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/inputdevice.h>
 
 
 /* Gamepads (game controllers).  The SDL gamepad subsystem is started

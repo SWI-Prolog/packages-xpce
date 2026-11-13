@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/cursor.h>
+#include <txt/chararray.h>
+#include <txt/string.h>
 
 static status XcloseCursor(CursorObj, DisplayObj);
 

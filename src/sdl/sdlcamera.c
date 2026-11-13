@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/colour.h>
+#include <txt/i18n.h>
 #include <SDL3_image/SDL_image.h>
 
 #if !SDL_VERSION_ATLEAST(3, 4, 0)	/* SDL 3.2 returns a plain int */

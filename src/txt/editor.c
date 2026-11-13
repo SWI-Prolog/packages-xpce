@@ -39,6 +39,26 @@
 #include <h/text.h>
 #include <h/unix.h>
 #include <h/charwidth.h>
+#include <txt/editor.h>
+#include <evt/event.h>
+#include <gra/device.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <gra/scrollbar.h>
+#include <gra/visual.h>
+#include <txt/chararray.h>
+#include <txt/keybinding.h>
+#include <txt/markup.h>
+#include <txt/regex.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/style.h>
+#include <txt/textbuffer.h>
+#include <txt/textcursor.h>
+#include <txt/textimage.h>
+#include <txt/undo.h>
+#include <unx/file.h>
+#include <win/window.h>
 
 static Int		getMarginWidthEditor(Editor);
 static Int		getColumnEditor(Editor, Int);

@@ -35,6 +35,10 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <win/browser.h>
+#include <gra/graphical.h>
+#include <gra/listbrowser.h>
+#include <win/window.h>
 
 static status
 initialiseBrowser(Browser b, Name name, Size size, DisplayObj display)

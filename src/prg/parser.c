@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/lang.h>
+#include <prg/parser.h>
+#include <prg/tokeniser.h>
 
 NewClass(parser)
   Tokeniser	tokeniser;		/* The tokeniser */

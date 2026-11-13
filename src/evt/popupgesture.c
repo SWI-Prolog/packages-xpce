@@ -35,6 +35,12 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/dialog.h>
+#include <evt/popupgesture.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <gra/graphical.h>
+#include <men/menu.h>
+#include <win/window.h>
 
 static status
 initialisePopupGesture(PopupGesture g, PopupObj popup,

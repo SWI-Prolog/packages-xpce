@@ -36,6 +36,10 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <gra/image.h>
+#include <gra/colour.h>
+#include <gra/graphical.h>
+#include <unx/file.h>
 
 #include <math.h>
 #ifndef M_PI

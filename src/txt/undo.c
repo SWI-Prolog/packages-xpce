@@ -35,6 +35,8 @@
 
 #include <h/kernel.h>
 #include <h/text.h>
+#include <txt/undo.h>
+#include <txt/textbuffer.h>
 
 static void	resetUndoBuffer(UndoBuffer ub);
 

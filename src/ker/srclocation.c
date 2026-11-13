@@ -34,6 +34,7 @@
 */
 
 #include <h/kernel.h>
+#include <txt/str.h>
 
 status
 initialiseSourceLocation(SourceLocation loc,

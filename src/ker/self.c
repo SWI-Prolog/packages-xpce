@@ -34,7 +34,7 @@
 */
 
 #include <h/kernel.h>
-#include "alloc.h"
+#include <ker/allocdata.h>
 #include <h/interface.h>
 #include <h/trace.h>
 #include <sys/types.h>
@@ -45,6 +45,15 @@
 #include <time.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/syntax.h>
+#include <unx/process.h>
+#include <win/application.h>
+#include <win/display.h>
+#include <win/displaymgr.h>
 #include <errno.h>
 
 #ifdef __WINDOWS__

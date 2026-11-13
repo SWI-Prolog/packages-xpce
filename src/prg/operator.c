@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/lang.h>
+#include <prg/operator.h>
 
 static status	kindOperator(Operator o, Name kind);
 

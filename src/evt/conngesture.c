@@ -34,6 +34,11 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/conngesture.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
 
 static status
 initialiseConnectGesture(ConnectGesture g,

@@ -36,6 +36,16 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <gra/text.h>
+#include <evt/event.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <txt/chararray.h>
+#include <txt/keybinding.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/textcursor.h>
+#include <win/displaymgr.h>
 
 static status	initOffsetText(TextObj, int);
 static status	initPositionText(TextObj);

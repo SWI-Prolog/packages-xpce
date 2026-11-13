@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <txt/syntax.h>
 
 static HashTable SyntaxTables;		/* @syntax_tables */
 

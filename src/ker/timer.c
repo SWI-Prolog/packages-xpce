@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/display.h>
+#include <win/displaymgr.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

@@ -39,6 +39,7 @@
 #include <h/kernel.h>
 #include "mswin.h"
 #include <h/interface.h>
+#include <txt/i18n.h>
 #include <tchar.h>
 #undef End
 #include <shlobj.h>

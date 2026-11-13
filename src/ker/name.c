@@ -36,6 +36,9 @@
 #define NO_BUILT_IN_DECL
 #include <h/kernel.h>
 #include <h/trace.h>
+#include <txt/chararray.h>
+#include <txt/str.h>
+#include <txt/string.h>
 
 #define BENCHNAMES 0			/* include benchmark code */
 

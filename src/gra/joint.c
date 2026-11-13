@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/joint.h>
+#include <gra/graphical.h>
 
 static status arrowsJoint(Joint, Name);
 

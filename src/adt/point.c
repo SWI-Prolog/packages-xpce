@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/event.h>
+#include <txt/string.h>
 #include <math.h>
 
 status

@@ -35,6 +35,13 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <gra/colour.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <win/displaymgr.h>
+#include <win/window.h>
 #include <cairo/cairo.h>
 #ifdef CAIRO_HAS_PDF_SURFACE
 #include <cairo/cairo-pdf.h>

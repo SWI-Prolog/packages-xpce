@@ -37,6 +37,10 @@
 #endif
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <txt/terminal.h>
+#include <unx/process.h>
+#include <unx/socket.h>
+#include <unx/stream.h>
 #include <errno.h>
 #include "sdlstream.h"
 #include "sdlinput.h"

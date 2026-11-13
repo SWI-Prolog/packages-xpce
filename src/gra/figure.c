@@ -35,6 +35,12 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/figure.h>
+#include <gra/device.h>
+#include <gra/elevation.h>
+#include <gra/graphical.h>
+#include <gra/shadow.h>
+#include <gra/transform.h>
 
 		/********************************
 		*            CREATE		*

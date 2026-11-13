@@ -35,6 +35,8 @@
 #include <h/kernel.h>
 #include <h/trace.h>
 #include <h/text.h>
+#include <txt/i18n.h>
+#include <txt/textbuffer.h>
 
 static status	initialiseVariable(Variable var, Name name, Type type,
 				   Name access, StringObj doc, Name group,

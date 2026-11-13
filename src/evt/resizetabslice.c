@@ -35,6 +35,11 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/layout.h>
+#include <evt/resizetabslice.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <fmt/table.h>
+#include <gra/graphical.h>
 
 NewClass(resize_table_slice_gesture)
   ABSTRACT_GESTURE

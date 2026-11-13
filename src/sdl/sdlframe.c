@@ -35,6 +35,14 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/dialog.h>			/* completer of a text_item */
+#include <gra/graphical.h>
+#include <men/button.h>
+#include <men/textitem.h>
+#include <txt/i18n.h>
+#include <win/displaymgr.h>
+#include <win/frame.h>
+#include <win/tile.h>
+#include <win/window.h>
 #include "sdldisplay.h"
 #include "sdlframe.h"
 #include "sdlwindow.h"

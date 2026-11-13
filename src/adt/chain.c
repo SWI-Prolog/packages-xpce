@@ -33,7 +33,9 @@
 */
 
 #include <h/kernel.h>
-#include "../unx/proto.h"		/* file operations */
+#include <txt/str.h>
+#include <txt/string.h>
+#include <unx/file.h>
 
 forwards Cell	newCell(Chain, Any);
 forwards Cell	previousCell(Chain, Cell);

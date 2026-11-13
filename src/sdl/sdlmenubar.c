@@ -44,6 +44,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/graphical.h>
+#include <txt/i18n.h>
 #include "sdl.h"
 #include "sdlframe.h"
 #include "sdlmenubar.h"

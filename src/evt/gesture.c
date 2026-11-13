@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/gesture.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
 
 static int	 tryDragScrollGesture(Gesture g, EventObj ev);
 static int	 cancelDragScrollGesture(Gesture g);

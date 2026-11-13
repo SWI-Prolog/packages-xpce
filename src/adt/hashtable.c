@@ -35,6 +35,8 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <txt/string.h>
+#include <unx/file.h>
 
 static status	unlinkHashTable(HashTable ht);
 

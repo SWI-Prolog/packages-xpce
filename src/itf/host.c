@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/interface.h>
 #include <h/graphics.h>
+#include <win/displaymgr.h>
 
 
 status

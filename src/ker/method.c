@@ -38,6 +38,8 @@
 #include <h/interface.h>
 #include <h/unix.h>
 #include <h/text.h>
+#include <txt/i18n.h>
+#include <txt/textbuffer.h>
 
 static status	typesMethod(Method m, Vector types);
 static Name	getContextNameMethod(Method m);

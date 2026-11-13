@@ -34,6 +34,13 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/labelbox.h>
+#include <gra/device.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <men/button.h>
+#include <men/diagroup.h>
+#include <men/dialogitem.h>
 
 static status	restoreLabelBox(LabelBox lb);
 

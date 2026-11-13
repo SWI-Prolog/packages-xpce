@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/sound.h>
+#include <win/displaymgr.h>
 
 		 /*******************************
 		 *	       SOUND		*

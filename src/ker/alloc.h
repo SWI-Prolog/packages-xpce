@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu,nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2007, University of Amsterdam
+    Copyright (c)  1985-2012, University of Amsterdam
+                              VU University Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,32 +33,18 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define ALLOCSIZE	65000		/* size of allocation space */
-#define ALLOCFAST	1024
+#ifndef XPCE_KER_ALLOC_H_INCLUDED
+#define XPCE_KER_ALLOC_H_INCLUDED
 
-GLOBAL char    *spaceptr;	/* allocation space */
-GLOBAL size_t	spacefree;	/* Free bytes in space */
+/* Functions defined in ker/alloc.c */
 
-GLOBAL size_t	allocbytes;	/* number of bytes allocated */
-GLOBAL size_t	wastedbytes;	/* core in allocation chains */
+COMMON(Any)	alloc(size_t n);
+COMMON(void)	unalloc(size_t n, Any p);
+COMMON(void)	pceInitAlloc(void);
+COMMON(void)	allocRange(void *low, size_t size);
+COMMON(status)	listWastedCorePce(Pce pce, BoolObj ppcells);
+COMMON(void)	checkFreeChains(void);
+COMMON(char *)	save_string(const char *s);
+COMMON(void)	free_string(char *s);
 
-typedef struct zone *Zone;	/* memory zone */
-
-struct zone
-{
-#if ALLOC_DEBUG
-  unsigned	in_use : 1;		/* Zone is in_use (1) or freed (0) */
-  unsigned	size   : 31;		/* Size of the zone (bytes) */
-  unsigned long magic;			/* Magic word */
-#endif
-  uintptr_t	start;			/* Reserved (start of zone) */
-  Zone		next;			/* Next zone of this size */
-};
-
-GLOBAL Zone freeChains[ALLOCFAST/sizeof(Zone)+1];
-
-#define MINALLOC    (sizeof(struct zone) - offsetof(struct zone, start))
-#define ROUNDALLOC  (sizeof(void *))
-
-#define roundAlloc(n) ((n) <= MINALLOC ? MINALLOC : \
-		       (((n) + (ROUNDALLOC - 1)) & ~(ROUNDALLOC-1)))
+#endif /*XPCE_KER_ALLOC_H_INCLUDED*/

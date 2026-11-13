@@ -35,6 +35,13 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/slider.h>
+#include <evt/event.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <men/button.h>
+#include <men/dialogitem.h>
+#include <txt/str.h>
 #include <math.h>
 
 static void	compute_slider(Slider, int *, int *, int *, int *,

@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/graphical.h>
+#include <gra/image.h>
+#include <win/displaymgr.h>
 #include <math.h>
 #include "sdltexture.h"
 

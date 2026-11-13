@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <gra/graphical.h>
+#include <txt/str.h>
+#include <unx/file.h>
 
 static Any	loadNameObject(IOSTREAM *);
 static int	pceSlotsClass(Class);

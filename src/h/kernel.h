@@ -33,6 +33,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PCE_INCLUDED
 #define PCE_INCLUDED 1
 
 #ifdef _MSC_VER
@@ -218,6 +219,12 @@ different types when passed to a vararg function.
 #else
 #define SO_LOCAL
 #endif
+
+#define COMMON(type) SO_LOCAL type /* module-local function */
+
+#define COMMON(type) SO_LOCAL type /* module-local function */
+
+#define COMMON(type) SO_LOCAL type /* module-local function */
 
 #if !O_INLINE
 #define inline
@@ -511,7 +518,6 @@ toInt(intptr_t i)
 		********************************/
 
 #include "str.h"			/* string type and friends */
-#include "../txt/proto.h"		/* prototypes */
 
 #define LocalString(name, iswide, size) \
   string _s_ ## name ## _hdr; \
@@ -1610,10 +1616,72 @@ typedef struct answer_table		/* object --> its cell on the AnswerStack */
 		 *	 GLOBAL FUNCTIONS	*
 		 *******************************/
 
-#include "../ker/proto.h"
-#include "../msg/proto.h"
-#include "../adt/proto.h"
-#include "../rel/proto.h"
+#include <adt/area.h>
+#include <adt/atable.h>
+#include <adt/attribute.h>
+#include <adt/bool.h>
+#include <adt/chain.h>
+#include <adt/chaintable.h>
+#include <adt/constant.h>
+#include <adt/date.h>
+#include <adt/dict.h>
+#include <adt/dictitem.h>
+#include <adt/hashtable.h>
+#include <adt/number.h>
+#include <adt/point.h>
+#include <adt/real.h>
+#include <adt/region.h>
+#include <adt/sheet.h>
+#include <adt/size.h>
+#include <adt/tuple.h>
+#include <adt/vector.h>
+#include <ker/alloc.h>
+#include <ker/assoc.h>
+#include <ker/behaviour.h>
+#include <ker/class.h>
+#include <ker/classvar.h>
+#include <ker/conversion.h>
+#include <ker/debug.h>
+#include <ker/declarations.h>
+#include <ker/error.h>
+#include <ker/gc.h>
+#include <ker/getmethod.h>
+#include <ker/glob.h>
+#include <ker/global.h>
+#include <ker/goodies.h>
+#include <ker/method.h>
+#include <ker/name.h>
+#include <ker/object.h>
+#include <ker/passing.h>
+#include <ker/programobject.h>
+#include <ker/save.h>
+#include <ker/self.h>
+#include <ker/sendmethod.h>
+#include <ker/srclocation.h>
+#include <ker/timer.h>
+#include <ker/trace.h>
+#include <ker/type.h>
+#include <ker/variable.h>
+#include <msg/and.h>
+#include <msg/assign.h>
+#include <msg/binding.h>
+#include <msg/block.h>
+#include <msg/code.h>
+#include <msg/create.h>
+#include <msg/equal.h>
+#include <msg/function.h>
+#include <msg/if.h>
+#include <msg/message.h>
+#include <msg/nameref.h>
+#include <msg/nonequal.h>
+#include <msg/not.h>
+#include <msg/obtain.h>
+#include <msg/or.h>
+#include <msg/progn.h>
+#include <msg/quote.h>
+#include <msg/var.h>
+#include <msg/when.h>
+#include <msg/while.h>
 
 /* Pointer <-> integer conversion */
 
@@ -1957,3 +2025,5 @@ GLOBAL int hash_shifts;			/* Shifts in append */
 
 
 #include "../ker/inline.c"
+
+#endif /*PCE_INCLUDED*/

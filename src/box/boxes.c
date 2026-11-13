@@ -34,6 +34,13 @@
 
 #define GLOBALS_HERE 1
 #include "boxes.h"
+#include <box/boxes.h>
+#include <box/grbox.h>
+#include <box/hbox.h>
+#include <box/lbox.h>
+#include <box/parbox.h>
+#include <box/rubber.h>
+#include <box/tbox.h>
 
 static struct class_definition boxdefs[] =
 { { NAME_rubber, NAME_object, makeClassRubber,

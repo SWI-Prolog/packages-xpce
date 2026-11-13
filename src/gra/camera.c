@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/camera.h>
 
 /* A camera delivers video as an image.  ->open starts the camera;
  * each new frame is copied into <-image, so a bitmap that displays

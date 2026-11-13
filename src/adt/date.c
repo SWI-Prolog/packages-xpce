@@ -39,6 +39,8 @@
 #include <sys/timeb.h>
 #endif
 #include <h/unix.h>
+#include <txt/string.h>
+#include <unx/file.h>
 
 extern time_t get_date(char *p, struct timeb *now);
 

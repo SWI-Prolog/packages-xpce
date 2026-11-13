@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/browserselgesture.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <gra/listbrowser.h>
 
 NewClass(browser_select_gesture)
   ABSTRACT_GESTURE

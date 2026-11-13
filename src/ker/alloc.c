@@ -48,7 +48,7 @@
 #define ALLOC_DEBUG 0
 #endif /*O_RUNTIME*/
 #endif /*ALLOC_DEBUG*/
-#include "alloc.h"
+#include <ker/allocdata.h>
 
 #define USE_MALLOC 1
 

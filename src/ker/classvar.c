@@ -37,6 +37,10 @@
 #include <h/lang.h>
 #include <h/unix.h>
 #include <h/text.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/textbuffer.h>
 
 static status	 contextClassVariable(ClassVariable cv, Class context);
 static StringObj getDefault(Class class, Name name, int accept_default);

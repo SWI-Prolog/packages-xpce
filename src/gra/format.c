@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/format.h>
 
 static status
 initialiseFormat(Format l, Name direction, Int width, BoolObj columns)

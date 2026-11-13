@@ -33,6 +33,7 @@
 */
 
 #include "boxes.h"
+#include <box/rubber.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Rubber levels:

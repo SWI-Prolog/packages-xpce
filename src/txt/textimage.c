@@ -37,6 +37,15 @@
 #include <h/graphics.h>
 #include <h/text.h>
 #include <h/charwidth.h>
+#include <txt/textimage.h>
+#include <evt/event.h>
+#include <gra/colour.h>
+#include <gra/device.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <gra/scrollbar.h>
+#include <win/display.h>
+#include <win/window.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The PCE-3 editor object is now split up into a large number of  separate

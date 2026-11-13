@@ -33,6 +33,8 @@
 */
 
 #include <h/kernel.h>
+#include <txt/str.h>
+#include <txt/string.h>
 
 status
 initialiseSourceSink(SourceSink ss)

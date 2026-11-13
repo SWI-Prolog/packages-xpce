@@ -35,6 +35,11 @@
 #include <h/kernel.h>
 #include <h/unix.h>			/* storeStringFile() prototype */
 #include <h/graphics.h>			/* FontObj, for <-ellipsize */
+#include <txt/chararray.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/syntax.h>
+#include <unx/file.h>
 
 static CharArray	stringToCharArray(PceString s);
 

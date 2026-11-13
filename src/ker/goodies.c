@@ -34,9 +34,14 @@
 
 #include <h/kernel.h>
 #include <h/trace.h>
-#include "alloc.h"
+#include <ker/allocdata.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/markup.h>
+#include <txt/str.h>
+#include <txt/string.h>
 #include <math.h>
 #include <locale.h>
 #ifdef HAVE_UNISTD_H
@@ -662,10 +667,6 @@ c99_snprintf(char *buffer, size_t count, const char *fmt, ...)
 }
 #endif
 
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Comment to avoid mkproto not generating the prototype for this function
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 /* If `markup' is true, the format is Pango markup and the text of the
  * arguments is escaped, unless the argument is a markup object.

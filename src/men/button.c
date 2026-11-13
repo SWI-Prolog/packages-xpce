@@ -35,6 +35,14 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/button.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <evt/popupgesture.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <men/dialogitem.h>
+#include <win/display.h>
 #include <math.h>
 
 static status

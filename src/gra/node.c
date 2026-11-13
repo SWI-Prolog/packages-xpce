@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/node.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
+#include <gra/tree.h>
 
 static void	swap_parents(Node, Node, Chain);
 static int	isSonNode2(Node, Node);

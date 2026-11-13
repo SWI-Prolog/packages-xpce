@@ -46,6 +46,12 @@
 #include <h/kernel.h>
 
 #include <h/unix.h>
+#include <unx/stream.h>
+#include <txt/regex.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <unx/socket.h>
+#include <win/displaymgr.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

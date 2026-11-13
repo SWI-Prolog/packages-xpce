@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/ellipse.h>
+#include <gra/graphical.h>
+#include <gra/shadow.h>
 #include <math.h>
 
 /* Test the normalised ellipse-space distance of (px, py) from the
@@ -42,7 +45,7 @@
  * box; larger values are outside.  Semi-axes below 1 are clamped to
  * avoid a division by zero on degenerate 0-width shapes.
  *
- * Shared with class circle via proto.h.
+ * Shared with class circle via gra/ellipse.h.
  */
 double
 ellipseNormDistance(int ax, int ay, int aw, int ah, int px, int py)

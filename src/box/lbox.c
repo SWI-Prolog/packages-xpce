@@ -33,6 +33,9 @@
 */
 
 #include "boxes.h"
+#include <box/lbox.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
 
 static status computeLBox(LBox lb);
 

@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/strokestyle.h>
 #include <math.h>
 
 /* Class `stroke_style' describes how lines are drawn, beyond their

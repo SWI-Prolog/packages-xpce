@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/markuptext.h>
+#include <gra/graphical.h>
+#include <txt/string.h>
 
 /* Class `markup_text' displays (read-only) text formatted using Pango
  * markup, e.g., "Some <b>bold</b> text".  Unlike class text, it can

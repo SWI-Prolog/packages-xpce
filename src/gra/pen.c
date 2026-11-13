@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/pen.h>
 
 static status
 initialisePen(Pen p, Int thickness, Name texture, Any colour)

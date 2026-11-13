@@ -46,7 +46,6 @@ typedef struct lbox     *LBox;
 #include <h/graphics.h>
 #include <h/text.h>
 
-#include "proto.h"
 
 #ifdef GLOBALS_HERE
 #undef GLOBAL
@@ -153,5 +152,12 @@ COMMON(void)	drawTBox(TBox tb, int x, int y, int w,
 COMMON(void)	drawTBoxSel(TBox tb, int x, int y, int w,
 			    parline const *line,
 			    int sel_from, int sel_to, Style sel_style);
+
+		 /*******************************
+		 *          PROTOTYPES          *
+		 *******************************/
+
+/* box/boxes.c */
+COMMON(void)	initBoxes(void);
 
 #endif /*BOXES_H_INCLUDED*/

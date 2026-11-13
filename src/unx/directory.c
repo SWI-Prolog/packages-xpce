@@ -34,6 +34,11 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <unx/directory.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/regex.h>
+#include <unx/file.h>
 
 #ifdef HAVE_UNISTD_H
 #include <sys/types.h>

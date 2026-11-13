@@ -36,6 +36,11 @@
 #include <h/kernel.h>
 #include <h/trace.h>
 #include <h/graphics.h>
+#include <evt/event.h>
+#include <gra/font.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
 #include <math.h>
 #include <wctype.h>
 

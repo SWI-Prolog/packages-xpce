@@ -35,6 +35,8 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <txt/string.h>
+#include <txt/textimage.h>
 
 static status
 initialiseDictItem(DictItem di, Any key, CharArray lbl, Any obj, Name style)

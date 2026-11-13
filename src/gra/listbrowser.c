@@ -36,6 +36,21 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <gra/listbrowser.h>
+#include <evt/event.h>
+#include <evt/popupgesture.h>
+#include <gra/device.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <gra/scrollbar.h>
+#include <txt/chararray.h>
+#include <txt/keybinding.h>
+#include <txt/markup.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/textimage.h>
+#include <win/display.h>
+#include <win/window.h>
 
 static Int    normalise_index(ListBrowser, Int);
 static status clearSelectionListBrowser(ListBrowser);

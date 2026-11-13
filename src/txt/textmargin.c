@@ -36,6 +36,9 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <txt/textmargin.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
 
 #define X_MARGIN    3			/* Space from the border */
 

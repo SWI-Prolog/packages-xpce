@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <men/trayicon.h>
 
 /* An icon in the system tray (the notification area) with an optional
  * tooltip and menu.  The menu is built from a popup.  Selecting an

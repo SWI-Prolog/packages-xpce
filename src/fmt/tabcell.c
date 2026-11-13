@@ -34,6 +34,12 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <fmt/tabcell.h>
+#include <fmt/layoutitf.h>
+#include <fmt/layoutmgr.h>
+#include <fmt/table.h>
+#include <fmt/tabslice.h>
+#include <gra/graphical.h>
 
 		 /*******************************
 		 *	    (TYPE) UTIL		*

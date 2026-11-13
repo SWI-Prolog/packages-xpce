@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/animation.h>
 
 /* An animation holds the frames of an animated image file (PNG, GIF,
  * WebP, AVIF or a Windows ANI cursor) as images, with the time each is

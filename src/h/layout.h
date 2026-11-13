@@ -142,6 +142,5 @@ typedef struct _table_cell_dimensions
   int	py;				/* V-padding */
 } table_cell_dimensions, *TableCellDimensions;
 
-#include <fmt/proto.h>			/* function prototypes */
 
 #endif /*LAYOUT_H_INCLUDED*/

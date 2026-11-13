@@ -35,6 +35,8 @@
 #include <h/kernel.h>
 #include <fcntl.h>
 #include <h/interface.h>
+#include <txt/chararray.h>
+#include <txt/str.h>
 #include <errno.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

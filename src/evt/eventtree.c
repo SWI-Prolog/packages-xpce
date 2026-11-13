@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/eventtree.h>
 
 static status	rootEventTree(EventTreeObj t, EventNodeObj n);
 

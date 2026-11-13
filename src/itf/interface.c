@@ -38,6 +38,10 @@
 #include <h/interface.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <win/displaymgr.h>
 #include "stub.h"
 #include <wctype.h>		/* hostIs* fallbacks when no host registered */
 #ifdef HAVE_UNISTD_H

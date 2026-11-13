@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/elevation.h>
 
 static HashTable ElevationTable;	/* @elevations */
 

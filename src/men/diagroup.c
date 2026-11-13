@@ -35,6 +35,13 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/dialog.h>
+#include <men/diagroup.h>
+#include <evt/event.h>
+#include <gra/device.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <men/dialogitem.h>
+#include <txt/chararray.h>
 
 static status nameDialogGroup(DialogGroup g, Name name);
 static status labelDialogGroup(DialogGroup g, Any name);

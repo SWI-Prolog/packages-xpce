@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <txt/i18n.h>
 #include "sdluserevent.h"
 
 /* Icons in the system tray.  The menu of the icon is built from the

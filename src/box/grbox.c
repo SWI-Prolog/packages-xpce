@@ -33,6 +33,8 @@
 */
 
 #include "boxes.h"
+#include <box/grbox.h>
+#include <gra/graphical.h>
 
 static status
 initialiseGrBox(GrBox grb, Graphical gr,

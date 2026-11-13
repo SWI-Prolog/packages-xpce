@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/sdlgraphics.h>
 
 /* Graphics that bypass Cairo.  An sdl_texture holds pixels that the
  * renderer draws directly, e.g., the frames of a camera in their YUV

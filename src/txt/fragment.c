@@ -35,6 +35,11 @@
 #include <h/kernel.h>
 #include <h/text.h>
 #include <h/unix.h>
+#include <txt/fragment.h>
+#include <txt/chararray.h>
+#include <txt/string.h>
+#include <txt/textbuffer.h>
+#include <unx/file.h>
 
 #define O_STATISTICS 0			/* statistics functions */
 

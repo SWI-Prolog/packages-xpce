@@ -35,6 +35,11 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/menuitem.h>
+#include <gra/graphical.h>
+#include <men/dialogitem.h>
+#include <men/menu.h>
+#include <txt/str.h>
 
 static status	labelMenuItem(MenuItem mi, Any label);
 

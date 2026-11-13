@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/canvas.h>
+#include <gra/graphical.h>
 
 /* Class `canvas' is a graphical to draw on using operations that are
  * modelled after Cairo: build a path using ->move_to, ->line_to, etc.

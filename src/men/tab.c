@@ -34,6 +34,15 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/tab.h>
+#include <evt/event.h>
+#include <gra/colour.h>
+#include <gra/device.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <men/diagroup.h>
+#include <men/dialogitem.h>
+#include <men/tabstack.h>
 
 /* Geometry of the label row: each label is a pill (see draw_label())
    PILL_VPAD above and below its text, PILL_HGAP from its neighbours and

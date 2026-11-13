@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/handler.h>
+#include <evt/event.h>
 
 static status
 initialiseHandler(Handler h, Any id, Message msg, RegionObj reg)

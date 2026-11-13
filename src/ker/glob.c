@@ -45,7 +45,7 @@
 #include <h/arith.h>
 #include <h/dialog.h>
 #include <h/lang.h>
-#include <ker/alloc.h>
+#include <ker/allocdata.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Oops. The MacOS X (darwin) linker doesn't get a .o file for a library if

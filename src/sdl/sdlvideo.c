@@ -35,6 +35,11 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <gra/video.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <unx/file.h>
 #include <math.h>
 #include "sdlvideo.h"
 #ifdef HAVE_VIDEO

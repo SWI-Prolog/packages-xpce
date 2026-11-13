@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/movegesture.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
 
 status
 initialiseMoveGesture(MoveGesture g, Name button, Modifier modifier)

@@ -33,6 +33,12 @@
 */
 
 #include <box/boxes.h>			/* to exploit class rubber */
+#include <fmt/tabslice.h>
+#include <fmt/layoutmgr.h>
+#include <fmt/tabcell.h>
+#include <fmt/table.h>
+#include <gra/graphical.h>
+#include <win/tile.h>
 
 static status computeRubberTableRow(TableRow row);
 static status computeRubberTableColumn(TableColumn col);

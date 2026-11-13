@@ -36,6 +36,9 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <txt/textcursor.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
 
 /* A text caret comes in a number of styles:
 

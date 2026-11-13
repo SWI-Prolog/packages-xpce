@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/visual.h>
 
 static status
 containedInVisual(VisualObj v, VisualObj super)

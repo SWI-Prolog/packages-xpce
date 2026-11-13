@@ -34,6 +34,11 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/dialogitem.h>
+#include <evt/event.h>
+#include <evt/popupgesture.h>
+#include <gra/graphical.h>
+#include <txt/chararray.h>
 
 static status	nameDialogItem(DialogItem di, Name name);
 

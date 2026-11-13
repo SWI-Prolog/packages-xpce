@@ -35,6 +35,11 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/path.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
+#include <txt/i18n.h>
+#include <txt/string.h>
 #include <math.h>
 #include <ctype.h>
 #include <stdarg.h>

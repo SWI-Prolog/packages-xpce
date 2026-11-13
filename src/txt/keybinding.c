@@ -35,6 +35,11 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <txt/keybinding.h>
+#include <evt/event.h>
+#include <evt/recogniser.h>
+#include <txt/chararray.h>
+#include <txt/str.h>
 
 static HashTable BindingTable;		/* name --> table: @key_bindings */
 

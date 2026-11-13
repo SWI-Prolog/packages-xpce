@@ -41,6 +41,12 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/boolitem.h>
+#include <evt/event.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <men/button.h>
+#include <men/dialogitem.h>
 
 static status	displayedValueBoolItem(BoolItem b, BoolObj val);
 static status	applyBoolItem(BoolItem b, BoolObj always);

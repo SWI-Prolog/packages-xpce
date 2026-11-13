@@ -33,6 +33,7 @@
 */
 
 #include <h/kernel.h>
+#include <txt/string.h>
 #define QUICK_AND_DIRTY 1
 
 		 /*******************************

@@ -35,6 +35,11 @@
 #include <h/kernel.h>
 #include <h/unix.h>
 #include <h/lang.h>
+#include <prg/tokeniser.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/textbuffer.h>
 #include <math.h>
 
 #define A_NONE		0		/* no input */

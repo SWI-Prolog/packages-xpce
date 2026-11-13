@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <txt/string.h>
+#include <unx/file.h>
 
 Number
 CtoNumber(intptr_t i)

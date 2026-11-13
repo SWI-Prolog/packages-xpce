@@ -35,6 +35,9 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/dialog.h>
+#include <gra/visual.h>
+#include <men/dialogitem.h>
+#include <txt/i18n.h>
 #include <stdbool.h>
 #include "sdlmenu.h"
 

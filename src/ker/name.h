@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,4 +33,22 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "pce-name.ih"
+#ifndef XPCE_KER_NAME_H_INCLUDED
+#define XPCE_KER_NAME_H_INCLUDED
+
+/* Functions defined in ker/name.c */
+
+COMMON(void)	trapGdb(void);
+COMMON(void)	initNamesPass1(void);
+COMMON(void)	initNamesPass2(void);
+COMMON(void)	checkNames(int prt);
+COMMON(status)	initialiseName(Name n, CharArray value);
+COMMON(status)	forNamePce(Pce pce, Code code);
+COMMON(Name)	getCapitaliseName(Name n);
+COMMON(Name)	GetLabelNameName(Name n);
+COMMON(Name)	getDeleteSuffixName(Name n, Name suffix);
+COMMON(Name)	StringToName(PceString s);
+COMMON(Name)	CtoKeyword(const char *s);
+COMMON(status)	makeClassName(Class class);
+
+#endif /*XPCE_KER_NAME_H_INCLUDED*/

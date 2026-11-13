@@ -35,6 +35,14 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/displaymgr.h>
+#include <evt/event.h>
+#include <gra/colour.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <win/display.h>
+#include <win/frame.h>
+#include <win/window.h>
 
 static status
 initialiseDisplayManager(DisplayManager dm)

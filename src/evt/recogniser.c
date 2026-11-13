@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/recogniser.h>
 
 status
 initialiseRecogniser(Recogniser r)

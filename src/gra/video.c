@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/video.h>
+#include <txt/i18n.h>
 
 /* Class video plays an encoded video file or stream.  The frames go
  * into <-texture, an sdl_texture, so an sdl_layer shows them in an

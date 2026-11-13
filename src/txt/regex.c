@@ -34,6 +34,12 @@
 
 #include <h/kernel.h>
 #include <h/text.h>		/* text_buffer */
+#include <txt/regex.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/textbuffer.h>
 #include <rgx/regex.h>
 
 forwards Int getRegisterStartRegex(Regex, Int);

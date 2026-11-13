@@ -33,6 +33,8 @@
 */
 
 #include <h/kernel.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
 
 static char *ppsavestring(const char *s);
 

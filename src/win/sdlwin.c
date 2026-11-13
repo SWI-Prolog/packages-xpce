@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/sdlwin.h>
+#include <gra/sdlgraphics.h>
+#include <win/window.h>
 
 /* An sdl_window shows sdl_layer objects, drawn by the renderer of the
  * frame rather than by Cairo, below its graphicals.  This makes it

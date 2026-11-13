@@ -35,6 +35,11 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <win/view.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <txt/editor.h>
+#include <win/window.h>
 
 static status
 initialiseView(View v, Name name, Size size, DisplayObj display, Editor editor)

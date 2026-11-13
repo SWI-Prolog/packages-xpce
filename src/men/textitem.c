@@ -36,6 +36,20 @@
 #include <h/kernel.h>
 #include <h/dialog.h>
 #include <h/text.h>
+#include <men/textitem.h>
+#include <evt/event.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <gra/listbrowser.h>
+#include <gra/text.h>
+#include <men/button.h>
+#include <men/dialogitem.h>
+#include <men/menu.h>
+#include <txt/chararray.h>
+#include <txt/keybinding.h>
+#include <txt/string.h>
+#include <txt/textcursor.h>
+#include <win/window.h>
 
 static Any	getSelectionTextItem(TextItem);
 static Type	getSelectionTypeTextItem(TextItem);

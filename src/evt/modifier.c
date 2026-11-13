@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/modifier.h>
+#include <txt/str.h>
 
 static HashTable ModifierTable;
 

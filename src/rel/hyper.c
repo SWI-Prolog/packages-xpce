@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <rel/hyper.h>
+#include <unx/file.h>
 
 
 static status

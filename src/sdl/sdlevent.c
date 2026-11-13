@@ -36,6 +36,15 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/dialog.h>			/* acceleratorCuesFrame() */
+#include <evt/event.h>
+#include <evt/inputdevice.h>
+#include <gra/graphical.h>
+#include <men/button.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <win/displaymgr.h>
+#include <win/frame.h>
+#include <win/window.h>
 #include <math.h>
 #include "../../swipl/pcecall.h"
 #include "sdlevent.h"

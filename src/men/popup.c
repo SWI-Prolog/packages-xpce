@@ -34,6 +34,16 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/popup.h>
+#include <evt/event.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
+#include <gra/shadow.h>
+#include <men/dialogitem.h>
+#include <men/menu.h>
+#include <win/display.h>
+#include <win/displaymgr.h>
+#include <win/frame.h>
 #include <stdbool.h>
 
 static status closePopup(PopupObj);

@@ -34,6 +34,12 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/tree.h>
+#include <evt/event.h>
+#include <gra/device.h>
+#include <gra/figure.h>
+#include <gra/graphical.h>
+#include <gra/node.h>
 
 static status	updateHandlesTree(Tree);
 static status	rootTree(Tree t, Node root, BoolObj relink);

@@ -47,7 +47,20 @@
 #include <h/kernel.h>
 #include <h/text.h>
 #include <h/charwidth.h>
-#include "terminal.h"
+#include <txt/terminal.h>
+#include <evt/event.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/keybinding.h>
+#include <txt/regex.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/textcursor.h>
+#include <win/displaymgr.h>
+#include <win/window.h>
+#include <txt/rlcdata.h>
 #include "../sdl/sdlevent.h"
 #if defined(__FreeBSD__) || defined(__DragonFly__)
 #include <sys/sysctl.h>

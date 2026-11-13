@@ -33,6 +33,7 @@
 */
 
 #include <h/kernel.h>
+#include <rel/constraint.h>
 
 static status	forwardCreateConstraint(Constraint c);
 static status	fromConstraint(Constraint c, Any obj);

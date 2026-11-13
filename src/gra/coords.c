@@ -51,6 +51,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/coords.h>
+#include <gra/transform.h>
 #include <math.h>
 #include <float.h>
 

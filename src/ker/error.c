@@ -36,6 +36,8 @@
 #include <h/kernel.h>
 #include <h/trace.h>
 #include <h/interface.h>
+#include <txt/str.h>
+#include <txt/string.h>
 
 static void initErrorDatabase(HashTable db);
 

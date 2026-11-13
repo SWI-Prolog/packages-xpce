@@ -35,6 +35,7 @@
 #ifndef SDLCURSOR_H
 #define SDLCURSOR_H
 #include <SDL3/SDL.h>
+#include <win/displaymgr.h>		/* CurrentDisplay() */
 
 void ws_init_cursor_font(void);
 bool ws_busy_cursor(void);

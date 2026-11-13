@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/arith.h>
+#include <rel/spatial.h>
+#include <ari/equation.h>
+#include <ari/expression.h>
 
 static status
 initialiseSpatial(Spatial s,

@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/link.h>
 
 static status
 initialiseLink(Link link, Name from, Name to, Line line, Class cl)

@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/handlergroup.h>
 
 static status appendHandlerGroup(HandlerGroup, Recogniser);
 

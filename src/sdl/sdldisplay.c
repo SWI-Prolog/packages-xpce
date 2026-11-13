@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/colour.h>
+#include <gra/graphical.h>
+#include <txt/i18n.h>
+#include <win/displaymgr.h>
 #include "sdldisplay.h"
 #include "sdlframe.h"
 #include "sdluserevent.h"

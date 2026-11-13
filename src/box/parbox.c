@@ -33,6 +33,15 @@
 */
 
 #include "boxes.h"
+#include <box/parbox.h>
+#include <box/grbox.h>
+#include <box/tbox.h>
+#include <evt/event.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <win/tile.h>
 
 static status appendParBox(ParBox pb, HBox hb);
 

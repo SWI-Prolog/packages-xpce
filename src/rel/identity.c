@@ -33,6 +33,7 @@
 */
 
 #include <h/kernel.h>
+#include <rel/identity.h>
 
 static status	forwardsIdentity(Identity id, Any from, Any to);
 

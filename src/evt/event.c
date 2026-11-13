@@ -35,6 +35,13 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/event.h>
+#include <evt/eventnode.h>
+#include <evt/eventtree.h>
+#include <gra/coords.h>
+#include <gra/graphical.h>
+#include <txt/string.h>
+#include <win/window.h>
 #include <math.h>
 #include <time.h>
 

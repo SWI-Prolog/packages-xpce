@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/box.h>
+#include <gra/graphical.h>
+#include <gra/shadow.h>
 
 static status
 initialiseBox(Box b, Int w, Int h)

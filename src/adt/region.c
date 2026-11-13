@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/arith.h>
+#include <ari/expression.h>
 
 #define InitAreaA	int ax = valInt(a->x), ay = valInt(a->y), \
 			    aw = valInt(a->w), ah = valInt(a->h)

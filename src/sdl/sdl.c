@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <txt/i18n.h>
 #include "sdl.h"
 #include "sdlinput.h"
 #include "sdlevent.h"

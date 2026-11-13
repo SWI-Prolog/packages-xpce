@@ -33,6 +33,7 @@
 */
 
 #include <h/kernel.h>
+#include <txt/string.h>
 
 
 static status

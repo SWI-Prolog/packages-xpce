@@ -103,7 +103,11 @@ with us, so we can add it to the base-system and maintain it.
         `{ NAME_rpc, NAME_object, makeClassRpc, &ClassRpc, "summary" }`
      b) Add the file(s) to `cmake/XPCESources.cmake`
      c) Add the makeClassRpc() prototype and other non-static
-        functions to the local proto.h file.
+        functions to the header of the source file, e.g. `rpc.c`
+        gets `rpc.h`.  The `.c` file includes its own header, and so
+        do `ker/declarations.c` and all other files that use
+        these functions.  Headers of `ker`, `adt` and `msg` are
+        included by `h/kernel.h`.
 
   4) Make atoms known to the system.  `NAME_<atom>` constants are
      collected from the sources by `find_names`.  This only runs

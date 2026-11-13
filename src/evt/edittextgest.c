@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/edittextgest.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <gra/graphical.h>
 
 static status
 initialiseEditTextGesture(EditTextGesture g, Name button, Modifier modifier)

@@ -36,6 +36,9 @@
 #include <h/kernel.h>
 #include <h/unix.h>
 #include <h/graphics.h>
+#include <gra/pixmap.h>
+#include <gra/graphical.h>
+#include <gra/image.h>
 
 static status
 initialisePixmap(PixmapObj pm, Any from, Int w, Int h)

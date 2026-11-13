@@ -34,6 +34,15 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/decorate.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
+#include <gra/scrollbar.h>
+#include <txt/chararray.h>
+#include <txt/markup.h>
+#include <txt/str.h>
+#include <win/tile.h>
+#include <win/window.h>
 
 static status scrollbarsWindowDecorator(WindowDecorator dw, Name bars);
 static status labelWindowDecorator(WindowDecorator, CharArray, int, Any *);

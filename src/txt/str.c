@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/str.h>
+#include <txt/str.h>
 
 #undef min
 #define min(a, b) ((a) < (b) ? (a) : (b))

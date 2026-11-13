@@ -39,6 +39,5 @@
 
 #define ACC_CHARSETSIZE 256	/* see assignAcceleratorsTaken() */
 
-#include <men/proto.h>
 
 #endif /*_PCE_DIA_INCLUDED*/

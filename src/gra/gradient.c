@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/gradient.h>
 
 /* Class `gradient' — a linear or radial colour gradient usable as a
  * graphical <-fill.  The Cairo backend consumes the slots directly

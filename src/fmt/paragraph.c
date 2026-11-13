@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/text.h>
+#include <gra/device.h>
 
 NewClass(paragraph)
   ABSTRACT_DEVICE

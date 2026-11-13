@@ -37,6 +37,13 @@
 #include <h/graphics.h>
 #include <h/text.h>
 #include <h/unix.h>
+#include <txt/textbuffer.h>
+#include <txt/editor.h>
+#include <txt/regex.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <txt/undo.h>
+#include <unx/file.h>
 
 static Int    getMatchingQuoteTextBuffer(TextBuffer, Int, Name);
 static status capitalise_textbuffer(TextBuffer, intptr_t, intptr_t);

@@ -35,6 +35,12 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <unx/file.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <unx/directory.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef HAVE_UNISTD_H

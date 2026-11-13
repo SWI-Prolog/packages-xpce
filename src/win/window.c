@@ -37,6 +37,22 @@
 #include <h/dialog.h>
 #include <h/text.h>
 #include <h/unix.h>
+#include <win/window.h>
+#include <evt/event.h>
+#include <evt/popupgesture.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
+#include <gra/scrollbar.h>
+#include <gra/visual.h>
+#include <men/dialogitem.h>
+#include <men/textitem.h>
+#include <txt/i18n.h>
+#include <unx/file.h>
+#include <win/decorate.h>
+#include <win/display.h>
+#include <win/displaymgr.h>
+#include <win/frame.h>
+#include <win/tile.h>
 #include <stdbool.h>
 #include <math.h>
 

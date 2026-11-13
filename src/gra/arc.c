@@ -35,6 +35,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/arc.h>
+#include <gra/graphical.h>
+#include <gra/joint.h>
+#include <gra/line.h>
 #include <math.h>
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)

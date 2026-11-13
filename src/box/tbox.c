@@ -34,6 +34,8 @@
 */
 
 #include "boxes.h"
+#include <box/tbox.h>
+#include <gra/font.h>
 
 static status computeTBox(TBox tb);
 

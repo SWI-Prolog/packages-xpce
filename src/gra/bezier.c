@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/bezier.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
+#include <gra/line.h>
 #include <math.h>
 
 #define MAXPTS 100

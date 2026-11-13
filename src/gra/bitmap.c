@@ -36,6 +36,10 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <gra/bitmap.h>
+#include <gra/graphical.h>
+#include <gra/image.h>
+#include <unx/file.h>
 
 static status	imageBitmap(BitmapObj bm, Image image);
 static status	animationBitmap(BitmapObj bm, Animation a);

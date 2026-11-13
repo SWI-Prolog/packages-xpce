@@ -33,6 +33,7 @@
 */
 
 #include <h/kernel.h>
+#include <rel/relation.h>
 
 static status
 createRelation(Relation r, Any from, Any to)

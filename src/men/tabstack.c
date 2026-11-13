@@ -34,6 +34,11 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/tabstack.h>
+#include <evt/event.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
+#include <men/tab.h>
 
 static Tab	getOnTopTabStack(TabStack ts);
 

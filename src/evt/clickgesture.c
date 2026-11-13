@@ -34,6 +34,11 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/clickgesture.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <gra/graphical.h>
+#include <win/display.h>
 
 static status
 initialiseClickGesture(ClickGesture g, Name button,

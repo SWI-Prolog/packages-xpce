@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/shadow.h>
 
 /* Class shadow describes a drop shadow as CSS `box-shadow' does: the
  * shape of a graphical, moved by <-x_offset and <-y_offset, grown by

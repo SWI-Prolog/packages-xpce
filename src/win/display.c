@@ -34,6 +34,12 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/display.h>
+#include <evt/event.h>
+#include <evt/inputdevice.h>
+#include <gra/visual.h>
+#include <win/displaymgr.h>
+#include <win/frame.h>
 					/* generated from Makefile */
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

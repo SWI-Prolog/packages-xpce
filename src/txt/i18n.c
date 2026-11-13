@@ -35,6 +35,9 @@
 
 #include <h/kernel.h>
 #include <h/utf8.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <txt/string.h>
 #include <stdbool.h>
 
 #define utf8_get_uchar(s, chr) (unsigned char*)utf8_get_char((char *)(s), chr)

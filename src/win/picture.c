@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/picture.h>
+#include <win/window.h>
 
 
 static status

@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/window.h>
 #include "sdlwindow.h"
 #include "sdlframe.h"
 #include "sdldisplay.h"

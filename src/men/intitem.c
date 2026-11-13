@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/intitem.h>
+#include <gra/font.h>
+#include <men/textitem.h>
+#include <txt/chararray.h>
 
 Class ClassIntItem;
 

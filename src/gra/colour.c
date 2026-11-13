@@ -35,6 +35,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/colour.h>
+#include <gra/hsv.h>
+#include <txt/string.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 

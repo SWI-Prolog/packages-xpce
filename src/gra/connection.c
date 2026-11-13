@@ -34,6 +34,11 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/connection.h>
+#include <gra/graphical.h>
+#include <gra/handle.h>
+#include <gra/joint.h>
+#include <gra/line.h>
 #include <math.h>
 
 forwards int	bestConnectionPoint(Device, Name, int, int,

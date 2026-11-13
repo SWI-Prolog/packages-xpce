@@ -36,6 +36,21 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <gra/graphical.h>
+#include <evt/event.h>
+#include <evt/popupgesture.h>
+#include <fmt/layoutitf.h>
+#include <gra/colour.h>
+#include <gra/connection.h>
+#include <gra/coords.h>
+#include <gra/device.h>
+#include <gra/handle.h>
+#include <gra/line.h>
+#include <gra/node.h>
+#include <gra/shadow.h>
+#include <txt/i18n.h>
+#include <unx/file.h>
+#include <win/window.h>
 #include <math.h>
 
 static status	orientationGraphical(Graphical gr, Name orientation);

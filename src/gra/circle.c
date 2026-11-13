@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/circle.h>
+#include <gra/ellipse.h>
+#include <gra/graphical.h>
+#include <gra/shadow.h>
 
 static status
 initialiseCircle(Circle c, Int w)

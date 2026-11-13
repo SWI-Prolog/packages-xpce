@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <txt/string.h>
+#include <txt/chararray.h>
+#include <txt/str.h>
+#include <unx/file.h>
 
 static status	appendString(StringObj, CharArray);
 static status	setString(StringObj str, PceString s);

@@ -35,6 +35,15 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/menubar.h>
+#include <evt/event.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <men/button.h>
+#include <men/dialogitem.h>
+#include <men/menu.h>
+#include <men/popup.h>
+#include <win/window.h>
 
 static status
 initialiseMenuBar(MenuBar mb, Name name)

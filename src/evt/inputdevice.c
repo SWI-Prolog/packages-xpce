@@ -35,6 +35,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/inputdevice.h>
+#include <evt/event.h>
+#include <gra/colour.h>
+#include <txt/i18n.h>
 
 /* An input_device describes the device that generated an event: the
  * mouse, a pen, a touch screen, a gamepad or the keyboard.  Devices the

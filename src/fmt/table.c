@@ -33,6 +33,13 @@
 */
 
 #include <box/boxes.h>			/* to exploit class rubber */
+#include <fmt/table.h>
+#include <evt/event.h>
+#include <fmt/layoutmgr.h>
+#include <fmt/tabcell.h>
+#include <fmt/tabslice.h>
+#include <gra/graphical.h>
+#include <win/tile.h>
 
 static void	advance_table(Table tab);
 static status	placeCellsTable(Table tab);

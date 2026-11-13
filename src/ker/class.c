@@ -35,6 +35,10 @@
 #include <h/kernel.h>
 #include <h/text.h>
 #include <h/interface.h>		/* hostCallProc() */
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/string.h>
+#include <txt/textbuffer.h>
 
 static status	recordInstancesClass(Class class, BoolObj keep, BoolObj recursive);
 static status	fill_slots_class(Class class, Class super);

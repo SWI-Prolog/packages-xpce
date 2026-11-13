@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/application.h>
 
 static Chain TheApplications;
 

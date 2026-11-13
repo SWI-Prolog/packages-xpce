@@ -48,5 +48,4 @@ typedef struct
   } value;
 } numeric_value, *NumericValue;
 
-#include <ari/proto.h>
 #endif /*ARITH_H_INCLUDED*/

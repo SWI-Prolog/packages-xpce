@@ -36,6 +36,18 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/dialog.h>
+#include <win/frame.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
+#include <gra/visual.h>
+#include <men/textitem.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/string.h>
+#include <win/display.h>
+#include <win/displaymgr.h>
+#include <win/tile.h>
+#include <win/window.h>
 
 TileObj		getTileFrame(FrameObj);
 forwards int	get_position_from_center_frame(FrameObj, DisplayObj, Point, int *, int *);

@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/rzolgesture.h>
+#include <evt/event.h>
+#include <evt/resizegesture.h>
 
 static status
 initialiseResizeOutlineGesture(ResizeOutlineGesture g, Name button,

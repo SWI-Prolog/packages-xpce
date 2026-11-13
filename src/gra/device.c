@@ -35,6 +35,13 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/device.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
+#include <win/display.h>
+#include <win/displaymgr.h>
+#include <win/tile.h>
+#include <win/window.h>
 
 static status	computeFormatDevice(Device dev);
 

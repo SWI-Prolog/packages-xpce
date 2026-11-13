@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/font.h>
+#include <txt/str.h>
 
 struct global
 { Name		reference;		/* Name of the object */

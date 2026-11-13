@@ -35,6 +35,8 @@
 #include <h/kernel.h>
 #include <h/unix.h>
 #include <h/text.h>
+#include <txt/style.h>
+#include <unx/file.h>
 
 static status	highlightStyle(Style s, BoolObj on);
 static status	greyStyle(Style s, BoolObj on);

@@ -35,6 +35,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/font.h>
+#include <txt/str.h>
+#include <txt/string.h>
 
 static Int	getPointsFont(FontObj f);
 static status	loadFontFamilies(void);

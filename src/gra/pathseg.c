@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/pathseg.h>
 
 /* Path segments.  A path's <-points is a chain of points.  A plain
  * point is a straight line to it from the previous point.  The classes

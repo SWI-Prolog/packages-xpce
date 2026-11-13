@@ -35,6 +35,12 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/dialog.h>
+#include <win/dialog.h>
+#include <gra/device.h>
+#include <gra/graphical.h>
+#include <gra/visual.h>
+#include <men/dialogitem.h>
+#include <win/window.h>
 
 static status
 initialiseDialog(Dialog d, Name name, Size size, DisplayObj display)

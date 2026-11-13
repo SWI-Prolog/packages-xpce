@@ -34,6 +34,11 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/line.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
+#include <gra/joint.h>
+#include <gra/strokestyle.h>
 #include <math.h>
 #ifndef M_PI
 #define M_PI (3.141593)

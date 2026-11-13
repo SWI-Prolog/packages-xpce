@@ -35,6 +35,18 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/menu.h>
+#include <evt/event.h>
+#include <evt/gesture.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <gra/shadow.h>
+#include <men/button.h>
+#include <men/dialogitem.h>
+#include <men/menuitem.h>
+#include <men/popup.h>
+#include <men/textitem.h>
+#include <txt/str.h>
 
 static FontObj	getFontMenuItemMenu(Menu m, MenuItem mi);
 static MenuItem	getItemSelectionMenu(Menu m);

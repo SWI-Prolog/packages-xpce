@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <unx/file.h>
 #include <errno.h>
 
 		 /*******************************

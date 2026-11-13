@@ -35,6 +35,10 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/arith.h>
+#include <gra/handle.h>
+#include <ari/expression.h>
+#include <gra/coords.h>
+#include <gra/graphical.h>
 #include <math.h>
 
 static status

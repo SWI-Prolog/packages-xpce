@@ -73,6 +73,11 @@ extern int errno;
 #include <h/kernel.h>
 #include <h/unix.h>
 #include <h/interface.h>
+#include <unx/socket.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <unx/file.h>
+#include <unx/stream.h>
 #if defined(HAVE_SYS_TIME_H) && !defined(__USE_W32_SOCKETS)
 #include <sys/time.h>
 #endif

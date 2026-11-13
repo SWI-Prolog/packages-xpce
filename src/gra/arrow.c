@@ -35,6 +35,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/arrow.h>
+#include <gra/graphical.h>
 #include "math.h"
 
 static status	drawArrow(double x1, double y1, double x2, double y2,

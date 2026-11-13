@@ -35,6 +35,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <gra/scrollbar.h>
+#include <evt/event.h>
+#include <gra/colour.h>
+#include <gra/graphical.h>
 
 #define swap(x, y)	{ int z; z=x; x=y; y=z; }
 #define swapInt(x, y)	{ Int z; z=x; x=y; y=z; }

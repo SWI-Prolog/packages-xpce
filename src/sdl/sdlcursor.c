@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/displaymgr.h>
+#include <win/window.h>
 #include "sdlcursor.h"
 #include "sdlevent.h"
 #include "sdlwindow.h"

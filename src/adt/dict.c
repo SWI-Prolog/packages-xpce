@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <txt/str.h>
 
 #define HASH_DICT_THRESHOLD 50
 

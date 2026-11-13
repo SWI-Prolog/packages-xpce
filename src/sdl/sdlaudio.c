@@ -35,6 +35,11 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/unix.h>
+#include <txt/chararray.h>
+#include <txt/i18n.h>
+#include <txt/str.h>
+#include <unx/file.h>
+#include <win/displaymgr.h>
 #include "sdluserevent.h"
 #include <math.h>
 #ifdef HAVE_SDL3_SOUND

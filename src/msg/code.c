@@ -34,6 +34,7 @@
 
 #define INLINE_UTILITIES 1
 #include <h/kernel.h>
+#include <txt/string.h>
 
 status
 initialiseCode(Code c)

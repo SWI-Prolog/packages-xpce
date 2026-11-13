@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <win/tile.h>
+#include <win/frame.h>
 
 /* The gap after the member t2 of t.  A gap that can be dragged to resize
  * the tiles next to it is <-border wide, one that cannot <-fixed_border.

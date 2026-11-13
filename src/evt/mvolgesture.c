@@ -34,6 +34,9 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/mvolgesture.h>
+#include <evt/event.h>
+#include <evt/movegesture.h>
 
 static status
 initialiseMoveOutlineGesture(MoveOutlineGesture g,

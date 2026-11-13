@@ -36,7 +36,12 @@
 #include <h/trace.h>
 #include <h/graphics.h>
 #include <h/interface.h>
-#include <rel/proto.h>
+#include <evt/event.h>
+#include <gra/graphical.h>
+#include <rel/constraint.h>
+#include <txt/str.h>
+#include <txt/string.h>
+#include <win/displaymgr.h>
 
 typedef struct check_path check_path;
 static int	check_object(Any, BoolObj, HashTable, int, check_path *);

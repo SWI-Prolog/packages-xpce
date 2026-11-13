@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <txt/markup.h>
+#include <txt/chararray.h>
+#include <txt/str.h>
+#include <txt/string.h>
 
 /* Class `markup' is a string that holds Pango markup, e.g., "Some
  * <b>bold</b> text".  Being a string, it can be used wherever text is

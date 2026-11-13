@@ -35,6 +35,16 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <men/label.h>
+#include <evt/gesture.h>
+#include <gra/font.h>
+#include <gra/graphical.h>
+#include <gra/text.h>
+#include <gra/visual.h>
+#include <men/button.h>
+#include <men/dialogitem.h>
+#include <txt/chararray.h>
+#include <txt/str.h>
 
 static status	statusLabel(Label lb, Name stat);
 static status	selectionLabel(Label lb, Any selection);

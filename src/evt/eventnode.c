@@ -34,6 +34,8 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <evt/eventnode.h>
+#include <evt/eventtree.h>
 
 static EventTreeObj	getTreeEventNode(EventNodeObj n);
 static status		sonEventNode(EventNodeObj n, EventNodeObj son);

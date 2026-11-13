@@ -67,6 +67,11 @@ reduced to the facility to terminate the inferior process.
 
 #include <h/unix.h>
 #include <h/interface.h>
+#include <unx/process.h>
+#include <txt/str.h>
+#include <unx/directory.h>
+#include <unx/stream.h>
+#include <win/displaymgr.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>

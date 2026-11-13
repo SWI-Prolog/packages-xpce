@@ -1496,9 +1496,6 @@ GLOBAL  Chain grabbedWindows;		/* @grabbed_windows */
 		*          PROTOTYPES		*
 		********************************/
 
-#include	"../gra/proto.h"
-#include	"../win/proto.h"
-#include	"../evt/proto.h"
 #include	"wst.h"
 
 #endif /*_PCE_GRA_INCLUDED*/
