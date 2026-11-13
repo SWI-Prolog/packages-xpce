@@ -980,7 +980,7 @@ markResizedTile(TileObj t, Name dim)	/* NAME_width or NAME_height */
 }
 
 
-static int
+static bool
 isResizedTile(TileObj t, Name dim)
 { return t->resized == dim || t->resized == NAME_both;
 }
@@ -995,7 +995,7 @@ isResizedTile(TileObj t, Name dim)
  * resize of the frame is shared out over all of it, dialogs included.
  */
 
-static int
+static bool
 freezeBeforeTile(TileObj t, int hand)
 { Cell tail;
 

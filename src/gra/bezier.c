@@ -141,7 +141,7 @@ shiftpts(FPoint pts, int to, int shift)
 	  p.y = (p1.y + p2.y + 1)/2; \
 	}
 
-static int
+static bool
 splitQuadratic(FPoint pts, int i, int *n)
 { fpoint m;
   int md = 1;
@@ -168,7 +168,7 @@ splitQuadratic(FPoint pts, int i, int *n)
 }
 
 
-static int
+static bool
 splitCubic(FPoint pts, int i, int *n)
 { pts += i;
 

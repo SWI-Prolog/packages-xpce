@@ -64,7 +64,7 @@ static int	combo_flags(TextItem ti);
 static status	detachTimerTextItem(TextItem ti);
 static int	text_item_clear_width(TextItem ti);
 static int	text_item_icon_width(TextItem ti);
-static int	clear_icon_shown(TextItem ti);
+static bool	clear_icon_shown(TextItem ti);
 
 
 status
@@ -1040,7 +1040,7 @@ iconTextItem(TextItem ti, Image image)
 }
 
 
-static int
+static bool
 clear_icon_shown(TextItem ti)
 { return ( text_item_clear_width(ti) > 0 &&
 	   getSizeCharArray(ti->value_text->string) != ZERO );

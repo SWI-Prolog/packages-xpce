@@ -1699,7 +1699,7 @@ shortcutFrame(FrameObj fr, EventObj ev)
  * grab, i.e., that operates a popup, and the menu bar key.
  */
 
-static int
+static bool
 frame_keyboard_event(FrameObj fr, EventObj ev, status *rc)
 { PceWindow gw = ws_grabbing_window();
 

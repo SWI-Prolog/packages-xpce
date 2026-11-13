@@ -742,7 +742,7 @@ parsep_line_textbuffer(TextBuffer tb, intptr_t here)
 }
 
 
-static int
+static bool
 all_layout(TextBuffer tb, intptr_t from, intptr_t to)
 { SyntaxTable syntax = tb->syntax;
 

@@ -52,7 +52,7 @@
 static int   breakargs(char *program, char *line, char **argv);
 static char *program_name(HANDLE hInstance);
 static void  bind_terminal(void);
-static int   attach_console(void);
+static bool   attach_console(void);
 
 static char *program;
 
@@ -186,7 +186,7 @@ write_console(void *h, char *buf, size_t len)
 }
 
 
-static int
+static bool
 attach_console(void)
 { static int done = 0;
 
@@ -229,7 +229,7 @@ attach_console(void)
 		 *	       I/O		*
 		 *******************************/
 
-static int
+static bool
 ask_attach(int read)
 { int rc;
 

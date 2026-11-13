@@ -1659,7 +1659,7 @@ something to tell an object to have a certain geometry in pixels and not
 negotiate, but deal properly with containers/decorations, etc.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static bool
 adjustDialogItem(Any obj, Int x, Int y, Int w, Int h)
 { Graphical gr = obj;
 

@@ -165,7 +165,7 @@ static PceObject	termToObject(term_t t, PceType type,
 				     atom_t assoc, int new);
 static prolog_call_data *get_pcd(PceObject method);
 static int		put_object(term_t t, PceObject obj);
-static int		put_trace_info(term_t id, prolog_call_data *pm);
+static bool		put_trace_info(term_t id, prolog_call_data *pm);
        foreign_t	pl_pce_init(term_t home, term_t appdir,
 				    term_t userdefaults);
 static Module		pceContextModule(void);
@@ -457,7 +457,7 @@ char_array_type(void)
 #define PROLOG_INSTALL_RESET_FUNCTION(f) \
 				{ SP_set_reinit_hook(f); }
 
-static int
+static bool
 GetChars(term_t t, char **s, unsigned int *len)
 { if ( SP_get_string(t, s) ||
        SP_get_list_chars(t, s) ||
@@ -472,7 +472,7 @@ GetChars(term_t t, char **s, unsigned int *len)
 
 #ifndef SWI
 
-static int
+static bool
 StripModuleTag(term_t t, atom_t *module, term_t p)
 { atom_t name;
   size_t arity;
@@ -732,7 +732,7 @@ Defined context terms
 #define EX_TOO_MANY_ARGUMENTS		9
 #define EX_EXISTENCE		       10 /* <type>, <term> */
 
-static int
+static bool
 put_goal_context(term_t ctx, PceGoal g, va_list args)
 { if ( g->flags & (PCE_GF_SEND|PCE_GF_GET) )
   { term_t rec = va_arg(args, term_t);
@@ -763,7 +763,7 @@ add_list(PceObject e, void *closure)
 }
 
 
-static int
+static bool
 ThrowException(int id, ...)
 { va_list args;
   fid_t fid;
@@ -1103,13 +1103,13 @@ static PL_blob_t pce_blob =
    worth a collection.  PL_BLOB_NOCOPY does not use it for lookup.
 */
 
-static int
+static bool
 unifyBlobRef(term_t t, PceObject obj)
 { return PL_unify_blob(t, obj, pceSizeOfObject(obj), &pce_blob);
 }
 
 
-static int
+static bool
 putBlobRef(term_t t, PceObject obj)
 { PL_put_blob(t, obj, pceSizeOfObject(obj), &pce_blob);
 
@@ -1122,7 +1122,7 @@ putBlobRef(term_t t, PceObject obj)
    the handle is still there.
 */
 
-static int
+static bool
 is_pce_blob(term_t t, PceObject *obj)
 { void *data;
   size_t len;
@@ -1142,7 +1142,7 @@ is_pce_blob(term_t t, PceObject *obj)
    gone: report it the same way a stale @Integer is reported.
 */
 
-static int
+static bool
 get_object_from_blob(term_t t, PceObject *obj)
 { PceObject o;
 
@@ -1168,7 +1168,7 @@ Get an XPCE object-reference from a Prolog term we already know to be of
 the form @/1.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static bool
 get_object_from_refterm(term_t t, PceObject *obj)
 { term_t a = PL_new_term_ref();
   PceObject o;
@@ -1201,7 +1201,7 @@ get_object_from_refterm(term_t t, PceObject *obj)
    so there is nothing @Var could be bound to and the unification fails.
 */
 
-static int
+static bool
 unifyReferenceArg(term_t t, PceObject obj)
 { PceCValue value;
   term_t t2;
@@ -1221,7 +1221,7 @@ unifyReferenceArg(term_t t, PceObject obj)
    term @Name if the object has a name, the <pce> blob otherwise.
 */
 
-static int
+static bool
 unifyReference(term_t t, PceObject obj)
 { PceCValue value;
 
@@ -3286,7 +3286,7 @@ get_pcd(PceObject method)
 }
 
 
-static int
+static bool
 put_trace_info(term_t id, prolog_call_data *pm)
 { term_t a = PL_new_term_ref();
   functor_t f;

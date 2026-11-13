@@ -554,7 +554,7 @@ put_string(int (*out)(void*, uchar_t), void *closure, PceString s)
 /* Emit `c' as Pango (XML) markup text
  */
 
-static int
+static bool
 put_markup_char(int (*out)(void*, uchar_t), void *closure, uchar_t c)
 { switch(c)
   { case '&':  PutString("&amp;");  break;
@@ -622,7 +622,7 @@ c99_snprintf(char *buffer, size_t count, const char *fmt, ...)
 #define NextFmtChar() (++i < fmt->s_size ? (c = str_fetch(fmt, i), true) \
 					   : false)
 
-static int
+static bool
 swritefv(int (*out)(void*, uchar_t), void *closure,
 	 const PceString fmt, int argc, const Any argv[], bool markup)
 { int i;

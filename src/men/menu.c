@@ -71,7 +71,7 @@ static MenuItem getMemberMenu(Menu m, Any obj);
 #define is_cycle_menu(m) ((m)->kind == NAME_cycle)
 
 static int	mark_width(Menu m, Any mark);
-static int	has_focus_ring(Menu m);
+static bool	has_focus_ring(Menu m);
 static MenuItem	getFocusItemMenu(Menu m);
 static status	focusItemMenu(Menu m, MenuItem mi);
 static status	executeMenuItem(Menu m, MenuItem mi, EventObj ev);
@@ -1247,7 +1247,7 @@ getItemFromEventMenu(Menu m, EventObj ev)
  * toggles.  The focus item is shown with a ring.
  */
 
-static int
+static bool
 has_focus_ring(Menu m)
 { return ( (m->kind == NAME_marked || m->kind == NAME_choice) &&
 	   !instanceOfObject(m, ClassPopup) );

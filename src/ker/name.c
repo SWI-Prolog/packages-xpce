@@ -391,7 +391,7 @@ getCopyName(Name n)
 		*       MODIFYING NAMES		*
 		********************************/
 
-static int
+static bool
 isBuiltInName(Name n)
 { return n >= (Name)&builtin_names[0] &&
          n <  (Name)&builtin_names[builtins];

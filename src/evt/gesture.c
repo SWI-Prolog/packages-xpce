@@ -247,7 +247,7 @@ getScrollTarget(Gesture g, EventObj ev)
    drag-scrolling.
 */
 
-static int
+static bool
 buttonDownGesture(Gesture g, EventObj ev)
 { int mask;
 
@@ -330,7 +330,7 @@ that no longer exists.  Sending  to  a   destroyed  object  reads  NIL or
 garbage from its slots, which crashes.  Verify the target before scrolling.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static bool
 validDragScrollGesture(Gesture g)
 { EventObj ev = g->drag_scroll_event;
 

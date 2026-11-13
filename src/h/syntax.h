@@ -91,7 +91,7 @@ End;
  * Keep this in sync with getCharType() in ker/type.c.
  */
 
-static inline int
+static inline bool
 isCharCode(intptr_t c)
 { return c >= 0 && c <= UNICODE_MAX;
 }

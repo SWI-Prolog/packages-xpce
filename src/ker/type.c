@@ -1221,7 +1221,7 @@ Check whether `s' has suffix `suff' and something non-blank before the
 suffix.  If so, delete the suffix and trailing blanks.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static bool
 suffix_string(StrPart s, const char *suff)
 { cucharp  ts = (cucharp)(suff + strlen(suff) - 1);
   wchar_t *es = s->end;
@@ -1246,7 +1246,7 @@ suffix_string(StrPart s, const char *suff)
 }
 
 
-static int
+static bool
 prefix_string(StrPart s, const char *prefix)
 { wchar_t *q = s->start;
   cucharp pref = (cucharp)prefix;

@@ -49,6 +49,7 @@ M$-Windows).
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
 #ifdef _MSC_VER
 #define strdup _strdup
 #endif
@@ -79,7 +80,7 @@ save_name(const char *name)
 
 
 
-static int
+static bool
 scan_file(const char *file)
 { FILE *fd = fopen(file, "r");
   char buf[LINESIZE];

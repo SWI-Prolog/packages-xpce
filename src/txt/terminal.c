@@ -411,7 +411,7 @@ static int	chars_columns(const text_char *chars, int len);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
 static void	rlc_destroy_saved_screen(RlcData b);
-static int	rlc_between(RlcData b, int f, int t, int v);
+static bool	rlc_between(RlcData b, int f, int t, int v);
 static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
 static void	rlc_update(rlc_console c);
@@ -5493,7 +5493,7 @@ rlc_over_link(RlcData b, int x, int y)
   return hr ? hr->link : NULL;
 }
 
-static int				/* v >= f && v <= t */
+static bool				/* v >= f && v <= t */
 rlc_between(RlcData b, int f, int t, int v)
 { int h = rlc_count_lines(b, b->first, v);
 
@@ -13049,7 +13049,7 @@ end_console_session(RlcData b)
   }
 }
 
-static int
+static bool
 release_pseudo_console(RlcData b)
 { if ( b->ptycon.hPC_refs > 0 && --b->ptycon.hPC_refs == 0 &&
        b->ptycon.hPC_ours )

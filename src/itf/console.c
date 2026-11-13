@@ -33,6 +33,7 @@
 */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdarg.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -73,7 +74,7 @@ doesn't appear to work however (Windows-NT 4.0, MSVC 4.2).
 #include <io.h>
 #include <fcntl.h>
 
-static int
+static bool
 ensure_console(void)
 { static int allocated = 0;
 
@@ -101,7 +102,7 @@ ensure_console(void)
 static FILE *console_in = NULL;
 static FILE *console_out = NULL;
 
-static int
+static bool
 ensure_console()
 { console_in = stdin;
   console_out = stdout;

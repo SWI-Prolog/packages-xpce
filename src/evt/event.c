@@ -738,7 +738,7 @@ get_xy_event_device(EventObj ev, Device dev, bool sub, double *rx, double *ry)
  * src/win/window.c.
  */
 
-static int
+static bool
 in_fixed_layer(Graphical gr)
 { Device d;
 
