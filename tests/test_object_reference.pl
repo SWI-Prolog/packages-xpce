@@ -61,6 +61,7 @@ test_object_reference :-
                 reference_as_xref_source,
                 weak_reference,
                 free_during_method,
+                var_binding,
                 pcerefer
               ]).
 
@@ -564,6 +565,38 @@ test(default_table_is_referring) :-
 
 
 %  pcerefer/1 prints the holders of an object, or of a stored value.
+
+:- begin_tests(var_binding).
+
+%   A var binding holds a code reference to its value.  Assigning a
+%   bound var again must release the reference to the old value, and
+%   the binding must hold just one reference to the new one.  Note that
+%   asking an object for its <-code_references binds @receiver to it,
+%   which counts as well: only differences are meaningful.
+
+test(reassign_releases_old_value,
+     [ setup(( new(Old, chain), new(New, chain),
+               new(B, block(assign(@arg1, New, local)))
+             )),
+       cleanup(free(B)),
+       After == Before
+     ]) :-
+    get(Old, code_references, Before),
+    send(B, forward, Old),
+    get(Old, code_references, After).
+
+test(outer_assignment_holds_one_reference,
+     [ setup(( new(Arg, chain), new(Value, chain), new(V, var),
+               new(B, block(assign(V, Value, outer)))
+             )),
+       cleanup((free(B), free(V))),
+       After == Before
+     ]) :-
+    get(Value, code_references, Before),
+    send(B, forward, Arg),
+    get(Value, code_references, After).
+
+:- end_tests(var_binding).
 
 :- begin_tests(pcerefer).
 

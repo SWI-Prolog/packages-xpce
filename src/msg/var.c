@@ -328,11 +328,19 @@ popVarEnvironment(void)
 }
 
 
+/* Give an existing binding a new value.  The binding holds a code
+   reference to its value, so it must release the one to the old value.
+*/
+
 static void
 valueVarBinding(VarBinding b, Any value)
-{ b->value = value;
-  if ( isObject(b->value) )
-    addCodeReference(b->value);
+{ Any old = b->value;
+
+  b->value = value;
+  if ( isObject(value) )
+    addCodeReference(value);
+  if ( isObject(old) )
+    delCodeReference(old);
 }
 
 
