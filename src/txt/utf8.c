@@ -37,42 +37,58 @@
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 UTF-8 Decoding, based on http://www.cl.cam.ac.uk/~mgk25/unicode.html
+
+Only the shortest encoding of a code point up to UNICODE_MAX is valid.
+Overlong encodings would allow e.g., hiding "/" or "." from code that
+checks the bytes.  An invalid sequence decodes as its first byte, which
+is consumed, as SWI-Prolog does for text.  A surrogate is replaced by
+U+FFFD: it is not a character and cannot be represented in UTF-16.
+
+The decoder stops at the first byte that is not a continuation byte, so
+it does not read past the 0-byte of a C string.  Callers that decode a
+buffer that is not 0-terminated must make sure the sequence is complete
+(see UTF8_FBN()).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#define CONT(i)   ISUTF8_CB(in[1])
-#define VAL(i, s) ((in[i]&0x3f) << s)
+#ifndef UNICODE_MAX
+#define UNICODE_MAX 0x10FFFF
+#endif
+
+static const int utf8_min_code[4] = { 0, 0x80, 0x800, 0x10000 };
 
 char *
 F_UTF8_GET_CHAR(const char *in, int *chr)
-{ 					/* 2-byte, 0x80-0x7ff */
-  if ( (in[0]&0xe0) == 0xc0 && CONT(1) )
-  { *chr = ((in[0]&0x1f) << 6)|VAL(1,0);
-    return (char *)in+2;
-  }
-					/* 3-byte, 0x800-0xffff */
-  if ( (in[0]&0xf0) == 0xe0 && CONT(1) && CONT(2) )
-  { *chr = ((in[0]&0xf) << 12)|VAL(1,6)|VAL(2,0);
-    return (char *)in+3;
-  }
-					/* 4-byte, 0x10000-0x1FFFFF */
-  if ( (in[0]&0xf8) == 0xf0 && CONT(1) && CONT(2) && CONT(3) )
-  { *chr = ((in[0]&0x7) << 18)|VAL(1,12)|VAL(2,6)|VAL(3,0);
-    return (char *)in+4;
-  }
-					/* 5-byte, 0x200000-0x3FFFFFF */
-  if ( (in[0]&0xfc) == 0xf8 && CONT(1) && CONT(2) && CONT(3) && CONT(4) )
-  { *chr = ((in[0]&0x3) << 24)|VAL(1,18)|VAL(2,12)|VAL(3,6)|VAL(4,0);
-    return (char *)in+5;
-  }
-					/* 6-byte, 0x400000-0x7FFFFFF */
-  if ( (in[0]&0xfe) == 0xfc && CONT(1) && CONT(2) && CONT(3) && CONT(4) && CONT(5) )
-  { *chr = ((in[0]&0x1) << 30)|VAL(1,24)|VAL(2,18)|VAL(3,12)|VAL(4,6)|VAL(5,0);
-    return (char *)in+4;
+{ const unsigned char *s = (const unsigned char *)in;
+  unsigned char c = s[0];
+  int code, n;
+
+  *chr = c;
+  if ( c < 0xc0 )			/* ASCII or a stray continuation */
+    return (char *)in+1;
+  if ( c < 0xe0 )
+  { code = c & 0x1f;
+    n = 1;
+  } else if ( c < 0xf0 )
+  { code = c & 0x0f;
+    n = 2;
+  } else if ( c < 0xf8 )
+  { code = c & 0x07;
+    n = 3;
+  } else
+  { return (char *)in+1;
   }
 
-  *chr = *in;
+  for(int k=1; k<=n; k++)
+  { if ( !ISUTF8_CB(s[k]) )		/* also stops at the 0-byte */
+      return (char *)in+1;
+    code = (code << 6) | (s[k] & 0x3f);
+  }
 
-  return (char *)in+1;
+  if ( code < utf8_min_code[n] || code > UNICODE_MAX )
+    return (char *)in+1;		/* overlong or too large */
+
+  *chr = IS_UTF16_SURROGATE(code) ? UTF8_MALFORMED_REPLACEMENT : code;
+  return (char *)in+n+1;
 }
 
 

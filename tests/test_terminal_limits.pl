@@ -42,11 +42,13 @@
 
 What a terminal shows is often not under control of its user: `cat`
 of a file someone else wrote is enough.  Escape sequences with huge
-arguments must therefore not hang it.
+arguments must therefore not hang it, and invalid UTF-8 must not
+decode as something else.
 */
 
 test_terminal_limits :-
-    run_tests([ terminal_limits
+    run_tests([ terminal_limits,
+                terminal_utf8
               ]).
 
 terminal(TI) :-
@@ -93,3 +95,63 @@ test(caret_down, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
     row(TI, LastRow, Text).
 
 :- end_tests(terminal_limits).
+
+		 /*******************************
+		 *	      UTF-8		*
+		 *******************************/
+
+%!  shows(+Bytes, -Codes) is det.
+%
+%   Codes is the first row of a fresh terminal after a client wrote
+%   Bytes to it.  The bytes go through the pty, which is where the
+%   terminal decodes UTF-8.  A `|` ends the row: we wait for it.
+
+shows(Bytes, Codes) :-
+    new(TI, terminal_image(400, 100)),
+    get(TI, pty_name, Pty),
+    setup_call_cleanup(
+        open(Pty, write, Out, [type(binary)]),
+        ( append(Bytes, `|\r\n`, All),
+          maplist(put_byte(Out), All),
+          flush_output(Out),
+          get_time(Now),
+          Deadline is Now+10,
+          shown(TI, Deadline, Codes)
+        ),
+        close(Out)),
+    free(TI).
+
+shown(TI, Deadline, Codes) :-
+    ignore(send(@display, dispatch)),
+    get(TI, row, 0, String),
+    get(String, value, Atom),
+    atom_codes(Atom, Codes0),
+    (   append(Codes, [0'||_], Codes0)
+    ->  true
+    ;   get_time(Now),
+        Now < Deadline
+    ->  shown(TI, Deadline, Codes)
+    ;   Codes = timeout
+    ).
+
+has_pty :-
+    \+ current_prolog_flag(windows, true).
+
+:- begin_tests(terminal_utf8, [condition(has_pty)]).
+
+test(valid, Codes == [0xe9, 0x1F600]) :-
+    shows([0xC3,0xA9, 0xF0,0x9F,0x98,0x80], Codes).
+test(overlong_slash, Codes == [0xC0, 0xAF]) :-
+    shows([0xC0,0xAF], Codes).
+test(overlong_3, Codes == [0xE0, 0x80, 0xAF]) :-
+    shows([0xE0,0x80,0xAF], Codes).
+test(surrogate, Codes == [0xFFFD]) :-
+    shows([0xED,0xA0,0x80], Codes).
+test(too_large, Codes == [0xF4, 0x90, 0x80, 0x80]) :-
+    shows([0xF4,0x90,0x80,0x80], Codes).
+test(five_bytes, Codes == [0xF8, 0x88, 0x80, 0x80, 0x80]) :-
+    shows([0xF8,0x88,0x80,0x80,0x80], Codes).
+test(truncated, Codes == [0xE2, 0x82]) :-
+    shows([0xE2,0x82], Codes).
+
+:- end_tests(terminal_utf8).
