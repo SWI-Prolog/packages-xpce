@@ -33,62 +33,20 @@
 */
 
 #include <wchar.h>
+#include <SWI-Prolog.h>
 #include <h/utf8.h>
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-UTF-8 Decoding, based on http://www.cl.cam.ac.uk/~mgk25/unicode.html
-
-Only the shortest encoding of a code point up to UNICODE_MAX is valid.
-Overlong encodings would allow e.g., hiding "/" or "." from code that
-checks the bytes.  An invalid sequence decodes as its first byte, which
-is consumed, as SWI-Prolog does for text.  A surrogate is replaced by
-U+FFFD: it is not a character and cannot be represented in UTF-16.
-
-The decoder stops at the first byte that is not a continuation byte, so
-it does not read past the 0-byte of a C string.  Callers that decode a
-buffer that is not 0-terminated must make sure the sequence is complete
-(see UTF8_FBN()).
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-#ifndef UNICODE_MAX
-#define UNICODE_MAX 0x10FFFF
-#endif
-
-static const int utf8_min_code[4] = { 0, 0x80, 0x800, 0x10000 };
+/* Decode as Prolog does: see PL_utf8_code_point().  The decoder stops
+   at the 0-byte of a C string.  Callers that decode a buffer that is
+   not 0-terminated must make sure the sequence is complete (see
+   UTF8_FBN()).
+*/
 
 char *
 F_UTF8_GET_CHAR(const char *in, int *chr)
-{ const unsigned char *s = (const unsigned char *)in;
-  unsigned char c = s[0];
-  int code, n;
+{ PL_utf8_code_point(&in, NULL, chr);
 
-  *chr = c;
-  if ( c < 0xc0 )			/* ASCII or a stray continuation */
-    return (char *)in+1;
-  if ( c < 0xe0 )
-  { code = c & 0x1f;
-    n = 1;
-  } else if ( c < 0xf0 )
-  { code = c & 0x0f;
-    n = 2;
-  } else if ( c < 0xf8 )
-  { code = c & 0x07;
-    n = 3;
-  } else
-  { return (char *)in+1;
-  }
-
-  for(int k=1; k<=n; k++)
-  { if ( !ISUTF8_CB(s[k]) )		/* also stops at the 0-byte */
-      return (char *)in+1;
-    code = (code << 6) | (s[k] & 0x3f);
-  }
-
-  if ( code < utf8_min_code[n] || code > UNICODE_MAX )
-    return (char *)in+1;		/* overlong or too large */
-
-  *chr = IS_UTF16_SURROGATE(code) ? UTF8_MALFORMED_REPLACEMENT : code;
-  return (char *)in+n+1;
+  return (char *)in;
 }
 
 
