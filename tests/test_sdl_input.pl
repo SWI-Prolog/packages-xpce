@@ -280,7 +280,10 @@ test(release_to_focus, Pairs == [0'a-focus_window, key_up-focus_window]) :-
 
 :- begin_tests(sdl_wheel, [cleanup(close_windows)]).
 
-test(whole_notches, [R-DY == 15-0.75]) :-
+%   integer_y needs SDL 3.2.12.  Older versions count whole notches by
+%   adding up the fractions themselves.
+
+test(whole_notches, [condition(sdl_wheel_integer), R-DY == 15-0.75]) :-
     open_window(F, _),
     sdl(F, mouse_wheel, [x=50, y=50, dy=0.25]),
     sdl(F, mouse_wheel, [x=50, y=50, dy=0.5, integer_y=1]),
@@ -304,6 +307,10 @@ test(position, [WX-WY == MX-MY]) :-
     get(E, position, W, point(WX, WY)).
 
 :- end_tests(sdl_wheel).
+
+sdl_wheel_integer :-
+    get(@pce, window_system_version, V),
+    V >= 30212.
 
 :- begin_tests(sdl_emulation, [cleanup(close_windows)]).
 
