@@ -167,7 +167,7 @@ SockError(void)
 #endif
 }
 
-#define SocketHandle(s) ((SOCKET)((s)->ws_ref))
+#define SocketHandle(s) ((SOCKET)((s)->rdfd))
 
 #else /*HAVE_WINSOCK*/
 #define SocketHandle(s) ((s->rdfd))
@@ -222,9 +222,6 @@ initialiseSocket(Socket s, Any address, Name domain)
 { setupSockets();
 
   initialiseStream((Stream) s, NIL, NIL, NIL, DEFAULT);
-#ifdef HAVE_WINSOCK
-  s->ws_ref = (WsRef) INVALID_SOCKET;
-#endif
 
   if ( isDefault(domain) )
   { if ( instanceOfObject(address, ClassFile) )
@@ -308,11 +305,7 @@ cloneSocket(Socket s, Socket clone)
 { clonePceSlots(s, clone);
 
   clone->rdfd = clone->wrfd = -1;
-#ifdef HAVE_WINSOCK
-  clone->ws_ref = (WsRef)INVALID_SOCKET;
-#else
   clone->ws_ref = 0;
-#endif
   clone->input_buffer = NULL;
   clone->input_allocated = clone->input_p = 0;
   clone->input_pending = NULL;
@@ -377,18 +370,13 @@ createSocket(Socket s)
     } else /*if ( s->domain == NAME_inet )*/
       domain = PF_INET;
 
-#ifdef HAVE_WINSOCK
   { SOCKET mss;
 
     if ( (mss=socket(domain, SOCK_STREAM, 0)) == INVALID_SOCKET )
       return errorPce(s, NAME_socket, NAME_create, SockError());
 
-    s->ws_ref = (WsRef) mss;
+    s->rdfd = s->wrfd = (intptr_t)mss;
   }
-#else
-    if ( (s->rdfd = s->wrfd = socket(domain, SOCK_STREAM, 0)) < 0 )
-      return errorPce(s, NAME_socket, NAME_create, SockError());
-#endif
   }
 
   succeed;
@@ -523,6 +511,24 @@ bindSocket(Socket s, BoolObj reuse)
 }
 
 
+/* The listening socket is non-blocking on Windows (see
+   add_socket_to_watch()), so accept() may find nothing.  That is not an
+   error. */
+
+static status
+accept_failed(Socket s)
+{
+#ifdef HAVE_WINSOCK
+  if ( WSAGetLastError() == WSAEWOULDBLOCK )
+    fail;
+#else
+  if ( errno == EAGAIN || errno == EWOULDBLOCK )
+    fail;
+#endif
+  return errorPce(s, NAME_socket, NAME_accept, SockError());
+}
+
+
 status
 acceptSocket(Socket s)
 { SOCKET id2;
@@ -534,8 +540,9 @@ acceptSocket(Socket s)
   { struct sockaddr_un address;
     socklen_t len = sizeof(address);
 
-    if ( (id2=accept(SocketHandle(s), (struct sockaddr *) &address, &len))<0 )
-      errorPce(s, NAME_socket, NAME_accept, SockError());
+    if ( (id2=accept(SocketHandle(s), (struct sockaddr *) &address, &len)) ==
+	 INVALID_SOCKET )
+      return accept_failed(s);
 
     client_address = s->address;
   } else /*if ( s->domain == NAME_inet )*/
@@ -547,8 +554,9 @@ acceptSocket(Socket s)
     socklen_t len = sizeof(address);
 #endif
 
-    if ( (id2=accept(SocketHandle(s), (struct sockaddr *) &address, &len))<0 )
-      errorPce(s, NAME_socket, NAME_accept, SockError());
+    if ( (id2=accept(SocketHandle(s), (struct sockaddr *) &address, &len)) ==
+	 INVALID_SOCKET )
+      return accept_failed(s);
 
     { struct hostent *hp;
 
@@ -569,12 +577,7 @@ acceptSocket(Socket s)
   if ( !(s2 = get(s, NAME_clone, EAV)) )
     return errorPce(s, NAME_failedToClone);
 
-#ifdef HAVE_WINSOCK
-  s2->ws_ref = (WsRef) id2;
-  s2->rdfd = s2->wrfd = 0;		/* signal open status */
-#else
-  s2->rdfd = s2->wrfd = id2;
-#endif
+  s2->rdfd = s2->wrfd = (intptr_t)id2;
   assign(s2, input_message, s->input_message);
   assign(s2, status, NAME_accepted);
   registerClientSocket(s, s2);
@@ -659,10 +662,6 @@ connectSocket(Socket s)
 
   if ( rval )
     return errorPce(s, NAME_socket, NAME_connect, SockError());
-
-#ifdef HAVE_WINSOCK
-  s->rdfd = s->wrfd = 0;		/* signal open status */
-#endif
 
   assign(s, status, NAME_connected);
   registerSocket(s);

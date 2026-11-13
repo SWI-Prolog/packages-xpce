@@ -32,7 +32,14 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __WINDOWS__
+#ifdef __WINDOWS__
+#include <winsock2.h>
+/* <h/kernel.h> defines send() as sendPCE() */
+static int
+socket_send(SOCKET s, const char *buf, int len)
+{ return send(s, buf, len, 0);
+}
+#else
 #include <sys/socket.h>		/* must be first to avoid conflict on send() */
 #endif
 #include <h/kernel.h>
@@ -44,14 +51,30 @@
 #include <errno.h>
 #include "sdlstream.h"
 #include "sdlinput.h"
+#ifdef __WINDOWS__
+#include "../msw/mswin.h"
+#endif
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
 
 #ifndef SHUT_RD
-#define SHUT_RD 0
-#define SHUT_WR 1
+#define SHUT_RD SD_RECEIVE
+#define SHUT_WR SD_SEND
 #endif
+
+#ifdef __WINDOWS__
+#define SOCK(fd) ((SOCKET)(fd))
+#define closesock(fd) closesocket(SOCK(fd))
+#else
+#define SOCK(fd) ((int)(fd))
+#define closesock(fd) close((int)(fd))
+#endif
+
+static bool
+is_socket(Stream s)
+{ return instanceOfObject(s, ClassSocket);
+}
 
 static FDWatch *
 getStreamWatch(Stream s)
@@ -149,23 +172,24 @@ sdl_stream_event(SDL_Event *event)
  */
 void
 ws_close_input_stream(Stream s)
-{ if ( s->rdstream )
+{ ws_no_input_stream(s);
+
+  if ( s->rdstream )
   { fclose(s->rdstream);
     s->rdstream = NULL;
   }
 
   if ( s->rdfd >= 0 )
-  {
-#ifdef HAVE_SHUTDOWN
-    if ( instanceOfObject(s, ClassSocket) )
-      shutdown(s->rdfd, SHUT_RD);
-    else
-#endif
-      close(s->rdfd);
+  { if ( is_socket(s) )
+    { /* A socket has one fd for both sides: the last side closes it */
+      if ( s->wrfd == s->rdfd )
+	shutdown(SOCK(s->rdfd), SHUT_RD);
+      else
+	closesock(s->rdfd);
+    } else
+      close((int)s->rdfd);
     s->rdfd = -1;
   }
-
-  ws_no_input_stream(s);
 }
 
 /**
@@ -176,13 +200,13 @@ ws_close_input_stream(Stream s)
 void
 ws_close_output_stream(Stream s)
 { if ( s->wrfd >= 0 )
-  {
-#ifdef HAVE_SHUTDOWN
-    if ( instanceOfObject(s, ClassSocket) )
-      shutdown(s->wrfd, SHUT_WR);
-/*    else		Seems we must do both to free the descriptor */
-#endif
-      close(s->wrfd);
+  { if ( is_socket(s) )
+    { if ( s->rdfd == s->wrfd )	/* see ws_close_input_stream() */
+	shutdown(SOCK(s->wrfd), SHUT_WR);
+      else
+	closesock(s->wrfd);
+    } else
+      close((int)s->wrfd);
     s->wrfd = -1;
   }
 }
@@ -205,7 +229,13 @@ ws_close_stream(Stream s)
 void
 ws_input_stream(Stream s)
 { if ( s->rdfd >= 0 )
-  { FDWatch *watch = add_socket_to_watch(s->rdfd, FD_READY_STREAM_INPUT, s);
+  {
+#ifdef __WINDOWS__
+    if ( !is_socket(s) )	/* only sockets are waitable on Windows */
+      return;
+#endif
+    FDWatch *watch = add_socket_to_watch(SOCK(s->rdfd),
+					 FD_READY_STREAM_INPUT, s);
     DEBUG(NAME_stream,
 	  Cprintf("Registered %s for async input (fd=%d)\n",
 		  pp(s), s->rdfd));
@@ -236,7 +266,8 @@ ws_no_input_stream(Stream s)
  */
 void
 ws_listen_socket(Socket s)
-{ FDWatch *watch = add_socket_to_watch(s->rdfd, FD_READY_STREAM_ACCEPT, s);
+{ FDWatch *watch = add_socket_to_watch(SOCK(s->rdfd),
+				       FD_READY_STREAM_ACCEPT, s);
   setStreamWatch((Stream)s, watch);
   DEBUG(NAME_stream,
 	  Cprintf("Registered %s for async listen (fd=%d)\n",
@@ -259,7 +290,28 @@ ws_write_stream_data(Stream s, void *data, int len)
     return errorPce(s, NAME_notOpen);
 
   while( len > 0 )		/* write() may be partial, e.g., on a pipe */
-  { ssize_t n = write(s->wrfd, p, len);
+  {
+#ifdef __WINDOWS__
+    if ( is_socket(s) )
+    { int n = socket_send(SOCK(s->wrfd), p, len);
+
+      if ( n == SOCKET_ERROR )
+      { if ( WSAGetLastError() == WSAEWOULDBLOCK )
+	{ fd_set wfds;		/* see add_socket_to_watch() */
+
+	  FD_ZERO(&wfds);
+	  FD_SET(SOCK(s->wrfd), &wfds);
+	  select(0, NULL, &wfds, NULL, NULL);
+	  continue;
+	}
+	return errorPce(s, NAME_ioError, WinStrError(WSAGetLastError()));
+      }
+      p   += n;
+      len -= n;
+      continue;
+    }
+#endif
+    ssize_t n = write((int)s->wrfd, p, len);
 
     if ( n < 0 )
     { if ( errno == EINTR )
@@ -314,14 +366,24 @@ ws_read_stream_data(Stream s, void *data, int len, Num timeout)
       to.tv_usec = (long)(v * 1000000.0) % 1000000;
 
       FD_ZERO(&readfds);
-      FD_SET(s->rdfd, &readfds);
-      if ( select(s->rdfd+1, &readfds, NULL, NULL, &to) == 0 )
+      FD_SET(SOCK(s->rdfd), &readfds);
+      if ( select((int)s->rdfd+1, &readfds, NULL, NULL, &to) == 0 )
 	return -2;
     }
 #endif
   }
 
-  return read(s->rdfd, data, len);
+#ifdef __WINDOWS__
+  if ( is_socket(s) )
+  { int n = recv(SOCK(s->rdfd), data, len, 0);
+
+    if ( n == SOCKET_ERROR )		/* see add_socket_to_watch() */
+      return WSAGetLastError() == WSAEWOULDBLOCK ? -2 : -1;
+    return n;
+  }
+#endif
+
+  return read((int)s->rdfd, data, len);
 }
 
 /**

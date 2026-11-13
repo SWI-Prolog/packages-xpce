@@ -152,7 +152,12 @@ static void
 releaseWatch(FDWatch *watch)
 {
 #ifdef __WINDOWS__
-  if ( watch->hPipe )
+  if ( watch->is_socket )
+  { if ( watch->fd )
+      WSACloseEvent(watch->fd);	/* closesocket() drops the association */
+    watch->fd = NULL;
+    watch->is_socket = false;
+  } else if ( watch->hPipe )
   { HANDLE h;
     if ( (h=watch->fd) )
     { watch->fd = NULL;
@@ -402,11 +407,21 @@ poll_thread_fn(void *unused)
 	ResetEvent(control_event);
       } else
       { FDWatch *watch = &fd_meta[meta_id[i]];
+	/* Reset before posting: the handler's recv() or accept()
+	   signals again if more is waiting, which we must not lose. */
+	if ( watch->is_socket )
+	  WSAResetEvent(watch->fd);
 	sdl_signal_watch(watch);
       }
     } else
-    { Cprintf("WaitForMultipleObjects(): %s\n",
-	      pp(WinStrError(GetLastError())));
+    { static bool reported = false;	/* do not flood when spinning */
+
+      if ( !reported )
+      { reported = true;
+	Cprintf("WaitForMultipleObjects(): %s\n",
+		pp(WinStrError(GetLastError())));
+      }
+      Sleep(10);
     }
 #else/*!__WINDOWS__*/
     int rc = poll(poll_fds, nfds, -1);
@@ -673,9 +688,25 @@ add_socket_to_watch(socket_t fd, int32_t code, void *userdata)
   { if ( claim_watch(watch) )
     {
 #ifdef __WINDOWS__
-      watch->sock     = fd;
+      /* A socket is not waitable.  Wait for an event that Winsock
+	 signals.  This makes the socket non-blocking. */
+      WSAEVENT ev = WSACreateEvent();
+      long events = (code == FD_READY_STREAM_ACCEPT ? FD_ACCEPT
+						     : FD_READ|FD_CLOSE);
+
+      if ( ev == WSA_INVALID_EVENT )
+      { watch->state = WATCH_FREE;
+	return NULL;
+      }
+      if ( WSAEventSelect(fd, ev, events) != 0 )
+      { WSACloseEvent(ev);
+	watch->state = WATCH_FREE;
+	return NULL;
+      }
+      watch->fd        = ev;
+      watch->is_socket = true;
 #else
-      watch->fd       = fd;
+      watch->fd        = fd;
 #endif
       return start_watch(watch, code, userdata);
     }

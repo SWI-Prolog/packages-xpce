@@ -39,7 +39,7 @@
 
 The sockets of xpce are servers that act on what they are sent, e.g.,
 the PceEmacs server and pce_server/1.  These tests check who can reach
-them.
+them, and that sockets work on all platforms.
 */
 
 :- use_module(library(pce)).
@@ -75,6 +75,100 @@ test(pce_server_localhost,
        Reply == "yes"
      ]) :-
     server_reply(localhost:Port, Reply).
+
+test(echo_lines,
+     [ condition(current_prolog_flag(threads, true)),
+       setup(echo_server(S, Port)),
+       cleanup(free(S)),
+       [Lines, Clients] == [["LINE 1", "LINE 2", "LINE 3"], 0]
+     ]) :-
+    run_client(echo_client(Port, ["line 1", "line 2", "line 3"]), Lines),
+    (   wait_for(get(S?clients, size, 0))	% removed at end of file
+    ->  Clients = 0
+    ;   get(S?clients, size, Clients)
+    ).
+test(client_socket,
+     [ condition(current_prolog_flag(threads, true)),
+       setup(( tcp_socket(L),
+               tcp_bind(L, localhost:Port),
+               tcp_listen(L, 5),
+               thread_create(reply_server(L), Id)
+             )),
+       cleanup(( thread_join(Id, _),
+                 tcp_close_socket(L)
+               )),
+       Got == ["got hello"]
+     ]) :-
+    new(C, socket(tuple(localhost, Port))),
+    nb_setval(socket_got, []),
+    send(C, input_message, message(@prolog, socket_got, @arg1)),
+    send(C, connect),
+    send(C, format, 'hello\n'),
+    wait_for(nb_getval(socket_got, [_])),
+    nb_getval(socket_got, Got),
+    free(C).
+
+%   An xpce server that sends each line back in upper case.
+
+echo_server(S, Port) :-
+    new(S, socket(0)),
+    send(S, input_message, message(@prolog, echo_line, @receiver, @arg1)),
+    send(S, listen),
+    get(S, address, Port).
+
+echo_line(Socket, Line) :-
+    get(Line, value, Text),		% includes the newline
+    upcase_atom(Text, Upper),
+    send(Socket, format, '%s', Upper).
+
+echo_client(Port, Lines, Me) :-
+    setup_call_cleanup(
+        tcp_connect(localhost:Port, Stream, []),
+        ( forall(member(Line, Lines), format(Stream, '~s~n', [Line])),
+          flush_output(Stream),
+          length(Lines, N),
+          length(Replies, N),
+          maplist(read_line_to_string(Stream), Replies)
+        ),
+        close(Stream)),
+    thread_send_message(Me, socket_reply(Replies)).
+
+%   A Prolog server for an xpce client socket.
+
+reply_server(L) :-
+    tcp_accept(L, S, _),
+    tcp_open_socket(S, Stream),
+    call_cleanup(( read_line_to_string(Stream, Line),
+                   format(Stream, 'got ~s~n', [Line]),
+                   flush_output(Stream)
+                 ),
+                 close(Stream)).
+
+socket_got(Line) :-
+    get(Line, value, Text),
+    split_string(Text, "", "\n", [Clean]),
+    nb_getval(socket_got, Got0),
+    append(Got0, [Clean], Got),
+    nb_setval(socket_got, Got).
+
+%   Run Goal in a client thread while we handle the xpce events.
+
+run_client(Goal, Reply) :-
+    thread_self(Me),
+    thread_create(call(Goal, Me), Id),
+    wait_reply(Id),
+    thread_join(Id, Status),
+    Status == true,
+    thread_get_message(Me, socket_reply(Reply), [timeout(0)]).
+
+wait_for(Cond) :-
+    between(1, 500, _),
+    ignore(send(@display, dispatch)),
+    (   call(Cond)
+    ->  !
+    ;   sleep(0.01),
+        fail
+    ).
 
 free_port(Port) :-
     tcp_socket(S),

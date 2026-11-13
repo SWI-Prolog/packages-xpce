@@ -67,7 +67,7 @@ typedef struct
 { _Atomic (watch_state)	state;	/* WATCH_* */
   waitable_t	 fd;		/* FD/HANDLE we are watching */
 #ifdef __WINDOWS__
-  socket_t       sock;		/* socket we are watching */
+  bool		 is_socket;	/* fd is our WSAEventSelect() event */
   HANDLE	 hPipe;		/* Pipe handle */
   OVERLAPPED	 overlapped;	/* ReadFile() overlapped struct */
   size_t	 buffer_size;	/* Size of the buffer */
