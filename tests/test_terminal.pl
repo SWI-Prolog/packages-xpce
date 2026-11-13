@@ -725,6 +725,27 @@ term_report_status(terminal(_, xpce(_, TI)), Text) :-
     get(TI, device, Window),
     send(Window, report, status, Text).
 
+%!  term_report_text(+T, -Text) is semidet.
+%
+%   Text the report bar shows.  Fails if it is not shown.
+
+term_report_text(T, Text) :-
+    term_report_shown(T),
+    T = terminal(_, xpce(_, TI)),
+    get(TI, device, Window),
+    get(Window, member, epilog_report, Bar),
+    get(Bar, member, text, TextObj),
+    get(TextObj?string, value, Text).
+
+%!  term_report_show_links(+Bool) is det.
+%
+%   Set the class variable epilog_report.show_links.
+
+term_report_show_links(Bool) :-
+    get(@pce, convert, epilog_report, class, Class),
+    get(Class, class_variable, show_links, CV),
+    send(CV, value, Bool).
+
 term_report_placement(terminal(_, xpce(_, TI)), Placement) :-
     get(TI, device, Window),
     get(Window, member, epilog_report, Bar),
@@ -6066,6 +6087,77 @@ test(report_bar_can_be_turned_off,
     term_report_placement(T, none),
     term_report_status(T, 'not shown'),
     assertion(\+ term_report_shown(T)).
+
+%  The text of a hyperlink (OSC 8) is chosen by whoever wrote the output
+%  and need not say where the link leads, so the bar says it while the
+%  pointer is on the link.
+
+test(hovering_a_link_shows_where_it_leads,
+     [ condition(needs([mouse])),
+       setup(test_begin(T)),
+       Shown-Hidden == 'https://example.com/target'-true
+     ]) :-
+    link_on_row(T, 2, 'https://example.com/target'),
+    move(T, 2, 2),
+    term_report_text(T, Shown),
+    move(T, 40, 5),
+    (   term_report_shown(T) -> Hidden = false ; Hidden = true ).
+
+test(link_bar_stays_off_the_link,
+     [ condition(needs([mouse])),
+       setup(test_begin(T)),
+       cleanup(( move(T, 40, 5),
+                 term_report_placement(T, smart)
+               )),
+       Sides == [top, bottom]
+     ]) :-
+    term_rows(T, Rows),
+    Last is Rows-1,
+    term_report_placement(T, bottom),
+    link_on_row(T, Last, 'https://example.com/last'),
+    move(T, 2, Last),
+    term_report_side(T, Side1),
+    move(T, 40, 5),
+    term_report_placement(T, top),
+    link_on_row(T, 0, 'https://example.com/first'),
+    move(T, 2, 0),
+    term_report_side(T, Side2),
+    Sides = [Side1, Side2].
+
+test(unopened_link_says_so,
+     [ condition(needs([mouse])),
+       setup(test_begin(T)),
+       cleanup(move(T, 40, 5)),
+       Shown == "ms-msdt:/id x (not opened)"
+     ]) :-
+    \+ predicate_property(epilog:tty_link_hook(_,_), number_of_clauses(_)),
+    link_on_row(T, 2, 'ms-msdt:/id x'),
+    move(T, 2, 2),
+    term_report_text(T, Text),
+    atom_string(Text, Shown).
+
+test(link_feedback_can_be_turned_off,
+     [ condition(needs([mouse])),
+       setup(test_begin(T)),
+       cleanup(( move(T, 40, 5),
+                 term_report_show_links(@on)
+               ))
+     ]) :-
+    term_report_show_links(@off),
+    link_on_row(T, 2, 'https://example.com/off'),
+    move(T, 2, 2),
+    assertion(\+ term_report_shown(T)).
+
+%!  link_on_row(+T, +Row, +URL) is det.
+%
+%   Clear the screen and put a link to URL at column 0 of Row, with the
+%   caret back at the top.
+
+link_on_row(T, Row, URL) :-
+    out(T, '\e[3J\e[H\e[2J'),
+    forall(between(1, Row, _), out(T, '\r\n')),
+    out(T, ['\e]8;;', URL, '\e\\LINK-TEXT\e]8;;\e\\']),
+    out(T, '\e[H').
 
 :- end_tests(terminal_report).
 

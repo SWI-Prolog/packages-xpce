@@ -1438,6 +1438,7 @@ parent_thread(_, main).
 
 event(T, Ev:event) :->
     "Handle popup and drag-and-drop"::
+    link_feedback(T, Ev),
     (   send_super(T, event, Ev)
     ->  (   send(Ev, is_a, activate_keyboard_focus)
         ->  activated(T)
@@ -1451,6 +1452,62 @@ event(T, Ev:event) :->
                           'Drop Prolog source file(s) to consult',
                           epilog_consult_drop)
     ).
+
+%!  link_feedback(+Terminal, +Event) is det.
+%
+%   Tell the report bar over Terminal  which   link  the  pointer is on,
+%   like the status bar of a web browser.  The text of a link and where
+%   it leads need not have anything to do with each other.
+
+link_feedback(T, Ev) :-
+    send(Ev, is_a, loc_move),
+    !,
+    get(Ev, y, T, Y),
+    (   get(T, link, Ev, Link)
+    ->  link_description(T, Link, Description)
+    ;   Description = @nil
+    ),
+    report_bar_link(T, Description, Y).
+link_feedback(T, Ev) :-
+    send(Ev, is_a, area_exit),
+    !,
+    report_bar_link(T, @nil, @nil).
+link_feedback(_, _).
+
+report_bar_link(T, Description, Y) :-
+    get(T, device, W),
+    get(W, member, epilog_report, Bar),
+    !,
+    send(Bar, link, Description, Y).
+report_bar_link(_, _, _).
+
+%!  link_description(+Terminal, +Link, -Description) is det.
+%
+%   What the report bar says about Link: the  file and line for a link
+%   to a file, the URL of a link we open in the browser, and a warning
+%   for anything else, which a click does not open unless a
+%   tty_link_hook/2 takes it.
+
+link_description(PT, Link, Description) :-
+    link_file_location(PT, Link, _File, Location),
+    !,
+    location_text(Location, Description).
+link_description(_PT, Link, Link) :-
+    browser_url(Link),
+    !.
+link_description(_PT, Link, Link) :-
+    predicate_property(tty_link_hook(_,_), number_of_clauses(N)),
+    N > 0,
+    !.
+link_description(_PT, Link, Description) :-
+    format(string(Description), '~w (not opened)', [Link]).
+
+location_text(file(File), File) :- !.
+location_text(File:Line:Column, Text) :-
+    !,
+    format(string(Text), '~w:~w:~w', [File, Line, Column]).
+location_text(File:Line, Text) :-
+    format(string(Text), '~w:~w', [File, Line]).
 
 %!  activated(+Terminal) is det.
 %
@@ -2157,7 +2214,8 @@ pce_preferences:preferences(epilog_window,
                          scroll_on_output, ansi_colours,
                          exact_case, auto_copy, fold_previous
                        ],
-      epilog_report  - [ placement, hide_after, background, colour ],
+      epilog_report  - [ placement, hide_after, show_links,
+                         background, colour ],
       epilog_window  - [ follow_activity ]
     ]).
 
@@ -2887,6 +2945,10 @@ process_prog(Name, Prog) :-
     in ~/.xpce/Defaults we always take the last line, `top' always
     takes the first and with `none' the messages go to the normal XPCE
     reporting instead.
+
+    While the pointer is on a hyperlink the bar says where the link
+    leads, as the status bar of a web browser does.  It then never
+    covers the line with the pointer, whatever the placement.
 */
 
 variable(timer,  timer*,          get, "Hides us again").
@@ -2894,6 +2956,8 @@ variable(client, terminal_image*, both, "Terminal whose search we show").
 variable(placement, {top,bottom,smart,none}, get,
          "Where I appear over the terminal").
 variable(covers,    area*, get, "Terminal area I am placed in").
+variable(link,      name*, get, "Where the link I describe leads").
+variable(link_y,    int*,  get, "Y of the pointer on that link").
 
 %!  .background
 %
@@ -2934,6 +2998,14 @@ class_variable(hide_after,  '0..',  5,        "Seconds a message stays up").
 class_variable(placement,   {top,bottom,smart,none}, smart,
                "Show messages at the top, at the bottom, out of the \c
                 way (`smart') or not at all").
+
+%!  .show_links
+%
+%   If @on (default), show where a hyperlink leads while the pointer is
+%   on it.
+
+class_variable(show_links,  bool, @on,
+               "Show where the hyperlink under the pointer leads").
 
 initialise(R) :->
     send_super(R, initialise),
@@ -3005,11 +3077,34 @@ layout(R) :->
         get(Menu, height, MH),
         send(Menu, set, Width-MW-6, (BH-MH)/2),
         get(R, height, H),
-        (   at_top(R, H)
+        (   link_at_top(R, H)
         ->  send(R, set, X, Y)
         ;   send(R, set, X, Y+Height-H)
         )
     ).
+
+%!  link_at_top(+Report, +BarHeight) is semidet.
+%
+%   As at_top/2, but a bar that describes a link moves to the other
+%   edge if it would cover the line of the pointer.
+
+link_at_top(R, BarHeight) :-
+    get(R, link_y, Y),
+    Y \== @nil,
+    get(R, client, TI),
+    TI \== @nil,
+    !,
+    get(TI, rows, Rows),
+    get(TI, font, Font),
+    get(Font, height, FontHeight),
+    Covered is max(1, ceiling(BarHeight/FontHeight)),
+    Row is floor(Y/FontHeight),
+    (   at_top(R, BarHeight)
+    ->  Row >= Covered
+    ;   Row >= Rows-Covered
+    ).
+link_at_top(R, BarHeight) :-
+    at_top(R, BarHeight).
 
 %!  at_top(+Report, +BarHeight) is semidet.
 %
@@ -3059,6 +3154,33 @@ search_options(R, Case:bool, Word:bool) :->
 
 show(R, _Type:name, Message:string, Transient:[bool]) :->
     "Show Message, and take it away again unless it is a prompt"::
+    send(R, slot, link, @nil),
+    send(R, slot, link_y, @nil),
+    send(R, show_message, Message, Transient).
+
+link(R, Description:name*, Y:int*) :->
+    "Say where the link under the pointer leads; @nil: off a link"::
+    (   (   get(R, class_variable_value, show_links, @off)
+        ;   get(R, placement, none)
+        ;   get(R, client, TI),
+            TI \== @nil,
+            \+ get(TI, focus_function, @nil) % a search owns the bar
+        )
+    ->  true
+    ;   Description == @nil
+    ->  (   get(R, link, @nil)
+        ->  true
+        ;   send(R, hide)
+        )
+    ;   get(R, link, Description)
+    ->  true
+    ;   send(R, slot, link, Description),
+        send(R, slot, link_y, Y),
+        send(R, show_message, Description, @off)
+    ).
+
+show_message(R, Message:char_array, Transient:[bool]) :->
+    "Show Message without asking what it is about"::
     get(R, member, text, Text),
     send(Text, string, Message),
     get(R, member, search_options, Menu),
@@ -3077,6 +3199,8 @@ show(R, _Type:name, Message:string, Transient:[bool]) :->
 hide(R) :->
     "Take the message away"::
     send(R, stop_timer),
+    send(R, slot, link, @nil),
+    send(R, slot, link_y, @nil),
     get(R, member, search_options, Menu),
     send(Menu, displayed, @off),
     send(R, displayed, @off).
