@@ -841,18 +841,14 @@ pceReset(void)
 void
 pceWriteCurrentGoal(void)
 {
-#ifndef O_RUNTIME
   writeGoal(CurrentGoal);
-#endif
 }
 
 
 void
 pceWriteErrorGoal(void)
 {
-#ifndef O_RUNTIME
   writeErrorGoal();
-#endif
 }
 
 		 /*******************************

@@ -400,7 +400,6 @@ getContextNameVariable(Variable v)
 }
 
 
-#ifndef O_RUNTIME
 static Name
 getManIdVariable(Variable v)
 { wchar_t buf[LINESIZE];
@@ -466,7 +465,6 @@ getManSummaryVariable(Variable v)
 
   answer(str);
 }
-#endif /*O_RUNTIME*/
 
 
 static Name
@@ -565,14 +563,12 @@ static getdecl get_variable[] =
      NAME_manual, "Name of context class"),
   GM(NAME_group, 0, "name", NULL, getGroupVariable,
      NAME_manual, "(Possible inherited) group-name"),
-#ifndef O_RUNTIME
   GM(NAME_manId, 0, "name", NULL, getManIdVariable,
      NAME_manual, "Card Id for variable"),
   GM(NAME_manIndicator, 0, "name", NULL, getManIndicatorVariable,
      NAME_manual, "Manual type indicator (`V')"),
   GM(NAME_manSummary, 0, "string", NULL, getManSummaryVariable,
      NAME_manual, "New string with summary"),
-#endif /*O_RUNTIME*/
   GM(NAME_argumentType, 1, "type", "index=[int]", getArgumentTypeVariable,
      NAME_meta, "Type of n-th1 argument if <-access includes `send'"),
   GM(NAME_types, 0, "vector", NULL, getTypesVariable,

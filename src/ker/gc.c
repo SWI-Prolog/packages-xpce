@@ -281,7 +281,6 @@ rewindAnswerStackToBase(void)
   if ( td->answer_stack != &td->answer_stack_base_cell )
   { AnswerMark mark = td->answer_stack_base_cell.index;
 
-#ifndef O_RUNTIME
     if ( DEBUGGING(NAME_gc) )
     { ToCell c;
 
@@ -290,7 +289,6 @@ rewindAnswerStackToBase(void)
       for(c=td->answer_stack; c != &td->answer_stack_base_cell; c=c->next)
 	Cprintf("\t%s\n", pp(c->value));
     }
-#endif
 
     _rewindAnswerStack(&mark, NIL);
   }

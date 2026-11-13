@@ -782,7 +782,6 @@ End;
   Any		init_function;		/* Function to initialise */ \
   Any		alloc_value;		/* Allocate value of variable */
 
-#ifndef O_RUNTIME
 #define ABSTRACT_METHOD \
   ABSTRACT_BEHAVIOUR \
   Name		group;			/* Conceptual group */ \
@@ -791,15 +790,6 @@ End;
   SourceLocation source;		/* Location of def in sources */ \
   Code		message;		/* message implementing method */
 
-#else /*O_RUNTIME*/
-
-#define ABSTRACT_METHOD \
-  ABSTRACT_BEHAVIOUR \
-  Name		group;			/* Conceptual group */ \
-  Vector	types;			/* type checking codes */ \
-  StringObj	summary;		/* Summary of this method */ \
-  Code		message;		/* message implementing method */
-#endif/*O_RUNTIME*/
 
 NewClass(behaviour)
   ABSTRACT_BEHAVIOUR
@@ -1214,10 +1204,8 @@ NewClass(number)
 End;
 
 NewClass(pce)
-#ifndef O_RUNTIME
   BoolObj		debugging;		/* debugging? (watching spy points) */
   BoolObj		trap_errors;		/* Trap tracer on errors */
-#endif
   Name		last_error;		/* Last error occurred */
   Chain		catched_errors;		/* Stack of catched error-id's */
   BoolObj		catch_error_signals;	/* Catch Unix signals */
@@ -1794,14 +1782,10 @@ GLOBAL char    *SaveMagic;		/* Magic string for saved objects */
 GLOBAL int	inBoot;			/* is the system in the boot cycle? */
 GLOBAL uintptr_t allocBase;		/* lowest allocated memory */
 GLOBAL uintptr_t allocTop;		/* highest allocated memory */
-#ifndef O_RUNTIME
 GLOBAL int	PCEdebugging;		/* PCE->debugging == ON */
 GLOBAL int	PCEdebugBoot;		/* Debug booting phase? */
 GLOBAL Chain	PCEdebugSubjects;	/* Names of things we are debugging */
 GLOBAL char    *symbolFile;		/* current symbol file */
-#else
-#define PCEdebugging false
-#endif /*O_RUNTIME*/
 GLOBAL int	PCEargc;		/* main() argument count */
 GLOBAL char   **PCEargv;		/* main() argument vector */
 GLOBAL char    *(*getFunctionNameFromAddress)();
@@ -1944,7 +1928,6 @@ extern char *T_report[];		/* ->report: kind, format, args... */
 				  if (h < 0) y += h+1, h = -h; \
 				}
 
-#ifndef O_RUNTIME
 #define DEBUGGING(subject)	( PCEdebugging && pceDebugging(subject) )
 #define DEBUG(subject, goal)	{ if ( DEBUGGING(subject) ) \
 				  { goal; \
@@ -1955,17 +1938,8 @@ extern char *T_report[];		/* ->report: kind, format, args... */
 				  { goal; \
 				  } \
 				}
-#else /*O_RUNTIME*/
-#define DEBUG(subject, goal)
-#define DEBUG_BOOT(goal)
-#define tracePce(pce, how)
-#endif
 
-#ifndef O_RUNTIME
 #define O_COUNT 0			/* we've had that */
-#else
-#define O_COUNT 0
-#endif
 
 		/********************************
 		*             SYNTAX		*

@@ -113,10 +113,8 @@ initialisePce(Pce pce)
 
   assert( sizeof(string) == 2*sizeof(void*) );
 
-#ifndef O_RUNTIME
   assign(pce, debugging,              OFF);
   assign(pce, trap_errors,	      ON);
-#endif
   assign(pce, catched_errors,	      newObject(ClassChain, EAV));
   assign(pce, catch_error_signals,    OFF);
 
@@ -221,7 +219,6 @@ getOsErrorPce(Pce pce)
 #endif /*HAVE_STRERROR*/
 }
 
-#ifndef O_RUNTIME
 static Chain
 getUnresolvedTypesPce(Pce pce)
 { Chain ch = answerObject(ClassChain, EAV);
@@ -247,7 +244,6 @@ getUnresolvedTypesPce(Pce pce)
 
   answer(ch);
 }
-#endif /*O_RUNTIME*/
 
 
 static status
@@ -374,26 +370,19 @@ run_pce_atexit_hooks(void)
 static BoolObj
 getIsRuntimeSystemPce(Pce pce)
 {
-#ifdef O_RUNTIME
-  answer(ON);
-#else
   answer(OFF);
-#endif
 }
 
 
 static status
 debuggingSubjectPce(Pce pce, Name what)
 {
-#ifndef O_RUNTIME
   if ( PCEdebugging && memberChain(PCEdebugSubjects, what) )
     succeed;
-#endif
   fail;
 }
 
 
-#ifndef O_RUNTIME
 
 static status
 debugSubjectPce(Pce pce, Name what)
@@ -438,7 +427,6 @@ printStackPce(Pce pce, Int depth)
 
   succeed;
 }
-#endif /*O_RUNTIME*/
 
 
 static status
@@ -967,7 +955,6 @@ succeedPce(Pce pce)
 }
 
 
-#ifndef O_RUNTIME
 static status
 benchPce(Pce pce, Message msg, Int count, Name how)
 { int cnt = valInt(count);
@@ -1006,7 +993,6 @@ benchPce(Pce pce, Message msg, Int count, Name how)
 
   succeed;
 }
-#endif /*O_RUNTIME*/
 
 status
 resetPce(Pce pce)
@@ -1019,9 +1005,7 @@ resetPce(Pce pce)
 
   if ( notNil(pce) )
   {
-#ifndef O_RUNTIME
     debuggingPce(pce, OFF);
-#endif
     clearChain(pce->catched_errors);
   }
 
@@ -1182,11 +1166,9 @@ getMultiThreadingPce(Pce pce)
 
 static char *T_instance[] =
         { "class=class", "argument=unchecked ..." };
-#ifndef O_RUNTIME
 static char *T_bench[] =
         { "message=message", "times=int",
 	  "how={forward,execute,qad,send}" };
-#endif /*O_RUNTIME*/
 static char *T_userInfo[] =
         { "field={name,password,user_id,group_id,gecos,home,shell}",
 	  "user=[name]" };
@@ -1207,12 +1189,10 @@ static char *T_syntax[] =
 
 static vardecl var_pce[] =
 {
-#ifndef O_RUNTIME
   SV(NAME_debugging, "bool", IV_GET|IV_STORE, debuggingPce,
      NAME_debugging, "Add consistency checks"),
   SV(NAME_trapErrors, "bool", IV_GET|IV_STORE, trapErrorsPce,
      NAME_debugging, "Trap tracer on errors"),
-#endif
   IV(NAME_lastError, "name*", IV_BOTH,
      NAME_exception, "Id of last occurred error"),
   IV(NAME_catchedErrors, "chain", IV_GET,
@@ -1264,7 +1244,6 @@ static senddecl send_pce[] =
      NAME_debugging, "Write statistics/info to terminal"),
   SM(NAME_maxGoalDepth, 1, "[int]*", maxGoalDepthPce,
      NAME_debugging, "Set maximum recursion level"),
-#ifndef O_RUNTIME
   SM(NAME_listWastedCore, 1, "list_content=[bool]", listWastedCorePce,
      NAME_debugging, "List wasted core map"),
   SM(NAME_nodebugSubject, 1, "subject=name", nodebugSubjectPce,
@@ -1275,7 +1254,6 @@ static senddecl send_pce[] =
      NAME_debugging, "Report internal event on terminal"),
   SM(NAME_bench, 3, T_bench, benchPce,
      NAME_statistics, "Benchmark for message passing"),
-#endif
   SM(NAME_debuggingSubject, 1, "subject=name", debuggingSubjectPce,
      NAME_debugging, "Succeed if we are debugging this subject"),
   SM(NAME_crash, 0, NULL, crashPce,
@@ -1329,10 +1307,8 @@ static getdecl get_pce[] =
      DEFAULT, "Find XPCE's home directory"),
   GM(NAME_convert, 2, "converted=unchecked", T_convert, getConvertPce,
      NAME_conversion, "Convert anything to specified type"),
-#ifndef O_RUNTIME
   GM(NAME_unresolvedTypes, 0, "chain", NULL, getUnresolvedTypesPce,
      NAME_debugging, "New chain with unresolved types"),
-#endif
   GM(NAME_maxGoalDepth, 0, "int*", NULL, getMaxGoalDepthPce,
      NAME_debugging, "Maximum recursion level"),
   GM(NAME_environmentVariable, 1, "value=name", "name=name",
@@ -1478,14 +1454,12 @@ pceInitialise(int handles, const char *home, const char *appdata,
 
   MaxGoalDepth = NO_MAX_GOAL_DEPTH;
 
-#ifndef O_RUNTIME
   PCEdebugging = false;
   if ( getenv("PCEDEBUGBOOT") != NULL )
   { PCEdebugBoot = true;
     DEBUG_BOOT(Cprintf("Debugging boot cycle\n"));
   } else
     PCEdebugBoot = false;
-#endif
 
   PCE = NIL;
   pceReset();				/* reset important globals */
@@ -1647,9 +1621,7 @@ pceInitialise(int handles, const char *home, const char *appdata,
   DEBUG_BOOT(Cprintf("Initialised boot classes\n"));
 
   classTable		= globalObject(NAME_classes,       ClassHashTable, EAV);
-#ifndef O_RUNTIME
   PCEdebugSubjects	= globalObject(NAME_DebugSubjects, ClassChain, EAV);
-#endif
   initDebugger();
 
   TypeTable->class = ClassHashTable;

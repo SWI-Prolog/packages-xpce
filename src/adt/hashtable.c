@@ -233,7 +233,6 @@ convertOldSlotHashTable(HashTable ht, Name slot, Any value)
 }
 
 
-#ifndef O_RUNTIME
 static int
 checkMemberHashTable(const HashTable ht, const Any name, const Any value)
 { int hashkey = hashKey(name, ht->buckets);
@@ -277,7 +276,6 @@ infoHashTable(HashTable ht)
 
   succeed;
 }
-#endif /*O_RUNTIME*/
 
 
 static status
@@ -602,10 +600,8 @@ static senddecl send_hashTable[] =
      NAME_iterate, "Run code on all values; demand acceptance ([safe])"),
   SM(NAME_forSome, 2, T_actionAcode_safeADboolD, forSomeHashTable,
      NAME_iterate, "Run code on all values ([safe])"),
-#ifndef O_RUNTIME
   SM(NAME_info, 0, NULL, infoHashTable,
      NAME_statistics, "Check consistency and print statistics"),
-#endif
 #if O_COUNT
   SM(NAME_printStatistics, 0, NULL, printStatisticsHashTable,
      NAME_statistics, "Print statistics on all tables"),

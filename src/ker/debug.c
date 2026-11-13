@@ -92,7 +92,6 @@ catchErrorSignals(BoolObj yes)
   hostAction(HOST_SIGNAL, SIGFPE,  handler);
 }
 
-#ifndef O_RUNTIME
 
 status
 confirmTerminal(char *question, char *def)
@@ -112,4 +111,3 @@ confirmTerminal(char *question, char *def)
   }
 }
 
-#endif /*O_RUNTIME*/

@@ -70,7 +70,6 @@ isProperGoal(PceGoal g)
   fail;
 }
 
-#ifndef O_RUNTIME
 
 static int
 levelGoal(PceGoal g)
@@ -365,4 +364,3 @@ pcePrintReturnGoal(PceGoal g, status rval)
     writef("\n");
 }
 
-#endif /*O_RUNTIME*/

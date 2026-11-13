@@ -54,9 +54,7 @@ createMethod(Method m, Name name, Vector types, StringObj doc, Func action)
   m->function    = action;
   m->summary	 = NIL;
   m->context     = NIL;
-#ifndef O_RUNTIME
   m->source	 = NIL;
-#endif
   m->dflags      = (uintptr_t) ZERO;
 
   initialiseMethod(m, name, types, NIL, doc, NIL, DEFAULT);
@@ -80,9 +78,7 @@ initialiseMethod(Method m, Name name, Vector types, Code msg, StringObj doc, Sou
   assign(m, group,   group);
   assign(m, message, msg);
   assign(m, summary, doc);
-#ifndef O_RUNTIME
   assign(m, source,  loc);
-#endif
 
   if ( ClassHostMethod && instanceOfObject(msg, ClassHostMethod) )
     setDFlag(m, D_HOSTMETHOD);
@@ -301,7 +297,6 @@ getSummaryMethod(Method m)
 }
 
 
-#ifndef O_RUNTIME
 static Name
 getManIdMethod(Method m)
 { wchar_t buf[LINESIZE];
@@ -388,14 +383,6 @@ getManSummaryMethod(Method m)
   answer(str);
 }
 
-#else
-
-static status
-rtSourceMethod(Method m, SourceLocation src)
-{ succeed;
-}
-
-#endif /*O_RUNTIME*/
 
 
 Method
@@ -455,10 +442,8 @@ static vardecl var_method[] =
      NAME_type, "Argument type specification"),
   IV(NAME_summary, "[string]*", IV_NONE,
      NAME_manual, "Summary documentation"),
-#ifndef O_RUNTIME
   IV(NAME_source, "source_location*", IV_BOTH,
      NAME_manual, "Location of definition in the sources"),
-#endif
   IV(NAME_message, "code|host_method*", IV_BOTH,
      NAME_implementation, "If implemented in PCE: the code object"),
   IV(NAME_function, "alien:Func", IV_NONE,
@@ -470,10 +455,6 @@ static vardecl var_method[] =
 static senddecl send_method[] =
 { SM(NAME_initialise, 6, T_initialise, initialiseMethod,
      DEFAULT, "Create from name, types, code and doc"),
-#ifdef O_RUNTIME
-  SM(NAME_source, 1, "source_location*", rtSourceMethod,
-     NAME_runtime, "Dummy method"),
-#endif /*O_RUNTIME*/
   SM(NAME_types, 1, "[vector]", typesMethod,
      NAME_type, "Set type-check")
 };
@@ -487,14 +468,12 @@ static getdecl get_method[] =
      NAME_manual, "Arrow indicating send- or get-access"),
   GM(NAME_group, 0, "name", NULL, getGroupMethod,
      NAME_manual, "(Possible inherited) group-name"),
-#ifndef O_RUNTIME
   GM(NAME_manId, 0, "name", NULL, getManIdMethod,
      NAME_manual, "Card Id for method"),
   GM(NAME_manIndicator, 0, "name", NULL, getManIndicatorMethod,
      NAME_manual, "Manual type indicator (`M')"),
   GM(NAME_manSummary, 0, "string", NULL, getManSummaryMethod,
      NAME_manual, "New string with documentation summary"),
-#endif /*O_RUNTIME*/
   GM(NAME_argumentCount, 0, "int", NULL, getArgumentCountMethod,
      NAME_meta, "Minimum number of arguments required"),
   GM(NAME_argumentType, 1, "type", "int", getArgumentTypeMethod,

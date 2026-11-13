@@ -104,7 +104,6 @@ displayError(Error e, int argc, Any *argv)
     Cputstr(&s);
     str_unalloc(&s);
 
-#ifndef O_RUNTIME
     if ( e->kind == NAME_fatal ||
 	 e->feedback == NAME_backtrace ||
 	 (e->feedback == NAME_print &&
@@ -122,7 +121,6 @@ displayError(Error e, int argc, Any *argv)
       Cputchar('\007');			/* ^G: ASCII bell */
       debuggingPce(PCE, ON);
     }
-#endif
     Cprintf("]\n");
   }
 
@@ -698,7 +696,6 @@ initErrorDatabase(HashTable db)
 	assert(0);
     }
 
-#ifndef O_RUNTIME
     switch(err->flags & EF_MASK)
     { case EF_THROW:	 feedback = NAME_throw;     break;
       case EF_REPORT:	 feedback = NAME_report;    break;
@@ -707,9 +704,6 @@ initErrorDatabase(HashTable db)
       default:
 	assert(0);
     }
-#else
-    feedback = NAME_report;
-#endif /*O_RUNTIME*/
 
     newObject(ClassError, err->id, CtoString(err->format),
 	      kind, feedback, EAV);

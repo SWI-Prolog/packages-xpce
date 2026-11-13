@@ -650,11 +650,7 @@ status pceExecuteGoal(g)
     function.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#ifdef O_RUNTIME
-#define DEBUGGER(g)
-#else
 #define DEBUGGER(g) if ( PCEdebugging ) g
-#endif
 
 typedef Any (*VAGetFunc0)(Any r, int vaac, Any *vaav);
 typedef Any (*VAGetFunc1)(Any r, Any, int vaac, Any *vaav);

@@ -141,7 +141,6 @@ getCatchAllClassStubv(ClassStub cstub, int argc, Any *argv)
 }
 
 
-#ifndef O_RUNTIME
 
 		/********************************
 		*        MANUAL SUPPORT		*
@@ -163,7 +162,6 @@ getManIndicatorClass(ClassStub cstub)
 { answer(CtoName("C"));
 }
 
-#endif /*O_RUNTIME*/
 
 		 /*******************************
 		 *	 CLASS DECLARATION	*
@@ -209,12 +207,10 @@ static getdecl get_classStub[] =
      NAME_autoload, "Create the actual class"),
   GM(NAME_catchAll, 1, "unchecked", "unchecked ...", getCatchAllClassStubv,
      NAME_delegate, "Convert to class and delegate message to the class"),
-#ifndef O_RUNTIME
   GM(NAME_manId, 0, "name", NULL, getManIdClass,
      NAME_manual, "Card Id for method"),
   GM(NAME_manIndicator, 0, "name", NULL, getManIndicatorClass,
      NAME_manual, "Manual type indicator (`C')"),
-#endif /*O_RUNTIME*/
   GM(NAME_subClasses, 0, "chain", NULL, getSubClassesClassStub,
      NAME_type, "Sub classes (fails if none available)")
 };

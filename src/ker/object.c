@@ -823,7 +823,6 @@ getLockObject(Any obj)
 }
 
 
-#ifndef O_RUNTIME
 status
 inspectObject(Any obj, BoolObj val)
 { if ( val == ON )
@@ -840,7 +839,6 @@ BoolObj
 getInspectObject(Any obj)
 { answer(onFlag(obj, F_INSPECT) ? ON : OFF);
 }
-#endif /*O_RUNTIME*/
 
 
 Name
@@ -2905,14 +2903,10 @@ reportObject(Any obj, Name kind, CharArray fmt, int argc, Any *argv)
 
   if ( !(to = get(obj, NAME_reportTo, EAV)) )
   {
-#ifdef O_RUNTIME
-    to = CurrentDisplay(NIL);
-#else
     if ( PCE->trap_errors == OFF )	/* Separate flag? */
       to = CurrentDisplay(NIL);
     else if ( obj != PCE )
       to = PCE;
-#endif
   }
 
   if ( to && notNil(to) )
@@ -2933,7 +2927,6 @@ reportObject(Any obj, Name kind, CharArray fmt, int argc, Any *argv)
 		*        MANUAL SUPPORT		*
 		********************************/
 
-#ifndef O_RUNTIME
 Name
 getManIdObject(Any obj)
 { Name name;
@@ -2953,7 +2946,6 @@ static Name
 getManIndicatorObject(Any obj)
 { answer(CtoName("O"));
 }
-#endif
 
 
 static CharArray
@@ -3038,10 +3030,8 @@ static senddecl send_object[] =
      NAME_file, "Save object and it's context in a file"),
   SM(NAME_Free, 0, NULL, freeObject,
      NAME_function, "Equivalent to ->free"),
-#ifndef O_RUNTIME
   SM(NAME_Inspect, 1, "bool", inspectObject,
      NAME_function, "Equivalent to ->inspect"),
-#endif
   SM(NAME_InstanceOf, 1, "class", instanceOfObject,
      NAME_function, "Equivalent to ->instance_of"),
   SM(NAME_SameReference, 1, "to=unchecked", sameReferenceObject,
@@ -3114,13 +3104,11 @@ static senddecl send_object[] =
      NAME_type, "Is object of the same class as argument"),
   SM(NAME_updateConstraints, 0, NULL, updateConstraintsObject,
      NAME_constraint, "Execute all constraints")
-#ifndef O_RUNTIME
   ,
   SM(NAME_inspect, 1, "bool", inspectObject,
      NAME_debugging, "Forward changes via classes' changed_messages"),
   SM(NAME_Check, 3, T_check, CheckObject,
      NAME_debugging, "Check types for all instance-variables of object")
-#endif /*O_RUNTIME*/
 };
 
 /* Get Methods */
@@ -3209,7 +3197,6 @@ static getdecl get_object[] =
      NAME_type, "Class the object belongs to"),
   GM(NAME_className, 0, "name", NULL, getClassNameObject,
      NAME_type, "Name of the class the object belongs to")
-#ifndef O_RUNTIME
   ,
   GM(NAME_inspect, 0, "bool", NULL, getInspectObject,
      NAME_debugging, "Boolean to indicate changes forwarding"),
@@ -3221,7 +3208,6 @@ static getdecl get_object[] =
      NAME_manual, "Card Id for global object"),
   GM(NAME_manIndicator, 0, "name", NULL, getManIndicatorObject,
      NAME_manual, "Manual type indicator (`O')")
-#endif /*O_RUNTIME*/
 };
 
 /* Resources */

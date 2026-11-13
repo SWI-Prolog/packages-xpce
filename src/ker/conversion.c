@@ -374,11 +374,9 @@ char *
 pcePP(Any obj)
 { char *s;
 
-#ifndef O_RUNTIME
   int old = PCEdebugging;
 
   PCEdebugging = false;
-#endif
 
   __try
   { s = do_pp(obj);
@@ -388,9 +386,7 @@ pcePP(Any obj)
     s = ppsavestring(tmp);
   }
 
-#ifndef O_RUNTIME
   PCEdebugging = old;
-#endif
 
   return s;
 }
@@ -435,9 +431,7 @@ restore_handler(int sig, struct sigaction *old)
 char *
 pcePP(Any obj)
 { char *s;
-#ifndef O_RUNTIME
   int old = PCEdebugging;
-#endif
   sigsave_t oldsegv;
 #ifdef SIGBUS
   sigsave_t oldbus;
@@ -448,9 +442,7 @@ pcePP(Any obj)
   set_sighandler(SIGBUS, pp_sig, &oldbus);
 #endif
 
-#ifndef O_RUNTIME
   PCEdebugging = false;
-#endif
   if ( setjmp(pp_env) == 0 )
   { s = do_pp(obj);
   } else
@@ -458,9 +450,7 @@ pcePP(Any obj)
     snprintf(tmp, sizeof(tmp), "0x%lx", (unsigned long)obj);
     s = ppsavestring(tmp);
   }
-#ifndef O_RUNTIME
   PCEdebugging = old;
-#endif
 
   restore_handler(SIGSEGV, &oldsegv);
 #ifdef SIGBUS

@@ -38,15 +38,11 @@
 #include <memory.h>
 #endif
 #ifndef ALLOC_DEBUG
-#ifndef O_RUNTIME
 #if defined(_DEBUG) && defined(__WINDOWS__)
 #define ALLOC_DEBUG 2
 #else
 #define ALLOC_DEBUG 0			/* 1 or 2 */
 #endif
-#else
-#define ALLOC_DEBUG 0
-#endif /*O_RUNTIME*/
 #endif /*ALLOC_DEBUG*/
 #include <ker/allocdata.h>
 

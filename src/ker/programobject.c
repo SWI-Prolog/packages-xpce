@@ -54,7 +54,6 @@ initialiseNewSlotProgramObject(ProgramObject obj, Variable var)
 }
 
 
-#ifndef O_RUNTIME
 static unsigned long
 nameToTraceFlag(Name name)
 { if ( name == NAME_enter )
@@ -124,7 +123,6 @@ getBreakProgramObject(ProgramObject obj, Name what)
   answer(onDFlag(obj, flag) ? ON : OFF);
 }
 
-#endif /*O_RUNTIME*/
 
 static status
 systemProgramObject(ProgramObject obj, BoolObj val)
@@ -167,10 +165,8 @@ clearDFlagProgramObject(Any obj, unsigned long mask)
 
 /* Type declaractions */
 
-#ifndef O_RUNTIME
 static char *T_debug[] =
         { "ports=[{full,enter,exit,fail}]", "value=[bool]" };
-#endif
 
 /* Instance Variables */
 
@@ -186,12 +182,10 @@ static senddecl send_programObject[] =
      DEFAULT, "Create program_object"),
   SM(NAME_initialiseNewSlot, 1, "variable", initialiseNewSlotProgramObject,
      NAME_compatibility, "Initialise <-dflags"),
-#ifndef O_RUNTIME
   SM(NAME_break, 2, T_debug, breakProgramObject,
      NAME_debugging, "set/clear break-point on object"),
   SM(NAME_trace, 2, T_debug, traceProgramObject,
      NAME_debugging, "set/clear trace-point on object"),
-#endif /*O_RUNTIME*/
   SM(NAME_system, 1, "bool", systemProgramObject,
      NAME_meta, "System defined object?")
 };
@@ -200,12 +194,10 @@ static senddecl send_programObject[] =
 
 static getdecl get_programObject[] =
 {
-#ifndef O_RUNTIME
   GM(NAME_break, 1, "bool", "port=[{enter,exit,fail}]", getBreakProgramObject,
      NAME_debugging, "Current setting of break-point"),
   GM(NAME_trace, 1, "bool", "port=[{enter,exit,fail}]", getTraceProgramObject,
      NAME_debugging, "Current setting of trace-point"),
-#endif /*O_RUNTIME*/
   GM(NAME_system, 0, "bool", NULL, getSystemProgramObject,
      NAME_meta, "System defined object?")
 };

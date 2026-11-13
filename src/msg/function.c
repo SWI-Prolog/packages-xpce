@@ -168,10 +168,8 @@ static senddecl send_function[] =
      DEFAULT, "Check obtainer instead of result"),
   SM(NAME_Free, 0, NULL, freeObject,
      DEFAULT, "Free obtainer instead of result"),
-#ifndef O_RUNTIME
   SM(NAME_Inspect, 1, "bool", inspectObject,
      DEFAULT, "Inspect obtainer instead of result"),
-#endif
   SM(NAME_InstanceOf, 1, "class", instanceOfObject,
      DEFAULT, "Test class of obtainer instead of result"),
   SM(NAME_convertLoadedObject, 2, T_convertLoadedObject, convertLoadedObjectObject,
@@ -203,12 +201,10 @@ static getdecl get_function[] =
      DEFAULT, "Class name instead of result's"),
   GM(NAME_Flags, 0, "name", NULL, getFlagsObject,
      DEFAULT, "Flags instead of result's"),
-#ifndef O_RUNTIME
   GM(NAME_Inspect, 0, "bool", NULL, getInspectObject,
      DEFAULT, "Inspect instead of result's"),
   GM(NAME_ManId, 0, "name", NULL, getManIdObject,
      DEFAULT, "Manual identifier instead of result's"),
-#endif
   GM(NAME_References, 0, "int", NULL, getReferencesObject,
      DEFAULT, "Reference count instead of result's"),
   GM(NAME_Slot, 1, "any", "name|int", getSlotObject,

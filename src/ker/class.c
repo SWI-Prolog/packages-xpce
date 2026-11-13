@@ -871,15 +871,7 @@ sendMethodClass(Class class, SendMethod m)
 
     if ( old->name == m->name && old != m )
     {
-#ifndef O_RUNTIME
       deleteChain(class->send_methods, old);
-#else
-      if ( onFlag(old, F_TEMPLATE_METHOD) )
-	deleteChain(class->send_methods, old);
-      else
-	return errorPce(getMethodFromFunction(sendMethodClass),
-			NAME_runtimeVersion);
-#endif
       break;
     }
   }
@@ -929,15 +921,7 @@ getMethodClass(Class class, GetMethod m)
 
     if ( old->name == m->name && old != m )
     {
-#ifndef O_RUNTIME
       deleteChain(class->get_methods, old);
-#else
-      if ( onFlag(old, F_TEMPLATE_METHOD) )
-	deleteChain(class->get_methods, old);
-      else
-	return errorPce(getMethodFromFunction(sendMethodClass),
-			NAME_runtimeVersion);
-#endif
       break;
     }
   }
@@ -1294,9 +1278,7 @@ solidClass(Class class, BoolObj val)
 status
 sourceClass(Class class, SendFunc f, char *file)
 {
-#ifndef O_RUNTIME
   assign(class, source, newObject(ClassSourceLocation, CtoName(file), EAV));
-#endif
 
   succeed;
 }
@@ -2061,7 +2043,6 @@ getSuperClassNameClass(Class cl)
   fail;
 }
 
-#ifndef O_RUNTIME
 
 		/********************************
 		*        MANUAL SUPPORT		*
@@ -2169,7 +2150,6 @@ getManSummaryClass(Class cl)
 
   answer(str);
 }
-#endif /*O_RUNTIME*/
 
 
 status
@@ -2521,11 +2501,6 @@ makeClassClass(Class class)
 	     "feature=name", "value=[any]",
 	     "Test if class has feature",
 	     hasFeatureClass);
-#ifdef O_RUNTIME
-  sendMethod(class, NAME_source, NAME_runtime, 1, "source_location*",
-	     "Dummy method",
-	     rtSourceClass);
-#endif
   sendMethod(class, NAME_boundSendMethod, NAME_cache, 1, "name",
 	     "Test if class defines send_method `name'",
 	     boundSendMethodClass);
@@ -2546,7 +2521,6 @@ makeClassClass(Class class)
   getMethod(class, NAME_instanceVariable, NAME_meta, "variable", 1, "name|int",
 	    "Get instance variable from name of offset",
 	    getInstanceVariableClass);
-#ifndef O_RUNTIME
   getMethod(class, NAME_manId, NAME_manual, "name", 0,
 	    "Identifier for the manual (C.<name>)",
 	    getManIdClass),
@@ -2559,7 +2533,6 @@ makeClassClass(Class class)
   getMethod(class, NAME_manSummary, NAME_manual, "string", 0,
 	    "New string with header and summary",
 	    getManSummaryClass);
-#endif
   getMethod(class, NAME_getMethod, NAME_meta, "behaviour", 1, "name",
 	    "Method implementing named get behaviour",
 	    getGetMethodClass);

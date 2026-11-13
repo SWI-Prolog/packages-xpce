@@ -1330,7 +1330,6 @@ sysPce(char *fm, ...)
   Cvprintf(fm, args);
   va_end(args);
 
-#ifndef O_RUNTIME
   Cprintf("\n\tStack:\n");
   pceBackTrace(NULL, 20);
   Cprintf("]\n");
@@ -1350,11 +1349,6 @@ sysPce(char *fm, ...)
 
   hostAction(HOST_HALT);
   exit(1);
-#else /*O_RUNTIME*/
-  hostAction(HOST_RECOVER_FROM_FATAL_ERROR);
-  hostAction(HOST_HALT);
-  exit(1);
-#endif /*O_RUNTIME*/
 
   return PCE_FAIL;
 }
@@ -1424,10 +1418,8 @@ int
 run_pce_exit_hooks(int rval)
 { AtexitEntry h;
 
-#ifndef O_RUNTIME
   assign(PCE, trap_errors, OFF);
   debuggingPce(PCE, OFF);
-#endif
 
   if ( exit_running++ )
     return -1;

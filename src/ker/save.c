@@ -884,9 +884,7 @@ loadExtensionsObject(Instance obj, IOSTREAM *fd)
 Any
 loadObject(IOSTREAM *fd)
 { int c;
-#ifndef O_RUNTIME
   long start = 0;
-#endif
 
   DEBUG(NAME_save, start = Stell(fd));
 
