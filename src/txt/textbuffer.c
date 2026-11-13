@@ -55,7 +55,7 @@ static status store_textbuffer(TextBuffer, intptr_t, uchar_t);
 static status transpose_textbuffer(TextBuffer, intptr_t, intptr_t, intptr_t, intptr_t);
 static status upcase_textbuffer(TextBuffer, intptr_t, intptr_t);
 static status save_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
-static status insert_file_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
+static int insert_file_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
 static status shift_fragments(TextBuffer, intptr_t, intptr_t);
 static void   start_change(TextBuffer, intptr_t);
 static status insert_textbuffer_shift(TextBuffer, intptr_t, intptr_t, PceString, int);

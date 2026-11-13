@@ -192,7 +192,7 @@ __pce_export int   freeHostData(PceHostData hd);
 __pce_export PceObject	pceNew (PceName classname,
 				PceObject assoc,
 				int argc, PceObject *argv);
-__pce_export int	pceSend(PceObject receiver,
+__pce_export bool	pceSend(PceObject receiver,
 				PceName classname,
 				PceName selector,
 				int argc, PceObject * argv);
@@ -263,7 +263,7 @@ typedef struct _pce_goal
 } pce_goal, *PceGoal;
 
 __pce_export int pcePushArgument(PceGoal g, PceObject argument);
-__pce_export int pceResolveImplementation(PceGoal goal);
+__pce_export bool pceResolveImplementation(PceGoal goal);
 __pce_export void pceInitArgumentsGoal(PceGoal goal);
 __pce_export void pceVaAddArgGoal(PceGoal goal, PceObject value);
 __pce_export int  pcePushNamedArgument(PceGoal goal,
@@ -271,13 +271,13 @@ __pce_export int  pcePushNamedArgument(PceGoal goal,
 __pce_export int  pceGetArgumentTypeGoal(PceGoal goal, PceName name,
 					 PceType *type, int *i);
 __pce_export int  pceSetErrorGoal(PceGoal goal, int err, ...);
-__pce_export int  pceExecuteGoal(PceGoal goal);
+__pce_export bool pceExecuteGoal(PceGoal goal);
 __pce_export void pceFreeGoal(PceGoal goal);
 __pce_export void pcePushGoal(PceGoal goal);
 __pce_export void pceTraceBack(PceGoal from, int depth);
 __pce_export void pceReportErrorGoal(PceGoal goal);
 __pce_export void pcePrintEnterGoal(PceGoal goal);
-__pce_export void pcePrintReturnGoal(PceGoal goal, int rval);
+__pce_export void pcePrintReturnGoal(PceGoal goal, bool rval);
 					/* Type logic */
 __pce_export int	pceIncludesType(PceType t, PceType super);
 __pce_export int	pceIncludesHostDataType(PceType t, PceClass hdclass);
@@ -423,7 +423,7 @@ __pce_export int pceSetProfileHooks(pce_profile_hooks *hooks);
 		*         INITIALISATION	*
 		********************************/
 
-__pce_export int pceInitialise(int handles, const char *home, const char *appdata,
+__pce_export bool pceInitialise(int handles, const char *home, const char *appdata,
 			       int argc, char **argv);
 
 
@@ -461,7 +461,7 @@ __pce_export int	pceExistsObject(PceObject);
 __pce_export const char *pceClassNameOfObject(PceObject);
 __pce_export size_t	pceSizeOfObject(PceObject);
 
-__pce_export int	pceInstanceOf(PceObject obj, PceObject class);
+__pce_export bool	pceInstanceOf(PceObject obj, PceObject class);
 
 		/********************************
 		*            EVENTS		*

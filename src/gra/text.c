@@ -47,7 +47,7 @@
 #include <txt/textcursor.h>
 #include <win/displaymgr.h>
 
-static status	initOffsetText(TextObj, int);
+static int	initOffsetText(TextObj, int);
 static status	initPositionText(TextObj);
 static status	initAreaText(TextObj);
 static status	recomputeText(TextObj t, Name what);

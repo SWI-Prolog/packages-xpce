@@ -41,7 +41,7 @@
 
 static void	swap_parents(Node, Node, Chain);
 static int	isSonNode2(Node, Node);
-static int	isParentNode2(Node, Node);
+static status	isParentNode2(Node, Node);
 static status	unrelate_node(Node, Node);
 static status	unlinkParentsNode(Node n);
 static status	unlinkSonsNode(Node n);

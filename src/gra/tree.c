@@ -41,7 +41,7 @@
 #include <gra/graphical.h>
 #include <gra/node.h>
 
-static status	updateHandlesTree(Tree);
+static int	updateHandlesTree(Tree);
 static status	rootTree(Tree t, Node root, BoolObj relink);
 
 

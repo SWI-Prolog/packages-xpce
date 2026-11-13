@@ -43,7 +43,7 @@
 
 forwards int	bestConnectionPoint(Device, Name, int, int,
 				    Graphical, Handle *, int *, int *);
-forwards int	relateConnection(Connection c, Graphical from, Graphical to);
+forwards status	relateConnection(Connection c, Graphical from, Graphical to);
 
 static int	distanceLineToPoint_int(int x1, int y1, int x2, int y2,
 					int px, int py);

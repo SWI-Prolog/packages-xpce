@@ -316,7 +316,7 @@ cpdata(to, from, type, n)
 		 *	    BASIC TYPES		*
 		 *******************************/
 
-typedef int			status;		/* FAIL, SUCCEED */
+typedef bool			status;		/* FAIL, SUCCEED */
 typedef void *			Any;		/* Arbitrary object */
 
 typedef Any			Int;		/* ZERO, ONE, ... */
