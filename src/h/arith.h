@@ -36,12 +36,12 @@
 #ifndef ARITH_H_INCLUDED
 #define ARITH_H_INCLUDED
 
-#define V_ERROR	      (-1)
-#define V_INTEGER      (0)
-#define V_DOUBLE       (1)
+#define NV_ERROR       (-1)
+#define NV_INTEGER     (0)
+#define NV_DOUBLE      (1)
 
 typedef struct
-{ int type;				/* V_INTEGER or V_FLOAT */
+{ int type;				/* NV_INTEGER or NV_DOUBLE */
   union
   { intptr_t	i;			/* integer value */
     double	f;			/* float value */

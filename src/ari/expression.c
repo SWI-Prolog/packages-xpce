@@ -45,13 +45,13 @@ The arithmetic code below is from SWI-Prolog  2.6.0. As the copyright to
 this software is in the same hands, this should be ok.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#define intNumericValue(n) ((n)->type == V_INTEGER)
+#define intNumericValue(n) ((n)->type == NV_INTEGER)
 
 void
 promoteToRealNumericValue(NumericValue n)
 { if ( intNumericValue(n) )
   { n->value.f = (double)n->value.i;
-    n->type = V_DOUBLE;
+    n->type = NV_DOUBLE;
   }
 }
 
@@ -75,14 +75,14 @@ ar_add(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) &&
        !add_overflows(n1->value.i, n2->value.i) )
   { r->value.i = n1->value.i + n2->value.i;
-    r->type = V_INTEGER;
+    r->type = NV_INTEGER;
     succeed;
   }
 
   promoteToRealNumericValue(n1);
   promoteToRealNumericValue(n2);
   r->value.f = n1->value.f + n2->value.f;
-  r->type = V_DOUBLE;
+  r->type = NV_DOUBLE;
 
   succeed;
 }
@@ -93,14 +93,14 @@ ar_minus(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) &&
        !sub_overflows(n1->value.i, n2->value.i) )
   { r->value.i = n1->value.i - n2->value.i;
-    r->type = V_INTEGER;
+    r->type = NV_INTEGER;
     succeed;
   }
 
   promoteToRealNumericValue(n1);
   promoteToRealNumericValue(n2);
   r->value.f = n1->value.f - n2->value.f;
-  r->type = V_DOUBLE;
+  r->type = NV_DOUBLE;
 
   succeed;
 }
@@ -110,7 +110,7 @@ ar_divide(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) )
   { if ( n2->value.i != 0 && n1->value.i % n2->value.i == 0 )
     { r->value.i = n1->value.i / n2->value.i;
-      r->type = V_INTEGER;
+      r->type = NV_INTEGER;
       succeed;
     }
   }
@@ -119,7 +119,7 @@ ar_divide(NumericValue n1, NumericValue n2, NumericValue r)
   promoteToRealNumericValue(n2);
 
   r->value.f = n1->value.f / n2->value.f;
-  r->type = V_DOUBLE;
+  r->type = NV_DOUBLE;
   succeed;
 }
 
@@ -133,7 +133,7 @@ ar_int_divide(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) &&
        !(n1->value.i == INTPTR_MIN && n2->value.i == -1) )
   { r->value.i = n1->value.i / n2->value.i;
-    r->type = V_INTEGER;
+    r->type = NV_INTEGER;
     succeed;
   }
 
@@ -141,7 +141,7 @@ ar_int_divide(NumericValue n1, NumericValue n2, NumericValue r)
   promoteToRealNumericValue(n2);
 
   r->value.f = trunc(n1->value.f / n2->value.f);
-  r->type = V_DOUBLE;
+  r->type = NV_DOUBLE;
   succeed;
 }
 
@@ -153,10 +153,10 @@ ar_times(NumericValue n1, NumericValue n2, NumericValue r)
 
     if ( f > (double)PCE_MIN_INT && f < (double)PCE_MAX_INT )
     { r->value.i = n1->value.i * n2->value.i;	/* cannot overflow */
-      r->type = V_INTEGER;
+      r->type = NV_INTEGER;
     } else
     { r->value.f = f;
-      r->type = V_DOUBLE;
+      r->type = NV_DOUBLE;
     }
     succeed;
   }
@@ -165,7 +165,7 @@ ar_times(NumericValue n1, NumericValue n2, NumericValue r)
   promoteToRealNumericValue(n2);
 
   r->value.f = n1->value.f * n2->value.f;
-  r->type = V_DOUBLE;
+  r->type = NV_DOUBLE;
   succeed;
 }
 
@@ -196,20 +196,20 @@ evaluateExpression(Any e, NumericValue v)
       if ( class == ClassIntDivide )	/* // */
       { if ( intNumericValue(&vr) ? vr.value.i == 0 : vr.value.f == 0.0 )
 	{ errorPce(e, NAME_divisionByZero);
-	  v->type = V_ERROR;
+	  v->type = NV_ERROR;
 	  fail;
 	}
 	return ar_int_divide(&vl, &vr, v);
       }
 
       errorPce(e, NAME_unknownFunction);
-      v->type = V_ERROR;
+      v->type = NV_ERROR;
       fail;
     }
 
     if ( !(e2 = expandFunction(e)) )
     { errorPce(e, NAME_evalFailed);
-      v->type = V_ERROR;
+      v->type = NV_ERROR;
       fail;
     } else
       e = e2;
@@ -220,10 +220,10 @@ evaluateExpression(Any e, NumericValue v)
 
     if ( f == (double)(intptr_t)f )
     { v->value.i = (intptr_t)f;
-      v->type    = V_INTEGER;
+      v->type    = NV_INTEGER;
     } else
     { v->value.f = f;
-      v->type    = V_DOUBLE;
+      v->type    = NV_DOUBLE;
     }
     succeed;
   }
@@ -231,37 +231,37 @@ evaluateExpression(Any e, NumericValue v)
   { Number n = e;
 
     v->value.i = n->value;
-    v->type    = V_INTEGER;
+    v->type    = NV_INTEGER;
     succeed;
   }
   if ( instanceOfObject(e, ClassReal) )	/* real */
   { Real r = e;
 
     v->value.f = valReal(r);
-    v->type    = V_DOUBLE;
+    v->type    = NV_DOUBLE;
     succeed;
   }
   if ( (fval = checkType(e, TypeReal, NIL)) )
   { v->value.f = valReal(fval);
-    v->type    = V_DOUBLE;
+    v->type    = NV_DOUBLE;
     succeed;
   }
 
   errorPce(e, NAME_unexpectedType, TypeExpression);
 
-  v->type = V_ERROR;
+  v->type = NV_ERROR;
   fail;
 }
 
 Any
 ar_result(NumericValue n)
 { switch(n->type)
-  { case V_INTEGER:
+  { case NV_INTEGER:
       if ( n->value.i > PCE_MIN_INT && n->value.i < PCE_MAX_INT )
 	return toInt(n->value.i);
       else
 	return CtoNumber(n->value.i);
-    case V_DOUBLE:
+    case NV_DOUBLE:
       return toNum(n->value.f);
     default:
       fail;
@@ -272,14 +272,14 @@ ar_result(NumericValue n)
 Int
 ar_int_result(Any e, NumericValue n)
 { switch(n->type)
-  { case V_INTEGER:
+  { case NV_INTEGER:
       if ( n->value.i > PCE_MIN_INT && n->value.i < PCE_MAX_INT )
 	return toInt(n->value.i);
       else
       { errorPce(e, NAME_outOfIntRange);
 	fail;
       }
-    case V_DOUBLE:
+    case NV_DOUBLE:
     { if ( n->value.f > (double)PCE_MIN_INT &&
 	   n->value.f < (double)PCE_MAX_INT )
 	return toInt(rfloat(n->value.f));
@@ -581,7 +581,7 @@ getExecuteUnaryExpression(UnaryExpression e)
   if ( !evaluateExpression(e->argument, &v) )
     fail;
 
-  if ( v.type == V_DOUBLE )
+  if ( v.type == NV_DOUBLE )
   { if ( instanceOfObject(e, ClassFloor) )
       v.value.f = floor(v.value.f);
     else				/* half away from zero, as Prolog */

@@ -123,12 +123,12 @@ evaluateEquation(Equation e, Var var, NumericValue result)
 					    var));
   if (inleft + inright == 0)
   { errorPce(e, NAME_noVar, var);
-    result->type = V_ERROR;
+    result->type = NV_ERROR;
     fail;
   }
   if (inleft + inright > 1)
   { errorPce(e, NAME_multipleVar, var);
-    result->type = V_ERROR;
+    result->type = NV_ERROR;
     fail;
   }
   if (inleft == 0)
@@ -140,7 +140,7 @@ evaluateEquation(Equation e, Var var, NumericValue result)
   }
 
   if ( !evaluateExpression(right, &v) )
-  { result->type = V_ERROR;
+  { result->type = NV_ERROR;
     fail;
   }
 
@@ -154,13 +154,13 @@ evaluateEquation(Equation e, Var var, NumericValue result)
       left_class = classOfObject(left);
     else
     { errorPce(left, NAME_unexpectedType, TypeEquation);
-      result->type = V_ERROR;
+      result->type = NV_ERROR;
       fail;
     }
 
     if	( inleft )
     { if ( !evaluateExpression(RIGHTHAND(left), &v2) )
-      { result->type = V_ERROR;
+      { result->type = NV_ERROR;
 	fail;
       }
 
@@ -174,12 +174,12 @@ evaluateEquation(Equation e, Var var, NumericValue result)
 	ar_times(&v, &v2, &vt);
       else
       { errorPce(left, NAME_unexpectedType, TypeEquation);
-	result->type = V_ERROR;
+	result->type = NV_ERROR;
 	fail;
       }
     } else
     { if ( !evaluateExpression(LEFTHAND(left), &v2) )
-      { result->type = V_ERROR;
+      { result->type = NV_ERROR;
 	fail;
       }
 
@@ -193,7 +193,7 @@ evaluateEquation(Equation e, Var var, NumericValue result)
 	ar_times(&v, &v2, &vt);
       else
       { errorPce(left, NAME_unexpectedType, TypeEquation);
-	result->type = V_ERROR;
+	result->type = NV_ERROR;
 	fail;
       }
     }
@@ -247,7 +247,7 @@ ExecuteEquation(Equation e)
 
   if ( evaluateExpression(LEFTHAND(e), &vl) &&
        evaluateExpression(LEFTHAND(e), &vr) )
-  { if ( vl.type == V_INTEGER && vr.type == V_INTEGER )
+  { if ( vl.type == NV_INTEGER && vr.type == NV_INTEGER )
     { if ( vl.value.i == vr.value.i )
 	succeed;
     } else
@@ -325,7 +325,7 @@ ExecuteLess(Equation e)
 
   if ( evaluateExpression(LEFTHAND(e), &vl) &&
        evaluateExpression(RIGHTHAND(e), &vr) )
-  { if ( vl.type == V_INTEGER && vr.type == V_INTEGER )
+  { if ( vl.type == NV_INTEGER && vr.type == NV_INTEGER )
     { if ( vl.value.i < vr.value.i )
 	succeed;
     } else
@@ -345,7 +345,7 @@ ExecuteLessEqual(Equation e)
 
   if ( evaluateExpression(LEFTHAND(e), &vl) &&
        evaluateExpression(RIGHTHAND(e), &vr) )
-  { if ( vl.type == V_INTEGER && vr.type == V_INTEGER )
+  { if ( vl.type == NV_INTEGER && vr.type == NV_INTEGER )
     { if ( vl.value.i <= vr.value.i )
 	succeed;
     } else
@@ -365,7 +365,7 @@ ExecuteGreater(Equation e)
 
   if ( evaluateExpression(LEFTHAND(e), &vl) &&
        evaluateExpression(RIGHTHAND(e), &vr) )
-  { if ( vl.type == V_INTEGER && vr.type == V_INTEGER )
+  { if ( vl.type == NV_INTEGER && vr.type == NV_INTEGER )
     { if ( vl.value.i > vr.value.i )
 	succeed;
     } else
@@ -385,7 +385,7 @@ ExecuteGreaterEqual(Equation e)
 
   if ( evaluateExpression(LEFTHAND(e), &vl) &&
        evaluateExpression(RIGHTHAND(e), &vr) )
-  { if ( vl.type == V_INTEGER && vr.type == V_INTEGER )
+  { if ( vl.type == NV_INTEGER && vr.type == NV_INTEGER )
     { if ( vl.value.i >= vr.value.i )
 	succeed;
     } else
