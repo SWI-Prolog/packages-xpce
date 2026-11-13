@@ -2715,7 +2715,7 @@ getCellsSizeTerminalImage(TerminalImage ti, Int cols, Int rows)
   int w = (valInt(cols)+2)*b->cw;
   int h = valInt(rows)*b->ch + rlc_caret_below_cell(b);
 
-  answer(newObject(ClassSize, toInt(w), toInt(h), EAV));
+  answer(answerObject(ClassSize, toInt(w), toInt(h), EAV));
 }
 
 

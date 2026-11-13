@@ -125,5 +125,22 @@ test(cells_size_gives_the_cells,
     %  A window sized for 25 rows must get 25 rows, not one less for
     %  the room the caret needs below the last.
     with_caret_style(Style, cells(80, Rows0, Cols, Rows)).
+test(cells_size_is_reclaimed,
+     [ setup(new(T, terminal_image)),
+       cleanup(free(T)),
+       Leaked == 0
+     ]) :-
+    %  The size is an answer: a caller that only reads its width and
+    %  height must not leave it behind.
+    live_sizes(Live0),
+    forall(between(1, 10, _),
+           get(T, cells_size, 80, 25, size(_, _))),
+    live_sizes(Live),
+    Leaked is Live - Live0.
+
+live_sizes(Live) :-
+    get(class(size), no_created, Created),
+    get(class(size), no_freed, Freed),
+    Live is Created - Freed.
 
 :- end_tests(terminal_rows).
