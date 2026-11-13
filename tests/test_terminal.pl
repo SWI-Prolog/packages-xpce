@@ -6103,6 +6103,26 @@ test(hovering_a_link_shows_where_it_leads,
     move(T, 40, 5),
     (   term_report_shown(T) -> Hidden = false ; Hidden = true ).
 
+%  The pointer need not move for the link under it to change: output
+%  may replace or scroll away what it is on.
+
+test(link_bar_follows_output,
+     [ condition(needs([mouse])),
+       setup(test_begin(T)),
+       cleanup(move(T, 40, 5)),
+       [First, Second, Gone] == ['https://example.com/first',
+                                 'https://example.com/second',
+                                 gone]
+     ]) :-
+    link_on_row(T, 2, 'https://example.com/first'),
+    move(T, 2, 2),
+    term_report_text(T, First),
+    link_on_row(T, 2, 'https://example.com/second'),
+    term_report_text(T, Second),
+    out(T, '\r\n\r\n\r\n'),       % scroll the link off row 2
+    scrollback(T, 30),
+    (   term_report_shown(T) -> Gone = shown ; Gone = gone ).
+
 test(link_bar_stays_off_the_link,
      [ condition(needs([mouse])),
        setup(test_begin(T)),

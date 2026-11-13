@@ -571,6 +571,8 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   assign(ti, drag_scroll_timer, NIL);
   assign(ti, foreground_timer, NIL);
   assign(ti, auto_links, NIL);
+  assign(ti, hover_message, NIL);
+  assign(ti, hover_link, NIL);
   obtainClassVariablesObject(ti);
   /* The class variables name the variant fonts by alias; they need the
      same pitch check as the ones ->font derives. */
@@ -1198,6 +1200,12 @@ dragScrollTerminalImage(TerminalImage ti)
  * pointer.  Sets *link_changed if the armed link changed, which means
  * its runs must be repainted.  Returns true if the displayed cursor may
  * have changed.
+ *
+ * If the target of the hovered link differs from the one last reported,
+ * ->hover_message is told: @arg1 is the target or @nil, @arg2 the y of
+ * the pointer or @nil.  The target rather than the href is compared:
+ * two links to the same place are one as far as the user is concerned,
+ * and an href may be freed while the pointer is on it.
  */
 
 static bool
@@ -1218,6 +1226,16 @@ rlc_update_hover(TerminalImage ti, bool *link_changed)
   if ( *link_changed )
   { b->armed_href = hr;
     assign(ti, armed_link, hr ? ON : OFF);
+  }
+
+  if ( notNil(ti->hover_message) && !isFreeingObj(ti) )
+  { Name target = hr ? TCHAR2Name(hr->link) : (Name)NIL;
+
+    if ( target != ti->hover_link )
+    { assign(ti, hover_link, target);
+      forwardReceiverCode(ti->hover_message, ti, target,
+			  hr ? (Any)toInt(b->hover_y) : NIL, EAV);
+    }
   }
 
   return was_armed != (isOn(ti->armed_link) || isOn(ti->armed_fold));
@@ -4403,6 +4421,10 @@ static vardecl var_terminal_image[] =
      NAME_event, "Hovering the marker of a fold"),
   IV(NAME_linkMessage, "code*", IV_BOTH,
      NAME_event, "Hovering a link"),
+  IV(NAME_hoverMessage, "code*", IV_BOTH,
+     NAME_event, "Called with the target and y when the hovered link changes"),
+  IV(NAME_hoverLink, "name*", IV_GET,
+     NAME_event, "Target of the link last reported to hover_message"),
   SV(NAME_autoLinks, "chain*", IV_GET|IV_STORE, autoLinksTerminalImage,
      NAME_event, "Patterns that turn the text they match into links"),
   IV(NAME_scrollBar, "scroll_bar*", IV_BOTH,
@@ -7679,7 +7701,8 @@ rlc_request_redraw(RlcData b)
   rlc_update_selection_string(b);
   rlc_autolink_page(b);		/* marks the lines it (un)links changed */
 
-  if ( b->hover_valid || b->armed_href || isOn(ti->armed_fold) )
+  if ( b->hover_valid || b->armed_href || isOn(ti->armed_fold) ||
+       notNil(ti->hover_link) )
   { bool link_changed;			/* the text may have moved under */
     if ( rlc_update_hover(ti, &link_changed) )	/* the pointer */
     { PceWindow sw = getWindowGraphical((Graphical)ti);

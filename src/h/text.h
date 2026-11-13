@@ -319,6 +319,8 @@ NewClass(terminal_image)
   BoolObj	armed_link;		/* Hovering over link */
   BoolObj	armed_fold;		/* Hovering over a fold marker */
   Code		link_message;		/* Handle a clicked link */
+  Code		hover_message;		/* Pointer moved on/off a link */
+  Name		hover_link;		/* Link last reported to it */
   Chain		auto_links;		/* Patterns that make links */
   ScrollBar	scroll_bar;		/* Associated scrollbar */
   Int		save_lines;		/* # saved lines */

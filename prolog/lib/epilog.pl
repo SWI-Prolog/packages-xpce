@@ -729,6 +729,7 @@ initialise(PT) :->
     send(PT, bindings, KB),
     send(PT, name, terminal),
     send(PT, link_message, message(@receiver, open_link, @arg1)),
+    send(PT, hover_message, message(@receiver, link_feedback, @arg1, @arg2)),
     forall(auto_link(Pattern, Target),
            send(PT, auto_link, regex(Pattern), Target)),
     send(PT, popup, new(P, pane_popup)),
@@ -1438,7 +1439,6 @@ parent_thread(_, main).
 
 event(T, Ev:event) :->
     "Handle popup and drag-and-drop"::
-    link_feedback(T, Ev),
     (   send_super(T, event, Ev)
     ->  (   send(Ev, is_a, activate_keyboard_focus)
         ->  activated(T)
@@ -1453,26 +1453,23 @@ event(T, Ev:event) :->
                           epilog_consult_drop)
     ).
 
-%!  link_feedback(+Terminal, +Event) is det.
-%
-%   Tell the report bar over Terminal  which   link  the  pointer is on,
-%   like the status bar of a web browser.  The text of a link and where
-%   it leads need not have anything to do with each other.
+%   `terminal_image ->hover_message` sends ->link_feedback when the
+%   pointer gets on or off a link, which includes output moving another
+%   link, or none, under a pointer that stands still.
 
-link_feedback(T, Ev) :-
-    send(Ev, is_a, loc_move),
-    !,
-    get(Ev, y, T, Y),
-    (   get(T, link, Ev, Link)
-    ->  link_description(T, Link, Description)
-    ;   Description = @nil
+link_feedback(T, Link:name*, Y:int*) :->
+    "Tell the report bar where the link under the pointer leads"::
+    (   Link == @nil
+    ->  Description = @nil
+    ;   link_description(T, Link, Description)
     ),
     report_bar_link(T, Description, Y).
-link_feedback(T, Ev) :-
-    send(Ev, is_a, area_exit),
-    !,
-    report_bar_link(T, @nil, @nil).
-link_feedback(_, _).
+
+%!  report_bar_link(+Terminal, +Description, +Y) is det.
+%
+%   Have the report bar over Terminal say where the link the pointer is
+%   on leads, like the status bar of a web browser.  The text of a link
+%   and where it leads need not have anything to do with each other.
 
 report_bar_link(T, Description, Y) :-
     get(T, device, W),
