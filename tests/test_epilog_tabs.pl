@@ -60,15 +60,45 @@ Run with:
 :- use_module(library(lists), [member/2, memberchk/2, subtract/3]).
 
 test_epilog_tabs :-
-    run_tests([ epilog_main,
-                epilog_thread,
-                epilog_tabs,
-                epilog_split,
-                epilog_move,
-                epilog_close,
-                epilog_label,
-                epilog_focus
-              ]).
+    setup_call_cleanup(
+        use_posix_shell(Old),
+        run_tests([ epilog_main,
+                    epilog_thread,
+                    epilog_tabs,
+                    epilog_split,
+                    epilog_move,
+                    epilog_close,
+                    epilog_label,
+                    epilog_focus
+                  ]),
+        restore_shell(Old)).
+
+%!  use_posix_shell(-Old) is det.
+%!  restore_shell(+Old) is det.
+%
+%   The terminals run the shell of the Prolog flag `shell`, else $SHELL.
+%   The user's shell may read files that change what the tests look
+%   at.  For example, the default ~/.bashrc of Debian and Ubuntu sets
+%   the window title in its prompt.  We therefore run the POSIX shell,
+%   which reads no such files if it is not a login shell.
+
+use_posix_shell(Old) :-
+    (   current_prolog_flag(shell, Old)
+    ->  true
+    ;   Old = (-)
+    ),
+    current_prolog_flag(posix_shell, Shell),
+    create_prolog_flag(shell, Shell, []).
+
+restore_shell(-) :-
+    !,
+    (   getenv('SHELL', Shell)
+    ->  true
+    ;   current_prolog_flag(posix_shell, Shell)
+    ),
+    set_prolog_flag(shell, Shell).
+restore_shell(Old) :-
+    set_prolog_flag(shell, Old).
 
                  /*******************************
                  *            HELPERS           *
