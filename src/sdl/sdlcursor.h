@@ -46,6 +46,7 @@ Name ws_cursor_kind(Name name);
 const char *ws_cursor_summary(Name name);
 status ws_create_cursor(CursorObj c, DisplayObj d);
 void ws_destroy_cursor(CursorObj c, DisplayObj d);
+void ws_destroy_animated_cursors(void);
 
 static inline SDL_Cursor *
 pceCursor2SDL_Cursor(CursorObj c)

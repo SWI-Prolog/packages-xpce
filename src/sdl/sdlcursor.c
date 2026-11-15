@@ -302,6 +302,52 @@ ws_cursor_font_index(Name name)
  */
 
 #if SDL_VERSION_ATLEAST(3, 4, 0)
+/* Cursors with an SDL animated cursor.  If the video driver cannot
+ * animate cursors (e.g., the dummy driver), SDL animates the cursor
+ * using a cursor per frame.  SDL_Quit() then reads freed memory when
+ * it destroys such a cursor together with its frames (SDL 3.4.2-3.4.14
+ * and SDL main of November 2026).  ws_destroy_animated_cursors()
+ * destroys them before SDL_Quit().
+ */
+
+static CursorObj *animated_cursors;
+static int animated_count;
+static int animated_allocated;
+
+static void
+register_animated_cursor(CursorObj c)
+{ if ( animated_count == animated_allocated )
+  { int size = animated_allocated ? animated_allocated*2 : 8;
+    CursorObj *new = SDL_realloc(animated_cursors, size*sizeof(*new));
+
+    if ( !new )
+      return;				/* only a cleanup at halt is lost */
+    animated_cursors = new;
+    animated_allocated = size;
+  }
+  animated_cursors[animated_count++] = c;
+}
+
+static void
+unregister_animated_cursor(CursorObj c)
+{ for(int i=0; i<animated_count; i++)
+  { if ( animated_cursors[i] == c )
+    { animated_cursors[i] = animated_cursors[--animated_count];
+      return;
+    }
+  }
+}
+
+void
+ws_destroy_animated_cursors(void)
+{ while( animated_count > 0 )
+  { CursorObj c = animated_cursors[--animated_count];
+
+    SDL_DestroyCursor(c->ws_ref);
+    c->ws_ref = NULL;
+  }
+}
+
 static SDL_Cursor *
 animated_cursor(CursorObj c, Animation a)
 { int n = valInt(a->frames->size);
@@ -333,6 +379,21 @@ animated_cursor(CursorObj c, Animation a)
 #else
 /* SDL before 3.4 has no animated cursors; use the first frame */
 
+static void
+register_animated_cursor(CursorObj c)
+{ (void)c;
+}
+
+static void
+unregister_animated_cursor(CursorObj c)
+{ (void)c;
+}
+
+void
+ws_destroy_animated_cursors(void)
+{
+}
+
 static SDL_Cursor *
 animated_cursor(CursorObj c, Animation a)
 { SDL_Cursor *cursor = NULL;
@@ -358,7 +419,8 @@ ws_create_cursor(CursorObj c, DisplayObj d)
 { if ( !c->ws_ref )
   { if ( instanceOfObject(c->image, ClassAnimation) )
     { ASSERT_SDL_MAIN();
-      c->ws_ref = animated_cursor(c, (Animation)c->image);
+      if ( (c->ws_ref = animated_cursor(c, (Animation)c->image)) )
+	register_animated_cursor(c);
     } else if ( isNil(c->image) )
     { Int idx = ws_cursor_font_index(c->name);
       assert(idx);
@@ -391,6 +453,7 @@ void
 ws_destroy_cursor(CursorObj c, DisplayObj d)
 { if ( c->ws_ref )
   { ASSERT_SDL_MAIN();
+    unregister_animated_cursor(c);
     SDL_DestroyCursor(c->ws_ref);
     c->ws_ref = NULL;
   }
