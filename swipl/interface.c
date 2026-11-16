@@ -120,21 +120,6 @@ typedef int (*OnExitFunction)(int rc);	/* HOST_ONEXIT function */
 		 *    PROLOG ELEMENTARY TYPES	*
 		 *******************************/
 
-#ifdef SICSTUS
-#include <sicstus/sicstus.h>
-
-typedef unsigned long	atom_t;
-typedef SP_term_ref	term_t;
-typedef int		foreign_t;
-typedef atom_t		Module;
-typedef SP_pred_ref	Predicate;
-typedef SP_term_ref	Fid;
-
-#define AtomFromString(s)	SP_atom_from_string(s)
-#define ModuleFromAtom(a)	((Module) (a))
-#define ModuleName(m)		((atom_t) (m))
-#endif /*SICSTUS*/
-
 #ifdef SWI
 
 typedef record_t	Record;
@@ -221,16 +206,7 @@ static __thread PceObject DefaultContext;	/* Executing context */
 		 *******************************/
 
 static atom_t ATOM_append;		/* "append" */
-static atom_t ATOM_argument;		/* "argument" */
-static atom_t ATOM_argument_count;	/* "argument_count" */
 static atom_t ATOM_assign;		/* ":=" */
-static atom_t ATOM_badIntegerReference;	/* "bad_integer_reference" */
-static atom_t ATOM_badList;		/* "bad_list" */
-static atom_t ATOM_badObjectDescription;	/* "bad_object_description" */
-static atom_t ATOM_badReference;		/* "bad_reference" */
-static atom_t ATOM_badSelector;		/* "bad_selector" */
-static atom_t ATOM_badStringArgument;	/* "bad_string_argument" */
-static atom_t ATOM_behaviour;		/* "behaviour" */
 static atom_t ATOM_context;		/* "context" */
 static atom_t ATOM_default;		/* "default" */
 
@@ -241,28 +217,21 @@ static atom_t ATOM_domain_error;		/* "domain_error" */
 static atom_t ATOM_error;			/* "error" */
 static atom_t ATOM_existence_error;	/* "existence_error" */
 static atom_t ATOM_get;			/* "get" */
-static atom_t ATOM_initialisation;	/* "initialisation" */
 static atom_t ATOM_instantiation_error;	/* "instantiation_error" */
 static atom_t ATOM_io_mode;		/* "io_mode" */
-static atom_t ATOM_module;		/* ":" */
-static atom_t ATOM_named_argument;	/* "named_argument" */
 static atom_t ATOM_named_reference;	/* "named_reference" */
 static atom_t ATOM_new;			/* "new" */
 static atom_t ATOM_object;		/* "object" */
 static atom_t ATOM_open;		/* "open" */
 static atom_t ATOM_pce;			/* "pce" */
 static atom_t ATOM_permission_error;	/* "permission_error" */
-static atom_t ATOM_procedure;		/* "procedure" */
 static atom_t ATOM_read;		/* "read" */
 static atom_t ATOM_ref;			/* "@" */
 static atom_t ATOM_send;		/* "send" */
-static atom_t ATOM_slash;		/* "/" */
 static atom_t ATOM_spy;			/* "spy" */
 static atom_t ATOM_string;		/* "string" */
 static atom_t ATOM_trace;		/* "trace" */
-static atom_t ATOM_true;		/* "true" */
 static atom_t ATOM_type_error;		/* "type_error" */
-static atom_t ATOM_unknownReference;	/* "unknown_reference" */
 static atom_t ATOM_update;		/* "update" */
 static atom_t ATOM_user;		/* "user" */
 static atom_t ATOM_write;		/* "write" */
@@ -275,16 +244,7 @@ static Module MODULE_user;		/* Handle for user-module */
 static void
 initPrologConstants(void)
 { ATOM_append			= AtomFromString("append");
-  ATOM_argument			= AtomFromString("argument");
-  ATOM_argument_count		= AtomFromString("argument_count");
   ATOM_assign			= AtomFromString(":=");
-  ATOM_badIntegerReference	= AtomFromString("bad_integer_reference");
-  ATOM_badList			= AtomFromString("bad_list");
-  ATOM_badObjectDescription	= AtomFromString("bad_object_description");
-  ATOM_badReference		= AtomFromString("bad_reference");
-  ATOM_badSelector		= AtomFromString("bad_selector");
-  ATOM_badStringArgument	= AtomFromString("bad_string_argument");
-  ATOM_behaviour		= AtomFromString("behaviour");
   ATOM_context			= AtomFromString("context");
   ATOM_default			= AtomFromString("default");
 #ifndef ATOM_dot
@@ -294,28 +254,21 @@ initPrologConstants(void)
   ATOM_error			= AtomFromString("error");
   ATOM_existence_error		= AtomFromString("existence_error");
   ATOM_get			= AtomFromString("get");
-  ATOM_initialisation		= AtomFromString("initialisation");
   ATOM_instantiation_error	= AtomFromString("instantiation_error");
   ATOM_io_mode			= AtomFromString("io_mode");
-  ATOM_module			= AtomFromString(":");
-  ATOM_named_argument		= AtomFromString("named_argument");
   ATOM_named_reference		= AtomFromString("named_reference");
   ATOM_new			= AtomFromString("new");
   ATOM_object			= AtomFromString("object");
   ATOM_open			= AtomFromString("open");
   ATOM_pce			= AtomFromString("pce");
   ATOM_permission_error		= AtomFromString("permission_error");
-  ATOM_procedure		= AtomFromString("procedure");
   ATOM_read			= AtomFromString("read");
   ATOM_ref			= AtomFromString("@");
   ATOM_send			= AtomFromString("send");
-  ATOM_slash			= AtomFromString("/");
   ATOM_spy			= AtomFromString("spy");
   ATOM_string			= AtomFromString("string");
   ATOM_trace			= AtomFromString("trace");
-  ATOM_true			= AtomFromString("true");
   ATOM_type_error		= AtomFromString("type_error");
-  ATOM_unknownReference		= AtomFromString("unknown_reference");
   ATOM_update			= AtomFromString("update");
   ATOM_user			= AtomFromString("user");
   ATOM_write			= AtomFromString("write");
@@ -334,8 +287,6 @@ static PceClass		ClassProlog;	/* class(prolog_term, host_data) */
 static PceType		ClassType;	/* class(type) */
 static PceType		TypeProlog;	/* prolog_term|atomic */
 static PceType		TypePrologTerm;	/* type representing above */
-static PceType		TypeInt;	/* Int type */
-static PceType		TypeReal;	/* real type */
 static PceName		NAME_functor;	/* "functor" */
 static PceName		NAME_Arity;	/* "_arity" */
 static PceName		NAME_Arg;	/* "_arg" */
@@ -366,8 +317,6 @@ initPceConstants(void)
   ClassType       = cToPceAssoc("type_class");	/* not so nice! */
   assert(ClassBinding);
 
-  TypeInt	  = cToPceType("int");
-  TypeReal	  = cToPceType("real");
 
   makeClassProlog();
 }
@@ -403,128 +352,6 @@ char_array_type(void)
 
 
 		 /*******************************
-		 *	   SICSTUS GLUE		*
-		 *******************************/
-
-#ifdef SICSTUS
-#define GET_FUNCTOR_BUG 1
-
-#define FUNCTOR_pce1		ATOM_pce, 1
-#define	FUNCTOR_pce2		ATOM_pce, 2
-#define	FUNCTOR_pce3		ATOM_pce, 3
-#define	FUNCTOR_ref1		ATOM_ref, 1
-#define	FUNCTOR_new1		ATOM_new, 1
-#define	FUNCTOR_string1		ATOM_string, 1
-#define	FUNCTOR_module2		ATOM_module, 2
-#define FUNCTOR_namearg		ATOM_assign, 2
-#define FUNCTOR_error2		ATOM_error, 2
-#define FUNCTOR_domain_error2	ATOM_domain_error, 2
-
-#define initHostConstants()
-
-#define AtomCharp(a)		SP_string_from_atom((a))
-#define GetInteger(a, i)	SP_get_integer((a), (i))
-#define GetAtom(a, n)		SP_get_atom((a), (n))
-#define GetFloat(a, f)		SP_get_float((a), (f))
-#define PL_new_term_ref()	SP_new_term_ref()
-#ifdef GET_FUNCTOR_BUG
-#define GetNameArity(t, n, a)	((SP_is_compound(t) || SP_is_atom(t)) && \
-				 SP_get_functor((t), (n), (a)))
-#else
-#define GetNameArity(t, n, a)	SP_get_functor((t), (n), (a))
-#endif
-#define IsVar(t)		SP_is_variable(t)
-#define GetArg(n, t, a)		SP_get_arg((n), (t), (a))
-#define PutFunctor(t, n, a)	SP_put_functor((t), (n), (a))
-#define PL_put_atom_chars(t, s)	SP_put_string((t), (s))
-#define PL_put_integer(t, i)	SP_put_integer((t), (i))
-#define PL_put_float(t, f)	SP_put_float((t), (f))
-#define PL_unify(t1, t2)	SP_unify((t1), (t2))
-#define PL_put_atom(t, a)	SP_put_atom((t), (a))
-#define PutTerm(t, f)		SP_put_term((t), (f))
-#define FindPredicate(n, a, m)	SP_pred(n, a, m)
-#define OpenForeign()		SP_new_term_refs(0)
-#define CloseForeign(fid)	SP_reset_term_refs(fid)
-#define InstallPredicate(n, a, f, flags)
-
-#if defined(__WINDOWS__)
-#define PROLOG_INSTALL_DISPATCH_FUNCTION(f) {}
-#else
-#define PROLOG_INSTALL_DISPATCH_FUNCTION(f) \
-				{ SP_read_hook = f; }
-#endif
-
-#define PROLOG_INSTALL_RESET_FUNCTION(f) \
-				{ SP_set_reinit_hook(f); }
-
-static bool
-GetChars(term_t t, char **s, unsigned int *len)
-{ if ( SP_get_string(t, s) ||
-       SP_get_list_chars(t, s) ||
-       SP_get_number_chars(t, s) )
-  { *len = strlen(*s);
-    return true;
-  }
-
-  return false;
-}
-
-
-#ifndef SWI
-
-static bool
-StripModuleTag(term_t t, atom_t *module, term_t p)
-{ atom_t name;
-  size_t arity;
-  term_t a = PL_new_term_ref();
-
-  PutTerm(p, t);
-
-  while( GetNameArity(p, &name, &arity) &&
-	 name == ATOM_module && arity == 2 )
-  { atom_t m;
-
-    QGetArg(1, p, a);
-    if ( GetAtom(a, &m) )
-    { *module = m;
-      QGetArg(2, p, p);
-    } else
-      break;
-  }
-
-  return true;
-}
-
-#endif /*~SWI*/
-
-static void
-UndefinedPredicate(atom_t pred, int arity, atom_t module)
-{ term_t et = PL_new_term_ref();			/* existence_error(G, 0, ...) */
-  term_t goal = PL_new_term_ref();		/* foo(_, _) */
-  term_t fa = PL_new_term_ref();			/* foo/2 */
-  term_t culprit = PL_new_term_ref();		/* Module:foo/2 */
-  term_t zero = PL_new_term_ref();		/* 0 */
-  term_t id = PL_new_term_ref();			/* procedure */
-  term_t name = PL_new_term_ref();		/* foo */
-  term_t ar = PL_new_term_ref();			/* 2 */
-  term_t m = PL_new_term_ref();			/* Module */
-
-  PutFunctor(goal, pred, arity);
-  PL_put_integer(zero, 0);
-  PL_put_atom(id, ATOM_procedure);
-  PL_put_atom(name, pred);
-  PL_put_atom(m, module);
-  PL_put_integer(ar, arity);
-  PL_cons_functor(fa, ATOM_slash, 2, name, ar);
-  PL_cons_functor(culprit, ATOM_module, 2, m, fa);
-  PL_cons_functor(et, ATOM_existence_error, 5, goal, zero, id, culprit, zero);
-
-  SP_raise_exception(et);
-}
-
-#endif /*SICSTUS*/
-
-		 /*******************************
 		 *	   SWI-Prolog GLUE	*
 		 *******************************/
 
@@ -534,12 +361,10 @@ UndefinedPredicate(atom_t pred, int arity, atom_t module)
 
 static Functor	FUNCTOR_pce1;
 static Functor	FUNCTOR_pce2;
-static Functor	FUNCTOR_pce3;
 static Functor	FUNCTOR_context2;
 static Functor	FUNCTOR_ref1;
 static Functor	FUNCTOR_new1;
 static Functor	FUNCTOR_string1;
-static Functor	FUNCTOR_module2;
 static Functor  FUNCTOR_spy1;
 static Functor  FUNCTOR_trace1;
 static Functor  FUNCTOR_namearg;
@@ -550,7 +375,6 @@ static Functor  FUNCTOR_existence_error2;
 static Functor  FUNCTOR_permission_error3;
 static Functor  FUNCTOR_type_error2;
 static Functor  FUNCTOR_domain_error2;
-static Functor  FUNCTOR_behaviour1;
 static Functor  FUNCTOR_unwind1;
 static predicate_t PREDICATE_send_implementation;
 static predicate_t PREDICATE_get_implementation;
@@ -600,16 +424,13 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 
 static void
 initHostConstants(void)
-{ FUNCTOR_behaviour1        = PL_new_functor(ATOM_behaviour, 1);
-  FUNCTOR_error2	    = PL_new_functor(ATOM_error, 2);
+{ FUNCTOR_error2	    = PL_new_functor(ATOM_error, 2);
   FUNCTOR_existence_error2  = PL_new_functor(ATOM_existence_error, 2);
   FUNCTOR_get2		    = PL_new_functor(ATOM_get, 2);
-  FUNCTOR_module2	    = PL_new_functor(ATOM_module, 2);
   FUNCTOR_namearg	    = PL_new_functor(ATOM_assign, 2);
   FUNCTOR_context2	    = PL_new_functor(ATOM_context, 2);
   FUNCTOR_pce1		    = PL_new_functor(ATOM_pce, 1);
   FUNCTOR_pce2		    = PL_new_functor(ATOM_pce, 2);
-  FUNCTOR_pce3		    = PL_new_functor(ATOM_pce, 3);
   FUNCTOR_permission_error3 = PL_new_functor(ATOM_permission_error, 3);
   FUNCTOR_ref1		    = PL_new_functor(ATOM_ref, 1);
   FUNCTOR_new1		    = PL_new_functor(ATOM_new, 1);
@@ -3620,143 +3441,6 @@ pce_dispatch(IOSTREAM *fd)
 
   return PROLOG_DISPATCH_TIMEOUT;
 }
-
-#ifdef SICSTUS
-
-#ifdef __WINDOWS__
-
-void *
-pl_malloc(unsigned int size)
-{ return SP_malloc(size);
-}
-
-
-void *
-pl_realloc(void *ptr, unsigned int size)
-{ return SP_realloc(ptr, size);
-}
-
-
-void
-pl_free(void *ptr)
-{ SP_free(ptr);
-}
-
-#else /* __WINDOWS__ */
-
-#define pl_malloc SP_malloc
-#define pl_realloc SP_realloc
-#define pl_free SP_free
-
-#endif /*__WINDOWS__*/
-
-
-		 /*******************************
-		 *	    CONSOLE I/O		*
-		 *******************************/
-
-void
-pl_Cvprintf(const char *fmt, va_list args)
-{ char buf[2048];			/* No SP_vprintf() in SICStus */
-  char *s;
-
-  vsprintf(buf, fmt, args);
-  for(s=buf; *s; s++)
-    SP_putc(*s);
-}
-
-
-static int
-pl_Cputchar(int c)
-{ SP_putc(c);
-
-  return c;
-}
-
-
-static void
-pl_Cflush(void)
-{ SP_fflush(SP_stdout);
-}
-
-
-static char *
-pl_Cgetline(char *buf, int size)
-{ int c, n = 0;
-
-  do
-  { c = SP_getc();
-
-    if ( c == EOF )
-      return NULL;
-
-    buf[n++] = c;
-    if ( n == size );
-      return buf;
-  } while ( c != '\n' && c != '\r' );
-
-  return buf;
-}
-
-
-		 /*******************************
-		 *	HOST ACTION/QUERY	*
-		 *******************************/
-
-typedef void (*sighandler_t)(int);
-
-static int
-PrologAction(int action, va_list args)
-{ switch(action)
-  { case HOST_TRACE:
-      SP_action(SP_ACTION_TRACE, NULL);
-      return PCE_SUCCEED;
-    case HOST_HALT:
-      SP_action(SP_ACTION_HALT, NULL);
-      return PCE_FAIL;				/* should not get here */
-    case HOST_BREAK:
-    { SP_pred_ref pred = SP_predicate("break", 0, "user");
-
-      SP_query_cut_fail(pred);
-      return PCE_SUCCEED;
-    }
-    case HOST_ABORT:
-      SP_action(SP_ACTION_ABORT, NULL);
-      return PCE_SUCCEED;
-    case HOST_SIGNAL:
-    { int sig = va_arg(args, int);
-      sighandler_t func = va_arg(args, sighandler_t);
-
-      signal(sig, func);		/* Not clear whether or not to SP_ */
-      return PCE_SUCCEED;
-    }
-    case HOST_RECOVER_FROM_FATAL_ERROR:
-      SP_action(SP_ACTION_ABORT, NULL);
-      return PCE_FAIL;			/* could not abort: failure */
-    case HOST_BACKTRACE:
-    case HOST_ATEXIT:
-    default:
-      return PCE_FAIL;
-  }
-}
-
-
-static int
-PrologQuery(int what, PceCValue *value)
-{ switch(what)
-  {
-#ifdef _CONSOLE_H_INCLUDED		/* Win32 console */
-    case HOST_CONSOLE:
-      if ( (value->pointer = indirect_rlc_hwnd()) )
-	return PCE_SUCCEED;
-      return PCE_FAIL;
-#endif
-    default:
-      return PCE_FAIL;
-  }
-}
-
-#endif /*SICSTUS*/
 
 #ifdef SWI
 
