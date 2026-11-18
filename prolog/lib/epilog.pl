@@ -953,7 +953,7 @@ link_action(PT, Link, open(File), Label) :-
 link_action(_PT, Link, copy(Link), "Copy link").
 
 run_link_action(consult(File), PT) :-
-    send(PT, inject, consult(File), @on, signal).
+    send(PT, inject, consult(File), @on, signal, @off).
 run_link_action(open(File), _PT) :-
     desktop_open(File).
 run_link_action(copy(Link), _PT) :-
@@ -1207,13 +1207,20 @@ prompt_step(PT, Dir) :-
 %  only type it if the toplevel reads the first line of a query.  If
 %  the user started that line, we take it out and put it back when
 %  the toplevel asks for the next query; see prompt_mark/3.
+%
+%  If Debug is @off, the command runs with the debugger switched off
+%  using notrace/1.  This is used for commands the IDE issues on behalf
+%  of the user, such as (re)loading a file, that should not be traced
+%  when the user has put the toplevel in debug or trace mode.
 
-inject(PT, Command:prolog,
-       Now:now=[bool], OnFail:on_fail=[{fail,warning,signal}]) :->
+inject(PT, Command0:prolog,
+       Now:now=[bool], OnFail:on_fail=[{fail,warning,signal}],
+       Debug:debug=[bool]) :->
     "Inject Prolog goal in commandline; if Now, run it now or fail"::
     (   Now == @on
     ->  (   get(PT, input, tuple(TextObj, Tail))
-        ->  (   get(TextObj, size, 0)
+        ->  typed_command(PT, Debug, Command0, Command),
+            (   get(TextObj, size, 0)
             ->  type_command(PT, Command)
             ;   send(PT, clear_input),
                 type_command(PT, Command),
@@ -1221,7 +1228,7 @@ inject(PT, Command:prolog,
             )
         ;   OnFail == warning
         ->  get(PT, frame, Frame),
-            plain_command(Command, Plain),
+            plain_command(Command0, Plain),
             format(string(Cmd), '~q.', [Plain]),
             send(@display, inform, Frame, "SWI-Prolog",
                  "Cannot inject \"%s\" into the console \c
@@ -1232,15 +1239,40 @@ inject(PT, Command:prolog,
             ->  Id = Thread
             ;   thread_property(Thread, id(Id))
             ),
+            signal_command(Debug, Command0, Command),
             thread_signal(Thread, Command),
-            plain_command(Command, Plain),
+            plain_command(Command0, Plain),
             format(string(Cmd), '~q.', [Plain]),
             send(PT, report, status,
                  "Sent %s to thread %s", Cmd, Id)
         ;   fail
         )
-    ;   type_command(PT, Command)
+    ;   typed_command(PT, Debug, Command0, Command),
+        type_command(PT, Command)
     ).
+
+%!  typed_command(+PT, +Debug, +Command0, -Command) is det.
+%!  signal_command(+Debug, +Command0, -Command) is det.
+%
+%   Wrap Command0 in notrace/1 if Debug is @off.  When typing the
+%   command we only do so if the toplevel runs queries in debug or
+%   trace mode, so a plain command remains plain.  A signal may
+%   interrupt traced code, so there we always wrap.
+
+typed_command(PT, @off, Command0, Command) :-
+    terminal_prolog_flag(PT, query_debug_settings,
+                         debug(Debugging, Tracing), debug(false, false)),
+    (   Debugging == true
+    ;   Tracing == true
+    ),
+    !,
+    plain_command(Command0, Plain),
+    Command = notrace(Plain).
+typed_command(_, _, Command, Command).
+
+signal_command(@off, Command, notrace(Command)) :-
+    !.
+signal_command(_, Command, Command).
 
 type_command(PT, Command) :-
     plain_command(Command, Plain),
@@ -1315,7 +1347,7 @@ gui_debug_toggle_command(false, guitracer).
 
 make(PT) :->
     "Inject make/0"::
-    send(PT, inject, make, @on, signal).
+    send(PT, inject, make, @on, signal, @off).
 
 close(PT) :->
     "Close this Prolog shell"::
@@ -2035,7 +2067,7 @@ epilog_consult_drop(Terminal, Paths) :-
     split_dropped_files(Paths, PrologOS, OtherOS),
     (   PrologOS \== []
     ->  prolog_path_list(PrologOS, PrologFiles),
-        send(Terminal, inject, consult(PrologFiles), @on, signal)
+        send(Terminal, inject, consult(PrologFiles), @on, signal, @off)
     ;   OtherOS \== []
     ->  rejection_text(OtherOS, Msg),
         drop_target_show_rejected(Terminal, Msg, 1.5)
@@ -2115,7 +2147,7 @@ consult(PT) :->
         default := CWD,
         allow_many := @on, FileChain),
     chain_list(FileChain, Files),
-    send(PT, inject, consult(Files), @on, signal).
+    send(PT, inject, consult(Files), @on, signal, @off).
 
 edit_file(PT) :->
     "Ask for a file and edit it"::
@@ -3337,10 +3369,11 @@ in_view(Window) :-
           ), _, fail).
 
 inject(F, Command:prolog,
-       Now:now=[bool], OnFail:on_fail=[{fail,warning,signal}]) :->
+       Now:now=[bool], OnFail:on_fail=[{fail,warning,signal}],
+       Debug:debug=[bool]) :->
     "Inject a command into the terminal in view"::
     get(F, current_terminal, Term),
-    send(Term, inject, Command, Now, OnFail).
+    send(Term, inject, Command, Now, OnFail, Debug).
 
 :- pce_end_class.
 

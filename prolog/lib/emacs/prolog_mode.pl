@@ -745,7 +745,7 @@ make(E) :->                             % SWI-Prolog specific
     send(E, close_warning_window),
     send(@emacs, save_some_buffers),
     (   get(@prolog_ide, current_epilog, PT)
-    ->  send(PT, inject, make, @on, signal)
+    ->  send(PT, inject, make, @on, signal, @off)
     ;   make,
         send(E, report, status, 'Make done')
     ).
@@ -771,7 +771,7 @@ emacs_reload_file(_E, ToLoad) :-
     ->  Command = consult(ToLoad)
     ;   Command = make_reload_file(ToLoad)
     ),
-    send(PT, inject, Command, @on, signal).
+    send(PT, inject, Command, @on, signal, @off).
 emacs_reload_file(E, ToLoad) :-
     print_message(silent, emacs(consult(user:ToLoad))),
     make:reload_file(ToLoad),
@@ -1161,7 +1161,7 @@ consult_tmp_file(E, File:file) :->
     send(E, close_warning_window),
     get(File, name, TmpNam),
     (   get(@prolog_ide, current_epilog, PT)
-    ->  send(PT, inject, emacs_consult_and_remove(TmpNam), @on, signal)
+    ->  send(PT, inject, emacs_consult_and_remove(TmpNam), @on, signal, @off)
     ;   consult(user:TmpNam),
         send(E, report, status, 'Region consulted'),
         send(File, remove)
