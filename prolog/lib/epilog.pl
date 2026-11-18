@@ -1240,7 +1240,7 @@ inject(PT, Command0:prolog,
             ;   thread_property(Thread, id(Id))
             ),
             signal_command(Debug, Command0, Command),
-            thread_signal(Thread, Command),
+            thread_signal(Thread, user:Command),
             plain_command(Command0, Plain),
             format(string(Cmd), '~q.', [Plain]),
             send(PT, report, status,
