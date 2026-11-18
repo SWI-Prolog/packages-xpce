@@ -1013,8 +1013,8 @@ CtoEvent(SDL_Event *event)
   { FrameObj fr = event->user.data1;
     if ( !onFlag(fr, F_FREED|F_FREEING) && instanceOfObject(fr, ClassFrame) )
     { WsFrame wfr = fr->ws_ref;
-      if ( wfr )
-      { wfr->flash_end_ms = 0;
+      if ( wfr && wfr->flash_end_ms <= SDL_GetTicks() )
+      { wfr->flash_end_ms = 0;		/* not when a newer flash is running */
 	pceMTLock();
 	ws_draw_frame(fr);
 	pceMTUnlock();

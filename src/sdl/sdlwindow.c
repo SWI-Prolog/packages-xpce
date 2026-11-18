@@ -362,7 +362,9 @@ ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs)
   wfr->flash_rect   = (SDL_FRect){ (ox+x)*scale, (oy+y)*scale,
 				    w*scale,       h*scale };
   wfr->flash_end_ms = SDL_GetTicks() + msecs;
-  SDL_AddTimer(msecs, flash_end_callback, fr);
+  addCodeReference(fr);			/* released by MY_EVENT_FLASH_END */
+  if ( !SDL_AddTimer(msecs, flash_end_callback, fr) )
+    delCodeReference(fr);
   ws_draw_frame(fr);
 }
 

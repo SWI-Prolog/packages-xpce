@@ -1140,17 +1140,13 @@ ws_rendered_image_frame(FrameObj fr)
 
 Uint32 SDLCALL
 flash_end_callback(void *userdata, SDL_TimerID id, Uint32 interval)
-{ FrameObj fr = userdata;
-
-  if ( onFlag(fr, F_FREEING|F_FREED) )
-    return 0;
-
-  SDL_Event ev;
+{ FrameObj fr = userdata;		/* referenced by ws_flash_area_window() */
+  SDL_Event ev;				/* runs in SDL's timer thread: do not */
+					/* touch fr here */
   SDL_zero(ev);
   ev.type       = MY_EVENT_FLASH_END;
   ev.user.data1 = fr;
-  addCodeReference(fr);			/* released by MY_EVENT_FLASH_END handler */
-  SDL_PushEvent(&ev);
+  SDL_PushEvent(&ev);			/* handler releases the reference */
   return 0;				/* one-shot */
 }
 
