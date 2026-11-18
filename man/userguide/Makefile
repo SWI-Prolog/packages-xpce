@@ -13,7 +13,8 @@ RERUN="Rerun to get cross-references right"
 CLHIER=figs/pceclasshierarchy.pdf
 PCEVERSIONFILE=../../VERSION
 PCEVERSION := $(shell cat $(PCEVERSIONFILE))
-DOWNLOADFILE=srv/plweb/data/download/devel/doc/XPCE-userguide-$(PCEVERSION).pdf
+SERIES=devel
+DOWNLOADFILE=srv/plweb/data/download/$(SERIES)/doc/XPCE-userguide-$(PCEVERSION).pdf
 
 COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
 	interface.tex graphics.tex drawing.tex devices.tex pceprolog.tex \
