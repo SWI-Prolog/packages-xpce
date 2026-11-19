@@ -397,11 +397,16 @@ pcePP(Any obj)
 #include <setjmp.h>
 #include <signal.h>
 
-jmp_buf pp_env;
+sigjmp_buf pp_env;
 
 static void
 pp_sig(int sig)
-{ longjmp(pp_env, 1);
+{ sigset_t set;
+
+  sigemptyset(&set);
+  sigaddset(&set, sig);
+  sigprocmask(SIG_UNBLOCK, &set, NULL);
+  siglongjmp(pp_env, 1);
 }
 
 typedef void (*handler_t)(int sig);
@@ -443,7 +448,7 @@ pcePP(Any obj)
 #endif
 
   PCEdebugging = false;
-  if ( setjmp(pp_env) == 0 )
+  if ( sigsetjmp(pp_env, 0) == 0 )
   { s = do_pp(obj);
   } else
   { char tmp[100];
