@@ -111,6 +111,9 @@ void	 processed_fd_watch(FDWatch *watch);
 /* Collect data the watcher thread already read.  Answers 0 at end of
  * file and -1 on error, as read(2) does. */
 ssize_t  read_watch(FDWatch *watch, char *buffer, size_t size);
+#ifndef __WINDOWS__
+void	 watch_clear_eof(FDWatch *watch);
+#endif
 
 #ifdef __WINDOWS__
 FDWatch *add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata);

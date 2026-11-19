@@ -305,6 +305,23 @@ read_watch(FDWatch *watch, char *buffer, size_t size)
 }
 
 
+/* The end of file the watcher saw was not final: the owner of the watch
+ * repaired the fd (see rlc_reclaim_pty()).  Without this read_watch()
+ * keeps answering 0 and the watcher no longer polls the fd.  The
+ * watcher picks the fd up again with the next processed_fd_watch().
+ */
+
+void
+watch_clear_eof(FDWatch *watch)
+{ if ( !watch->inbuf_lock )
+    return;
+
+  SDL_LockMutex(watch->inbuf_lock);
+  watch->inbuf_eof = false;
+  SDL_UnlockMutex(watch->inbuf_lock);
+}
+
+
 /* Is there still buffered data the main thread has not collected? */
 
 static bool

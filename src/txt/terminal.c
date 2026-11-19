@@ -12497,6 +12497,8 @@ rlc_reclaim_pty(RlcData b)
     }
   }
   close(fd);
+  if ( b->pty.watch )			/* the revoke was not the end */
+    watch_clear_eof(b->pty.watch);
 
   DEBUG(NAME_term, Cprintf("%s: reclaimed revoked pty %s\n",
 			   pp(b->object), b->pty.slave_name));

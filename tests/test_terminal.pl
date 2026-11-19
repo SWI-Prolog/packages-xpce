@@ -6380,6 +6380,25 @@ test(terminal_survives_child_leaving_on_eof,
     key(T, enter),
     assertion(wait_until(marker_on_screen(T, 'X = 42'), 30)).
 
+%  The same revoke, from a child of process_create/3 that inherits the
+%  terminal.  This is how pack_upgrade/1 runs git, which closed the
+%  whole application.  The window reconnected the pty on the first end
+%  of file but kept reporting end of file afterwards, so it went down
+%  at the next output: hence the pause before using it again.
+
+test(terminal_survives_process_create_child,
+     [ condition(needs([pty_signals])),
+       setup(test_begin(T))
+     ]) :-
+    term_send(T, 'process_create(path(true), [], [process(P)]), \c
+                  process_wait(P, S), format("CHILD=~w~n", [S]).\n'),
+    assertion(wait_until(marker_on_screen(T, 'CHILD=exit(0)'), 30)),
+    wait_for_prompt(T),
+    wait(1),
+    type(T, 'X is 6*7.'),
+    key(T, enter),
+    assertion(wait_until(marker_on_screen(T, 'X = 42'), 30)).
+
 %  The Prolog thread hands its terminal over for the child and must get
 %  it back: on Windows the console it hands out reads the very pipe the
 %  thread reads.  Run enough children that a stuck one shows up.
