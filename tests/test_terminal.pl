@@ -4359,6 +4359,31 @@ test(edit_wrapped_input_after_resize, [setup(resize_test_begin(T))]) :-
     atomic_list_concat(Trimmed, Joined),
     assertion(Joined == Expected).
 
+test(delete_on_full_first_row, [setup(resize_test_begin(T))]) :-
+    %  Delete a character from the first row of a wrapped input line
+    %  whose first row fills the width exactly (GitHub #1582).  The
+    %  prompt carries the OSC 133 marks, which take a cell in libedit's
+    %  copy of the screen but no column, so that row holds one cell
+    %  more than the width.  libedit cut its copy at the width when
+    %  shifting it for the deletion, lost the last character and wrote
+    %  a stale one when moving the cursor there by rewriting the row:
+    %  "test(),test(),,e" instead of "test(),test(),te".
+    cursor(T, P, R),
+    Text = 'test(),test2(),test3().',
+    type_and_wait(T, Text),
+    TargetCols is P + 16,               % row 1 ends in "test2(),t"
+    resize_cols(T, TargetCols, NewCols),
+    assertion(NewCols == TargetCols),
+    key(T, ctrl_a),
+    drive(0.2),
+    forall(between(1, 12, _), key(T, cursor_right)),
+    key(T, backspace),
+    drive(0.2),
+    rows_of(T, R, 2, [First, Second]),
+    strip_prompt(First, FirstTail),
+    maplist(trim_trailing_spaces, [FirstTail, Second], Trimmed),
+    assertion(Trimmed == ['test(),test(),te', 'st3().']).
+
 test(resize_below_window_scrolls, [setup(resize_test_begin(T))]) :-
     %   Type a long input and then shrink the terminal so the
     %   wrapped input needs more rows than the window holds.  The
