@@ -397,11 +397,11 @@ pcePP(Any obj)
 #include <setjmp.h>
 #include <signal.h>
 
-jmp_buf pp_env;
+static sigjmp_buf pp_env;
 
 static void
 pp_sig(int sig)
-{ longjmp(pp_env, 1);
+{ siglongjmp(pp_env, 1);
 }
 
 typedef void (*handler_t)(int sig);
@@ -415,6 +415,8 @@ set_sighandler(int sig, handler_t func, sigsave_t *old)
 
   memset(&new, 0, sizeof(new));	/* deal with other fields */
   new.sa_handler = func;
+  new.sa_flags   = SA_NODEFER;	/* we leave the handler using */
+				/* siglongjmp(): keep sig unblocked */
 
   sigaction(sig, &new, (struct sigaction *)old);
 /*Cprintf("pcePP: handler = %p, flags = 0x%x\n",
@@ -443,7 +445,7 @@ pcePP(Any obj)
 #endif
 
   PCEdebugging = false;
-  if ( setjmp(pp_env) == 0 )
+  if ( sigsetjmp(pp_env, 0) == 0 )	/* 0: do not save the signal mask */
   { s = do_pp(obj);
   } else
   { char tmp[100];
