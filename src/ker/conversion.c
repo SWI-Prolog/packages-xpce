@@ -397,6 +397,12 @@ pcePP(Any obj)
 #include <setjmp.h>
 #include <signal.h>
 
+#ifndef HAVE_SIGSETJMP			/* sigjmp_buf may be larger */
+#define sigjmp_buf jmp_buf		/* and need other alignment, */
+#define sigsetjmp(env, save) setjmp(env)	/* so use setjmp() with */
+#define siglongjmp(env, val) longjmp(env, val)	/* the matching jmp_buf */
+#endif
+
 static sigjmp_buf pp_env;
 
 static void
