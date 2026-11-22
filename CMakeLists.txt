@@ -168,6 +168,14 @@ endif()
 # build host happens to have a window server.
 set(XPCE_TEST_ENV "SDL_VIDEODRIVER=dummy")
 
+# On little-endian POWER, SDL3's AltiVec code scrambles the bytes when
+# SDL_ConvertSurface() converts XRGB8888, BGRA8888 or XBGR8888 to
+# ARGB8888 (seen with SDL 3.4.20 and upstream main).  That fails the
+# pixel tests (camera, sdl_texture, ...).  Drop this once SDL is fixed.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64le|powerpc64le)$")
+  list(APPEND XPCE_TEST_ENV "SDL_CPU_FEATURE_MASK=-altivec")
+endif()
+
 # And it must not read the Defaults file of whoever is running the tests:
 # a preference of theirs is not a reason for the suite to fail.  See the
 # `xpce_defaults' flag.
