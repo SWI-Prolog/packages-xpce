@@ -34,6 +34,7 @@
 
 #if defined(__linux__) || defined(__GLIBC__) || defined(__GNU__)
 #define _XOPEN_SOURCE 500 /* GNU glibc grantpt() prototypes */
+#define _DEFAULT_SOURCE 1  /* syscall() for close_range() */
 #endif
 #include <h/kernel.h>
 
@@ -84,6 +85,9 @@ reduced to the facility to terminate the inferior process.
 #endif
 #ifdef HAVE_CRT_EXTERNS_H
 #include <crt_externs.h>
+#endif
+#ifdef __linux__
+#include <sys/syscall.h>
 #endif
 
 #ifdef HAVE_TERMIOS_H
@@ -494,6 +498,28 @@ environmentProcess(Process p, Name name, CharArray value)
 		 *	       OPEN		*
 		 *******************************/
 
+/* Close all file descriptors from low upwards in the child.  Closing
+ * them one by one up to getFileDesCount() takes a system call per
+ * possible descriptor.  Containers often set RLIMIT_NOFILE to a million
+ * or more, which made starting a process take seconds on slow machines.
+ */
+
+static void
+close_fds_from(int low)
+{
+#if defined(__linux__) && defined(SYS_close_range)
+  if ( syscall(SYS_close_range, (unsigned int)low, ~0U, 0) == 0 )
+    return;			/* ENOSYS before Linux 5.9 */
+#elif defined(HAVE_CLOSEFROM)
+  closefrom(low);
+  return;
+#endif
+
+  int maxfd = getFileDesCount();
+  for(int i=low; i < maxfd; i++)
+    close(i);
+}
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Solaris stuff with many thanks to Andrew Chittenden, ADT
 (asc@concurrent.co.uk)
@@ -540,11 +566,6 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
       if ( (pid = fork()) == 0 )	/* child process */
       { int i, argc;
 	char **argv;
-	int maxfd = getFileDesCount();
-
-#ifdef stderr
-	DEBUG(NAME_process, fprintf(stderr, "Child: maxfd = %d\n", maxfd));
-#endif
 
 	if ( notDefault(p->directory) )
 	  cdDirectory(p->directory);
@@ -594,8 +615,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 	    dup2(slave, i);
 	}
 
-	for(i=3; i < maxfd; i++)	/* close remaining open fd's */
-	  close(i);
+	close_fds_from(3);		/* close remaining open fd's */
 
 #ifdef TIOCSCTTY
 	ioctl(0, TIOCSCTTY, NULL);
@@ -651,16 +671,15 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 	  cdDirectory(p->directory);
 	initEnvironment(p);
 
-	for(i = getFileDesCount()-1; i >= 0; i--)
-	{ if ( i != wrfd[0] && i != rdfd[1] )
-	    close(i);
-	}
+	/* Move our ends above 2 first: if stdin was closed, one of
+	   them may be 0, 1 or 2 and dup2() would overwrite it. */
+	int in  = fcntl(wrfd[0], F_DUPFD, 3);
+	int out = fcntl(rdfd[1], F_DUPFD, 3);
 
-	dup2(wrfd[0], 0);
-	dup2(rdfd[1], 1);
-	dup2(rdfd[1], 2);
-	close(wrfd[0]);
-	close(rdfd[1]);
+	dup2(in, 0);
+	dup2(out, 1);
+	dup2(out, 2);
+	close_fds_from(3);
 
 	argv = (char **)alloca(sizeof(char *) *
 			       (valInt(p->arguments->size) + 2));

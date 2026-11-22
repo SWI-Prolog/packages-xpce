@@ -31,4 +31,5 @@ check_struct_has_member("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
 check_struct_has_member("struct termios" c_line termios.h TERMIOS_HAS_C_LINE)
 # sigsetjmp() is a macro in glibc
 check_symbol_exists(sigsetjmp setjmp.h HAVE_SIGSETJMP)
+check_symbol_exists(closefrom unistd.h HAVE_CLOSEFROM)
 
