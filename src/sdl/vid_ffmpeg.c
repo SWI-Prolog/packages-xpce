@@ -506,6 +506,27 @@ frame_to_samples(vb_reader *r, const AVFrame *f, vb_samples *out,
 }
 
 
+/* FFmpeg 9 ends an HTTP body without a length, such as a chunked
+ * response, with AVERROR(EIO) rather than AVERROR_EOF.  We cannot
+ * tell this from a dropped connection, which older versions ended
+ * with AVERROR_EOF as well.  Custom I/O is excluded: there EIO is a
+ * read error of the Prolog stream.
+ */
+
+static bool
+end_of_stream(const vb_reader *r, int rc)
+{ if ( rc == AVERROR_EOF )
+    return true;
+  if ( rc == AVERROR(EIO) && !r->avio && r->fmt->pb )
+  { const AVIOContext *pb = r->fmt->pb;
+
+    return pb->eof_reached && !(pb->seekable & AVIO_SEEKABLE_NORMAL);
+  }
+
+  return false;
+}
+
+
 vb_status
 vb_read(vb_reader *r, SDL_Surface **frame, vb_samples *samples,
 	double *pts, char *errmsg)
@@ -554,7 +575,7 @@ vb_read(vb_reader *r, SDL_Surface **frame, vb_samples *samples,
       return VB_EOF;
 
     rc = av_read_frame(r->fmt, r->pkt);
-    if ( rc == AVERROR_EOF )
+    if ( end_of_stream(r, rc) )
     { r->eof = true;
       avcodec_send_packet(r->dec, NULL); /* flush the decoders */
       if ( r->adec )
