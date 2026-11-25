@@ -60,7 +60,9 @@
 :- autoload(library(atom), [restyle_identifier/3]).
 :- autoload(library(edit), [edit/1]).
 :- autoload(library(lists),
-            [append/3, append/2, member/2, reverse/2, last/2, list_to_set/2]).
+            [ append/3, append/2, member/2, reverse/2, last/2, list_to_set/2,
+              subtract/3
+            ]).
 :- autoload(library(portray_object), [portray_object/2]).
 :- autoload(library(pce_class_variable_editor),
             [save_class_variable/3, user_defaults_file/1]).
@@ -2035,7 +2037,9 @@ not_typed(recogniser).
 %   Classes are the classes whose methods implement the functions on
 %   Target: its class and the classes it forwards or delegates to with
 %   their super classes, up to class graphical, whose methods are not
-%   meant for keys.
+%   meant for keys.  Delegation is followed through the objects it
+%   reaches: a PceEmacs mode delegates to its editor, which delegates
+%   to its text buffer.
 
 target_classes(Target, Classes) :-
     target_class(Target, Class),
@@ -2046,18 +2050,36 @@ target_classes(Target, Classes) :-
     ),
     (   send(Target, instance_of, class)
     ->  Delegated = []
-    ;   get(Class, delegate, Vars),
-        chain_list(Vars, VarList),
-        convlist(delegate_classes(Target), VarList, Delegated)
+    ;   delegated_objects([Target], [Target], Objects),
+        maplist(object_classes, Objects, Delegated)
     ),
     append([Own, Forwarded|Delegated], Classes0),
     list_to_set(Classes0, Classes).
 
-delegate_classes(Target, Var, Classes) :-
+%   delegated_objects(+Agenda, +Seen, -Objects)
+%
+%   Objects are the objects the objects of Agenda delegate to, directly
+%   or through others, without those of Seen.
+
+delegated_objects([], _, []).
+delegated_objects([Obj|Agenda0], Seen0, Objects) :-
+    get(Obj?class, delegate, Vars),
+    chain_list(Vars, VarList),
+    convlist(delegate_object(Obj), VarList, Delegates0),
+    subtract(Delegates0, Seen0, Delegates1),
+    list_to_set(Delegates1, Delegates),
+    append(Seen0, Delegates, Seen),
+    append(Agenda0, Delegates, Agenda),
+    append(Delegates, Objects1, Objects),
+    delegated_objects(Agenda, Seen, Objects1).
+
+delegate_object(Obj, Var, Object) :-
     get(Var, name, Name),
-    get(Target, Name, Object),
+    get(Obj, Name, Object),
     object(Object),
-    Object \= @nil,
+    Object \= @nil.
+
+object_classes(Object, Classes) :-
     get(Object, class, Class),
     super_classes(Class, Classes).
 
