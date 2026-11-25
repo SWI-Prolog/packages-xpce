@@ -46,9 +46,11 @@
 :- require([ auto_call/1,
              chain_list/2,
              default/3,
+             foldl/4,
              ignore/1,
              member/2,
-             pce_define_type/2
+             pce_define_type/2,
+             reverse/2
            ]).
 
 :- emacs_begin_mode(language, fundamental,
@@ -61,6 +63,8 @@
           insert_section_comment        = key('\\C-c\\C-h'),
           insert_long_comment           = key('\\C-c\\C-q'),
           insert_line_comment           = key('\\e;'),
+          comment_set_column            = key('\\C-x;'),
+          comment_line                  = key('\\C-x\\C-;'),
           close_block_comment           = key('/'),
           find_tag                      = key('\\e.') + button(browse),
           xref_go_back		= key('\\e,'),
@@ -71,13 +75,19 @@
           goto_prev_error               = key('\\egp'),
 
                                         % Commands for M-x
+          align_comment                 = command,
+          align_current                 = command,
+          align_regexp                  = command,
+          align_region                  = command,
           align_with_previous_line      = command,
           beginning_of_text_on_line     = command,
           comment_region                = command,
+          kill_comment                  = command,
           prolog_manual                 = command,
           restyle_word                  = command,
           show_caret_line               = command,
           show_line_numbers             = command,
+          tabularise                    = command,
           visit_tag_table               = command,
           what_syntax                   = command
         ],
@@ -136,10 +146,15 @@ setup_mode(E) :->
 line_comment(E, CS:name) :<-
     "Fetch the line-comment start sequence"::
     get(E, syntax, Syntax),
-    member(CSlen, [1, 2]),
-    get(Syntax, comment_start, CSlen, CS),
-    get(Syntax, comment_end, CSlen, CE),
-    send(CE, equal, '\n').
+    (   get(Syntax, line_comment, CS),
+        CS \== @nil
+    ->  true
+    ;   member(CSlen, [1, 2]),
+        get(Syntax, comment_start, CSlen, CS),
+        get(Syntax, comment_end, CSlen, CE),
+        send(CE, equal, '\n')
+    ->  true
+    ).
 
 line_comment_column_in_context(E) :->
     get(E, line_comment_column_in_context, Col),
@@ -177,14 +192,19 @@ line_comment_column_in_context(E, Col:int) :<-
     get(E, column, SCM, Col).
 
 insert_line_comment(E, Arg:[int]) :->
-    "Insert (line) comment"::
+    "Insert (line) comment; C-u: kill it"::
+    (   Arg == 4
+    ->  send(E, kill_comment)
+    ;   insert_line_comment(E, Arg)
+    ).
+
+insert_line_comment(E, Arg) :-
     member(CSlen, [1, 2]),
     get(E?syntax, comment_start, CSlen, CS),
     !,
     get(E, caret, Caret),
     get(E, text_buffer, TB),
     get(TB, scan, Caret, line, 0, start, SOL),
-    get(TB, scan, Caret, line, 0, end,   EOL),
     (   integer(Arg), Arg > 4
     ->  CC = Arg
     ;   Arg == @default,
@@ -193,7 +213,7 @@ insert_line_comment(E, Arg:[int]) :->
     ->  true
     ;   get(E, comment_column, CC)
     ),
-    (   get(regex(?(regex(''), quote, CS)), search, TB, SOL, EOL, Start)
+    (   line_comment_in_code(E, SOL, CS, Start)
     ->  send(E, caret, Start),
         send(E, align, CC),
         send(E, forward_char, CSlen + 1)
@@ -216,6 +236,22 @@ comment_region(E) :->
     get(E, text_buffer, TB),
     get(TB, scan, Start, line, 0, start, S0),
     comment_lines(TB, S0, End, Comment).
+
+comment_line(E, Times:[int]) :->
+    "Toggle-Comment the lines of an active region or Times lines"::
+    (   \+ get(E, mark_status, inactive),
+        get(E, region, _)
+    ->  send(E, comment_region)
+    ;   default(Times, 1, N),
+        get(E, line_comment, Comment),
+        get(E, caret, Caret),
+        get(E, text_buffer, TB),
+        get(TB, scan, Caret, line, 0, start, SOL),
+        get(TB, scan, SOL, line, N, start, End),
+        comment_lines(TB, SOL, max(End, SOL+1), Comment),
+        get(TB, scan, SOL, line, N, start, Next),
+        send(E, caret, Next)
+    ).
 
 comment_lines(_TB, S0, End, _Comment) :-
     S0 >= End,
@@ -698,6 +734,371 @@ align_close_bracket(E, Times:[int], Id:[event_id]) :->
         Caret =:= P0+1
     ->  send(E, indent_line),
         send(E, forward_char)
+    ;   true
+    ).
+
+
+                 /*******************************
+                 *             ALIGN            *
+                 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Alignment, after GNU Emacs' align.el and newcomment.el:
+
+  - align_region is `M-x align` and align_current `M-x align-current`.
+    The lines between blank lines form sections that are aligned
+    independently using ->align_section.  That aligns the columns that
+    the mode defines using <-align_context and <-align_group (none by
+    default) and the comments after the code.  This command cannot be
+    called `align`, as that would hide editor->align.  tabularise is an
+    alias.
+  - align_regexp is `M-x align-regexp`.  Without a prefix argument it
+    asks for a regex and aligns its first match on each line, changing
+    the white space before it.  With a prefix argument the regex holds
+    the group to change itself, and the command asks for the group, the
+    minimal spacing and whether to align all matches on the line.
+  - align_comment aligns the line comments after the code of the region
+    on one column: comment_column, or right of the longest code.
+  - comment_set_column (C-x ;) and kill_comment, the latter also as
+    C-u M-;
+
+Columns are rounded up to a tab stop if the buffer indents using tabs,
+as Emacs' `align-to-tab-stop` does by default.  Matches and comment
+starts inside a string or comment are ignored.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+:- pce_group(align).
+
+align_region(M, From:[int], To:[int]) :->
+    "Align the region (Emacs M-x align)"::
+    get(M, line_region, From, To, tuple(S, E)),
+    align_sections(M, S, E).
+
+align_current(M) :->
+    "Align the section (lines between blank lines) holding the caret"::
+    get(M, caret, Caret),
+    section(M, Caret, S, E),
+    send(M, align_section, S, E).
+
+tabularise(M, From:[int], To:[int]) :->
+    "Align the region (alias for ->align_region)"::
+    send(M, align_region, From, To).
+
+%   Align the sections of S..E, the last first, so aligning one does
+%   not move the others.
+
+align_sections(M, S, E) :-
+    findall(SS-SE, region_section(M, S, E, SS, SE), Sections),
+    reverse(Sections, Rev),
+    forall(member(SS-SE, Rev), send(M, align_section, SS, SE)).
+
+region_section(M, S, E, SS, SE) :-
+    S < E,
+    get(M, text_buffer, TB),
+    (   section_separator(TB, S)
+    ->  get(TB, scan, S, line, 1, start, S1),
+        S1 > S,
+        region_section(M, S1, E, SS, SE)
+    ;   section_end(TB, S, E, SE0),
+        (   SS = S, SE = SE0
+        ;   region_section(M, SE0, E, SS, SE)
+        )
+    ).
+
+section_end(TB, S, E, SE) :-
+    get(TB, scan, S, line, 1, start, Next),
+    (   Next >= E
+    ->  SE = E
+    ;   Next =< S
+    ->  SE = E
+    ;   section_separator(TB, Next)
+    ->  SE = Next
+    ;   section_end(TB, Next, E, SE)
+    ).
+
+%!  section_separator(+TB, +SOL) is semidet.
+%
+%   The line at SOL separates sections, as Emacs' align-region-separate:
+%   it is blank, but for an optional brace.
+
+section_separator(TB, SOL) :-
+    get(TB, scan, SOL, line, 0, end, EOL),
+    get(TB, contents, SOL, EOL-SOL, Line),
+    get(Line, value, Text),
+    split_string(Text, "", " \t", [Rest]),
+    memberchk(Rest, ["", "{", "}"]).
+
+%!  section(+M, +Pos, -S, -E) is semidet.
+%
+%   S..E are the lines between section separators around Pos.
+
+section(M, Pos, S, E) :-
+    get(M, text_buffer, TB),
+    get(TB, scan, Pos, line, 0, start, SOL),
+    \+ section_separator(TB, SOL),
+    section_start(TB, SOL, S),
+    get(TB, size, Size),
+    section_end(TB, SOL, Size, E).
+
+section_start(TB, SOL, S) :-
+    (   SOL > 0,
+        get(TB, scan, SOL, line, -1, start, Prev),
+        Prev < SOL,
+        \+ section_separator(TB, Prev)
+    ->  section_start(TB, Prev, S)
+    ;   S = SOL
+    ).
+
+align_section(M, S:int, E:int) :->
+    "Align the lines S..E: columns (see <-align_context) and comments"::
+    (   get(M, align_context, S, E, Ctx)
+    ->  get(M, text_buffer, TB),
+        get(TB, count_lines, S, E, Lines),
+        align_columns(M, 1, S, Lines, mode_group(M, Ctx), 1, @on)
+    ;   true
+    ),
+    (   get(M, line_comment, _)
+    ->  send(M, align_comment, S, E)
+    ;   true
+    ).
+
+align_context(_M, _S:int, _E:int, _Ctx:any) :<-
+    "Context for <-align_group to align the columns of S..E"::
+    fail.
+
+align_group(_M, _Ctx:any, _SOL:int, _EOL:int, _N:int, _Group:tuple) :<-
+    "White space GS..GE before column N of the line SOL..EOL"::
+    fail.
+
+align_regexp(M, Arg:[int], Regexp:regexp=name) :->
+    "Align the first match of a regex on each line of the region"::
+    (   Arg == @default
+    ->  format(string(ReS), '(\\s*)~w', [Regexp]),
+        Group = 1,
+        Spacing = 1,
+        Repeat = @off
+    ;   ReS = Regexp,
+        get(M, window, W),
+        get(W, prompt, 'Parenthesis group to modify', 1, int, Group),
+        get(W, prompt, 'Amount of spacing', 1, int, Spacing),
+        get(W, prompt, 'Repeat for entire line', @off, bool, Repeat)
+    ),
+    get(M, region, tuple(From, To)),
+    send(M, align_regexp_region, From, To, regex(ReS),
+         Group, Spacing, Repeat).
+
+align_regexp_region(M, From:int, To:int, Re:regex,
+                    Group:[int], Spacing:[int], Repeat:[bool]) :->
+    "Align group Group of matches of Re in the lines From..To"::
+    default(Group, 1, G),
+    default(Spacing, 1, Sp),
+    default(Repeat, @off, Rep),
+    (   G < 1
+    ->  send(M, report, error, 'Justification (negative group) \c
+                                is not supported'),
+        fail
+    ;   true
+    ),
+    get(M, line_region, From, To, tuple(S, E)),
+    get(M, text_buffer, TB),
+    get(TB, count_lines, S, E, Lines),
+    align_columns(M, 1, S, Lines, regex_group(Re, G), Sp, Rep).
+
+%!  align_columns(+M, +N, +S, +Lines, :Finder, +Spacing, +Repeat)
+%
+%   Align the Nth column of the Lines lines starting at S.  The column
+%   starts where the white space before it, GS..GE, ends:
+%
+%       call(Finder, TB, SOL, EOL, N, GS, GE)
+%
+%   Columns are found again for each N, as aligning the previous ones
+%   moved them.
+
+align_columns(M, N, S, Lines, Finder, Sp, Rep) :-
+    get(M, text_buffer, TB),
+    findall(GS-GE, line_group(TB, S, Lines, Finder, N, GS, GE), Groups),
+    Groups \== [],
+    !,
+    foldl(max_group_column(M), Groups, 0, MaxCol),
+    tab_stop_column(M, MaxCol+Sp, Col),
+    reverse(Groups, Rev),                       % later lines first
+    forall(member(GS-GE, Rev), set_white_space(M, GS, GE, Col)),
+    (   Rep == @on
+    ->  N1 is N+1,
+        align_columns(M, N1, S, Lines, Finder, Sp, Rep)
+    ;   true
+    ).
+align_columns(_, _, _, _, _, _, _).
+
+line_group(TB, S, Lines, Finder, N, GS, GE) :-
+    Last is Lines-1,
+    between(0, Last, I),
+    get(TB, scan, S, line, I, start, SOL),
+    get(TB, scan, SOL, line, 0, end, EOL),
+    call(Finder, TB, SOL, EOL, N, GS, GE).
+
+regex_group(Re, G, TB, SOL, EOL, N, GS, GE) :-
+    nth_code_match(TB, Re, SOL, EOL, N, G, GS, GE).
+
+mode_group(M, Ctx, _TB, SOL, EOL, N, GS, GE) :-
+    get(M, align_group, Ctx, SOL, EOL, N, tuple(GS, GE)).
+
+max_group_column(M, GS-_, Max0, Max) :-
+    get(M, column, GS, Col),
+    Max is max(Max0, Col).
+
+set_white_space(M, GS, GE, Col) :-
+    get(M, text_buffer, TB),
+    send(TB, delete, GS, GE-GS),
+    get(M, column, GS, Here),
+    (   Col > Here
+    ->  send(M, align, Col, GS)
+    ;   true
+    ).
+
+%!  nth_code_match(+TB, +Re, +From, +EOL, +N, +G, -GS, -GE) is semidet.
+%
+%   Group G of the Nth match of Re in code of From..EOL spans GS..GE.
+
+nth_code_match(TB, Re, From, EOL, N, G, GS, GE) :-
+    From =< EOL,
+    send(Re, search, TB, From, EOL),
+    get(Re, register_start, 0, MS),
+    get(Re, register_end, 0, ME),
+    Next is max(ME, MS+1),
+    (   in_code(TB, MS)
+    ->  (   N == 1
+        ->  get(Re, register_start, G, GS),
+            get(Re, register_end, G, GE)
+        ;   N1 is N-1,
+            nth_code_match(TB, Re, Next, EOL, N1, G, GS, GE)
+        )
+    ;   nth_code_match(TB, Re, Next, EOL, N, G, GS, GE)
+    ).
+
+in_code(TB, Pos) :-
+    get(TB, scan_syntax, 0, Pos, tuple(code, _)).
+
+tab_stop_column(M, Col0, Col) :-
+    (   get(M?text_buffer, indent_tabs, @on)
+    ->  get(M, tab_distance, TD),
+        Col is ((Col0+TD-1)//TD)*TD
+    ;   Col is Col0
+    ).
+
+align_comment(M, From:[int], To:[int]) :->
+    "Align the comments after the code in region"::
+    get(M, line_comment, CS),
+    get(M, line_region, From, To, tuple(S, E)),
+    get(M, text_buffer, TB),
+    get(TB, count_lines, S, E, Lines),
+    findall(Start-CodeCol,
+            line_code_comment(M, S, Lines, CS, Start, CodeCol),
+            Comments),
+    (   Comments == []
+    ->  true
+    ;   get(M, comment_column, CC),
+        foldl(max_code_column, Comments, CC, MaxCol),
+        tab_stop_column(M, MaxCol, Col),
+        reverse(Comments, Rev),
+        forall(member(Start-_, Rev), send(M, align, Col, Start))
+    ).
+
+max_code_column(_-CodeCol, Max0, Max) :-
+    Max is max(Max0, CodeCol+1).
+
+%!  line_code_comment(+M, +S, +Lines, +CS, -Start, -CodeCol) is nondet.
+%
+%   A line has a line comment at Start after code that ends at CodeCol.
+
+line_code_comment(M, S, Lines, CS, Start, CodeCol) :-
+    get(M, text_buffer, TB),
+    Last is Lines-1,
+    between(0, Last, I),
+    get(TB, scan, S, line, I, start, SOL),
+    line_comment_in_code(M, SOL, CS, Start),
+    get(TB, skip_layout, Start, backward, @off, EOC),
+    EOC > SOL,
+    get(M, column, EOC, CodeCol).
+
+%!  line_comment_in_code(+M, +Pos, +CS, -Start) is semidet.
+%
+%   Start is the start of the line comment on the line of Pos.
+
+line_comment_in_code(M, Pos, CS, Start) :-
+    get(M, text_buffer, TB),
+    get(TB, scan, Pos, line, 0, start, SOL),
+    get(TB, scan, Pos, line, 0, end, EOL),
+    get(regex(''), quote, CS, QCS),
+    new(Re, regex(QCS)),
+    code_match_start(TB, Re, SOL, EOL, Start).
+
+code_match_start(TB, Re, From, EOL, Start) :-
+    From < EOL,
+    send(Re, search, TB, From, EOL),
+    get(Re, register_start, 0, MS),
+    (   in_code(TB, MS)
+    ->  Start = MS
+    ;   Next is MS+1,
+        code_match_start(TB, Re, Next, EOL, Start)
+    ).
+
+comment_set_column(M, Arg:[int]) :->
+    "Set comment_column; C-u: from previous comment; C--: kill comment"::
+    (   Arg == @default
+    ->  get(M, column, Col),
+        send(M, comment_column, Col),
+        send(M, report, status, 'comment_column set to %d', Col)
+    ;   Arg < 0
+    ->  send(M, kill_comment)
+    ;   get(M, line_comment, CS),
+        get(M, caret, Caret),
+        get(M, text_buffer, TB),
+        get(TB, scan, Caret, line, 0, start, SOL),
+        previous_comment(M, SOL, CS, Start)
+    ->  get(M, column, Start, Col),
+        send(M, comment_column, Col),
+        send(M, report, status, 'comment_column set to %d', Col),
+        send(M, insert_line_comment, Col)
+    ;   send(M, report, warning, 'No previous comment')
+    ).
+
+previous_comment(M, Here, CS, Start) :-
+    Here > 0,
+    get(M, text_buffer, TB),
+    get(TB, scan, Here, line, -1, start, SOL),
+    SOL < Here,
+    (   line_comment_in_code(M, SOL, CS, Start)
+    ->  true
+    ;   previous_comment(M, SOL, CS, Start)
+    ).
+
+kill_comment(M, Times:[int]) :->
+    "Kill the line comment on this and Times-1 next lines"::
+    default(Times, 1, N),
+    get(M, line_comment, CS),
+    get(M, caret, Caret),
+    get(M, text_buffer, TB),
+    get(TB, scan, Caret, line, 0, start, SOL),
+    get(TB, scan, SOL, line, N, start, End),
+    forall(previous_line_start(TB, SOL, End, LS),
+           kill_line_comment(M, LS, CS)).
+
+%   Line starts from End back to Start, so killing does not move them.
+
+previous_line_start(TB, Start, End, LS) :-
+    End > Start,
+    get(TB, scan, End-1, line, 0, start, LS0),
+    (   LS = LS0
+    ;   previous_line_start(TB, Start, LS0, LS)
+    ).
+
+kill_line_comment(M, SOL, CS) :-
+    (   line_comment_in_code(M, SOL, CS, Start)
+    ->  get(M, text_buffer, TB),
+        get(TB, scan, Start, line, 0, end, EOL),
+        get(TB, skip_layout, Start, backward, @off, From),
+        send(M, kill, From, EOL)
     ;   true
     ).
 

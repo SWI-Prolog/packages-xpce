@@ -66,6 +66,38 @@ Meta-q formats a paragraph.  If the caret is in a long comment, this
 behaviour is retained, but if the caret is in a clause all lines of
 the clause will re-indented using the same rules as used for <b>TAB</b>.
 See also <a href="#jargon">jargon</a>.
+
+  <dt><b>M-;</b><dd>
+Insert a comment after the code on the current line or move the caret
+to it.  <b>\C-u M-;</b> kills the comment of the line and
+<b>\C-x;</b> sets the column for these comments.  <b>\C-x\C-;</b>
+comments or uncomments the current line or the lines of the region
+(also <b>Prolog/Comment region</b>).
+
+  <dt><b>\C-c\C-a</b> (<b>Prolog/Align region</b>) and <b>M-x align_current</b><dd>
+Align the region, or the lines between the blank lines around the caret,
+as a table, as <b>M-x align</b> in GNU Emacs.  Blank lines separate
+sections that are aligned independently.  The columns are the terms and
+operators separated by white space or a comma or, if no line has more
+than one of these, the arguments of the first term of the line.  The
+comments after the code are aligned as well.  For example:
+
+<p>
+<PRE>
+t(a,   1,   x).
+t(bbb, 22,  yy).
+t(c,   333, z).
+</PRE>
+
+  <dt><b>M-x align_regexp</b><dd>
+Align the first match of a regular expression on each line of the
+region by changing the white space before it, as GNU Emacs.  With a
+prefix argument, the regular expression contains the group to change
+and the command asks for the group, the minimal spacing and whether to
+align all matches.  Matches in strings and comments are ignored.
+
+  <dt><b>M-x align_comment</b><dd>
+Align the comments after the code in the region on one column.
 </dl>
 
 

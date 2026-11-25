@@ -136,6 +136,9 @@ resource(breakpoint,   image, library('trace/icons/stop.svg')).
           -                            = button(prolog),
           check_clause                 = key('\\C-c\\C-s') + button(prolog),
           setup_auto_indent            = button(prolog),
+          -                            = button(prolog),
+          align_region                 = key('\\C-c\\C-a') + button(prolog),
+          comment_region               = button(prolog),
           insert_full_stop             = key(.),
           find_definition              = key('\\e.') + button(browse),
           -                            = button(prolog),
@@ -734,6 +737,200 @@ insert_quasi_quote(E) :->
         )
     ;   true
     ).
+
+
+                 /*******************************
+                 *             ALIGN            *
+                 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+M-x align (see language mode) aligns the lines of a section as a table.
+The columns of a line are its items: the terms and operators separated
+by white space or a comma.  If no line of the section has more than one
+item, the columns are the arguments of the first term of the line, so
+
+    t(a, 1, x).                 t(a,   1,  x).
+    t(bbb, 22, yy).      =>     t(bbb, 22, yy).
+    t(c,333,z).                 t(c,   333, z).
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+align_context(M, S:int, E:int, Level:int) :<-
+    "Align items (0) or arguments (1) of the lines S..E"::
+    get(M, text_buffer, TB),
+    get(TB, count_lines, S, E, Lines),
+    Last is Lines-1,
+    (   between(0, Last, I),
+        get(TB, scan, S, line, I, start, SOL),
+        line_columns(TB, SOL, 0, [_|_])
+    ->  Level = 0
+    ;   Level = 1
+    ).
+
+align_group(M, Level:int, SOL:int, _EOL:int, N:int, Group:tuple) :<-
+    "White space before column N of the line at SOL"::
+    get(M, text_buffer, TB),
+    line_columns(TB, SOL, Level, Columns),
+    nth1(N, Columns, Offset),
+    GE is SOL+Offset,
+    get(TB, skip_layout, GE, backward, @off, GS),
+    new(Group, tuple(GS, GE)).
+
+%!  line_columns(+TB, +SOL, +Level, -Offsets) is det.
+%
+%   Offsets are the offsets from SOL where the columns of the line after
+%   the first start.  Lines that start in a string or comment have no
+%   columns.
+
+line_columns(TB, SOL, Level, Offsets) :-
+    get(TB, scan_syntax, 0, SOL, tuple(code, _)),
+    !,
+    get(TB, scan, SOL, line, 0, end, EOL),
+    get(TB, contents, SOL, EOL-SOL, Line),
+    get(Line, value, Text),
+    string_codes(Text, Codes),
+    line_tokens(Codes, 0, 0, Tokens),
+    level_tokens(Level, Tokens, LTokens),
+    column_starts(LTokens, Level, none, Offsets).
+line_columns(_, _, _, []).
+
+%!  level_tokens(+Level, +Tokens, -LevelTokens) is det.
+%
+%   Level 1 are the tokens inside the first bracket of the line.
+
+level_tokens(0, Tokens, Tokens).
+level_tokens(1, Tokens, Inside) :-
+    (   append(_, [tok(_, open, 0)|Rest], Tokens)
+    ->  inside_bracket(Rest, Inside)
+    ;   Inside = []
+    ).
+
+inside_bracket([], []).
+inside_bracket([tok(_, close, 0)|_], []) :- !.
+inside_bracket([H|T0], [H|T]) :-
+    inside_bracket(T0, T).
+
+%!  column_starts(+Tokens, +Level, +Prev, -Offsets) is det.
+%
+%   A column starts at a token of Level that follows white space after
+%   an item, or a comma.  Prev is one of `none`, `item`, `space` (after
+%   an item) or `comma`.
+
+column_starts([], _, _, []).
+column_starts([tok(Pos, Type, Depth)|T], Level, Prev, Offsets) :-
+    (   Depth < Level
+    ->  Offsets = []
+    ;   Depth > Level
+    ->  column_starts(T, Level, item, Offsets)
+    ;   column_step(Type, Prev, Next, Start),
+        (   Start == true
+        ->  Offsets = [Pos|Offsets1]
+        ;   Offsets = Offsets1
+        ),
+        column_starts(T, Level, Next, Offsets1)
+    ).
+
+column_step(space, item,  space, false) :- !.
+column_step(space, Prev,  Prev,  false) :- !.
+column_step(comma, _,     comma, false) :- !.
+column_step(close, _,     item,  false) :- !.
+column_step(_,     space, item,  true) :- !.
+column_step(_,     comma, item,  true) :- !.
+column_step(_,     _,     item,  false).
+
+%!  line_tokens(+Codes, +Pos, +Depth, -Tokens) is det.
+%
+%   Tokens of a line of Prolog code: tok(Pos, Type, Depth), where Type is
+%   one of `space`, `comma`, `open`, `close` or `other`.  A bracket has
+%   the depth outside it.  A line comment ends the line.
+
+line_tokens([], _, _, []).
+line_tokens([0'%|_], _, _, []) :- !.
+line_tokens([0'/, 0'*|T0], P0, D, [tok(P0, space, D)|Tokens]) :-
+    !,
+    P1 is P0+2,
+    skip_block_comment(T0, P1, T, P),
+    line_tokens(T, P, D, Tokens).
+line_tokens([C|T0], P0, D, [tok(P0, space, D)|Tokens]) :-
+    blank_code(C),
+    !,
+    P1 is P0+1,
+    line_tokens(T0, P1, D, Tokens).
+line_tokens([0'0, 0'\'|T0], P0, D, [tok(P0, other, D)|Tokens]) :-
+    !,
+    P1 is P0+2,
+    skip_char_code(T0, P1, T, P),
+    line_tokens(T, P, D, Tokens).
+line_tokens([Q|T0], P0, D, [tok(P0, other, D)|Tokens]) :-
+    quote_code(Q),
+    !,
+    P1 is P0+1,
+    skip_quoted(T0, Q, P1, T, P),
+    line_tokens(T, P, D, Tokens).
+line_tokens([C|T0], P0, D, [tok(P0, open, D)|Tokens]) :-
+    open_code(C),
+    !,
+    P1 is P0+1,
+    D1 is D+1,
+    line_tokens(T0, P1, D1, Tokens).
+line_tokens([C|T0], P0, D0, [tok(P0, close, D)|Tokens]) :-
+    close_code(C),
+    !,
+    P1 is P0+1,
+    D is D0-1,
+    line_tokens(T0, P1, D, Tokens).
+line_tokens([0',|T0], P0, D, [tok(P0, comma, D)|Tokens]) :-
+    !,
+    P1 is P0+1,
+    line_tokens(T0, P1, D, Tokens).
+line_tokens([_|T0], P0, D, [tok(P0, other, D)|Tokens]) :-
+    P1 is P0+1,
+    line_tokens(T0, P1, D, Tokens).
+
+blank_code(0' ).
+blank_code(0'\t).
+
+quote_code(0'\').
+quote_code(0'").
+quote_code(0'`).
+
+open_code(0'().
+open_code(0'[).
+open_code(0'{).
+
+close_code(0')).
+close_code(0']).
+close_code(0'}).
+
+skip_block_comment([], P, [], P).
+skip_block_comment([0'*, 0'/|T], P0, T, P) :-
+    !,
+    P is P0+2.
+skip_block_comment([_|T0], P0, T, P) :-
+    P1 is P0+1,
+    skip_block_comment(T0, P1, T, P).
+
+%   After 0': the character, an escape or a doubled quote.
+
+skip_char_code([0'\\, _|T], P0, T, P) :- !, P is P0+2.
+skip_char_code([0'\', 0'\'|T], P0, T, P) :- !, P is P0+2.
+skip_char_code([_|T], P0, T, P) :- !, P is P0+1.
+skip_char_code([], P, [], P).
+
+skip_quoted([], _, P, [], P).
+skip_quoted([0'\\, _|T0], Q, P0, T, P) :-
+    !,
+    P1 is P0+2,
+    skip_quoted(T0, Q, P1, T, P).
+skip_quoted([Q, Q|T0], Q, P0, T, P) :-
+    !,
+    P1 is P0+2,
+    skip_quoted(T0, Q, P1, T, P).
+skip_quoted([Q|T], Q, P0, T, P) :-
+    !,
+    P is P0+1.
+skip_quoted([_|T0], Q, P0, T, P) :-
+    P1 is P0+1,
+    skip_quoted(T0, Q, P1, T, P).
 
 
                  /*******************************

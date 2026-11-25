@@ -345,7 +345,11 @@ line_region(M, F0:[int], T0:[int], Tuple:tuple) :<-
     ),
     get(M, text_buffer, TB),
     get(TB, scan, From, line, 0, start, S),
-    get(TB, scan, To,   line, 0, start, E),
+    get(TB, scan, To,   line, 0, start, SOL),
+    (   SOL < To                        % region ends inside a line
+    ->  get(TB, scan, To, line, 1, start, E)
+    ;   E = SOL
+    ),
     new(Tuple, tuple(S, E)).
 
 for_lines_in_region(M, From:[int], To:[int], Code:code) :->

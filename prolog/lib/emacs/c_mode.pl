@@ -119,6 +119,7 @@ c_keyword('_Alignof',       operator).
                       gdb_next          = button(gdb) + key('\\C-c\\C-n'),
                       gdb_print         = button(gdb) + key('\\C-c\\C-p'),
                       prolog_manual     = button(prolog),
+                      comment_region    = button(c),
                       find_definition   = key('\\e.') + button(browse),
                       find_references   = key('\\e?') + button(browse),
 
