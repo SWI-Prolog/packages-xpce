@@ -3207,7 +3207,7 @@ alignEditor(Editor e, Int column, Int where)
 
   if ( col <= txtcol )
   { tabs = 0;
-    if ( txt == 1 || tisendsline(tb->syntax, fetch_textbuffer(tb, txt-1)) )
+    if ( txt == 0 || tisendsline(tb->syntax, fetch_textbuffer(tb, txt-1)) )
       spaces = 0;
     else
       spaces = 1;
