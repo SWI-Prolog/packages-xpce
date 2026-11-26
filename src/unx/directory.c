@@ -76,7 +76,6 @@
 #endif
 
 static Chain DirectoryStack;
-static Name  ExpandProblem;
 
 static char *	canonicalisePath(char *);
 static Name	getWorkingDirectoryPce(Pce pce);
@@ -857,8 +856,17 @@ GETENV(const wchar_t *var, size_t len)
 }
 
 
+/* Expand ~ and $VAR in pattern into bin, which holds binlen characters.
+ * Returns the length of the result, or -1 on failure, after which
+ * *problem, if problem is not NULL, holds the reason.
+ */
+
+#define EXPAND_FAIL(msg) \
+	do { if ( problem ) *problem = CtoName(msg); return -1; } while(0)
+
 int
-expandFileNameW(const wchar_t *pattern, wchar_t *bin, size_t binlen)
+expandFileNameW(const wchar_t *pattern, wchar_t *bin, size_t binlen,
+		Name *problem)
 { wchar_t *expanded = bin;
   size_t size = 0;
   wint_t c;
@@ -876,9 +884,7 @@ expandFileNameW(const wchar_t *pattern, wchar_t *bin, size_t binlen)
     size_t l;
 
     if ( (l = takeWord(s)) > USERNAME_MAX )
-    { ExpandProblem = CtoName("User name too long");
-      return -1;
-    }
+      EXPAND_FAIL("User name too long");
     if ( s[l] && !IsDirSep(s[l]) )	/* ~shhs[^/] */
       goto nouser;
     pattern = &s[l];
@@ -907,25 +913,19 @@ expandFileNameW(const wchar_t *pattern, wchar_t *bin, size_t binlen)
 
       if ( fred != user )
       { if ( (pwent = getpwnam(charArrayToMB((CharArray)user))) == (struct passwd *) NULL )
-	{ ExpandProblem = CtoName("Unknown user");
-	  return -1;
-	}
+	  EXPAND_FAIL("Unknown user");
 	fred      = user;
 	fredLogin = MBToName(pwent->pw_dir);
       }
       value = charArrayToWC((CharArray)fredLogin, NULL);
     }
 #else
-    { ExpandProblem = CtoName("Unknown user");
-      return -1;
-    }
+    EXPAND_FAIL("Unknown user");
 #endif
 
     size += (int)(l = wcslen(value));
     if ( size >= binlen )
-    { ExpandProblem = CtoName("Name too long");
-      return -1;
-    }
+      EXPAND_FAIL("Name too long");
     wcscpy(expanded, value);
     expanded += l;
 
@@ -947,13 +947,11 @@ nouser:
 	    int l;
 
 	    if ( !value )
-	    { ExpandProblem = CtoName("Unknown variable");
-	      return -1;
-	    }
+	      EXPAND_FAIL("Unknown variable");
 	    size += (l = (int)wcslen(value));
 	    if ( size >= binlen )
 	    { errno = ENAMETOOLONG;
-	      return -1;
+	      EXPAND_FAIL("Name too long");
 	    }
 	    wcscpy(expanded, value);
 	    expanded += l;
@@ -967,7 +965,7 @@ nouser:
       default:
 	if ( ++size >= binlen )
 	{ errno = ENAMETOOLONG;
-	  return -1;
+	  EXPAND_FAIL("Name too long");
 	}
 	*expanded++ = c;
 

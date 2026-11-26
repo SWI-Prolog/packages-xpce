@@ -159,9 +159,10 @@ Name
 expandFileName(Name in)
 { wchar_t expanded[PATH_MAX];
   int len;
+  Name problem = NULL;
 
   if ( (len=expandFileNameW(nameToWC(in, NULL),
-			    expanded, PATH_MAX)) > 0 )
+			    expanded, PATH_MAX, &problem)) > 0 )
   {
 #if O_XOS
      wchar_t lng[PATH_MAX];
@@ -179,6 +180,8 @@ expandFileName(Name in)
 #endif
   }
 
+  if ( problem )
+    errorPce(in, NAME_cannotExpand, problem);
   fail;
 }
 
@@ -1306,7 +1309,7 @@ findFile(FileObj f, CharArray path, Name mode)
     }
 
     if ( wcschr(name, L'$') || name[0] == L'~' )
-    { if ( (l=expandFileNameW(name, bin, PATH_MAX)) > 0 )
+    { if ( (l=expandFileNameW(name, bin, PATH_MAX, NULL)) > 0 )
 	wcsncpy(name, bin, l);
       else
 	continue;

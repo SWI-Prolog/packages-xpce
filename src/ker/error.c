@@ -289,6 +289,8 @@ static const error_def errors[] =
     "%N: Cannot seek in a live stream" },
   { NAME_cannotCreate,		EF_REPORT,
     "%N: Cannot create: %s" },
+  { NAME_cannotExpand,		EF_REPORT,
+    "%N: Cannot expand: %s" },
   { NAME_notSupported,		EF_REPORT,
     "%N: Not supported: %s" },
   { NAME_unknownKey,		EF_REPORT,

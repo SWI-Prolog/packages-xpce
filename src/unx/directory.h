@@ -43,6 +43,7 @@ COMMON(char *)	dirName(const char *f, char *dir, size_t dirlen);
 COMMON(char *)	baseName(const char *f);
 COMMON(int)	isAbsolutePath(const char *p);
 COMMON(int)	absolutePath(const char *file, char *path, size_t buflen);
-COMMON(int)	expandFileNameW(const wchar_t *pattern, wchar_t *bin, size_t binlen);
+COMMON(int)	expandFileNameW(const wchar_t *pattern, wchar_t *bin,
+				size_t binlen, Name *problem);
 
 #endif /*XPCE_UNX_DIRECTORY_H_INCLUDED*/
