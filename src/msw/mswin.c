@@ -128,22 +128,31 @@ ws_default_scrollbar_width(void)
 
 #define MAXMESSAGE 1024
 
-Name
-WinStrError(int error, ...)
-{ va_list args;
-  TCHAR msg[MAXMESSAGE];
+/* The system message for error.  Language 0 lets the system pick a
+ * language it has a message for, where asking for the user's language
+ * fails if the system has no messages in that language.
+ */
 
-  va_start(args, error);
-  if ( !FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS,
-		      NULL,
-		      error,
-		      GetUserDefaultLangID(),
-		      msg,
-		      sizeof(msg),
-		      (char **)args) )
-  { wsprintf(msg, _T("Unknown WINAPI error %d"), error);
+Name
+WinStrError(int error)
+{ TCHAR msg[MAXMESSAGE];
+  DWORD len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM|
+			    FORMAT_MESSAGE_IGNORE_INSERTS,
+			    NULL,
+			    error,
+			    0,
+			    msg,
+			    MAXMESSAGE,
+			    NULL);
+
+  if ( len == 0 )
+  { wsprintf(msg, _T("Windows error %d"), error);
+  } else				/* delete the trailing ".\r\n" */
+  { while( len > 0 && (msg[len-1] == '\n' || msg[len-1] == '\r' ||
+		       msg[len-1] == ' '  || msg[len-1] == '.') )
+      len--;
+    msg[len] = EOS;
   }
-  va_end(args);
 
   return TCHARToName(msg);
 }

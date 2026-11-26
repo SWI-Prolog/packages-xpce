@@ -121,6 +121,44 @@ dispatch_for(Time) :-
       Now-T0 > Time,
     !.
 
+%   A process that records its errors as event(error(Id, Context)).
+
+:- pce_begin_class(test_error_process, process).
+
+error(_P, Error:error, Context:any ...) :->
+    get(Error, id, Id),
+    assertz(event(error(Id, Context))).
+
+:- pce_end_class(test_error_process).
+
+%!  not_found(-Id, -Context) is det.
+%
+%   Start a command that does not exist.  Windows sees that when
+%   starting it, Unix when the child cannot run it.
+
+not_found(Id, Context) :-
+    retractall(event(_)),
+    setup_call_cleanup(
+        new(P, test_error_process(no_such_command_for_xpce)),
+        ( send(P, use_tty, @off),
+          ignore(send(P, open)),
+          await_event(error(_,_), 20)
+        ),
+        free(P)),
+    event(error(Id, Context)).
+
+await_event(E, Max) :-
+    get_time(T0),
+    repeat,
+      (   event(E)
+      ->  !
+      ;   get_time(Now),
+          Now-T0 > Max
+      ->  !
+      ;   ignore(send(@display, dispatch)),
+          fail
+      ).
+
 :- begin_tests(process_io).
 
 test(output, [Lines-Status-Code == ["hello world"]-exited-0]) :-
@@ -140,5 +178,12 @@ test(arguments, [Lines == ["['x\"y','c:\\\\dir\\\\','','a\\\\\"b','a b']"]]) :-
     run(['-g', 'current_prolog_flag(argv,A),print(A),nl,halt', '--',
          'x"y', 'c:\\dir\\', '', 'a\\"b', 'a b'],
         Lines, exited, 0).
+
+test(not_found, [Id == exec_error]) :-
+    not_found(Id, _).
+:- if(current_prolog_flag(windows, true)).
+test(not_found_message, [Context == ['command not found']]) :-
+    not_found(_, Context).
+:- endif.
 
 :- end_tests(process_io).

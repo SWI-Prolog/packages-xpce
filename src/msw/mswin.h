@@ -38,7 +38,7 @@
 
 Name		ws_appdata(const char* sub);	/* User application dir */
 int		ws_getpid(void);
-Name		WinStrError(int error, ...);
+Name		WinStrError(int error);
 
 BOOL		CreatePipeEx(PHANDLE hReadPipe,
 			     PHANDLE hWritePipe,

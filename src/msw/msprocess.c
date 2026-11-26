@@ -256,7 +256,12 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 
       inputStream((Stream)p, DEFAULT);
     } else
-    { errorPce(p, NAME_execError, APIError());
+    { DWORD error = GetLastError();
+
+      if ( error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND )
+	errorPce(p, NAME_execError, CtoName("command not found"));
+      else
+	errorPce(p, NAME_execError, WinStrError(error));
       CloseHandle(wrfd[1]);
       CloseHandle(rdfd[0]);
       rval = FAIL;
