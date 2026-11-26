@@ -1896,7 +1896,9 @@ register_input(PT, PTY, EditLine, History) :-
     stream_property(In, alias(user_input)),
     stream_property(Out, alias(user_output)),
     stream_property(Err, alias(user_error)),
-    asserta(terminal_input(PT, PTY, In, Out, Err, EditLine)),
+    with_mutex(epilog_capture,
+               asserta(terminal_input(PT, PTY, In, Out, Err, EditLine))),
+    complete_capture(PT),
     history_events(PT, History).
 
 
@@ -3402,20 +3404,27 @@ terminal_base_label(PT, Label) :-
 %!  uncapture_messages(?PrologTerminal) is det.
 %
 %   Capture messages from XPCE's main thread in an Epilog console.
+%
+%   The streams of PrologTerminal exist after its thread registered them
+%   (see register_input/4).  If that did not yet happen, the capture is
+%   pending and register_input/4 asks the main thread to complete it.
+%   Waiting for the terminal here for a limited time lost the messages
+%   of the main thread if the thread started slowly, as on Windows.
 
 :- dynamic
-    capturing/3.                        % PrologTerminal, Stdout, Stderr
+    capturing/3,                        % PrologTerminal, Stdout, Stderr
+    capture_pending/1.                  % PrologTerminal
 
 capture_messages(PrologTerminal) :-
     thread_self(main),
-    (   between(1, 10, _),              % Wait for terminal to become ready
-        (   terminal_input(PrologTerminal, _PTY, _In,Out,Error, _EditLine)
-        ->  true
-        ;   pce_principal:pce_dispatch(-1, 0.25),
-            fail
-        )
-    ->  true
-    ),
+    with_mutex(epilog_capture,
+               (   terminal_input(PrologTerminal, _PTY, _In,Out,Error, _EditLine)
+               ->  Ready = true
+               ;   retractall(capture_pending(_)),
+                   asserta(capture_pending(PrologTerminal)),
+                   Ready = false
+               )),
+    Ready == true,
     stream_property(Stdout, alias(user_output)),
     stream_property(Stderr, alias(user_error)),
     Stdout \== Out,
@@ -3428,8 +3437,21 @@ capture_messages(PrologTerminal) :-
     asserta(capturing(PrologTerminal,Stdout,Stderr)).
 capture_messages(_).
 
+%   complete_capture(+PrologTerminal)
+%
+%   Called by register_input/4 after registering the streams of
+%   PrologTerminal: complete a pending capture.
+
+complete_capture(PrologTerminal) :-
+    with_mutex(epilog_capture,
+               retract(capture_pending(PrologTerminal))),
+    !,
+    in_pce_thread(capture_messages(PrologTerminal)).
+complete_capture(_).
+
 uncapture_messages(PrologTerminal) :-
     thread_self(main),
+    retractall(capture_pending(PrologTerminal)),
     retract(capturing(PrologTerminal,Stdout,Stderr)),
     !,
     set_stream(Stdout, alias(current_output)),
