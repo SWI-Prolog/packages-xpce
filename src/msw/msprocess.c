@@ -37,12 +37,10 @@
 #include <h/unix.h>
 #include <h/interface.h>
 #include <txt/chararray.h>
+#include <txt/i18n.h>
 #include <unx/process.h>
 #include <unx/stream.h>
 
-#ifndef MAXCMDLINE
-#define MAXCMDLINE 10240
-#endif
 #define PIPE_SIZE 8192
 
 #define APIError() WinStrError(GetLastError())
@@ -102,55 +100,60 @@ createWin32EnvironmentBlock(Process p)
 }
 
 
-/* Append arg to the command line in buf, separated by a space and
- * quoted such that the C runtime of the child (CommandLineToArgvW()
- * rules) gets it back as one argument.  Without, `sh -c 'exit 3'` runs
- * `sh -c exit 3`.
+/* Quoting arguments for Windows is shared with library(process) */
+
+#include "win_cmdline.c"
+
+/* Copy the text of ca into buf as an OS file name: wide and with
+ * backslashes.  We copy because charArrayToWC() may return the text of
+ * ca itself.
  */
 
 static bool
-append_arg(char *buf, size_t size, const char *arg)
-{ size_t len = strlen(buf);
-  bool quote = (*arg == EOS || strpbrk(arg, " \t\n\v\"") != NULL);
-  const char *s;
+os_file_nameW(CharArray ca, wchar_t *buf, size_t size)
+{ size_t len;
+  const wchar_t *s = charArrayToWC(ca, &len);
 
-#define ADD(c) do { if ( len+1 >= size ) return false; \
-		    buf[len++] = (c); } while(0)
-
-  if ( len > 0 )
-    ADD(' ');
-  if ( !quote )
-  { for(s=arg; *s; s++)
-      ADD(*s);
-  } else
-  { ADD('"');
-    for(s=arg; ; s++)
-    { size_t backslashes = 0;
-
-      while( *s == '\\' )
-      { backslashes++;
-	s++;
-      }
-      if ( *s == EOS )			/* double them before the quote */
-      { for(size_t i=0; i<backslashes*2; i++)
-	  ADD('\\');
-	break;
-      } else if ( *s == '"' )
-      { for(size_t i=0; i<backslashes*2+1; i++)
-	  ADD('\\');
-	ADD('"');
-      } else
-      { for(size_t i=0; i<backslashes; i++)
-	  ADD('\\');
-	ADD(*s);
-      }
-    }
-    ADD('"');
-  }
-  buf[len] = EOS;
-#undef ADD
+  if ( len+1 > size )
+    return false;
+  for(size_t i=0; i<len; i++)
+    buf[i] = (s[i] == '/' ? '\\' : s[i]);
+  buf[len] = 0;
 
   return true;
+}
+
+/* Build the command line of p in b.  The program is the first word, as
+ * we let CreateProcessW() find it.  A batch file (.bat, .cmd) is run by
+ * cmd.exe, which needs other quoting and cannot be passed all text.
+ */
+
+static status
+command_line(Process p, wbuf *b)
+{ wchar_t prog[PATH_MAX];
+  bool batch;
+  Vector args = p->arguments;
+
+  if ( !os_file_nameW(p->name, prog, PATH_MAX) )
+    return errorPce(p, NAME_execError, CtoName("program name too long"));
+  batch = is_batch_file(prog);
+  if ( !add_quoted_arg(b, prog, wcslen(prog), false) )
+    return errorPce(p, NAME_notEnoughMemory);
+
+  for(int i=0; i<valInt(args->size); i++)
+  { CharArray a = args->elements[i];
+    size_t len;
+    const wchar_t *s = charArrayToWC(a, &len);
+
+    if ( batch && !batch_safe_arg(s, len) )
+      return errorPce(p, NAME_execError,
+		      CtoName("argument cannot be passed to a batch file"));
+    if ( !wbuf_add(b, ' ') ||
+	 !add_quoted_arg(b, s, len, batch) )
+      return errorPce(p, NAME_notEnoughMemory);
+  }
+
+  succeed;
 }
 
 
@@ -177,49 +180,45 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
   if ( isNil(p->pid) )
   { HANDLE wrfd[2];			/* output to process */
     HANDLE rdfd[2];			/* input from process */
-    STARTUPINFO startinfo;
+    STARTUPINFOW startinfo;
     PROCESS_INFORMATION processinfo;
     SECURITY_ATTRIBUTES sa;
-    char cmdline[MAXCMDLINE];
-    char dirbuf[PATH_MAX];
-    char *cwd = NULL;
-    Any a;
+    wbuf cmdline = {0};
+    wchar_t dirbuf[PATH_MAX];
+    wchar_t *cwd = NULL;
     char *env;
 
     if ( p->use_tty == ON )
     { Cprintf("%s: Warning: no TTY control in Win32\n", pp(p));
     }
 
-    _xos_limited_os_filename(strName(p->name), dirbuf, PATH_MAX);
-    cmdline[0] = EOS;
-    if ( !append_arg(cmdline, sizeof(cmdline), dirbuf) )
-      return errorPce(p, NAME_execError, CtoName("command line too long"));
-    for_vector(p->arguments, a,
-	       { if ( !append_arg(cmdline, sizeof(cmdline), toCharp(a)) )
-		   return errorPce(p, NAME_execError,
-				   CtoName("command line too long"));
-	       });
+    if ( !command_line(p, &cmdline) )
+    { free(cmdline.base);
+      fail;
+    }
 
     sa.nLength              = sizeof(sa);
     sa.lpSecurityDescriptor = NULL;
     sa.bInheritHandle       = true;
 
     if ( !CreatePipe(&wrfd[0], &wrfd[1], &sa, 0) ) /* read, write */
+    { free(cmdline.base);
       return errorPce(p, NAME_noPipe, APIError());
+    }
     if ( !CreatePipeEx(&rdfd[0], &rdfd[1], &sa, PIPE_SIZE,
 		       FILE_FLAG_OVERLAPPED, 0) )
     { Name msg = APIError();
       CloseHandle(wrfd[0]);
       CloseHandle(wrfd[1]);
+      free(cmdline.base);
       return errorPce(p, NAME_noPipe, msg);
     }
     SetHandleInformation(wrfd[1], HANDLE_FLAG_INHERIT, 0);
     SetHandleInformation(rdfd[0], HANDLE_FLAG_INHERIT, 0);
 
-    if ( notDefault(p->directory) )
-    { _xos_limited_os_filename(strName(p->directory->path), dirbuf, PATH_MAX);
+    if ( notDefault(p->directory) &&
+	 os_file_nameW((CharArray)p->directory->path, dirbuf, PATH_MAX) )
       cwd = dirbuf;
-    }
 
     memset(&startinfo, 0, sizeof(startinfo));
     memset(&processinfo, 0, sizeof(processinfo));
@@ -231,8 +230,8 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
     startinfo.hStdError   = rdfd[1];
 
     env = createWin32EnvironmentBlock(p);
-    if ( CreateProcess(NULL,			/* executable */
-		       cmdline,			/* cmdline */
+    if ( CreateProcessW(NULL,			/* executable */
+		       cmdline.base,		/* cmdline */
 		       NULL,			/* Process security */
 		       NULL,			/* Thread security */
 		       true,			/* Inherited handles */
@@ -250,8 +249,8 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
       ws_watch_process(p, processinfo.hProcess);
 
       DEBUG(NAME_process,
-	    Cprintf("%s: Created Process %d --> %s --> %d, id = %d\n",
-		    pp(p), p->wrfd, cmdline, p->rdfd,
+	    Cprintf("%s: Created Process %d --> %ls --> %d, id = %d\n",
+		    pp(p), p->wrfd, cmdline.base, p->rdfd,
 		    processinfo.dwProcessId));
 
       inputStream((Stream)p, DEFAULT);
@@ -269,6 +268,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 
     if ( env )
       pceFree(env);
+    free(cmdline.base);
 
     CloseHandle(wrfd[0]);
     CloseHandle(rdfd[1]);

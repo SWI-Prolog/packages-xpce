@@ -178,6 +178,11 @@ test(arguments, [Lines == ["['x\"y','c:\\\\dir\\\\','','a\\\\\"b','a b']"]]) :-
     run(['-g', 'current_prolog_flag(argv,A),print(A),nl,halt', '--',
          'x"y', 'c:\\dir\\', '', 'a\\"b', 'a b'],
         Lines, exited, 0).
+test(non_ascii_argument, [Status-Code == exited-0]) :-
+    run(['-g', 'current_prolog_flag(argv,[A]),atom_codes(A,C),\c
+                (C==[104,233,8364]->halt(0);halt(1))',
+         '--', 'h\u00e9\u20ac'],
+        _, Status, Code).
 
 test(not_found, [Id == exec_error]) :-
     not_found(Id, _).
@@ -186,4 +191,40 @@ test(not_found_message, [Context == ['command not found']]) :-
     not_found(_, Context).
 :- endif.
 
+
+%   A batch file is run by cmd.exe, which has its own quoting rules and
+%   cannot be passed all text.
+
+:- if(current_prolog_flag(windows, true)).
+test(batch_file, [Lines == ["a b"]]) :-
+    with_batch_file(Bat, run_batch(Bat, 'a b', Lines)).
+test(batch_file_unsafe, [Id == exec_error]) :-
+    with_batch_file(Bat, batch_error(Bat, '%PATH%', Id)).
+:- endif.
+
 :- end_tests(process_io).
+
+with_batch_file(Bat, Goal) :-
+    tmp_file_stream(Bat0, Out, [extension(bat)]),
+    format(Out, '@echo %~~1~n', []),
+    close(Out),
+    prolog_to_os_filename(Bat0, Bat),
+    call_cleanup(Goal, delete_file(Bat0)).
+
+run_batch(Bat, Arg, Lines) :-
+    retractall(event(_)),
+    setup_call_cleanup(
+        new(P, process(Bat, Arg)),
+        run_process(P, false),
+        free(P)),
+    findall(L, event(line(L)), Lines).
+
+batch_error(Bat, Arg, Id) :-
+    retractall(event(_)),
+    setup_call_cleanup(
+        new(P, test_error_process(Bat, Arg)),
+        ( send(P, use_tty, @off),
+          ignore(send(P, open))
+        ),
+        free(P)),
+    event(error(Id, _)).

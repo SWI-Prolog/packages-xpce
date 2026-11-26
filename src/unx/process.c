@@ -70,6 +70,7 @@ reduced to the facility to terminate the inferior process.
 #include <h/interface.h>
 #include <unx/process.h>
 #include <txt/str.h>
+#include <txt/i18n.h>
 #include <unx/directory.h>
 #include <unx/stream.h>
 #include <win/displaymgr.h>
@@ -530,6 +531,189 @@ Solaris stuff with many thanks to Andrew Chittenden, ADT
 #define CHILD_NOPTY		(CHILD_BASE+1)
 #define CHILD_NOEXEC		(CHILD_BASE+2)
 
+/* The argument vector for execvp(): the program and its arguments in
+ * the encoding of file names, as process_create/3 uses.  It is built
+ * before fork(), as the child should not allocate memory.  NULL if a
+ * text cannot be encoded or there is no memory.
+ */
+
+static void
+free_argv(char **argv)
+{ for(char **a = argv; *a; a++)
+    free(*a);
+  free(argv);
+}
+
+static char **
+process_argv(Process p)
+{ int argc = valInt(p->arguments->size);
+  char **argv = calloc(argc+2, sizeof(char *));
+  char *s;
+
+  if ( !argv )
+    return NULL;
+  if ( !(s = charArrayToFN((CharArray)p->name)) ||
+       !(argv[0] = strdup(s)) )
+    goto error;
+  for(int i=0; i<argc; i++)
+  { if ( !(s = charArrayToFN(p->arguments->elements[i])) ||
+	 !(argv[i+1] = strdup(s)) )
+      goto error;
+  }
+
+  return argv;
+
+error:
+  free_argv(argv);
+  return NULL;
+}
+
+
+static status
+forkProcess(Process p, char **argv)
+{ if ( p->use_tty == ON )
+  { int master = -1, slave = -1;
+    int pid;
+#if USE_GRANTPT
+    char *line = NULL;
+#else
+    char line[100];
+#endif
+
+#if USE_GRANTPT
+    if ( (master = open("/dev/ptmx", O_RDWR)) < 0 )
+#else
+    if ( !getPseudoTTY(p, line, &master, &slave) )
+#endif
+    { Cprintf("[PCE: Failed to get pseudo tty: %s]\n",
+	      strName(OsError()));
+      fail;
+    }
+
+#ifdef stderr
+    DEBUG(NAME_process, fprintf(stderr, "Ready to fork\n"));
+#endif
+
+    if ( (pid = fork()) == 0 )	/* child process */
+    { if ( notDefault(p->directory) )
+	cdDirectory(p->directory);
+#ifdef stderr
+      DEBUG(NAME_process, fprintf(stderr, "CD ok\n"));
+#endif
+      initEnvironment(p);
+#ifdef stderr
+      DEBUG(NAME_process, fprintf(stderr, "Environment initialised\n"));
+#endif
+#ifdef HAVE_SETSID
+      if ( setsid() < 0 )
+	Cprintf("[PCE: setsid() failed: %s]\n", strName(OsError()));
+#else
+    { int fd;
+
+      if ( (fd = open("/dev/tty", 2)) )
+      { ioctl(fd, TIOCNOTTY, NULL);	/* detach from controlling tty */
+	close(fd);
+      }
+    }
+#endif
+#ifdef USE_GRANTPT
+      if ( grantpt(master) < 0 ||
+	   unlockpt(master) < 0 ||
+	   (line = ptsname(master)) == NULL ||
+	   (slave = open(line, O_RDWR)) < 0 )
+      { Cprintf("[PCE: failed to get slave pty: %s]\n", strName(OsError()));
+	exit(1);
+      }
+#ifdef I_PUSH
+      ioctl(slave, I_PUSH, "ptem");	/* don't worry it these fail */
+      ioctl(slave, I_PUSH, "ldterm");
+      ioctl(slave, I_PUSH, "ttcompat");
+#endif
+#endif /*USE_GRANTPT*/
+
+      DEBUG(NAME_process, Cprintf("Slave %s at %d\n", line, slave));
+      if ( !copyTty(p, line, slave) )
+      { Cprintf("[PCE: failed to reset %s: %s]\n", line, strName(OsError()));
+	exit(CHILD_NOPTY);
+      }
+      DEBUG(NAME_process, Cprintf("%s initialised\n", line));
+
+      for(int i=0; i<=2; i++)	/* dup slave to stdin/stdout/stderr */
+      { if ( slave != i )
+	  dup2(slave, i);
+      }
+
+      close_fds_from(3);		/* close remaining open fd's */
+
+#ifdef TIOCSCTTY
+      ioctl(0, TIOCSCTTY, NULL);
+#endif
+
+      if ( execvp(argv[0], argv) )
+      { Cprintf("[PCE: Failed to start %s: %s]\n",
+		argv[0], strName(OsError()));
+	exit(CHILD_NOEXEC);
+      }
+    } else				/* parent process  */
+    {
+#ifndef USE_GRANTPT
+      close(slave);
+#else
+      if ( (line = ptsname(master)) != NULL )
+#endif
+	assign(p, tty, CtoName(line));
+      pidProcess(p, toInt(pid));
+      p->rdfd = p->wrfd = master;
+      p->rdstream = NULL;
+      assign(p, status, NAME_running);
+    }
+  } else				/* no tty: use pipes */
+  { int wrfd[2];
+    int rdfd[2];
+    int pid;
+
+    if ( pipe(wrfd) )
+      return errorPce(p, NAME_noPipe, OsError());
+    if ( pipe(rdfd) )
+    { close(wrfd[0]);
+      close(wrfd[1]);
+      return errorPce(p, NAME_noPipe, OsError());
+    }
+
+    if ( (pid = fork()) == 0 )	/* child process */
+    { if ( notDefault(p->directory) )
+	cdDirectory(p->directory);
+      initEnvironment(p);
+
+      /* Move our ends above 2 first: if stdin was closed, one of
+	 them may be 0, 1 or 2 and dup2() would overwrite it. */
+      int in  = fcntl(wrfd[0], F_DUPFD, 3);
+      int out = fcntl(rdfd[1], F_DUPFD, 3);
+
+      dup2(in, 0);
+      dup2(out, 1);
+      dup2(out, 2);
+      close_fds_from(3);
+
+      if ( execvp(argv[0], argv) )
+      { Cprintf("[PCE: Failed to start %s: %s]\n",
+		argv[0], strName(OsError()));
+	exit(CHILD_NOEXEC);
+      }
+    } else
+    { close(wrfd[0]);
+      close(rdfd[1]);
+      pidProcess(p, toInt(pid));
+      p->wrfd = wrfd[1];
+      p->rdfd = rdfd[0];
+      assign(p, status, NAME_running);
+    }
+  }
+
+  succeed;
+}
+
+
 static status
 openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 { if ( notDefault(cmd) )
@@ -541,171 +725,16 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
   }
 
   if ( isNil(p->pid) )
-  { if ( p->use_tty == ON )
-    { int master = -1, slave = -1;
-      int pid;
-#if USE_GRANTPT
-      char *line = NULL;
-#else
-      char line[100];
-#endif
+  { char **exec_argv = process_argv(p);
+    status rc;
 
-#if USE_GRANTPT
-      if ( (master = open("/dev/ptmx", O_RDWR)) < 0 )
-#else
-      if ( !getPseudoTTY(p, line, &master, &slave) )
-#endif
-      { Cprintf("[PCE: Failed to get pseudo tty: %s]\n",
-		strName(OsError()));
-	fail;
-      }
-
-#ifdef stderr
-      DEBUG(NAME_process, fprintf(stderr, "Ready to fork\n"));
-#endif
-
-      if ( (pid = fork()) == 0 )	/* child process */
-      { int i, argc;
-	char **argv;
-
-	if ( notDefault(p->directory) )
-	  cdDirectory(p->directory);
-#ifdef stderr
-	DEBUG(NAME_process, fprintf(stderr, "CD ok\n"));
-#endif
-	initEnvironment(p);
-#ifdef stderr
-	DEBUG(NAME_process, fprintf(stderr, "Environment initialised\n"));
-#endif
-#ifdef HAVE_SETSID
-	if ( setsid() < 0 )
-	  Cprintf("[PCE: setsid() failed: %s]\n", strName(OsError()));
-#else
-      { int fd;
-
-	if ( (fd = open("/dev/tty", 2)) )
-	{ ioctl(fd, TIOCNOTTY, NULL);	/* detach from controlling tty */
-	  close(fd);
-	}
-      }
-#endif
-#ifdef USE_GRANTPT
-	if ( grantpt(master) < 0 ||
-	     unlockpt(master) < 0 ||
-	     (line = ptsname(master)) == NULL ||
-	     (slave = open(line, O_RDWR)) < 0 )
-	{ Cprintf("[PCE: failed to get slave pty: %s]\n", strName(OsError()));
-	  exit(1);
-	}
-#ifdef I_PUSH
-	ioctl(slave, I_PUSH, "ptem");	/* don't worry it these fail */
-	ioctl(slave, I_PUSH, "ldterm");
-	ioctl(slave, I_PUSH, "ttcompat");
-#endif
-#endif /*USE_GRANTPT*/
-
-	DEBUG(NAME_process, Cprintf("Slave %s at %d\n", line, slave));
-	if ( !copyTty(p, line, slave) )
-	{ Cprintf("[PCE: failed to reset %s: %s]\n", line, strName(OsError()));
-	  exit(CHILD_NOPTY);
-	}
-	DEBUG(NAME_process, Cprintf("%s initialised\n", line));
-
-	for(i=0; i<=2; i++)		/* dup slave to stdin/stdout/stderr */
-	{ if ( slave != i )
-	    dup2(slave, i);
-	}
-
-	close_fds_from(3);		/* close remaining open fd's */
-
-#ifdef TIOCSCTTY
-	ioctl(0, TIOCSCTTY, NULL);
-#endif
-
-	argv = (char **)alloca(sizeof(char *) *
-			       (valInt(p->arguments->size) + 2));
-	argc = valInt(p->arguments->size);
-
-	argv[0] = strName(p->name);
-
-	for(i=0; i<argc; i++)
-	  argv[i+1] = toCharp(p->arguments->elements[i]);
-	argv[i+1] = NULL;
-
-	if ( execvp(strName(p->name), argv) )
-	{ Cprintf("[PCE: Failed to start %s: %s]\n",
-		  strName(p->name), strName(OsError()));
-	  exit(CHILD_NOEXEC);
-	}
-      } else				/* parent process  */
-      {
-#ifndef USE_GRANTPT
-	close(slave);
-#else
-	if ( (line = ptsname(master)) != NULL )
-#endif
-	  assign(p, tty, CtoName(line));
-	pidProcess(p, toInt(pid));
-	p->rdfd = p->wrfd = master;
-	p->rdstream = NULL;
-	assign(p, status, NAME_running);
-      }
-    } else				/* no tty: use pipes */
-    { int wrfd[2];
-      int rdfd[2];
-      int pid;
-
-      if ( pipe(wrfd) )
-	return errorPce(p, NAME_noPipe, OsError());
-      if ( pipe(rdfd) )
-      { close(wrfd[0]);
-	close(wrfd[1]);
-	return errorPce(p, NAME_noPipe, OsError());
-      }
-
-      if ( (pid = fork()) == 0 )	/* child process */
-      { int i;
-	char **argv;
-	int argc;
-
-	if ( notDefault(p->directory) )
-	  cdDirectory(p->directory);
-	initEnvironment(p);
-
-	/* Move our ends above 2 first: if stdin was closed, one of
-	   them may be 0, 1 or 2 and dup2() would overwrite it. */
-	int in  = fcntl(wrfd[0], F_DUPFD, 3);
-	int out = fcntl(rdfd[1], F_DUPFD, 3);
-
-	dup2(in, 0);
-	dup2(out, 1);
-	dup2(out, 2);
-	close_fds_from(3);
-
-	argv = (char **)alloca(sizeof(char *) *
-			       (valInt(p->arguments->size) + 2));
-	argc = valInt(p->arguments->size);
-
-	argv[0] = strName(p->name);
-
-	for(i=0; i<argc; i++)
-	  argv[i+1] = toCharp(p->arguments->elements[i]);
-	argv[i+1] = NULL;
-
-	if ( execvp(strName(p->name), argv) )
-	{ Cprintf("[PCE: Failed to start %s: %s]\n",
-		  strName(p->name), strName(OsError()));
-	  exit(CHILD_NOEXEC);
-	}
-      } else
-      { close(wrfd[0]);
-	close(rdfd[1]);
-	pidProcess(p, toInt(pid));
-	p->wrfd = wrfd[1];
-	p->rdfd = rdfd[0];
-	assign(p, status, NAME_running);
-      }
-    }
+    if ( !exec_argv )
+      return errorPce(p, NAME_execError,
+		      CtoName("cannot encode the command"));
+    rc = forkProcess(p, exec_argv);
+    free_argv(exec_argv);
+    if ( !rc )
+      fail;
 
     inputStream((Stream)p, DEFAULT);
   }
