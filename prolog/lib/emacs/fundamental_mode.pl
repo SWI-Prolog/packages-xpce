@@ -39,7 +39,7 @@
 :- use_module(library(emacs_extend), []).
 :- use_module(window, [emacs_register_closed_tab/1]).
 :- autoload(bookmarks, [hit_list_editor/2]).
-:- autoload(library(process), [process_which/2]).
+:- autoload(library(process), [process_which/2, process_command_line/2]).
 :- autoload(library(keybinding),
             [select_key_binding/1, command_functions/2, key_function/2]).
 :- use_module(library(swi_ide), []).
@@ -820,12 +820,20 @@ execute_extended_command(M,
                  *           COMPILE            *
                  *******************************/
 
-split_command_string(String, List) :-
-    new(Ch, chain),
-    new(Re, regex('[^ ]+')),
-    send(Re, for_all, String,
-         message(Ch, append, ?(@arg1, register_value, @arg2, 0, name))),
-    chain_list(Ch, List).
+%   split_command_string(+Command, -Args) is det.
+%
+%   Split Command into words as Windows does.  Double quotes group
+%   words, e.g., "C:\Program Files\Git\usr\bin\grep.exe".  See
+%   process_command_line/2.
+
+split_command_string(Command, Args) :-
+    (   atom(Command)
+    ->  Text = Command
+    ;   string(Command)
+    ->  Text = Command
+    ;   get(Command, value, Text)
+    ),
+    process_command_line(Text, Args).
 
 %!  command_process(+Mode, +Class, +Command, -Process) is det.
 %

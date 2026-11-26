@@ -120,6 +120,13 @@ test(args_kept, [L == "grep -n a\\b ."]) :-
                                         string('a\\b'), L).
 test(no_placeholder, [L == "grep -n"]) :-
     emacs_fundamental_mode:command_line(string('grep -n'), string(foo), L).
+test(quoted_program, [ Args == [ 'C:\\Program Files\\Git\\usr\\bin\\grep.exe',
+                                 '-Hn', 'a b'
+                               ]
+                      ]) :-
+    emacs_fundamental_mode:split_command_string(
+        string('"C:\\Program Files\\Git\\usr\\bin\\grep.exe" -Hn "a b"'),
+        Args).
 
 :- end_tests(grep_command_line).
 
