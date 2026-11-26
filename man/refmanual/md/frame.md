@@ -32,7 +32,7 @@ imply X-specific semantics.
 
 ## Class variables {#class-frame-classvars}
 
-- frame.busy_cursor: cursor* = watch (Unix/macOS) / win_wait (Windows)
+- frame.busy_cursor: cursor* = wait
     Cursor used by `frame ->busy_cursor` when the call site does not
     pass a cursor.
 

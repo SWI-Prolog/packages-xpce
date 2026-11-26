@@ -94,6 +94,12 @@ test(alias_maps_to_standard, true) :-
                   ))
            )).
 
+test(busy_cursor_known, true) :-        % used to be win_wait on Windows
+    get(class(frame), class_variable, busy_cursor, CV),
+    get(CV, value, Cursor),
+    get(Cursor, name, Name),
+    get(@cursor_names, value, Name, _).
+
 :- end_tests(cursor_kind).
 
 summary(Name, Summary) :-

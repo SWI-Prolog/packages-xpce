@@ -2457,7 +2457,7 @@ static getdecl get_frame[] =
 static classvardecl rc_frame[] =
 { RC(NAME_menuBarKey, "name*", "f10",
      "Key that opens the first menu of the menu_bar (@nil: none)"),
-  RC(NAME_busyCursor, "cursor*", UXWIN("watch", "win_wait"),
+  RC(NAME_busyCursor, "cursor*", "wait",
      "Default cursor displayed by ->busy_cursor"),
   RC(NAME_confirmDone, "bool", "@off",
      "Show confirmer on `Delete'"),

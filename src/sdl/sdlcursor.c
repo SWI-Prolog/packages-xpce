@@ -58,6 +58,7 @@ static standard_cursor x11_cursors[] =
   { "cross",		   SDL_SYSTEM_CURSOR_CROSSHAIR },
   { "plus",		   SDL_SYSTEM_CURSOR_CROSSHAIR },
   { "watch",               SDL_SYSTEM_CURSOR_WAIT },
+  { "win_wait",            SDL_SYSTEM_CURSOR_WAIT },
   { "hand2",               SDL_SYSTEM_CURSOR_POINTER },
   { "xterm",               SDL_SYSTEM_CURSOR_TEXT },
   { "win_ibeam",           SDL_SYSTEM_CURSOR_TEXT },
