@@ -39,6 +39,7 @@
 :- use_module(library(emacs_extend), []).
 :- use_module(window, [emacs_register_closed_tab/1]).
 :- autoload(bookmarks, [hit_list_editor/2]).
+:- autoload(library(process), [process_which/2]).
 :- autoload(library(keybinding),
             [select_key_binding/1, command_functions/2, key_function/2]).
 :- use_module(library(swi_ide), []).
@@ -190,7 +191,7 @@
 
 class_variable(grep_command, string,
                [ 'X'('grep -n --color=always %s /dev/null'),
-                 windows('grep -n --color=always %s NUL')
+                 windows('grep -Hn --color=always %s')
                ],
                "Command of M-x grep").
 class_variable(git_grep_command, string,
@@ -836,10 +837,64 @@ command_process(M, Class, Command, Process) :-
     (   ShellCommandChain \== @nil
     ->  chain_list(ShellCommandChain, List),
         append(List, [Command], Args)
-    ;   split_command_string(Command, Args)
+    ;   split_command_string(Command, Args0),
+        resolve_program(Args0, Args)
     ),
     Term =.. [Class|Args],
     new(Process, Term).
+
+%!  resolve_program(+Args0, -Args) is det.
+%
+%   On Windows, find a Unix tool such as `grep` that is not in %PATH% in
+%   the `usr\bin` directory of Git for Windows or MSYS2.  Git for Windows
+%   ships these tools for its bash, but only puts git itself in %PATH%.
+
+resolve_program([Prog0|Args], [Prog|Args]) :-
+    current_prolog_flag(windows, true),
+    \+ sub_atom(Prog0, _, _, _, '/'),
+    \+ sub_atom(Prog0, _, _, _, '\\'),
+    \+ process_which(path(Prog0), _),
+    msys_bin_dir(Dir),
+    msys_program(Dir, Prog0, Prog),
+    !.
+resolve_program(Args, Args).
+
+msys_bin_dir(Dir) :-
+    process_which(path(git), Git),
+    git_msys_bin_dir(Git, Dir).
+msys_bin_dir(Dir) :-
+    member(Dir, [ 'C:/Program Files/Git/usr/bin',
+                  'C:/msys64/usr/bin'
+                ]),
+    exists_directory(Dir).
+
+%!  git_msys_bin_dir(+GitExe, -Dir) is nondet.
+%
+%   Dir is the directory of the Unix tools of the Git for Windows that
+%   GitExe belongs to: GitExe is <Git>/cmd/git.exe, <Git>/bin/git.exe or
+%   <Git>/mingw64/bin/git.exe and Dir is <Git>/usr/bin.
+
+git_msys_bin_dir(GitExe, Dir) :-
+    prolog_to_os_filename(Git, GitExe),
+    file_directory_name(Git, GitDir),
+    file_directory_name(GitDir, Up1),
+    file_directory_name(Up1, Up2),
+    member(Root, [Up1, Up2]),
+    directory_file_path(Root, 'usr/bin', Dir),
+    exists_directory(Dir).
+
+%!  msys_program(+Dir, +Prog, -Path) is semidet.
+%
+%   Path is the OS file name of Prog in Dir.  Prog may lack `.exe`.
+
+msys_program(Dir, Prog, Path) :-
+    (   file_name_extension(_, '', Prog)
+    ->  file_name_extension(Prog, exe, Exe)
+    ;   Exe = Prog
+    ),
+    directory_file_path(Dir, Exe, File),
+    exists_file(File),
+    prolog_to_os_filename(File, Path).
 
 compile(M, Command:shell_command=string, Label:[name]) :->
     "Run Unix (compilation) process in buffer"::

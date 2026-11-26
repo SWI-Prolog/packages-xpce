@@ -63,6 +63,7 @@ Run with:
 test_emacs_grep :-
     run_tests([ grep_line,
                 grep_command_line,
+                grep_from_git,
                 grep_hit_list,
                 grep_command,
                 hit_list_filter,
@@ -121,6 +122,58 @@ test(no_placeholder, [L == "grep -n"]) :-
     emacs_fundamental_mode:command_line(string('grep -n'), string(foo), L).
 
 :- end_tests(grep_command_line).
+
+%   On Windows, grep is found in the usr/bin of Git for Windows, next to
+%   which git.exe in %PATH% lives.  Tested on a fake Git tree.
+
+:- begin_tests(grep_from_git, [ setup(make_git_tree),
+                                cleanup(remove_git_tree)
+                              ]).
+
+:- dynamic git_root/1.
+
+make_git_tree :-
+    tmp_directory(git, Root),
+    asserta(git_root(Root)),
+    forall(member(D, [cmd, 'mingw64/bin', 'usr/bin']),
+           ( directory_file_path(Root, D, Dir),
+             make_directory_path(Dir) )),
+    forall(member(F, ['cmd/git.exe', 'mingw64/bin/git.exe',
+                      'usr/bin/grep.exe']),
+           ( directory_file_path(Root, F, File),
+             close_empty(File) )).
+
+close_empty(File) :-
+    setup_call_cleanup(open(File, write, Out), true, close(Out)).
+
+remove_git_tree :-
+    retract(git_root(Root)),
+    delete_directory_and_contents(Root).
+
+grep_next_to(GitRel, Grep) :-
+    git_root(Root),
+    directory_file_path(Root, GitRel, Git0),
+    prolog_to_os_filename(Git0, Git),
+    once(emacs_fundamental_mode:git_msys_bin_dir(Git, Dir)),
+    emacs_fundamental_mode:msys_program(Dir, grep, Grep).
+
+expected_grep(Grep) :-
+    git_root(Root),
+    directory_file_path(Root, 'usr/bin/grep.exe', File),
+    prolog_to_os_filename(File, Grep).
+
+test(cmd, [Grep == Expected]) :-
+    grep_next_to('cmd/git.exe', Grep),
+    expected_grep(Expected).
+test(mingw64, [Grep == Expected]) :-
+    grep_next_to('mingw64/bin/git.exe', Grep),
+    expected_grep(Expected).
+test(missing, fail) :-
+    git_root(Root),
+    directory_file_path(Root, 'usr/bin', Dir),
+    emacs_fundamental_mode:msys_program(Dir, egrep_xyz, _).
+
+:- end_tests(grep_from_git).
 
 %   These run the grep program, which need not be installed, e.g., on
 %   Windows.
