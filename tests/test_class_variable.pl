@@ -66,6 +66,24 @@ variable(x, int, both).
 :- pce_begin_class(tcv_e, tcv_a).
 :- pce_end_class.
 
+%   Classes where the class variable is <-y of an instance: there is no
+%   instance variable y.
+
+:- pce_begin_class(tcv_g, object).
+class_variable(y, name, a).
+:- pce_end_class.
+:- pce_begin_class(tcv_h, tcv_g).
+:- pce_end_class.
+:- pce_begin_class(tcv_i, tcv_g).
+:- pce_end_class.
+:- pce_begin_class(tcv_j, tcv_i).
+:- pce_end_class.
+
+get_y(Class, Value) :-
+    new(Obj, Class),
+    get(Obj, y, Value),
+    free(Obj).
+
 cv_value(Class, Value) :-
     get(class(Class), class_variable, x, CV),
     get(CV, value, Value).
@@ -103,6 +121,23 @@ test(runtime_after_lookup, [Before-After-O == 1-4-4]) :-
 test(runtime_inherited_by_subclass, [D-O == 3-3]) :-
     cv_value(tcv_d, D),
     new_x(tcv_d, O).
+
+%   <-y of an instance is the class variable of its class.  That used to
+%   be the one of the declaring class, ignoring a value for the subclass,
+%   e.g., emacs_prolog_mode.grep_command in a Defaults file.
+
+test(getter_defaults_subclass, [G-H == a-b]) :-
+    load_defaults(['tcv_h.y: b']),
+    get_y(tcv_g, G),
+    get_y(tcv_h, H).
+test(getter_runtime, [Before-After-G == a-c-a]) :-
+    get_y(tcv_j, _),                    % caches tcv_g's variable in tcv_j
+    get_y(tcv_i, Before),               % caches tcv_g's variable
+    send(class(tcv_i), class_variable_value, y, c),
+    get_y(tcv_i, After),
+    get_y(tcv_g, G).
+test(getter_runtime_subclass, [J == c]) :-
+    get_y(tcv_j, J).
 
 
 %   A colour may be written as #RRGGBB or #RRGGBBAA in Defaults syntax,

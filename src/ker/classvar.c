@@ -453,8 +453,10 @@ hasClassVariableClass(Class class, Name name)
 }
 
 
-/* Remove cv from the class_variable_table caches of all (indirect)
- * subclasses of class, such that they look it up again.
+/* Remove cv from the class_variable_table caches of class and all its
+ * (indirect) subclasses, such that they look it up again.  Also remove
+ * a class variable as get-implementation from their get_table, which
+ * caches the class variable that <-name of an instance uses.
  */
 
 static void
@@ -463,9 +465,15 @@ uncacheSubClassVariable(Class class, ClassVariable cv)
   Class c;
 
   while( (c = getDeleteHeadChain(agenda)) )
-  { if ( notNil(c->class_variable_table) &&
+  { Any gm;
+
+    if ( notNil(c->class_variable_table) &&
 	 getMemberHashTable(c->class_variable_table, cv->name) == cv )
       deleteHashTable(c->class_variable_table, cv->name);
+    if ( instanceOfObject(c->get_table, ClassHashTable) &&
+	 (gm = getMemberHashTable(c->get_table, cv->name)) &&
+	 instanceOfObject(gm, ClassClassVariable) )
+      deleteHashTable(c->get_table, cv->name);
     if ( notNil(c->sub_classes) )
     { Cell cell;
 

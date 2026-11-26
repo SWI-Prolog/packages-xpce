@@ -1760,6 +1760,11 @@ caching.
 Class-variables  are  a  nuisance,  as   it    is   defined  that  other
 get-implementation always precedes class-variables, even   if  the other
 behaviour is defined higher in the hierarchy.
+
+If  a class variable is the implementation, it  is the one of the class
+itself as getClassVariableClass() finds it.  That is a copy of the one
+of  the super class if the class has  a value of its own, from a Defaults
+file or set with class->class_variable_value.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 Any
@@ -1774,8 +1779,12 @@ getResolveGetMethodClass(Class class, Name name)
     Cell cell;
 
     if ( (gm = getMemberHashTable(super->get_table, name)) )
-    { if ( cv && instanceOfObject(gm, ClassClassVariable) )
-	gm = cv;
+    { if ( instanceOfObject(gm, ClassClassVariable) )
+      { ClassVariable mine = getClassVariableClass(class, name);
+
+	if ( mine )
+	  gm = mine;
+      }
       if ( class != super )
 	appendHashTable(class->get_table, name, gm);
       answer(gm);
@@ -1819,7 +1828,11 @@ getResolveGetMethodClass(Class class, Name name)
   }
 
   if ( cv )
-  { appendHashTable(class->get_table, name, cv);
+  { ClassVariable mine = getClassVariableClass(class, name);
+
+    if ( mine )				/* e.g., set for this class */
+      cv = mine;
+    appendHashTable(class->get_table, name, cv);
     answer(cv);
   }
 
