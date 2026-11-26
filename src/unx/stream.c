@@ -171,7 +171,7 @@ inputStream(Stream s, Int fd)
 		 *******************************/
 
 
-#define BLOCKSIZE 1024
+#define BLOCKSIZE 4096		/* >= PIPE_READ_CHUNK of sdl/sdlinput.h */
 #define ALLOCSIZE 1024
 #define MAX_PENDING 16			/* >= longest incomplete sequence */
 

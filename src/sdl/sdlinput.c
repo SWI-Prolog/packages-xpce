@@ -159,6 +159,18 @@ releaseWatch(FDWatch *watch)
     watch->is_socket = false;
   } else if ( watch->hPipe )
   { HANDLE h;
+    /* A ReadFile() may still be pending.  The system writes into our
+       buffer until it is done, so cancel it and wait before we free
+       the buffer. */
+    if ( watch->pending && watch->code != FD_ASYNC_WRITE )
+    { DWORD bytes;
+      CancelIoEx(watch->hPipe, &watch->overlapped);
+      GetOverlappedResult(watch->hPipe, &watch->overlapped, &bytes, true);
+      watch->pending = false;
+    }
+    if ( watch->close_fd )	/* see remove_fd_watch_and_close() */
+      CloseHandle(watch->hPipe);
+    watch->hPipe = NULL;
     if ( (h=watch->fd) )
     { watch->fd = NULL;
       CloseHandle(h);
@@ -173,9 +185,11 @@ releaseWatch(FDWatch *watch)
     }
     if ( watch->code == FD_ASYNC_WRITE )
       DeleteCriticalSection(&watch->lock);
+  } else if ( watch->close_fd && watch->fd )
+  { CloseHandle(watch->fd);	/* e.g., a process handle */
+    watch->fd = NULL;
   }
-#endif
-#ifndef __WINDOWS__
+#else
   if ( watch->inbuf_lock )
   { SDL_DestroyMutex(watch->inbuf_lock);
     watch->inbuf_lock = NULL;
@@ -188,8 +202,8 @@ releaseWatch(FDWatch *watch)
   { close(watch->fd);		/* see remove_fd_watch_and_close() */
     watch->fd = -1;
   }
-  watch->close_fd = false;
 #endif
+  watch->close_fd = false;
   watch->state = WATCH_FREE;
 }
 
@@ -592,22 +606,28 @@ add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata)
   return NULL;
 }
 
+/* Collect the data of the ReadFile() that made the watch signal.  A
+ * read of zero bytes (the writer wrote zero bytes) answers -2: there
+ * is nothing, but this is not the end of the data.
+ */
+
 ssize_t
 read_watch(FDWatch *watch, char *buffer, size_t size)
 { DWORD bytes;
   if ( watch->last_error != ERROR_SUCCESS )
-  { return -1;
+  { return watch->last_error == ERROR_BROKEN_PIPE ? 0 : -1;
   } else if ( GetOverlappedResult(watch->hPipe, &watch->overlapped,
 				  &bytes, false) )
   { assert(bytes <= size);
     memcpy(buffer, watch->buffer, bytes);
-    if ( bytes == 0 )
-    { Cprintf("Got 0 bytes?\n");
-      exit(1);
-    }
-    return bytes;
+    return bytes == 0 ? -2 : bytes;
   } else
-  { Cprintf("No overlapped result: %s\n", pp(WinStrError(GetLastError())));
+  { DWORD error = GetLastError();
+
+    watch->last_error = error;
+    if ( error == ERROR_BROKEN_PIPE )	/* the writer closed the pipe */
+      return 0;
+    Cprintf("No overlapped result: %s\n", pp(WinStrError(error)));
     return -1;
   }
 }
@@ -727,6 +747,27 @@ add_socket_to_watch(socket_t fd, int32_t code, void *userdata)
 #endif
       return start_watch(watch, code, userdata);
     }
+  }
+
+  return NULL;
+}
+
+
+/* Find the watch installed with code and userdata.  Only the thread
+ * that installs and removes such watches may use this.
+ */
+
+FDWatch *
+find_fd_watch(int32_t code, void *userdata)
+{ FDWatch *watch = fd_meta;
+
+  for(int i=0; i<=watch_max; i++, watch++)
+  { watch_state st = watch->state;
+
+    if ( (st == WATCH_ACTIVE || st == WATCH_PENDING ||
+	  st == WATCH_PROCESSING) &&
+	 watch->code == code && watch->userdata == userdata )
+      return watch;
   }
 
   return NULL;

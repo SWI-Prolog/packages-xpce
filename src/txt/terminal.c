@@ -13313,6 +13313,9 @@ receiveTerminalImage(TerminalImage ti)
   ssize_t rc = read_watch(b->ptycon.watchIn,
 			  buf+MAX_INCOMPLETE, PIPE_READ_CHUNK);
 
+  if ( rc == -2 )			/* nothing, but not EOF */
+    succeed;
+
   return processClientOutputTerminalImage(ti, buf+MAX_INCOMPLETE, rc);
 }
 

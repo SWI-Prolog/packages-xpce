@@ -107,9 +107,11 @@ FDWatch *add_socket_to_watch(socket_t fd, int32_t code, void *userdata);
 void	 remove_fd_watch(FDWatch *watch);
 void	 remove_fd_watch_and_close(FDWatch *watch);
 void	 processed_fd_watch(FDWatch *watch);
+FDWatch *find_fd_watch(int32_t code, void *userdata);
 
 /* Collect data the watcher thread already read.  Answers 0 at end of
- * file and -1 on error, as read(2) does. */
+ * file and -1 on error, as read(2) does.  On Windows it answers -2 if
+ * there is nothing, which happens if the writer wrote zero bytes. */
 ssize_t  read_watch(FDWatch *watch, char *buffer, size_t size);
 #ifndef __WINDOWS__
 void	 watch_clear_eof(FDWatch *watch);

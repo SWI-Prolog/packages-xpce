@@ -76,6 +76,20 @@ is_socket(Stream s)
 { return instanceOfObject(s, ClassSocket);
 }
 
+#ifdef __WINDOWS__
+/* On Windows the fds of a process are Win32 handles: rdfd is the
+ * overlapped read end of a pipe, wrfd a normal pipe handle.  See
+ * openProcess() in msw/msprocess.c.
+ */
+
+static bool
+is_process(Stream s)
+{ return instanceOfObject(s, ClassProcess);
+}
+
+static void process_terminated(Process p, FDWatch *watch);
+#endif
+
 static FDWatch *
 getStreamWatch(Stream s)
 { return s->ws_ref;
@@ -143,13 +157,15 @@ sdl_stream_event(SDL_Event *event)
 	pceMTUnlock();
       }
       processed_fd_watch(watch);
-#ifndef __WINDOWS__
     } else if ( event->user.code == FD_READY_CHILD )
     { pceMTLock();
+#ifdef __WINDOWS__
+      process_terminated(event->user.data2, watch);
+#else
       reapChildProcesses(watch->fd);
+#endif
       pceMTUnlock();
       processed_fd_watch(watch);
-#endif
     } else if ( event->user.code == FD_READY_TERMINAL )
     { TerminalImage ti = event->user.data2;
       if ( !onFlag(ti, F_FREED|F_FREEING) )
@@ -172,7 +188,19 @@ sdl_stream_event(SDL_Event *event)
  */
 void
 ws_close_input_stream(Stream s)
-{ ws_no_input_stream(s);
+{
+#ifdef __WINDOWS__
+  FDWatch *watch;
+
+  /* The watcher thread may have a ReadFile() pending on the pipe.  Let
+     it close the pipe when it is done with it. */
+  if ( is_process(s) && (watch = getStreamWatch(s)) )
+  { setStreamWatch(s, NULL);
+    remove_fd_watch_and_close(watch);
+    s->rdfd = -1;
+  }
+#endif
+  ws_no_input_stream(s);
 
   if ( s->rdstream )
   { fclose(s->rdstream);
@@ -180,7 +208,15 @@ ws_close_input_stream(Stream s)
   }
 
   if ( s->rdfd >= 0 )
-  { if ( is_socket(s) )
+  {
+#ifdef __WINDOWS__
+    if ( is_process(s) )
+    { CloseHandle((HANDLE)s->rdfd);
+      s->rdfd = -1;
+      return;
+    }
+#endif
+    if ( is_socket(s) )
     { /* A socket has one fd for both sides: the last side closes it */
       if ( s->wrfd == s->rdfd )
 	shutdown(SOCK(s->rdfd), SHUT_RD);
@@ -200,7 +236,15 @@ ws_close_input_stream(Stream s)
 void
 ws_close_output_stream(Stream s)
 { if ( s->wrfd >= 0 )
-  { if ( is_socket(s) )
+  {
+#ifdef __WINDOWS__
+    if ( is_process(s) )
+    { CloseHandle((HANDLE)s->wrfd);
+      s->wrfd = -1;
+      return;
+    }
+#endif
+    if ( is_socket(s) )
     { if ( s->rdfd == s->wrfd )	/* see ws_close_input_stream() */
 	shutdown(SOCK(s->wrfd), SHUT_WR);
       else
@@ -228,14 +272,18 @@ ws_close_stream(Stream s)
  */
 void
 ws_input_stream(Stream s)
-{ if ( s->rdfd >= 0 )
-  {
+{ if ( s->rdfd >= 0 && !getStreamWatch(s) )
+  { FDWatch *watch;
 #ifdef __WINDOWS__
-    if ( !is_socket(s) )	/* only sockets are waitable on Windows */
-      return;
+    if ( is_process(s) )
+      watch = add_pipe_to_watch((HANDLE)s->rdfd, FD_READY_STREAM_INPUT, s);
+    else if ( is_socket(s) )
+      watch = add_socket_to_watch(SOCK(s->rdfd), FD_READY_STREAM_INPUT, s);
+    else
+      return;			/* other handles are not waitable */
+#else
+    watch = add_socket_to_watch(SOCK(s->rdfd), FD_READY_STREAM_INPUT, s);
 #endif
-    FDWatch *watch = add_socket_to_watch(SOCK(s->rdfd),
-					 FD_READY_STREAM_INPUT, s);
     DEBUG(NAME_stream,
 	  Cprintf("Registered %s for async input (fd=%d)\n",
 		  pp(s), s->rdfd));
@@ -292,6 +340,15 @@ ws_write_stream_data(Stream s, void *data, int len)
   while( len > 0 )		/* write() may be partial, e.g., on a pipe */
   {
 #ifdef __WINDOWS__
+    if ( is_process(s) )
+    { DWORD n;
+
+      if ( !WriteFile((HANDLE)s->wrfd, p, len, &n, NULL) )
+	return errorPce(s, NAME_ioError, WinStrError(GetLastError()));
+      p   += n;
+      len -= n;
+      continue;
+    }
     if ( is_socket(s) )
     { int n = socket_send(SOCK(s->wrfd), p, len);
 
@@ -342,6 +399,21 @@ ws_read_stream_data(Stream s, void *data, int len, Num timeout)
   { errno = EINVAL;
     return -1;
   }
+
+#ifdef __WINDOWS__
+  /* The watcher thread did the read.  We get here only on its event,
+     so there is no reason to wait.  len must be at least
+     PIPE_READ_CHUNK (see BLOCKSIZE in unx/stream.c). */
+  if ( is_process(s) )
+  { FDWatch *watch = getStreamWatch(s);
+
+    if ( !watch )
+    { errno = EINVAL;
+      return -1;
+    }
+    return (int)read_watch(watch, data, len);
+  }
+#endif
 
   if ( notDefault(timeout) )
   {
@@ -394,7 +466,91 @@ ws_read_stream_data(Stream s, void *data, int len, Num timeout)
 void
 ws_done_process(Process p)
 {
+#ifdef __WINDOWS__
+  FDWatch *watch = find_fd_watch(FD_READY_CHILD, p);
+
+  if ( watch )
+    remove_fd_watch_and_close(watch);	/* closes the process handle */
+#endif
 }
+
+#ifdef __WINDOWS__
+/* A process on Windows is watched through its handle, which becomes
+ * signalled when the process terminates.  The watch owns the handle
+ * and closes it when it is removed.
+ */
+
+void
+ws_watch_process(Process p, void *hProcess)
+{ if ( !add_fd_to_watch(hProcess, FD_READY_CHILD, p) )
+  { Cprintf("%s: cannot watch for termination\n", pp(p));
+    CloseHandle(hProcess);
+  }
+}
+
+void
+ws_kill_process(Process p, int sig)
+{ FDWatch *watch = find_fd_watch(FD_READY_CHILD, p);
+
+  if ( !watch )				/* already terminated */
+    return;
+
+  if ( sig == 1 ||
+       sig == 9 ||
+       sig == 15 )
+  { TerminateProcess(watch->fd, sig);
+  } else if ( sig == 3 )
+  { GenerateConsoleCtrlEvent(CTRL_C_EVENT, valInt(p->pid));
+  } else
+    Cprintf("%s: process->kill only supports INT, KILL\n", pp(p));
+}
+
+/* Report the termination of p.  <-code holds the outcome: the name of
+ * the signal if we killed it (see killProcess()) or the exit status.
+ */
+
+static void
+report_process_outcome(Process p)
+{ Any code = p->code;
+
+  if ( isName(code) )
+    send(p, NAME_killed, code, EAV);
+  else
+    send(p, NAME_exited, isInteger(code) ? code : ZERO, EAV);
+}
+
+/* p terminated.  If its output is still open, there may be output we
+ * did not yet handle, which the terminate message may rely on.  Then
+ * ws_end_of_output_process() reports the termination.
+ */
+
+static void
+process_terminated(Process p, FDWatch *watch)
+{ if ( !isName(p->code) )		/* not killed by us */
+  { DWORD rc;
+
+    if ( !GetExitCodeProcess(watch->fd, &rc) )
+      rc = 1;
+    assign(p, code, toInt(rc));
+  }
+  remove_fd_watch_and_close(watch);
+
+  DEBUG(NAME_process, Cprintf("%s: terminated (%s)\n",
+			      pp(p), pp(p->code)));
+  if ( p->rdfd < 0 )
+    report_process_outcome(p);
+}
+
+/* Called at the end of the output of p.  If p already terminated,
+ * process_terminated() left the reporting to us.
+ */
+
+void
+ws_end_of_output_process(Process p)
+{ if ( p->status == NAME_running && !find_fd_watch(FD_READY_CHILD, p) )
+    report_process_outcome(p);
+}
+#endif /*__WINDOWS__*/
 
 /**
  * Watch fd, the read end of the pipe the SIGCHLD handler writes to,

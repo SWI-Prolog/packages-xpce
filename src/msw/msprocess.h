@@ -36,7 +36,5 @@
 #define MSPROCESS_H_INCLUDED
 
 status	openProcess(Process p, CharArray cmd, int argc, CharArray *argv);
-void	ws_kill_process(Process p, int sig);
-void	ws_done_process(Process p);
 
 #endif /*MSPROCESS_H_INCLUDED*/

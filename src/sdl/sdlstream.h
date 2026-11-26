@@ -53,5 +53,10 @@ status ws_write_stream_data(Stream s, void *data, int len);
 int ws_read_stream_data(Stream s, void *data, int len, Num timeout);
 void ws_done_process(Process p);
 void ws_watch_child_processes(int fd);
+#ifdef __WINDOWS__
+void ws_watch_process(Process p, void *hProcess);
+void ws_kill_process(Process p, int sig);
+void ws_end_of_output_process(Process p);
+#endif
 
 #endif /* RAYSTREAM_H */

@@ -43,6 +43,7 @@
 #ifndef MAXCMDLINE
 #define MAXCMDLINE 10240
 #endif
+#define PIPE_SIZE 8192
 
 #define APIError() WinStrError(GetLastError())
 
@@ -101,6 +102,66 @@ createWin32EnvriomentBlock(Process p)
 }
 
 
+/* Append arg to the command line in buf, separated by a space and
+ * quoted such that the C runtime of the child (CommandLineToArgvW()
+ * rules) gets it back as one argument.  Without, `sh -c 'exit 3'` runs
+ * `sh -c exit 3`.
+ */
+
+static bool
+append_arg(char *buf, size_t size, const char *arg)
+{ size_t len = strlen(buf);
+  bool quote = (*arg == EOS || strpbrk(arg, " \t\n\v\"") != NULL);
+  const char *s;
+
+#define ADD(c) do { if ( len+1 >= size ) return false; \
+		    buf[len++] = (c); } while(0)
+
+  if ( len > 0 )
+    ADD(' ');
+  if ( !quote )
+  { for(s=arg; *s; s++)
+      ADD(*s);
+  } else
+  { ADD('"');
+    for(s=arg; ; s++)
+    { size_t backslashes = 0;
+
+      while( *s == '\\' )
+      { backslashes++;
+	s++;
+      }
+      if ( *s == EOS )			/* double them before the quote */
+      { for(size_t i=0; i<backslashes*2; i++)
+	  ADD('\\');
+	break;
+      } else if ( *s == '"' )
+      { for(size_t i=0; i<backslashes*2+1; i++)
+	  ADD('\\');
+	ADD('"');
+      } else
+      { for(size_t i=0; i<backslashes; i++)
+	  ADD('\\');
+	ADD(*s);
+      }
+    }
+    ADD('"');
+  }
+  buf[len] = EOS;
+#undef ADD
+
+  return true;
+}
+
+
+/* Start the process.  Its output is read through the overlapped read
+ * end of a pipe by the watcher thread (see ws_input_stream()) and its
+ * termination is seen through its handle (see ws_watch_process()).
+ * Only the ends of the pipes the child uses are inherited: if the child
+ * inherits our ends, it holds its own input open and the pipes of other
+ * processes we start.
+ */
+
 status
 openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 { status rval = SUCCEED;
@@ -117,17 +178,27 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
   { HANDLE wrfd[2];			/* output to process */
     HANDLE rdfd[2];			/* input from process */
     STARTUPINFO startinfo;
-    PROCESS_INFORMATION *processinfo;
+    PROCESS_INFORMATION processinfo;
     SECURITY_ATTRIBUTES sa;
     char cmdline[MAXCMDLINE];
     char dirbuf[PATH_MAX];
     char *cwd = NULL;
     Any a;
-    char *env = createWin32EnvriomentBlock(p);
+    char *env;
 
     if ( p->use_tty == ON )
     { Cprintf("%s: Warning: no TTY control in Win32\n", pp(p));
     }
+
+    _xos_limited_os_filename(strName(p->name), dirbuf, PATH_MAX);
+    cmdline[0] = EOS;
+    if ( !append_arg(cmdline, sizeof(cmdline), dirbuf) )
+      return errorPce(p, NAME_execError, CtoName("command line too long"));
+    for_vector(p->arguments, a,
+	       { if ( !append_arg(cmdline, sizeof(cmdline), toCharp(a)) )
+		   return errorPce(p, NAME_execError,
+				   CtoName("command line too long"));
+	       });
 
     sa.nLength              = sizeof(sa);
     sa.lpSecurityDescriptor = NULL;
@@ -135,25 +206,23 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 
     if ( !CreatePipe(&wrfd[0], &wrfd[1], &sa, 0) ) /* read, write */
       return errorPce(p, NAME_noPipe, APIError());
-    if ( !CreatePipe(&rdfd[0], &rdfd[1], &sa, 0) )
-    { CloseHandle(wrfd[0]);
+    if ( !CreatePipeEx(&rdfd[0], &rdfd[1], &sa, PIPE_SIZE,
+		       FILE_FLAG_OVERLAPPED, 0) )
+    { Name msg = APIError();
+      CloseHandle(wrfd[0]);
       CloseHandle(wrfd[1]);
-      return errorPce(p, NAME_noPipe, APIError());
+      return errorPce(p, NAME_noPipe, msg);
     }
+    SetHandleInformation(wrfd[1], HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(rdfd[0], HANDLE_FLAG_INHERIT, 0);
 
     if ( notDefault(p->directory) )
     { _xos_limited_os_filename(strName(p->directory->path), dirbuf, PATH_MAX);
       cwd = dirbuf;
     }
 
-    _xos_limited_os_filename(strName(p->name), cmdline, MAXCMDLINE);
-    for_vector(p->arguments, a,
-	       { strcat(cmdline, " ");
-		 strcat(cmdline, toCharp(a));
-	       });
-    processinfo = alloc(sizeof(*processinfo));
     memset(&startinfo, 0, sizeof(startinfo));
-    memset(processinfo, 0, sizeof(*processinfo));
+    memset(&processinfo, 0, sizeof(processinfo));
 
     startinfo.cb	  = sizeof(startinfo);
     startinfo.dwFlags     = STARTF_USESTDHANDLES;
@@ -161,6 +230,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
     startinfo.hStdOutput  = rdfd[1];
     startinfo.hStdError   = rdfd[1];
 
+    env = createWin32EnvriomentBlock(p);
     if ( CreateProcess(NULL,			/* executable */
 		       cmdline,			/* cmdline */
 		       NULL,			/* Process security */
@@ -170,23 +240,25 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 		       env,			/* environment char ** */
 		       cwd,			/* directory */
 		       &startinfo,
-		       processinfo) )
-    { CloseHandle(processinfo->hThread);	/* don't need this */
-      pidProcess(p, toInt(processinfo->dwProcessId));
+		       &processinfo) )
+    { CloseHandle(processinfo.hThread);	/* don't need this */
+      pidProcess(p, toInt(processinfo.dwProcessId));
       p->rdfd   = (intptr_t) rdfd[0];
       p->wrfd   = (intptr_t) wrfd[1];
-      p->ws_ref = processinfo;
       assign(p, status, NAME_running);
+      assign(p, code, NIL);		/* see ws_end_of_output_process() */
+      ws_watch_process(p, processinfo.hProcess);
 
       DEBUG(NAME_process,
 	    Cprintf("%s: Created Process %d --> %s --> %d, id = %d\n",
 		    pp(p), p->wrfd, cmdline, p->rdfd,
-		    processinfo->dwProcessId));
+		    processinfo.dwProcessId));
 
       inputStream((Stream)p, DEFAULT);
     } else
     { errorPce(p, NAME_execError, APIError());
-      unalloc(sizeof(*processinfo), processinfo);
+      CloseHandle(wrfd[1]);
+      CloseHandle(rdfd[0]);
       rval = FAIL;
     }
 
@@ -199,32 +271,3 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 
   return rval;
 }
-
-
-void
-ws_kill_process(Process p, int sig)
-{ PROCESS_INFORMATION *pi = p->ws_ref;
-
-  if ( sig == 1 ||
-       sig == 9 ||
-       sig == 15 )
-  { TerminateProcess(pi->hProcess, sig);
-  } else if ( sig == 3 )
-  { GenerateConsoleCtrlEvent(CTRL_C_EVENT, pi->dwProcessId);
-  } else
-    Cprintf("%s: process->kill only supports INT, KILL\n", pp(p));
-}
-
-
-#if NOSTUB
-void
-ws_done_process(Process p)
-{ PROCESS_INFORMATION *pi;
-
-  if ( (pi=p->ws_ref) )
-  { CloseHandle(pi->hProcess);
-    unalloc(sizeof(*pi), pi);
-    p->ws_ref = NULL;
-  }
-}
-#endif

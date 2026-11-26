@@ -379,6 +379,7 @@ unlinkProcess(Process p)
     killProcess(p, NAME_hup);
   if ( notNil(p->pid) )			/* doesn't listen ... */
     killProcess(p, NAME_kill);
+  ws_done_process(p);			/* stop watching it */
 
   succeed;
 }
@@ -746,6 +747,8 @@ killProcess(Process p, Any sig)
   kill(valInt(p->pid), n);
 #else
   ws_kill_process(p, n);
+  if ( p->status == NAME_running && (n == 1 || n == 9 || n == 15) )
+    assign(p, code, signames[n]);	/* reported as ->killed */
 #endif
 
   succeed;
@@ -818,14 +821,18 @@ exitedProcess(Process p, Int stat)
 /* End of the output of the process.  If we can see the process
  * terminate (USE_SIGCHLD), reapChildProcesses() reports it with its
  * actual status.  The process may continue after closing its output.
- * Otherwise (Windows) we take the end of output as normal termination.
+ * On Windows, the watch on the process handle reports it, but leaves
+ * that to us if the process terminated before the end of its output.
+ * Otherwise we take the end of output as normal termination.
  */
 
 static status
 endOfFileProcess(Process p)
 { DEBUG(NAME_stream, Cprintf("Process %s: end of input\n", pp(p)));
 
-#ifndef USE_SIGCHLD
+#ifdef __WINDOWS__
+  ws_end_of_output_process(p);
+#elif !defined(USE_SIGCHLD)
   send(p, NAME_exited, ZERO, EAV);
 #endif
 
