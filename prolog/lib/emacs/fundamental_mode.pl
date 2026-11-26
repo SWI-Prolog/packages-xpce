@@ -882,17 +882,32 @@ compile(M, Command:shell_command=string, Label:[name]) :->
 grep(M, GrepArgs:grep_arguments=string) :->
     "Run the OS grep command, showing the hits in a hit list"::
     get(M, grep_command, GrepCommad),
+    command_line(GrepCommad, GrepArgs, CommandLine),
     send(M, grep_hits,
-         string(GrepCommad, GrepArgs),
+         CommandLine,
          string('grep %s', GrepArgs)).
 
 
 git_grep(M, GrepArgs:grep_arguments=string) :->
     "Run the git grep, showing the hits in a hit list"::
     get(M, git_grep_command, GrepCommad),
+    command_line(GrepCommad, GrepArgs, CommandLine),
     send(M, grep_hits,
-         string(GrepCommad, GrepArgs),
+         CommandLine,
          string('git grep %s', GrepArgs)).
+
+%!  command_line(+Template, +Args, -CommandLine:string) is det.
+%
+%   CommandLine is Template with each `%s` replaced by Args.  We do not
+%   use Template as an XPCE format: that would interpret backslashes in
+%   it, e.g., in C:\msys64\usr\bin\grep.exe.
+
+command_line(Template, Args, CommandLine) :-
+    get(Template, value, T),
+    get(Args, value, A),
+    atomic_list_concat(Parts, '%s', T),
+    atomic_list_concat(Parts, A, Line),
+    atom_string(Line, CommandLine).
 
 grep_hits(M, Command:shell_command=string, Label:name) :->
     "Run a grep command, showing the hits in a hit list"::

@@ -56,11 +56,13 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(emacs/bookmarks)).
 :- use_module(library(emacs/grep)).
+:- use_module(library(emacs/fundamental_mode)).
 :- use_module(library(lists), [member/2, delete/3]).
 :- use_module(library(process), [process_which/2]).
 
 test_emacs_grep :-
     run_tests([ grep_line,
+                grep_command_line,
                 grep_hit_list,
                 grep_command,
                 hit_list_filter,
@@ -102,6 +104,23 @@ test(long_line, [TextLen-Pos-Len == 500-0-(@default)]) :-
     string_length(Text, TextLen).
 
 :- end_tests(grep_line).
+
+%   The command template is not an XPCE format: its backslashes, e.g.,
+%   of a Windows file name, are kept.
+
+:- begin_tests(grep_command_line).
+
+test(windows_path, [L == "C:\\msys64\\usr\\bin\\grep.exe -n foo NUL"]) :-
+    emacs_fundamental_mode:command_line(
+        string('C:\\msys64\\usr\\bin\\grep.exe -n %s NUL'),
+        string(foo), L).
+test(args_kept, [L == "grep -n a\\b ."]) :-
+    emacs_fundamental_mode:command_line(string('grep -n %s .'),
+                                        string('a\\b'), L).
+test(no_placeholder, [L == "grep -n"]) :-
+    emacs_fundamental_mode:command_line(string('grep -n'), string(foo), L).
+
+:- end_tests(grep_command_line).
 
 %   These run the grep program, which need not be installed, e.g., on
 %   Windows.
