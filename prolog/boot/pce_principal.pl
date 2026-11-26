@@ -442,7 +442,8 @@ send_implementation(trace(Id), Args, Obj) :-
     pce_info(pce_trace(enter, send_implementation(Id, Args, Obj))),
     (   send_implementation(Id, Args, Obj)
     ->  pce_info(pce_trace(exit, send_implementation(Id, Args, Obj)))
-    ;   pce_info(pce_trace(fail, send_implementation(Id, Args, Obj)))
+    ;   pce_info(pce_trace(fail, send_implementation(Id, Args, Obj))),
+        fail
     ).
 
 

@@ -179,6 +179,7 @@ list(APPEND XPCE_EXTRA_TESTS ${XPCE_VIDEO_TESTS})
 set_tests_properties(xpce:gamepad PROPERTIES RUN_SERIAL TRUE)
 
 xpce_test(process_io)
+xpce_test(tracepce)
 
 # process_encoding checks the bytes on the wire using od and iconv
 
