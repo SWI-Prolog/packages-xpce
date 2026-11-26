@@ -90,6 +90,7 @@ class_variable(d,      '[colour]', @default).
 
 :- pce_begin_class(tcve_key, object).
 class_variable(k, name, a).
+class_variable(g, string, "grep -n %s").
 :- pce_end_class.
 
 :- pce_begin_class(tcve_box, box).
@@ -241,6 +242,28 @@ test(backslash, [T == "'\\C-x\\C-s'", V == '\\C-x\\C-s']) :-
     name_round_trip('\\C-x\\C-s', T, V).
 test(backslash_quote, [T == "\"\\e'\"", V == '\\e\'']) :-
     name_round_trip('\\e\'', T, V).
+
+test(string_backslash, [ T == "\"C:\\usr\\grep.exe %s\"",
+                         V == "C:\\usr\\grep.exe %s"
+                       ]) :-
+    string_round_trip("C:\\usr\\grep.exe %s", T, V).
+test(string_backslash_quote, [ T == "'a\"\\b'",
+                               V == "a\"\\b"
+                             ]) :-
+    string_round_trip("a\"\\b", T, V).
+
+%   string_round_trip(+String, -Text, -Value)
+%
+%   As name_round_trip/3, for a string.  Saving a Windows file name
+%   doubled its backslashes on each round trip.
+
+string_round_trip(String, Text, Value) :-
+    get(class(tcve_key), class_variable, g, CV),
+    new(S, string(String)),
+    pce_class_variable_editor:value_to_defaults_text(S, Text),
+    get(CV, convert_string, Text, Value0),
+    get(Value0, value, Value1),
+    atom_string(Value1, Value).
 
 %   name_round_trip(+Name, -Text, -Value)
 %
