@@ -881,8 +881,8 @@ compile(M, Command:shell_command=string, Label:[name]) :->
 
 grep(M, GrepArgs:grep_arguments=string) :->
     "Run the OS grep command, showing the hits in a hit list"::
-    get(M, grep_command, GrepCommad),
-    command_line(GrepCommad, GrepArgs, CommandLine),
+    get(M, grep_command, GrepCommand),
+    command_line(GrepCommand, GrepArgs, CommandLine),
     send(M, grep_hits,
          CommandLine,
          string('grep %s', GrepArgs)).
@@ -890,8 +890,8 @@ grep(M, GrepArgs:grep_arguments=string) :->
 
 git_grep(M, GrepArgs:grep_arguments=string) :->
     "Run the git grep, showing the hits in a hit list"::
-    get(M, git_grep_command, GrepCommad),
-    command_line(GrepCommad, GrepArgs, CommandLine),
+    get(M, git_grep_command, GrepCommand),
+    command_line(GrepCommand, GrepArgs, CommandLine),
     send(M, grep_hits,
          CommandLine,
          string('git grep %s', GrepArgs)).

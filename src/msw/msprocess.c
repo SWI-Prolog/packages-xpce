@@ -74,7 +74,7 @@ separated by '\0'. The last is terminated by a secondary '\0'.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static char *
-createWin32EnvriomentBlock(Process p)
+createWin32EnvironmentBlock(Process p)
 { if ( notNil(p->environment) )
   { char *buf = pceMalloc(getEnvironmentSizeProcess(p));
     char *s = buf;
@@ -230,7 +230,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
     startinfo.hStdOutput  = rdfd[1];
     startinfo.hStdError   = rdfd[1];
 
-    env = createWin32EnvriomentBlock(p);
+    env = createWin32EnvironmentBlock(p);
     if ( CreateProcess(NULL,			/* executable */
 		       cmdline,			/* cmdline */
 		       NULL,			/* Process security */
