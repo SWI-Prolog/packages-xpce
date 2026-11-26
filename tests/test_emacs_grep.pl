@@ -62,6 +62,7 @@ Run with:
 test_emacs_grep :-
     run_tests([ grep_line,
                 grep_hit_list,
+                grep_command,
                 hit_list_filter,
                 hit_title
               ]).
@@ -113,6 +114,8 @@ has_grep :-
 :- pce_begin_class(grep_test_editor, emacs_bookmark_editor).
 
 variable(reports, chain := new(chain), get, "Kind-Text of the reports").
+variable(unshown, chain := new(chain), get,
+         "Kind-Text of the reports made while not in a window").
 
 report(BM, Kind:name, Fmt:[char_array], Args:any ...) :->
     (   Fmt == @default
@@ -123,7 +126,11 @@ report(BM, Kind:name, Fmt:[char_array], Args:any ...) :->
         get(S, value, Atom),
         atom_string(Atom, Text)
     ),
-    send(BM?reports, append, prolog(Kind-Text)).
+    send(BM?reports, append, prolog(Kind-Text)),
+    (   get(BM, pane_frame, _)
+    ->  true
+    ;   send(BM?unshown, append, prolog(Kind-Text))
+    ).
 
 :- pce_end_class(grep_test_editor).
 
@@ -230,6 +237,48 @@ test(exit_status, [Reports == [warning-"Exit status 3"]]) :-
     grep(sh, ['-c', 'exit 3'], _, _, Reports).
 
 :- end_tests(grep_hit_list).
+
+%   A command that cannot be started is reported in the hit list.  On
+%   Windows that happens when the process is opened, which must thus be
+%   after the hit list is in a window.  Reported before, the message went
+%   to a modal message box that froze PceEmacs.
+
+:- begin_tests(grep_command).
+
+test(not_found, [ Unshown == [],
+                  true(memberchk(error, Kinds))
+                ]) :-
+    working_directory(Dir, Dir),
+    new(BM, grep_test_editor("grep test", @off)),
+    new(P, emacs_grep_process(no_such_command_for_xpce)),
+    ignore(send(P, run, BM, directory(Dir))),
+    await_reports(BM),
+    get(BM, reports, Chain),
+    chain_list(Chain, Reports0),
+    delete(Reports0, progress-_, Reports),
+    findall(K, member(K-_, Reports), Kinds),
+    get(BM, unshown, UChain),
+    chain_list(UChain, Unshown),
+    send(BM, free).
+
+%   Dispatch until a report other than progress arrived, at most 10 sec.
+
+await_reports(BM) :-
+    get_time(T0),
+    repeat,
+      (   get(BM?reports, find, message(@prolog, report_done, @arg1), _)
+      ->  !
+      ;   get_time(T),
+          T-T0 > 10
+      ->  !
+      ;   ignore(send(@display, dispatch)),
+          fail
+      ).
+
+report_done(Kind-_) :-
+    Kind \== progress.
+
+:- end_tests(grep_command).
 
 :- begin_tests(hit_list_filter, [ setup(make_hits(BM)),
                                   cleanup(send(BM, free))

@@ -79,9 +79,9 @@ run(P, BM:emacs_bookmark_editor, Dir:directory) :->
     send(P, directory, Dir),
     send(P, input_message, message(P, hit_line, @arg1)),
     send(P, terminate_message, message(P, report_outcome)),
-    send(P, open),
-    send(BM, open),
-    send(BM, report, progress, 'Searching ...').
+    send(BM, open),                     % first: errors of ->open go there
+    send(BM, report, progress, 'Searching ...'),
+    send(P, open).
 
 %   Errors of the process, e.g., that the command cannot be started,
 %   are reported in the editor rather than on the console.
