@@ -420,12 +420,15 @@ insert_link(TI, URL, Len) :-
 
 %!  hover(+Terminal, +Column, +Row) is det.
 %
-%   Move the mouse to the centre of cell Column,Row.
+%   Move the mouse to the centre of cell Column,Row.  The terminal rows
+%   are a whole number of pixels high: the font height truncated.  A
+%   fractional height would put the mouse rows off near the bottom.
 
 hover(TI, Column, Row) :-
     get(TI, font, Font),
     get(Font, avg_char_width, CW),
-    get(Font, height, CH),
+    get(Font, height, H),
+    CH is truncate(H),
     X is round((Column+1)*CW + CW/2),
     Y is round(Row*CH + CH/2),
     ignore(send(TI, event, new(_, event(loc_move, TI, X, Y, 0, 0)))).
@@ -966,16 +969,20 @@ test(remove_keeps_the_folds_of_the_others,
      [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     session(TI, 3),
     blocks(TI, [B1,B2,B3|_]),
+    send(B1, fold),
     send(B3, fold),
     send(B2, remove),
+    assertion(get(B1, folded, @on)),
     assertion(get(B3, folded, @on)),
     screen(TI, Rows),
+    assertion(\+ memberchk('out1-2', Rows)),
     assertion(\+ memberchk('out3-2', Rows)),
+    assertion(memberchk('?- goal1.', Rows)),
     assertion(memberchk('?- goal3.', Rows)),
-    assertion(memberchk('out1-2', Rows)),
     send(B3, unfold),
     screen(TI, Back),
-    assertion(memberchk('out3-2', Back)).
+    assertion(memberchk('out3-2', Back)),
+    assertion(\+ memberchk('out1-2', Back)).
 
 test(remove_ends_a_search_that_may_be_looking_at_it,
      [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
@@ -1053,7 +1060,7 @@ test(blocks_follow_save_lines,
     forall(between(1, Fill, _), send(TI, insert, 'x\r\n')),
     session(TI, 2),
     blocks(TI, Blocks),
-    append(_, [B1,_Prompt], Blocks),        % the last command
+    once(append(_, [B1,_Prompt], Blocks)),  % the last command
     get(B1, content, output, S0), text(S0, Output),
     Grow is Save*2,
     send(TI, save_lines, Grow),
