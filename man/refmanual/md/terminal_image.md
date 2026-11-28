@@ -595,6 +595,12 @@ about the terminal.  Class `prolog_terminal` uses it for `->block_popup`.
 - scroll_past_end: `@off`; see `<->scroll_past_end`.
 - auto_copy: copy selected text to clipboard automatically (default
   `@on` on macOS, `@off` elsewhere).
+- clipboard_write: `@on` (default) lets the client set the clipboard
+  and the primary selection using OSC 52 (`ESC ] 52 ; <targets> ;
+  <base64> ST`).  Full screen applications that take the mouse, such
+  as `vim`, `tmux` or a TUI in its alternate screen, copy their own
+  selection this way.  A request to report the clipboard (`?`) is
+  always refused.
 - ansi_colours: 16-element vector with the theme colours
   `ansi_black` ... `ansi_bright_white`, so the palette follows the
   theme.

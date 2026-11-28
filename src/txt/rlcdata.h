@@ -50,6 +50,7 @@ typedef struct rlc_data * rlc_console; /* they are the same; rename! */
 
 #define ANSI_MAX_ARGC     10		/* Ansi-escape sequence argv */
 #define ANSI_MAX_LINK	4096		/* 4-K max URL length */
+#define OSC52_MAX	(16<<20)	/* max OSC 52 payload (base64) */
 
 /* Packed per-cell metadata (32 bits).  Indices `fg` and `bg` reference
  * the per-buffer color palette (see `palette` in rlc_data).  The sentinel
@@ -222,6 +223,13 @@ typedef struct rlc_data
   int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */
   uchar_t		link[ANSI_MAX_LINK];	/* Max URL length */
   uchar_t      *link_url;		/* Open OSC 8 hyperlink or NULL */
+  struct				/* OSC 52 being received */
+  { char       *data;			/* <targets>;<base64>, so far */
+    size_t	len;			/* bytes in `data` */
+    size_t	size;			/* allocated for `data` */
+    bool	esc;			/* last char was ESC (of ST?) */
+    bool	discard;		/* too long or not ASCII */
+  } osc52;
   href	       *armed_href;		/* href the mouse is hovering, or NULL */
   bool		hover_valid;		/* hover_x,hover_y hold the pointer */
   int		hover_x;		/* last pointer position over the */

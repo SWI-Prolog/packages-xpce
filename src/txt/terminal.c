@@ -346,6 +346,7 @@ rlc_cluster_prev(const RlcTextLine tl, int pos)
 static void	assign_variant_fonts(TerminalImage ti, FontObj bold,
 				     FontObj italic, FontObj bold_italic);
 static void	rlc_destroy_buffer(RlcData b);
+static void	osc52_reset(RlcData b);
 static bool	rlc_caret_xy(RlcData b, int *x, int *y);
 static void	blink_changed_caret(Graphical gr);
 static void	rlc_resize_pixel_units(RlcData b, int w, int h);
@@ -4691,6 +4692,8 @@ static classvardecl rc_terminal_image[] =
      "Style for the fold marker and its tally (@nil for none)"),
   RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
      "Automatically copy selected text to the clipboard"),
+  RC(NAME_clipboardWrite, "bool", "@on",
+     "The client may set the clipboard (OSC 52)"),
   RC(NAME_saveLines, "int", "1000",
      "How many lines are saved for scroll back"),
   RC(NAME_scrollPastEnd, "bool", "@off",
@@ -7940,6 +7943,7 @@ rlc_destroy_buffer(RlcData b)
 
   if ( b->link_url )
     rlc_free(b->link_url);
+  osc52_reset(b);
   rlc_destroy_saved_screen(b);
   rlc_close_connection(b);
   palette_destroy(b);
@@ -11578,6 +11582,173 @@ promptMarkTerminalImage(TerminalImage ti, Name kind, BoolObj continuation)
 }
 
 
+		 /*******************************
+		 *	  OSC 52: CLIPBOARD	*
+		 *******************************/
+
+/* OSC 52 lets the client set the clipboard: ESC ] 52 ; <targets> ;
+ * <base64> ST.  Full screen applications that take the mouse, and
+ * therefore make their own selection, copy this way, as do vim, neovim
+ * and tmux.  The payload is the text copied, so it is not limited to
+ * the length of a URL as the other OSC strings are: it is collected
+ * separately, and dropped as a whole if it exceeds OSC52_MAX.
+ *
+ * Asking for the clipboard (a payload of `?') is refused: any program
+ * that writes to the terminal could read the clipboard otherwise.
+ * Setting it can be disabled using the class variable
+ * terminal_image.clipboard_write.
+ */
+
+static void
+osc52_reset(RlcData b)
+{ if ( b->osc52.data )
+    rlc_free(b->osc52.data);
+  memset(&b->osc52, 0, sizeof(b->osc52));
+}
+
+static int
+base64_value(int c)
+{ if ( c >= 'A' && c <= 'Z' ) return c-'A';
+  if ( c >= 'a' && c <= 'z' ) return c-'a'+26;
+  if ( c >= '0' && c <= '9' ) return c-'0'+52;
+  if ( c == '+' ) return 62;
+  if ( c == '/' ) return 63;
+  return -1;
+}
+
+/* Decode `len` bytes of base64 into a malloced, 0-terminated string.
+ * Padding is optional.  Returns NULL if `in` is not base64.
+ */
+
+static char *
+base64_decode(const char *in, size_t len)
+{ char *out = rlc_malloc(len/4*3 + 4);
+  char *o = out;
+
+  if ( !out )
+    return NULL;
+  unsigned int acc = 0;
+  int bits = 0;
+  size_t i;
+
+  for(i=0; i<len && in[i] != '='; i++)
+  { int v = base64_value(in[i]);
+
+    if ( v < 0 )
+    { rlc_free(out);
+      return NULL;
+    }
+    acc = (acc<<6)|v;
+    if ( (bits += 6) >= 8 )
+    { bits -= 8;
+      *o++ = (char)((acc>>bits)&0xff);
+    }
+  }
+  for(; i<len; i++)			/* only padding may follow */
+  { if ( in[i] != '=' )
+    { rlc_free(out);
+      return NULL;
+    }
+  }
+  *o = EOS;
+
+  return out;
+}
+
+static void
+osc52_command(RlcData b, const char *data, size_t len)
+{ TerminalImage ti = b->object;
+  const char *sep = memchr(data, ';', len);
+
+  if ( !sep )
+    return;
+
+  const char *payload = sep+1;
+  size_t plen = len - (size_t)(payload-data);
+
+  if ( plen == 1 && payload[0] == '?' )
+  { DEBUG(NAME_term, Cprintf("OSC 52: refused to report the clipboard\n"));
+    return;
+  }
+  if ( plen == 0 ||
+       !isOn(getClassVariableValueObject(ti, NAME_clipboardWrite)) )
+    return;
+
+  bool clipboard = (sep == data);	/* no targets: the clipboard */
+  bool primary = false;
+  for(const char *t=data; t<sep; t++)
+  { switch(*t)
+    { case 'c': clipboard = true; break;
+      case 'p':
+      case 's': primary = true; break;
+    }					/* q and 0-7 we do not have */
+  }
+  if ( !clipboard && !primary )
+    return;
+
+  char *text = base64_decode(payload, plen);
+  if ( !text )
+  { DEBUG(NAME_term, Cprintf("OSC 52: payload is not base64\n"));
+    return;
+  }
+
+  DisplayObj d = CurrentDisplay(ti);
+  AnswerMark mark;
+  markAnswerStack(mark);
+  StringObj str = UTF8ToString(text);
+  addCodeReference(str);
+  if ( clipboard )
+    send(d, NAME_selection, NAME_clipboard, str, EAV);
+  if ( primary )
+    send(d, NAME_selection, NAME_primary, str, EAV);
+  delCodeReference(str);
+  freeableObj(str);
+  rewindAnswerStack(mark, NIL);
+  rlc_free(text);
+}
+
+/* Add `chr` to the OSC 52 string being received.  True if it ended the
+ * string, which is then acted on.  The string ends at BEL or at ST
+ * (ESC \).
+ */
+
+static bool
+osc52_char(RlcData b, int chr)
+{ if ( chr == '\a' || (chr == '\\' && b->osc52.esc) )
+  { if ( !b->osc52.discard && b->osc52.data )
+      osc52_command(b, b->osc52.data, b->osc52.len);
+    osc52_reset(b);
+    return true;
+  }
+
+  if ( b->osc52.esc )			/* ESC that did not start ST */
+    b->osc52.discard = true;
+  b->osc52.esc = (chr == ESC);
+  if ( b->osc52.esc || b->osc52.discard )
+    return false;
+
+  if ( chr > 0x7e || chr < 0x20 || b->osc52.len >= OSC52_MAX )
+  { b->osc52.discard = true;		/* base64 and targets are ASCII */
+    return false;
+  }
+
+  if ( b->osc52.len+1 >= b->osc52.size )
+  { size_t size = b->osc52.size ? b->osc52.size*2 : 256;
+    char *data = rlc_realloc(b->osc52.data, size);
+
+    if ( !data )
+    { b->osc52.discard = true;
+      return false;
+    }
+    b->osc52.data = data;
+    b->osc52.size = size;
+  }
+  b->osc52.data[b->osc52.len++] = (char)chr;
+
+  return false;
+}
+
+
 static void
 osc_command(RlcData b, int param, const uchar_t *link)
 { switch(param)
@@ -11852,6 +12023,11 @@ rlc_putansi(RlcData b, int chr)
       }
       break;
     case CMD_OSCTEXT:
+      if ( b->argv[0] == 52 )		/* may be far longer than a URL */
+      { if ( osc52_char(b, chr) )
+	  b->cmdstat = CMD_INITIAL;
+	break;
+      }
       if ( b->link_len < ANSI_MAX_LINK-1 )
       { bool end = false;
 	b->link[b->link_len++] = chr;

@@ -40,6 +40,7 @@
 :- use_module(library(plunit)).
 :- use_module(library(lists)).
 :- use_module(library(yall)).
+:- use_module(library(base64)).
 
 /** <module> Test OSC 8 hyperlinks of the xpce terminal
 
@@ -53,7 +54,8 @@ copied to the screen as text.
 test_terminal_osc :-
     run_tests([ terminal_osc8,
                 terminal_osc133,
-                terminal_autolink
+                terminal_autolink,
+                terminal_osc52
               ]).
 
                 /*******************************
@@ -1261,3 +1263,117 @@ truth(Goal, Truth) :-
     ).
 
 :- end_tests(terminal_autolink).
+
+
+                /*******************************
+                *     OSC 52: SET CLIPBOARD    *
+                *******************************/
+
+%   `ESC ] 52 ; <targets> ; <base64> ST' sets the clipboard.  Full
+%   screen applications that take the mouse copy their own selection
+%   this way.  Each test first puts a marker on the clipboard, so that
+%   one that changes nothing shows as the marker.
+
+:- begin_tests(terminal_osc52,
+               [ setup(clipboard_write(Old, @on)),
+                 cleanup(clipboard_write(_, Old))
+               ]).
+
+test(bel, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+            Got == hello ]) :-
+    osc52(TI, c, hello, bel),
+    clipboard(clipboard, Got).
+test(st, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+           Got == hello ]) :-
+    osc52(TI, c, hello, st),
+    clipboard(clipboard, Got).
+test(no_targets_is_the_clipboard,
+     [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+       Got == hello ]) :-
+    osc52(TI, '', hello, st),
+    clipboard(clipboard, Got).
+test(utf8, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+             Got == 'h\u00e9llo \u2713 \U0001F600' ]) :-
+    osc52(TI, c, 'h\u00e9llo \u2713 \U0001F600', st),
+    clipboard(clipboard, Got).
+test(primary, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                [P, C] == [hello, marker] ]) :-
+    osc52(TI, p, hello, st),
+    clipboard(primary, P),
+    clipboard(clipboard, C).
+test(both, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+             [P, C] == [hello, hello] ]) :-
+    osc52(TI, pc, hello, st),
+    clipboard(primary, P),
+    clipboard(clipboard, C).
+test(longer_than_a_url,
+     [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+       [Len, Rows] == [20000, []] ]) :-
+    length(Codes, 20000),
+    maplist(=(0'x), Codes),
+    atom_codes(Long, Codes),
+    osc52(TI, c, Long, st),
+    clipboard(clipboard, Got),
+    atom_length(Got, Len),
+    screen(TI, Rows).
+test(not_shown, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                  Rows == [before, after] ]) :-
+    send(TI, insert, 'before\r\n'),
+    osc52(TI, c, hello, st),
+    send(TI, insert, 'after'),
+    screen(TI, Rows).
+test(bad_base64, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                   [Got, Rows] == [marker, []] ]) :-
+    clipboard_marker,
+    send(TI, insert, '\e]52;c;not*base64\e\\'),
+    clipboard(clipboard, Got),
+    screen(TI, Rows).
+test(query_is_refused,
+     [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+       [Got, Rows] == [marker, []] ]) :-
+    clipboard_marker,
+    send(TI, insert, '\e]52;c;?\e\\'),
+    clipboard(clipboard, Got),
+    screen(TI, Rows).
+test(disabled, [ setup(terminal(TI)), cleanup(destroy_terminal(TI)),
+                 Got == marker ]) :-
+    setup_call_cleanup(
+        clipboard_write(Old, @off),
+        osc52(TI, c, hello, st),
+        clipboard_write(_, Old)),
+    clipboard(clipboard, Got).
+
+%!  osc52(+Terminal, +Targets, +Text, +End) is det.
+%
+%   Have the client copy Text to Targets, ending the string with BEL or
+%   ST.  The clipboard holds `marker` before.
+
+osc52(TI, Targets, Text, End) :-
+    clipboard_marker,
+    base64_encoded(Text, Base64, []),
+    (   End == bel
+    ->  Term = '\a'
+    ;   st(Term)
+    ),
+    atomic_list_concat(['\e]52;', Targets, ';', Base64, Term], Seq),
+    send(TI, insert, Seq).
+
+clipboard_marker :-
+    send(@display, selection, clipboard, marker),
+    send(@display, selection, primary, marker).
+
+clipboard(Which, Text) :-
+    get(@display, paste, Which, S),
+    get(S, value, Text).
+
+%!  clipboard_write(-Old, +New) is det.
+%
+%   Set the class variable terminal_image.clipboard_write.
+
+clipboard_write(Old, New) :-
+    get(@pce, convert, terminal_image, class, Class),
+    get(Class, class_variable, clipboard_write, CV),
+    get(CV, value, Old),
+    send(CV, value, New).
+
+:- end_tests(terminal_osc52).
